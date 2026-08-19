@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   detect-affected:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     outputs:
       rust: ${{ steps.affected.outputs.rust }}
@@ -64,7 +64,7 @@ jobs:
   rust-application:
     needs: detect-affected
     if: needs.detect-affected.outputs.rust != '[]'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 60
     concurrency:
       group: rust-ci-${{ matrix.project }}-${{ github.head_ref || github.ref_name }}
@@ -94,7 +94,7 @@ jobs:
   web-application:
     needs: detect-affected
     if: needs.detect-affected.outputs.web != '[]'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 45
     concurrency:
       group: web-ci-${{ matrix.project }}-${{ github.head_ref || github.ref_name }}

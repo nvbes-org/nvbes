@@ -28,7 +28,7 @@ defaults:
 jobs:
   detect-affected:
     if: vars.CLOUDFLARE_PAGES_DEPLOY_ENABLED == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     outputs:
       web: ${{ steps.affected.outputs.web }}
@@ -67,7 +67,7 @@ jobs:
   deploy:
     needs: detect-affected
     if: needs.detect-affected.outputs.web != '[]'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 30
     environment: production
     concurrency:

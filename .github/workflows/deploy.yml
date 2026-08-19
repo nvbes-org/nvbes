@@ -42,7 +42,7 @@ defaults:
 jobs:
   deploy-identity-service:
     if: github.inputs.component == 'all' || github.inputs.component == 'identity-service'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     environment: ${{ github.inputs.environment }}
     steps:
@@ -60,7 +60,7 @@ jobs:
 
   deploy-account-service:
     if: github.inputs.component == 'all' || github.inputs.component == 'account-service'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     environment: ${{ github.inputs.environment }}
     steps:

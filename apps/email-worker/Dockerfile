@@ -25,7 +25,11 @@ COPY contracts ./contracts
 COPY libs ./libs
 COPY vendor ./vendor
 
-RUN cargo build --locked --release --bin nvbes-email-worker
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/usr/src/nvbes/target \
+    cargo build --locked --release --bin nvbes-email-worker \
+    && install -D target/release/nvbes-email-worker /out/email-worker
 
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS runtime
 
@@ -43,7 +47,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
     && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin nvbes
 
 WORKDIR /app
-COPY --from=builder --chown=10001:10001 /usr/src/nvbes/target/release/nvbes-email-worker /app/email-worker
+COPY --from=builder --chown=10001:10001 /out/email-worker /app/email-worker
 
 ENV PORT="8080"
 

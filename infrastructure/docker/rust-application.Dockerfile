@@ -40,7 +40,10 @@ COPY contracts ./contracts
 COPY libs ./libs
 COPY vendor ./vendor
 
-RUN cargo build --locked --release --package "${CARGO_PACKAGE}" --bin "${CARGO_BINARY}" \
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/usr/src/nvbes/target \
+    cargo build --locked --release --package "${CARGO_PACKAGE}" --bin "${CARGO_BINARY}" \
     && install -D "target/release/${CARGO_BINARY}" /out/nvbes-app \
     && if [ -d "${APPLICATION_PATH}/migrations" ]; then \
       find "${APPLICATION_PATH}/migrations" -type f -exec sh -c \

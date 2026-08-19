@@ -4,6 +4,7 @@ set -e
 if [ -e /var/run/docker.sock ]; then
   sudo chmod 666 /var/run/docker.sock || true
 fi
+sudo chown -R runner:runner /usr/local/cargo /home/runner/.local 2>/dev/null || true
 
 if [ -z "$GITHUB_REPOSITORY_URL" ] || [ -z "$RUNNER_TOKEN" ]; then
   echo "Error: GITHUB_REPOSITORY_URL and RUNNER_TOKEN environment variables are required."

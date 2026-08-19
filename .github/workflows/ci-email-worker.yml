@@ -44,7 +44,7 @@ defaults:
 
 jobs:
   test-email-worker:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 30
     env:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_email_test

@@ -59,7 +59,7 @@ defaults:
 
 jobs:
   quality-contract:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -82,7 +82,7 @@ jobs:
         run: pnpm exec nx run account-quality:test
 
   campaign-gate:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 5
     env:
       ACCOUNT_K6_DURATION: ${{ inputs.duration || 'profile-default' }}
@@ -133,7 +133,7 @@ jobs:
     if: >-
       (github.event_name == 'schedule' && github.event.schedule == '17 1 * * *') ||
       (github.event_name == 'workflow_dispatch' && inputs.lane == 'nightly')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 45
     env:
       NVBES_TARGET_ENV: staging
@@ -177,7 +177,7 @@ jobs:
     if: >-
       (github.event_name == 'schedule' && github.event.schedule == '17 1 * * *') ||
       (github.event_name == 'workflow_dispatch' && inputs.lane == 'nightly')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 45
     env:
       ACCOUNT_LOAD_ALLOWED_ORIGINS: ${{ vars.ACCOUNT_TEST_ALLOWED_SERVICE_ORIGINS }}
@@ -208,7 +208,7 @@ jobs:
       - campaign-gate
       - quality-contract
     if: github.event_name == 'schedule' && github.event.schedule == '31 1 * * 0'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -248,7 +248,7 @@ jobs:
       - campaign-gate
       - quality-contract
     if: github.event_name == 'workflow_dispatch' && inputs.lane == 'resilience'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 330
     env:
       ACCOUNT_K6_DURATION: ${{ inputs.duration }}

@@ -54,7 +54,7 @@ defaults:
 
 jobs:
   check-identity-rust:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 60
     env:
       CI: 'true'
@@ -129,7 +129,7 @@ jobs:
         run: pnpm exec nx run identity-service:test-contract
 
   check-identity-web:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 30
     env:
       CI: 'true'
@@ -162,7 +162,7 @@ jobs:
         run: pnpm exec nx run identity-sdk-core:check
 
   test-identity-critical-journeys:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 60
     env:
       CI: 'true'

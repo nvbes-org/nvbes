@@ -36,7 +36,7 @@ defaults:
 
 jobs:
   zap-auth-api-backoffice:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 60
     environment:
       name: account-dast-staging

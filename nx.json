@@ -2,7 +2,13 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "defaultBase": "main",
   "namedInputs": {
-    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "default": [
+      "{projectRoot}/**/*",
+      "!{projectRoot}/README.md",
+      "!{projectRoot}/**/*.md",
+      "!{projectRoot}/docs/**",
+      "sharedGlobals"
+    ],
     "production": [
       "default",
       "!{projectRoot}/dist/**",
@@ -14,6 +20,7 @@
       "!{projectRoot}/**/*.test.*",
       "!{projectRoot}/e2e/**",
       "!{projectRoot}/README.md",
+      "!{projectRoot}/**/*.md",
       "!{projectRoot}/docs/**"
     ],
     "sharedGlobals": [
@@ -25,6 +32,7 @@
       "{workspaceRoot}/vite.config.ts"
     ]
   },
+  "parallel": 4,
   "targetDefaults": {
     "build": {
       "cache": true,
