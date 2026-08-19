@@ -23,6 +23,38 @@ jobs:
   quality-checks:
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 30
+    env:
+      CI: "true"
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
+      NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
+      NVBES_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
+      NVBES_ENV: test
+      NVBES_IDENTITY_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
+      NVBES_REDIS_URL: redis://127.0.0.1:6379/15
+      NVBES_REDIS_PASSWORD: ""
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: nvbes_identity_test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nvbes_identity_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
