@@ -1,0 +1,82 @@
+---
+title: Portail Développeur nvbes
+description: Centre d'ingénierie logicielle, architecture des microservices, catalogues déterministes et contrats d'API.
+template: splash
+hero:
+  title: Documentation Développeur nvbes
+  tagline: Plateforme d'ingénierie full-stack Rust & TypeScript. Architecture modulaire, contrats OpenAPI stricts et système déterministe certifié.
+  actions:
+    - text: Démarrer l'Onboarding
+      link: /onboarding/dev-setup/
+      icon: right-arrow
+      variant: primary
+    - text: Bac à Sable API
+      link: /api/interactive/
+      icon: laptop
+      variant: secondary
+    - text: Cartographie Système
+      link: /architecture/overview/
+      icon: document
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<div class="not-content my-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
+  <div class="rounded-xl border border-sky-500/30 bg-sky-500/5 p-4 text-center">
+    <div class="text-2xl font-bold font-mono text-sky-400">44</div>
+    <div class="text-xs text-slate-400 mt-1">Projets Monorepo</div>
+  </div>
+  <div class="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-4 text-center">
+    <div class="text-2xl font-bold font-mono text-indigo-400">37</div>
+    <div class="text-xs text-slate-400 mt-1">Crates Rust Axum</div>
+  </div>
+  <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
+    <div class="text-2xl font-bold font-mono text-emerald-400">17</div>
+    <div class="text-xs text-slate-400 mt-1">Bibliothèques TS</div>
+  </div>
+  <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-center">
+    <div class="text-2xl font-bold font-mono text-amber-400">11</div>
+    <div class="text-xs text-slate-400 mt-1">ADRs Validés</div>
+  </div>
+</div>
+
+---
+
+## Espaces d'Ingénierie & Outils Interactifs
+
+<CardGrid stagger>
+  <Card title="🚀 Onboarding & Configuration Rapide" icon="rocket">
+    Installez l'environnement local (Node 24, Rust stable, Docker Compose) et générez votre fichier `.env` sur mesure.
+    [Voir le guide d'installation](/onboarding/dev-setup/).
+  </Card>
+  <Card title="📡 Explorateur & Testeur d'API" icon="laptop">
+    Testez les contrats REST certifiés, prévisualisez les réponses et générez des requêtes cURL prêtes à copier.
+    [Ouvrir l'explorateur OpenAPI](/api/interactive/).
+  </Card>
+  <Card title="🏛️ Topologie & Dépendances des Microservices" icon="open-book">
+    Explorez la matrice de connectivité entre frontends React, gateway Axum, workers Tokio et bases PostgreSQL.
+    [Consulter l'architecture](/architecture/overview/).
+  </Card>
+  <Card title="⚡ Catalogues Déterministes (AST / IR)" icon="setting">
+    Tableaux extraits automatiquement du code source avec zéro hallucination et vérification continue de dérive.
+    [Parcourir le catalogue des services](/generated/services-catalog/).
+  </Card>
+</CardGrid>
+
+---
+
+## Commandes Clés au Quotidien
+
+```bash
+# Démarrer l'infrastructure et les services
+pnpm dev:infra
+pnpm dev:api
+pnpm dev:web
+
+# Synchroniser la documentation et réparer toute dérive
+pnpm doc:fix
+
+# Lancer la validation complète avant commit
+pnpm check
+```

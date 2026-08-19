@@ -7,5 +7,7 @@ pre-commit:
 
 pre-push:
   commands:
+    doc-validate:
+      run: pnpm doc:validate
     check:
       run: pnpm check:web

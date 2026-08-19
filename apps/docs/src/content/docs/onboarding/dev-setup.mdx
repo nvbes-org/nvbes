@@ -1,0 +1,104 @@
+---
+title: Installation de l'Environnement Local
+description: Guide étape par étape pour installer les prérequis et lancer le monorepo nvbes en local.
+---
+
+import { Steps, Tabs, TabItem, Aside, Badge } from '@astrojs/starlight/components';
+
+## 1. Prérequis Système
+
+Assurez-vous d'avoir installé les outils requis sur votre poste de travail :
+
+| Outil | Version Minimale | Rôle |
+| :--- | :--- | :--- |
+| **Node.js** | `v24+` | Runtime JavaScript / TypeScript |
+| **pnpm** | `v11+` | Gestionnaire de paquets workspace |
+| **Rust & Cargo** | `stable` | Compilateur Rust & crates workspace |
+| **Docker Compose** | `v2+` | Bases de données locales (Postgres, Redis) |
+| **SQLx CLI** | `v0.8+` | Migrations et vérification SQL compile-time |
+
+---
+
+## 2. Déploiement Étape par Étape
+
+<Steps>
+1. **Cloner le Dépôt Monorepo**
+   ```bash
+   git clone <votre-repo-url>
+   cd nvbes
+   ```
+
+2. **Installer les Dépendances Workspace**
+   ```bash
+   pnpm install
+   ```
+
+3. **Configurer l'Environnement Local**
+   Initialisez votre fichier `.env` local :
+   ```bash
+   pnpm env:sync
+   pnpm env:check
+   ```
+
+4. **Démarrer les Conteneurs Docker (Postgres & Redis)**
+   ```bash
+   pnpm dev:infra
+   ```
+
+5. **Exécuter les Migrations de Base de Données**
+   ```bash
+   pnpm db:migrate
+   ```
+
+6. **Lancer les Services en Mode Développement**
+   <Tabs>
+     <TabItem label="Tous les Runtimes">
+   ```bash
+   pnpm dev
+   ```
+     </TabItem>
+     <TabItem label="Services Rust Uniquement">
+   ```bash
+   pnpm dev:api
+   ```
+     </TabItem>
+     <TabItem label="Frontends Web Uniquement">
+   ```bash
+   pnpm dev:web
+   ```
+     </TabItem>
+     <TabItem label="Documentation Locale">
+   ```bash
+   pnpm dev:docs
+   ```
+     </TabItem>
+   </Tabs>
+</Steps>
+
+---
+
+## 3. Configuration des Variables d'Environnement
+
+<Aside type="note" title="Fichier .env de référence">
+  Voici les variables minimales pour lancer les services en développement local :
+</Aside>
+
+```env
+# Environnement général
+ENV=development
+LOG_LEVEL=debug
+
+# Bases de données locales (Docker)
+DATABASE_URL=postgres://nvbes:nvbes_dev_pwd@127.0.0.1:5432/nvbes_monorepo
+REDIS_URL=redis://127.0.0.1:6379
+
+# Ports des microservices Axum
+GATEWAY_PORT=8080
+IDENTITY_SERVICE_PORT=8081
+CLOUD_SERVICE_PORT=8082
+BILLING_SERVICE_PORT=8083
+
+# Clés de développement locales
+JWT_SIGNING_KEY=secret_key_dev_local_nvbes_32_bytes_long
+STRIPE_SECRET_KEY=sk_test_mock_nvbes_stripe_key
+```
