@@ -41,7 +41,48 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
+  ci-test-gate:
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/container-release.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+          components: rustfmt, clippy
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Format check
+        run: pnpm format:check
+      - name: Structure check
+        run: pnpm check:structure
+      - name: Nx boundaries check
+        run: pnpm check:nx-boundaries
+      - name: Pre-build: Contracts & Codegen check
+        run: pnpm check:contracts && pnpm check:codegen
+      - name: Pre-build: Linting
+        run: pnpm lint:web
+      - name: Pre-build: Unit tests
+        run: pnpm test:unit
+
   detect-affected:
+    needs: [ci-test-gate]
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     outputs:
@@ -55,9 +96,6 @@ jobs:
         run: >-
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/container-release.yml
-      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
-        with:
-          toolchain: 1.91.1
       - name: Select one application or detect affected applications
         id: affected
         env:
@@ -79,7 +117,7 @@ jobs:
           echo "rust=$(jq -c '.rust' <<<"$affected")" >> "$GITHUB_OUTPUT"
 
   build-scan-sign:
-    needs: detect-affected
+    needs: [ci-test-gate, detect-affected]
     if: needs.detect-affected.outputs.rust != '[]'
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 90
