@@ -18,6 +18,8 @@ jspm_packages/
 
 dist/
 coverage/
+.astro/
+apps/docs/.astro/
 
 target/
 vendor/*

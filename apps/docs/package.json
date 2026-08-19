@@ -1,0 +1,29 @@
+{
+  "name": "@nvbes/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "check": "node ../../tools/doc-system/validate-docs.mjs"
+  },
+  "dependencies": {
+    "@astrojs/react": "^6.0.3",
+    "@astrojs/starlight": "^0.32.5",
+    "@astrojs/starlight-tailwind": "^3.0.1",
+    "astro": "^5.4.2",
+    "lucide-react": "^1.32.0",
+    "mermaid": "^11.16.1",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwindcss": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "catalog:"
+  }
+}

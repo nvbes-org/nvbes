@@ -1,0 +1,57 @@
+/* ==========================================================================
+   Starlight Custom Theme - Clean, High Contrast & Professional
+   ========================================================================== */
+
+:root {
+  /* Accent Colors - Light Mode */
+  --sl-color-accent-low: #e0f2fe;
+  --sl-color-accent: #0284c7;
+  --sl-color-accent-high: #0369a1;
+  --sl-content-width: 60rem;
+}
+
+:root[data-theme='dark'] {
+  /* Accent Colors - Dark Mode */
+  --sl-color-accent-low: #0c4a6e;
+  --sl-color-accent: #38bdf8;
+  --sl-color-accent-high: #bae6fd;
+}
+
+/* Subtle code block polish */
+.expressive-code {
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+}
+
+/* Tables refinement */
+.sl-markdown-content table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+}
+
+.sl-markdown-content table th {
+  background-color: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border-bottom: 2px solid var(--sl-color-hairline);
+}
+
+.sl-markdown-content table td {
+  padding: 0.6rem 1rem;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+/* Mermaid Container Styling */
+.mermaid-card {
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  border: 1px solid var(--sl-color-hairline);
+  background-color: var(--sl-color-gray-6);
+  padding: 1rem;
+  overflow-x: auto;
+}

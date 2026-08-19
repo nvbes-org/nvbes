@@ -1,0 +1,175 @@
+---
+title: Explorateur d'API & Contrats REST
+description: Répertoire interactif des endpoints, contrats OpenAPI et exemples multi-langages (cURL, Rust, TypeScript).
+---
+
+import { Tabs, TabItem, Card, CardGrid, Badge, Aside } from '@astrojs/starlight/components';
+
+## 1. Endpoints & Contrats Principaux
+
+Explorez les requêtes types pour interagir avec les microservices du monorepo :
+
+### Authentification & Sessions (`identity-service`)
+
+<Badge text="POST" variant="tip" /> `/api/v1/auth/login`
+<Badge text="Public" variant="note" />
+<Badge text="DPoP Requis" variant="caution" />
+
+Authentification utilisateur par identifiants (hachage Argon2id) ou clé d'accès WebAuthn.
+
+<Tabs>
+  <TabItem label="cURL">
+```bash
+curl -X POST "https://api.nvbes.internal/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "email": "alex@nvbes.internal",
+    "password": "your_secure_password"
+  }'
+```
+  </TabItem>
+  <TabItem label="TypeScript (SDK)">
+```typescript
+import { createIdentityClient } from '@nvbes/identity-client';
+
+const client = createIdentityClient({ baseUrl: 'https://api.nvbes.internal' });
+const session = await client.auth.login({
+  email: 'alex@nvbes.internal',
+  password: 'your_secure_password',
+});
+
+console.log('Utilisateur authentifié:', session.user_id);
+```
+  </TabItem>
+  <TabItem label="Rust (SDK)">
+```rust
+use identity_sdk_backend::IdentityClient;
+
+let client = IdentityClient::new("https://api.nvbes.internal");
+let session = client.login("alex@nvbes.internal", "your_secure_password").await?;
+println!("Session active: {:?}", session.session_id);
+```
+  </TabItem>
+  <TabItem label="Réponse 200 OK">
+```json
+{
+  "status": "authenticated",
+  "user_id": "usr_94a28f110c",
+  "session_expires_at": "2026-08-20T12:00:00Z"
+}
+```
+  </TabItem>
+</Tabs>
+
+---
+
+### Stockage & Tickets d'Upload S3 (`cloud-service`)
+
+<Badge text="POST" variant="tip" /> `/api/v1/files/upload-ticket`
+<Badge text="Bearer DPoP" variant="note" />
+<Badge text="Scope: drive:write" variant="success" />
+
+Demande de ticket d'upload pré-signé S3 avec vérification atomique de quota disponible.
+
+<Tabs>
+  <TabItem label="cURL">
+```bash
+curl -X POST "https://api.nvbes.internal/api/v1/files/upload-ticket" \
+  -H "Authorization: Bearer <DPOP_ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filename": "q3-financial-report.pdf",
+    "byte_size": 14502000,
+    "mime_type": "application/pdf"
+  }'
+```
+  </TabItem>
+  <TabItem label="TypeScript">
+```typescript
+import { createDriveClient } from '@nvbes/sdk-drive';
+
+const drive = createDriveClient({ token: '<DPOP_TOKEN>' });
+const ticket = await drive.files.createUploadTicket({
+  filename: 'q3-financial-report.pdf',
+  byteSize: 14502000,
+  mimeType: 'application/pdf',
+});
+
+// Upload direct vers le bucket S3
+await fetch(ticket.presigned_url, {
+  method: 'PUT',
+  body: fileBlob,
+});
+```
+  </TabItem>
+  <TabItem label="Réponse 200 OK">
+```json
+{
+  "ticket_id": "tkt_84f91a02",
+  "presigned_url": "https://s3.fr-par.scw.cloud/nvbes-vault/uploads/tkt_84f91a02",
+  "expires_in": 300
+}
+```
+  </TabItem>
+</Tabs>
+
+<Aside type="caution" title="Garantie de Sécurité">
+  Aucun flux binaire ne transite directement par l'API `cloud-service`. Les fichiers sont transférés de manière chiffrée directement vers le stockage objet S3 via les URLs pré-signées éphémères.
+</Aside>
+
+---
+
+### Webhooks Stripe & Abonnements (`billing-service`)
+
+<Badge text="POST" variant="tip" /> `/webhooks/stripe`
+<Badge text="HMAC Stripe-Signature" variant="danger" />
+
+Réception des événements de facturation et ajustement asynchrone des droits du workspace.
+
+<Tabs>
+  <TabItem label="cURL (Stripe CLI)">
+```bash
+stripe trigger customer.subscription.updated \
+  --override customer.subscription:status=active
+```
+  </TabItem>
+  <TabItem label="Payload d'Événement">
+```json
+{
+  "id": "evt_1P83x94aBcz",
+  "type": "customer.subscription.updated",
+  "data": {
+    "object": {
+      "id": "sub_9941a80",
+      "customer": "cus_4821a",
+      "status": "active"
+    }
+  }
+}
+```
+  </TabItem>
+</Tabs>
+
+---
+
+## 2. Spécifications OpenAPI Disponibles
+
+<CardGrid>
+  <Card title="Identity & Auth API" icon="open-book">
+    Spécification complète des routes d'authentification, sessions et flux OAuth2.
+    [Accéder à la référence API](/api/identity-service/).
+  </Card>
+  <Card title="Cloud & Storage API" icon="document">
+    Opérations de gestion de fichiers, quotas et métadonnées.
+    [Accéder à la référence API](/api/cloud-service/).
+  </Card>
+  <Card title="Developer API" icon="laptop">
+    Gestion des applications tierces, clés API et webhooks.
+    [Accéder à la référence API](/api/developer-service/).
+  </Card>
+  <Card title="Backoffice API" icon="setting">
+    Administration interne, gestion des rôles et audit trail.
+    [Accéder à la référence API](/api/backoffice-service/).
+  </Card>
+</CardGrid>
