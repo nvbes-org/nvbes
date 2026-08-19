@@ -5,6 +5,10 @@ use super::principal_has_privileged_role;
 #[tokio::test]
 async fn privileged_workspace_role_protects_last_passkey_through_cloud_boundary() {
     let db = crate::test_support::shared_test_pool();
+    if !crate::test_support::is_test_database_available(&db).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     crate::test_support::ensure_test_database(&db).await;
     let _guard = crate::test_support::test_database_lock().lock().await;
     crate::test_support::cloud_mock::ensure_cloud_mock(&db);

@@ -13,7 +13,7 @@ fn test_pool() -> PgPool {
     crate::test_support::shared_test_pool()
 }
 
-async fn test_redis_pool() -> nvbes_redis::RedisPool {
+async fn test_redis_pool() -> Option<nvbes_redis::RedisPool> {
     crate::test_support::test_redis_pool().await
 }
 
@@ -162,7 +162,14 @@ async fn cleanup(
 #[tokio::test]
 async fn reset_password_updates_credentials_and_revokes_existing_sessions() {
     let pool = test_pool();
-    let redis = test_redis_pool().await;
+    let Some(redis) = test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
+    if !crate::test_support::is_test_database_available(&pool).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     let (tenant_id, principal_id, session_id, reset_token) = seed_subject(&pool, &redis).await;
     let config = AppConfig {
         auth_password_pepper: Some("test-password-pepper".to_string()),
@@ -216,7 +223,14 @@ async fn reset_password_updates_credentials_and_revokes_existing_sessions() {
 #[tokio::test]
 async fn reset_password_rejects_reused_token() {
     let pool = test_pool();
-    let redis = test_redis_pool().await;
+    let Some(redis) = test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
+    if !crate::test_support::is_test_database_available(&pool).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     let (tenant_id, principal_id, _, reset_token) = seed_subject(&pool, &redis).await;
 
     password_reset::take_password_reset_token(&redis, &token_hash(&reset_token))

@@ -1,13 +1,12 @@
 use super::{consume_pushed_parameters, resolve_pushed_parameters};
 use uuid::Uuid;
 
-async fn test_redis_pool() -> nvbes_redis::RedisPool {
-    crate::test_support::test_redis_pool().await
-}
-
 #[tokio::test]
 async fn stores_and_resolves_pushed_authorization_request_via_redis() {
-    let redis = test_redis_pool().await;
+    let Some(redis) = crate::test_support::test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
     let request_uri = format!(
         "urn:ietf:params:oauth:request_uri:gxpar_{}",
         Uuid::new_v4().simple()

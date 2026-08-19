@@ -16,8 +16,12 @@ struct EmailFixture {
 }
 
 impl EmailFixture {
-    async fn seed() -> Self {
+    async fn seed() -> Option<Self> {
         let db = crate::test_support::shared_test_pool();
+        if !crate::test_support::is_test_database_available(&db).await {
+            eprintln!("skipping email fixture: database not available");
+            return None;
+        }
         crate::test_support::ensure_test_database(&db).await;
         let tenant_id = Uuid::new_v4();
         let principal_id = Uuid::new_v4();
@@ -58,13 +62,13 @@ impl EmailFixture {
         .await
         .expect("primary email");
 
-        Self {
+        Some(Self {
             db,
             tenant_id,
             principal_id,
             primary_id,
             primary_email,
-        }
+        })
     }
 
     async fn insert_secondary(&self, email: &str) -> crate::domains::auth::types::EmailAddressView {
@@ -87,7 +91,9 @@ impl EmailFixture {
 
 #[tokio::test]
 async fn email_listing_normalizes_secondary_addresses_and_honors_keyset_cursor() {
-    let fixture = EmailFixture::seed().await;
+    let Some(fixture) = EmailFixture::seed().await else {
+        return;
+    };
     let secondary = fixture
         .insert_secondary("  Secondary.User@Example.TEST  ")
         .await;
@@ -120,7 +126,9 @@ async fn email_listing_normalizes_secondary_addresses_and_honors_keyset_cursor()
 
 #[tokio::test]
 async fn primary_promotion_requires_verification_and_preserves_previous_primary() {
-    let fixture = EmailFixture::seed().await;
+    let Some(fixture) = EmailFixture::seed().await else {
+        return;
+    };
     let secondary = fixture.insert_secondary("next@example.test").await;
 
     let mut tx = fixture.db.begin().await.expect("transaction");
@@ -163,7 +171,9 @@ async fn primary_promotion_requires_verification_and_preserves_previous_primary(
 
 #[tokio::test]
 async fn promotion_enforces_minimum_age_and_primary_cannot_be_deleted() {
-    let fixture = EmailFixture::seed().await;
+    let Some(fixture) = EmailFixture::seed().await else {
+        return;
+    };
     let secondary = fixture.insert_secondary("young@example.test").await;
     mark_secondary_verified(&fixture.db, fixture.principal_id, secondary.id)
         .await
@@ -187,7 +197,9 @@ async fn promotion_enforces_minimum_age_and_primary_cannot_be_deleted() {
 
 #[tokio::test]
 async fn deleting_secondary_email_revokes_its_email_factor() {
-    let fixture = EmailFixture::seed().await;
+    let Some(fixture) = EmailFixture::seed().await else {
+        return;
+    };
     let secondary = fixture.insert_secondary("factor@example.test").await;
     sqlx::query(
         "INSERT INTO mfa_factors (principal_id, factor_type, status, factor_data) VALUES ($1, 'email', 'active', jsonb_build_object('email_id', $2::text))",
@@ -218,7 +230,9 @@ async fn deleting_secondary_email_revokes_its_email_factor() {
 
 #[tokio::test]
 async fn unverified_primary_change_updates_identity_and_rejects_invalid_email() {
-    let fixture = EmailFixture::seed().await;
+    let Some(fixture) = EmailFixture::seed().await else {
+        return;
+    };
     let mut tx = fixture.db.begin().await.expect("transaction");
     assert!(
         change_unverified_primary_email(&mut tx, fixture.principal_id, "not-an-email")

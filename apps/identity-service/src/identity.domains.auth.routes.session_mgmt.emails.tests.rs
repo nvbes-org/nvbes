@@ -62,7 +62,10 @@ async fn store_session(
 
 #[tokio::test]
 async fn email_mutation_rejects_aal2_password_session() {
-    let redis = crate::test_support::test_redis_pool().await;
+    let Some(redis) = crate::test_support::test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
     let subject = TestStepUpSubject {
         principal_id: Uuid::new_v4(),
         session_id: Uuid::new_v4(),
@@ -88,7 +91,10 @@ async fn email_mutation_rejects_aal2_password_session() {
 
 #[tokio::test]
 async fn email_mutation_rejects_aal2_totp_session() {
-    let redis = crate::test_support::test_redis_pool().await;
+    let Some(redis) = crate::test_support::test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
     let subject = TestStepUpSubject {
         principal_id: Uuid::new_v4(),
         session_id: Uuid::new_v4(),
@@ -114,7 +120,10 @@ async fn email_mutation_rejects_aal2_totp_session() {
 
 #[tokio::test]
 async fn email_mutation_accepts_recent_webauthn_session() {
-    let redis = crate::test_support::test_redis_pool().await;
+    let Some(redis) = crate::test_support::test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
     let subject = TestStepUpSubject {
         principal_id: Uuid::new_v4(),
         session_id: Uuid::new_v4(),
@@ -138,7 +147,10 @@ async fn email_mutation_accepts_recent_webauthn_session() {
 
 #[tokio::test]
 async fn email_mutation_rejects_expired_webauthn_session() {
-    let redis = crate::test_support::test_redis_pool().await;
+    let Some(redis) = crate::test_support::test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
     let subject = TestStepUpSubject {
         principal_id: Uuid::new_v4(),
         session_id: Uuid::new_v4(),
