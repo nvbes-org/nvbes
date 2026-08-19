@@ -3,9 +3,7 @@
   "agent": "antigravity",
   "instructions": [
     "AGENTS.md",
-    ".cursor/rules/core-workflow.mdc",
-    ".cursor/rules/rust-backend.mdc",
-    ".cursor/rules/typescript-react.mdc",
+    ".codex/instructions.md",
     ".agents/skills/fix-errors/SKILL.md",
     ".agents/skills/frontend-design/SKILL.md",
     ".agents/skills/nx-workspace/SKILL.md",

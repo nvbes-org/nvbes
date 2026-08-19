@@ -39,8 +39,6 @@ Commandes utiles:
 ## Conventions pour agents et LLMs
 
 - Lire [AGENTS.md](AGENTS.md) avant toute modification.
-- Les règles complémentaires pour Copilot sont dans [.github/copilot-instructions.md](.github/copilot-instructions.md).
-- Les règles Cursor sont dans [.cursor/README.md](.cursor/README.md) et [.cursor/rules/core-workflow.mdc](.cursor/rules/core-workflow.mdc).
 - Les fichiers Rust doivent rester plats, en dot-notation, et sous les seuils de taille définis dans [AGENTS.md](AGENTS.md).
 
 ## Demarrage local
@@ -107,16 +105,16 @@ Conventions de scripts:
 
 ## Documentation
 
-- [PRD V1](docs/prd/nvbes-drive-v1.md)
+- [PRD V1](docs/product/nvbes-drive-v1-prd.md)
 - [Monorepo agentic refactor workplan](docs/blueprint/nvbes-monorepo-agentic-refactor.work.md)
 - [Nx workspace and dependency graph](docs/architecture/nx-workspace.md)
 - [Architecture technique](docs/architecture/technical-architecture.md)
 - [Architecture Identity](docs/architecture/identity-product.md)
 - [Infrastructure, Network et DevOps](docs/architecture/infrastructure-devops.md)
-- [Modele de donnees](docs/domain/data-model.md)
+- [Modèle de données](docs/architecture/data-model.md)
 - [Contrats API V1](docs/api/v1-contracts.md)
 - [API Publique V1](docs/api/public-api-v1.md)
-- [Beta readiness](docs/beta/beta-readiness.md)
+- [Beta readiness](docs/product/beta-readiness.md)
 - [Runbooks incidents](docs/operations/incident-runbooks.md)
 - [Roadmap](docs/roadmap.md)
 
@@ -124,5 +122,4 @@ Conventions de scripts:
 
 - Les decisions structurantes sont documentees dans `docs/adr/`.
 - Chaque document produit ou architecture doit distinguer les decisions acceptees des hypotheses.
-- Les changements de pricing, billing, securite, infra et conformite doivent etre relus avant implementation.
-- Les changements qui affectent les scripts, la structure du repo ou les conventions d’agent doivent mettre à jour `AGENTS.md` et, si besoin, `.github/copilot-instructions.md` et les règles Cursor.
+- Les changements qui affectent les scripts, la structure du repo ou les conventions d’agent doivent mettre à jour `AGENTS.md` et `.codex/instructions.md`.

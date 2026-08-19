@@ -9,7 +9,6 @@ Start here when working on agent behavior for nvbes.
 | Memory | `docs/agent/agent.memory.md` |
 | Skills | `docs/agent/agent.skills.md` |
 | Codex | `docs/agent/agent.codex.md` |
-| ChatGPT | `docs/agent/agent.chatgpt.md` |
 | Workflows | `docs/agent/agent.workflows.md` |
 
 ## Maintenance Commands

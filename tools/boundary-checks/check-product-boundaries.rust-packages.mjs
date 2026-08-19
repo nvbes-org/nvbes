@@ -31,18 +31,15 @@ function scopeForPath(path) {
 	if (
 		normalized.startsWith("apps/cloud-") ||
 		normalized.startsWith("libs/rust/cloud/") ||
-		normalized.startsWith("libs/rust/adapters-cloud/") ||
+		normalized.startsWith("libs/rust/adapters/") ||
 		normalized.startsWith("libs/ts/cloud-ui/")
 	) {
-		return "cloud";
-	}
-	if (normalized.startsWith("libs/rust/adapters-oss/")) {
 		return "adapter";
 	}
 	if (normalized.startsWith("apps/")) {
 		return "app";
 	}
-	return "oss";
+	return "platform";
 }
 
 function isRustServiceAppPackage(pkg) {

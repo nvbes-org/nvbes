@@ -37,8 +37,9 @@ workflows:
 routes:
   rust_backend:
     applies_to:
-      - apps/*-api
+      - apps/*-service*
       - apps/*-worker
+      - apps/gateway-cloud
       - libs/rust
     profile: rust-api
     skills:
@@ -62,7 +63,8 @@ routes:
       - pnpm check:web
   database:
     applies_to:
-      - apps/*-api/migrations
+      - apps/*-service*/migrations
+      - apps/*-worker/migrations
       - libs/rust/*/src/*db*
     profile: database
     skills:
