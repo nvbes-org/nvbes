@@ -69,8 +69,9 @@ pub async fn app_state() -> Option<crate::app::AppState> {
     let config = nvbes_core::config::AppConfig {
         app_name: "identity-worker-test".to_string(),
         environment: "development".to_string(),
-        database_url: std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes_identity_test".to_string()),
+        database_url: std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgres://postgres:postgres@localhost:5432/nvbes_identity_test".to_string()
+        }),
         redis_url: std::env::var("NVBES_REDIS_URL")
             .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         redis_max_connections: 4,
