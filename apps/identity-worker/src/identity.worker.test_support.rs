@@ -18,13 +18,16 @@ pub async fn database_pool() -> Option<PgPool> {
         .unwrap_or_else(|_| {
             "postgres://postgres:postgres@localhost:5432/nvbes_identity_test".to_string()
         });
-    let pool = PgPoolOptions::new()
-        .max_connections(4)
-        .acquire_timeout(std::time::Duration::from_millis(500))
-        .connect_timeout(std::time::Duration::from_millis(500))
-        .connect(&database_url)
-        .await
-        .ok()?;
+    let pool = tokio::time::timeout(
+        std::time::Duration::from_millis(500),
+        PgPoolOptions::new()
+            .max_connections(4)
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .connect(&database_url),
+    )
+    .await
+    .ok()
+    .and_then(|r| r.ok())?;
     if sqlx::migrate!("../identity-service/migrations")
         .run(&pool)
         .await

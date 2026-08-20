@@ -33,7 +33,9 @@ fn identity_worker_retries_only_transient_owned_jobs() {
 
 #[tokio::test]
 async fn queue_wrappers_cover_success_retry_dead_letter_and_lease_renewal() {
-    let redis = redis_pool().await;
+    let Some(redis) = redis_pool().await else {
+        return;
+    };
     let queue = unique_queue("lifecycle");
 
     let success_id = enqueue(&redis, &queue, 3).await;
@@ -93,7 +95,9 @@ async fn queue_wrappers_cover_success_retry_dead_letter_and_lease_renewal() {
 
 #[tokio::test]
 async fn stale_job_wrapper_recovers_a_claim_whose_lease_expired() {
-    let redis = redis_pool().await;
+    let Some(redis) = redis_pool().await else {
+        return;
+    };
     let queue = unique_queue("stale");
     let id = enqueue(&redis, &queue, 3).await;
     let mut job = claim_next_job(&redis, &[&queue])
