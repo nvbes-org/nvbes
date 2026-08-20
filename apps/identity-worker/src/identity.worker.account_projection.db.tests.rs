@@ -10,7 +10,9 @@ const AGGREGATE_TYPE: &str = "identity-worker-test";
 
 #[tokio::test]
 async fn claim_selects_only_the_oldest_dispatchable_registration() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     cleanup(&db).await;
     let oldest = insert_event(&db, EVENT_TYPE, -30, 0, None, None).await;
     let newer = insert_event(&db, EVENT_TYPE, -10, 0, None, None).await;
@@ -51,7 +53,9 @@ async fn claim_selects_only_the_oldest_dispatchable_registration() {
 
 #[tokio::test]
 async fn claim_recovers_stale_claims_but_not_active_leases() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     cleanup(&db).await;
     let stale = insert_event(&db, EVENT_TYPE, -20, 1, None, None).await;
     let active = insert_event(&db, EVENT_TYPE, -10, 1, None, None).await;
@@ -80,7 +84,9 @@ async fn claim_recovers_stale_claims_but_not_active_leases() {
 
 #[tokio::test]
 async fn complete_deletes_exactly_one_claimed_event() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     cleanup(&db).await;
     let event_id = insert_event(&db, EVENT_TYPE, 0, 0, None, None).await;
 
@@ -95,7 +101,9 @@ async fn complete_deletes_exactly_one_claimed_event() {
 
 #[tokio::test]
 async fn fail_retries_transient_errors_and_dead_letters_permanent_or_exhausted_events() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     cleanup(&db).await;
     let transient = insert_event(&db, EVENT_TYPE, 0, 1, None, None).await;
     let permanent = insert_event(&db, EVENT_TYPE, 1, 1, None, None).await;
@@ -126,7 +134,9 @@ async fn fail_retries_transient_errors_and_dead_letters_permanent_or_exhausted_e
 
 #[tokio::test]
 async fn status_reports_pending_and_dead_letter_depth_and_age() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     cleanup(&db).await;
     let pending = insert_event(&db, EVENT_TYPE, -120, 0, None, None).await;
     let dead = insert_event(

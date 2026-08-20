@@ -38,7 +38,9 @@ fn lease_heartbeat_precedes_stale_recovery_window() {
 
 #[tokio::test]
 async fn claim_available_job_returns_none_for_an_empty_owned_queue() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     cleanup_queue(&state.redis).await;
     assert!(
         claim_available_job(&state, &state.observability)
@@ -50,7 +52,9 @@ async fn claim_available_job_returns_none_for_an_empty_owned_queue() {
 
 #[tokio::test]
 async fn processor_completes_a_valid_email_job_end_to_end() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     cleanup_queue(&state.redis).await;
     let id = enqueue(
         &state.redis,
@@ -82,7 +86,9 @@ async fn processor_completes_a_valid_email_job_end_to_end() {
 
 #[tokio::test]
 async fn processor_dead_letters_invalid_and_unknown_jobs() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     cleanup_queue(&state.redis).await;
     for (job_type, payload) in [
         (JOB_EMAIL_SUBMIT, json!({"invalid": true})),
@@ -116,7 +122,9 @@ async fn processor_dead_letters_invalid_and_unknown_jobs() {
 
 #[tokio::test]
 async fn processor_schedules_retry_for_transient_email_service_failures() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     cleanup_queue(&state.redis).await;
     let id = enqueue(
         &state.redis,

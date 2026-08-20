@@ -48,7 +48,9 @@ fn maxmind_configuration_preserves_explicit_consent_and_credentials() {
 
 #[tokio::test]
 async fn run_if_due_is_a_no_op_before_the_hourly_boundary() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     let mut last_run = Instant::now();
     run_if_due(&state, &mut last_run).await.expect("not due");
     assert!(last_run.elapsed() < Duration::from_secs(1));
@@ -56,7 +58,9 @@ async fn run_if_due_is_a_no_op_before_the_hourly_boundary() {
 
 #[tokio::test]
 async fn due_housekeeping_runs_database_maintenance_and_all_fresh_importers() {
-    let mut state = app_state().await;
+    let Some(mut state) = app_state().await else {
+        return;
+    };
     state.config.maxmind_geolite_database_enabled = true;
     state.config.maxmind_account_id = Some("test-account".to_string());
     state.config.maxmind_license_key = Some("test-license".to_string());
@@ -74,7 +78,9 @@ async fn due_housekeeping_runs_database_maintenance_and_all_fresh_importers() {
 
 #[tokio::test]
 async fn enabled_maxmind_import_fails_closed_without_credentials() {
-    let mut state = app_state().await;
+    let Some(mut state) = app_state().await else {
+        return;
+    };
     state.config.maxmind_geolite_database_enabled = true;
     state.config.maxmind_account_id = None;
     state.config.maxmind_license_key = None;
