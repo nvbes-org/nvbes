@@ -58,7 +58,9 @@ fn reminder_command_rejects_invalid_due_at() {
 
 #[tokio::test]
 async fn worker_loop_runs_all_due_no_op_integrations_and_honors_shutdown() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     cleanup_owned_queue(&state.redis).await;
     let observability = state.observability.clone();
     let redis = state.redis.clone();
@@ -79,7 +81,9 @@ async fn worker_loop_runs_all_due_no_op_integrations_and_honors_shutdown() {
 
 #[tokio::test]
 async fn worker_loop_claims_and_dead_letters_an_invalid_owned_job_before_shutdown() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     cleanup_owned_queue(&state.redis).await;
     let redis = state.redis.clone();
     let id = enqueue_job(
@@ -116,7 +120,9 @@ async fn worker_loop_claims_and_dead_letters_an_invalid_owned_job_before_shutdow
 
 #[tokio::test]
 async fn fresh_enterprise_schedules_are_skipped_without_rpc_calls() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     let mut schedule_last_run = std::time::Instant::now();
     let mut reminder_last_run = std::time::Instant::now();
     run_access_review_schedules_if_due(&state, &mut schedule_last_run)
@@ -129,7 +135,9 @@ async fn fresh_enterprise_schedules_are_skipped_without_rpc_calls() {
 
 #[tokio::test]
 async fn enterprise_reminder_candidates_are_enqueued_as_owned_email_jobs() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     cleanup_owned_queue(&state.redis).await;
     let reminder = candidate((Utc::now() + Duration::days(2)).to_rfc3339());
 

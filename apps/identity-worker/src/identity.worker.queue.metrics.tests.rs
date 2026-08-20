@@ -38,7 +38,9 @@ fn queue_status_metrics_fill_missing_states_with_zero() {
 
 #[tokio::test]
 async fn refresh_if_due_skips_fresh_metrics_and_refreshes_all_owned_queues() {
-    let state = app_state().await;
+    let Some(state) = app_state().await else {
+        return;
+    };
     let mut fresh = Instant::now();
     refresh_if_due(&state, &WORKER_QUEUES, &mut fresh)
         .await

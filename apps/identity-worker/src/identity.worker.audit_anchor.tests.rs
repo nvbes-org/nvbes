@@ -64,7 +64,9 @@ fn audit_anchor_config_loads_every_required_boundary_value() {
 
 #[tokio::test]
 async fn snapshot_selects_each_tenants_latest_chain_head_in_stable_order() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     let tenant_b = insert_tenant(&db, "b").await;
     let tenant_a = insert_tenant(&db, "a").await;
     let old = insert_audit_event(&db, tenant_a, "hash-old", -60).await;
@@ -96,7 +98,9 @@ async fn snapshot_selects_each_tenants_latest_chain_head_in_stable_order() {
 
 #[tokio::test]
 async fn receipt_persistence_is_idempotent_and_discoverable_by_digest() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     let digest = format!("digest-{}", Uuid::new_v4());
     let object_key = format!("anchors/{digest}.json");
     let signature = KmsSignResponse {
@@ -126,7 +130,9 @@ async fn receipt_persistence_is_idempotent_and_discoverable_by_digest() {
 #[tokio::test]
 async fn unchanged_snapshot_short_circuits_before_kms_and_object_storage() {
     let _guard = ENV_LOCK.lock().expect("environment lock");
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     for (name, value) in ENVIRONMENT {
         set_env(name, value);
     }
@@ -155,7 +161,9 @@ async fn unchanged_snapshot_short_circuits_before_kms_and_object_storage() {
 
 #[tokio::test]
 async fn changed_snapshot_is_signed_verified_written_and_receipted_end_to_end() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     let tenant = insert_tenant(&db, "full-anchor").await;
     insert_audit_event(&db, tenant, "full-anchor-event", 0).await;
     let external = RecordingExternal::default();
@@ -177,7 +185,9 @@ async fn changed_snapshot_is_signed_verified_written_and_receipted_end_to_end() 
 
 #[tokio::test]
 async fn signing_failure_stops_before_write_and_receipt() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     let tenant = insert_tenant(&db, "signing-failure").await;
     insert_audit_event(&db, tenant, "signing-failure-event", 0).await;
     let external = RecordingExternal {

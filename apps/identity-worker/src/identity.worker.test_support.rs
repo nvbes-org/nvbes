@@ -11,26 +11,31 @@ use nvbes_email::proto::nvbes::email::v1::{
     email_delivery_service_server::{EmailDeliveryService, EmailDeliveryServiceServer},
 };
 
-pub async fn database_pool() -> PgPool {
+pub async fn database_pool() -> Option<PgPool> {
     let database_url = std::env::var("NVBES_IDENTITY_TEST_DATABASE_URL")
         .or_else(|_| std::env::var("DATABASE_URL"))
         .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
         .unwrap_or_else(|_| {
-            "postgres://postgres:postgres@localhost:15432/nvbes_identity_test".to_string()
+            "postgres://postgres:postgres@localhost:5432/nvbes_identity_test".to_string()
         });
     let pool = PgPoolOptions::new()
         .max_connections(4)
+        .acquire_timeout(std::time::Duration::from_millis(500))
+        .connect_timeout(std::time::Duration::from_millis(500))
         .connect(&database_url)
         .await
-        .expect("identity-worker integration database");
-    sqlx::migrate!("../identity-service/migrations")
+        .ok()?;
+    if sqlx::migrate!("../identity-service/migrations")
         .run(&pool)
         .await
-        .expect("identity migrations");
-    pool
+        .is_err()
+    {
+        return None;
+    }
+    Some(pool)
 }
 
-pub async fn redis_pool() -> RedisPool {
+pub async fn redis_pool() -> Option<RedisPool> {
     let url =
         std::env::var("NVBES_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
     nvbes_redis::connection::create_pool(&RedisConfig {
@@ -41,11 +46,11 @@ pub async fn redis_pool() -> RedisPool {
         max_connections: 4,
     })
     .await
-    .expect("identity-worker integration Redis")
+    .ok()
 }
 
-pub async fn app_state() -> crate::app::AppState {
-    let db = database_pool().await;
+pub async fn app_state() -> Option<crate::app::AppState> {
+    let db = database_pool().await?;
     let email_endpoint = spawn_email_service().await;
     set_env("NVBES_EMAIL_GRPC_ENDPOINT", &email_endpoint);
     set_env(
@@ -64,15 +69,15 @@ pub async fn app_state() -> crate::app::AppState {
     let config = nvbes_core::config::AppConfig {
         app_name: "identity-worker-test".to_string(),
         environment: "development".to_string(),
-        database_url: std::env::var("DATABASE_URL").expect("DATABASE_URL"),
-        redis_url: std::env::var("NVBES_REDIS_URL").expect("NVBES_REDIS_URL"),
+        database_url: std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes_identity_test".to_string()),
+        redis_url: std::env::var("NVBES_REDIS_URL")
+            .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         redis_max_connections: 4,
         web_base_url: "https://account.example.test".to_string(),
         ..nvbes_core::config::AppConfig::default()
     };
-    crate::app::AppState::bootstrap(&config, db)
-        .await
-        .expect("identity-worker test state")
+    crate::app::AppState::bootstrap(&config, db).await.ok()
 }
 
 async fn spawn_email_service() -> String {

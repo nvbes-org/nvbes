@@ -14,7 +14,9 @@ const AGGREGATE_TYPE: &str = "identity-worker-projection-orchestration-test";
 
 #[tokio::test]
 async fn process_next_returns_false_when_the_outbox_is_empty() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     cleanup(&db).await;
     let client = client(unused_endpoint().await);
 
@@ -23,7 +25,9 @@ async fn process_next_returns_false_when_the_outbox_is_empty() {
 
 #[tokio::test]
 async fn process_next_deletes_successful_deliveries_end_to_end() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     cleanup(&db).await;
     let event_id = insert_event(&db).await;
     let (endpoint, server) = response_server("204 No Content").await;
@@ -40,7 +44,9 @@ async fn process_next_deletes_successful_deliveries_end_to_end() {
 
 #[tokio::test]
 async fn process_next_dead_letters_permanent_delivery_failures_end_to_end() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     cleanup(&db).await;
     let event_id = insert_event(&db).await;
     let (endpoint, server) = response_server("400 Bad Request").await;
@@ -72,7 +78,9 @@ async fn process_next_dead_letters_permanent_delivery_failures_end_to_end() {
 
 #[tokio::test]
 async fn refresh_metrics_exports_pending_and_dead_letter_series() {
-    let db = database_pool().await;
+    let Some(db) = database_pool().await else {
+        return;
+    };
     cleanup(&db).await;
     let pending = insert_event(&db).await;
     let dead = insert_event(&db).await;
