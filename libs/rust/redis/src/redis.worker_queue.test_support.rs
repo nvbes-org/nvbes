@@ -192,6 +192,9 @@ mod cleanup_integration_tests {
 
     #[tokio::test]
     async fn isolated_queue_is_cleaned_when_the_scenario_panics() {
+        let Some(pool_for_spawn) = redis_pool(2).await else {
+            return;
+        };
         let outcome = tokio::spawn(with_isolated_queue(
             "paniccleanup",
             2,
@@ -205,9 +208,12 @@ mod cleanup_integration_tests {
             },
         ))
         .await;
+        drop(pool_for_spawn);
         assert!(outcome.is_err(), "the scenario panic must be propagated");
 
-        let pool = redis_pool(1).await;
+        let Some(pool) = redis_pool(1).await else {
+            return;
+        };
         let mut connection = pool.get().await.expect("verification Redis connection");
         let mut remaining = connection
             .scan_match::<_, String>(format!("{KEY_PREFIX}:worker_queue_paniccleanup_*:*"))
