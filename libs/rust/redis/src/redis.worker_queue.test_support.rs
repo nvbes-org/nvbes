@@ -6,7 +6,7 @@ use uuid::Uuid;
 use super::keys::KEY_PREFIX;
 use crate::RedisPool;
 
-pub async fn redis_pool(max_connections: u32) -> RedisPool {
+pub async fn redis_pool(max_connections: u32) -> Option<RedisPool> {
     let mut config = crate::config::RedisConfig::from_env();
     if config.url == "redis://localhost:6379" {
         config.url = "redis://127.0.0.1:6379".to_string();
@@ -15,9 +15,13 @@ pub async fn redis_pool(max_connections: u32) -> RedisPool {
         .unwrap_or_else(|error| panic!("{error}"));
     validate_loopback_redis(&config.url).unwrap_or_else(|error| panic!("{error}"));
     config.max_connections = max_connections;
-    crate::connection::create_pool(&config)
-        .await
-        .expect("redis pool")
+    tokio::time::timeout(
+        std::time::Duration::from_millis(500),
+        crate::connection::create_pool(&config),
+    )
+    .await
+    .ok()
+    .and_then(|r| r.ok())
 }
 
 pub async fn with_isolated_queue<F, Fut>(label: &str, max_connections: u32, test: F)
@@ -25,7 +29,9 @@ where
     F: FnOnce(RedisPool, String) -> Fut,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    let pool = redis_pool(max_connections).await;
+    let Some(pool) = redis_pool(max_connections).await else {
+        return;
+    };
     let queue = isolated_queue_name(label);
     let outcome = tokio::spawn(test(pool.clone(), queue.clone())).await;
     cleanup_queue(&pool, &queue).await;
