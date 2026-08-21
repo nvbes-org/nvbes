@@ -2,7 +2,7 @@ import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import devtoolsJson from 'vite-plugin-devtools-json';
-import { defineConfig, loadEnv, type Plugin } from 'vite-plus';
+import { defineConfig, loadEnv, type Plugin, type PluginOption } from 'vite-plus';
 import {
   browserIsolationHeaders,
   buildWebCsp,
@@ -19,6 +19,10 @@ function cspFor(mode: string): string {
     imgSrc: [],
     fontSrc: [],
   });
+}
+
+function pluginList(plugin: unknown): PluginOption[] {
+  return Array.isArray(plugin) ? (plugin as PluginOption[]) : [plugin as PluginOption];
 }
 
 function cspPlugin(mode: string): Plugin {
@@ -47,8 +51,8 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [
-      tailwindcss(),
-      react(),
+      ...pluginList(tailwindcss()),
+      ...pluginList(react()),
       devtoolsJson(),
       cspPlugin(mode),
       ...observabilitySourceMapPlugins({
@@ -56,7 +60,7 @@ export default defineConfig(({ command, mode }) => {
         command,
         envSources,
       }),
-    ],
+    ].filter(Boolean),
     build: {
       target: 'esnext',
       sourcemap: 'hidden',
