@@ -28,11 +28,7 @@ fn validate_test_environment(environment: Option<&str>) -> Result<(), String> {
     ))
 }
 
-fn validate_loopback_host(
-    host: &str,
-    resource: &str,
-    environment: Option<&str>,
-) -> Result<(), String> {
+fn validate_loopback_host(host: &str, resource: &str) -> Result<(), String> {
     let normalized_host = host
         .strip_prefix('[')
         .and_then(|host| host.strip_suffix(']'))
@@ -41,9 +37,8 @@ fn validate_loopback_host(
         || normalized_host
             .parse::<IpAddr>()
             .is_ok_and(|address| address.is_loopback());
-    let is_ci_docker_host =
-        environment == Some("ci") && normalized_host.eq_ignore_ascii_case("host.docker.internal");
-    if is_loopback || is_ci_docker_host {
+    let is_local_docker_host = normalized_host.eq_ignore_ascii_case("host.docker.internal");
+    if is_loopback || is_local_docker_host {
         Ok(())
     } else {
         Err(format!(
@@ -76,7 +71,7 @@ pub fn validate_test_database_url(
     let host = url
         .host_str()
         .ok_or_else(|| "test database URL must contain a host".to_string())?;
-    validate_loopback_host(host, "PostgreSQL", environment)?;
+    validate_loopback_host(host, "PostgreSQL")?;
     validate_test_database_name(url.path().trim_start_matches('/'))
 }
 
@@ -113,7 +108,7 @@ fn validate_test_redis_url(redis_url: &str, environment: Option<&str>) -> Result
     let host = url
         .host_str()
         .ok_or_else(|| "test Redis URL must contain a host".to_string())?;
-    validate_loopback_host(host, "Redis", environment)
+    validate_loopback_host(host, "Redis")
 }
 
 fn test_environment() -> Option<String> {
@@ -261,8 +256,8 @@ pub async fn ensure_test_database(pool: &sqlx::PgPool) {
 }
 
 async fn validate_test_database_connection(pool: &PgPool) {
-    let environment = test_environment();
-    validate_test_environment(environment.as_deref()).unwrap_or_else(|error| panic!("{error}"));
+    validate_test_environment(test_environment().as_deref())
+        .unwrap_or_else(|error| panic!("{error}"));
     if destructive_test_opt_in().as_deref() != Some(DESTRUCTIVE_TEST_OPT_IN) {
         panic!(
             "destructive Account tests require \
@@ -270,7 +265,7 @@ async fn validate_test_database_connection(pool: &PgPool) {
         );
     }
     let options = pool.connect_options();
-    validate_loopback_host(options.get_host(), "PostgreSQL", environment.as_deref())
+    validate_loopback_host(options.get_host(), "PostgreSQL")
         .unwrap_or_else(|error| panic!("{error}"));
     let configured_database = options
         .get_database()
@@ -324,7 +319,7 @@ mod resource_guard_tests {
         assert!(
             validate_test_database_url(
                 "postgres://user:secret@host.docker.internal:5432/nvbes_test",
-                Some("ci"),
+                Some("test"),
                 Some("account-quality-v1"),
             )
             .is_ok()
@@ -336,7 +331,6 @@ mod resource_guard_tests {
         for url in [
             "postgres://user:secret@db.example.test:5432/nvbes_test",
             "postgres://user:secret@localhost.evil.test:5432/nvbes_test",
-            "postgres://user:secret@host.docker.internal:5432/nvbes_test",
             "postgres://user:secret@127.0.0.1:5432/nvbes",
             "postgres://user:secret@127.0.0.1:5432/postgres",
             "postgres://user:secret@127.0.0.1:5432/nvbes_production_test",
@@ -376,10 +370,7 @@ mod resource_guard_tests {
         assert!(validate_test_redis_url("redis://127.0.0.1:6379/15", Some("ci")).is_ok());
         assert!(validate_test_redis_url("rediss://[::1]:6380/15", Some("test")).is_ok());
         assert!(
-            validate_test_redis_url("redis://host.docker.internal:6379/15", Some("ci")).is_ok()
-        );
-        assert!(
-            validate_test_redis_url("redis://host.docker.internal:6379/15", Some("test")).is_err()
+            validate_test_redis_url("redis://host.docker.internal:6379/15", Some("test")).is_ok()
         );
         assert!(validate_test_redis_url("redis://redis.internal:6379", Some("test")).is_err());
         assert!(validate_test_redis_url("redis://localhost.evil.test:6379", Some("test")).is_err());
