@@ -33,6 +33,7 @@ test("continuous CI isolates migration scenarios and avoids remote cache stalls"
 	assert.match(workflow, /job\.services\.redis\.ports\[6379\]/u);
 	assert.match(workflow, /name: Export test service URLs/u);
 	assert.match(workflow, /host\.docker\.internal/u);
+	assert.match(workflow, /NVBES_ENV: ci/u);
 	assert.doesNotMatch(workflow, /Pre-build: Setup test services/u);
 	assert.doesNotMatch(workflow, /^\s+- 5432:5432\s*$/mu);
 	assert.doesNotMatch(workflow, /^\s+- 6379:6379\s*$/mu);

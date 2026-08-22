@@ -11,9 +11,10 @@ pub async fn redis_pool(max_connections: u32) -> Option<RedisPool> {
     if config.url == "redis://localhost:6379" {
         config.url = "redis://127.0.0.1:6379".to_string();
     }
-    validate_test_environment(std::env::var("NVBES_ENV").ok().as_deref())
+    let environment = std::env::var("NVBES_ENV").ok();
+    validate_test_environment(environment.as_deref()).unwrap_or_else(|error| panic!("{error}"));
+    validate_loopback_redis(&config.url, environment.as_deref())
         .unwrap_or_else(|error| panic!("{error}"));
-    validate_loopback_redis(&config.url).unwrap_or_else(|error| panic!("{error}"));
     config.max_connections = max_connections;
     tokio::time::timeout(
         std::time::Duration::from_millis(500),
@@ -115,7 +116,7 @@ fn validate_test_environment(environment: Option<&str>) -> Result<(), String> {
     ))
 }
 
-fn validate_loopback_redis(redis_url: &str) -> Result<(), String> {
+fn validate_loopback_redis(redis_url: &str, environment: Option<&str>) -> Result<(), String> {
     let url = redis::parse_redis_url(redis_url)
         .ok_or_else(|| "NVBES_REDIS_URL must be a valid Redis URL".to_string())?;
     let host = url
@@ -125,7 +126,9 @@ fn validate_loopback_redis(redis_url: &str) -> Result<(), String> {
         || host
             .parse::<IpAddr>()
             .is_ok_and(|address| address.is_loopback());
-    if is_loopback {
+    let is_ci_docker_host =
+        environment == Some("ci") && host.eq_ignore_ascii_case("host.docker.internal");
+    if is_loopback || is_ci_docker_host {
         Ok(())
     } else {
         Err(format!(
@@ -144,8 +147,11 @@ mod tests {
     #[test]
     fn redis_guard_accepts_the_complete_loopback_address_space() {
         for url in ["redis://localhost:6379", "redis://127.42.0.1:16379/15"] {
-            assert!(validate_loopback_redis(url).is_ok(), "{url}");
+            assert!(validate_loopback_redis(url, Some("test")).is_ok(), "{url}");
         }
+        assert!(
+            validate_loopback_redis("redis://host.docker.internal:6379/15", Some("ci")).is_ok()
+        );
     }
 
     #[test]
@@ -156,8 +162,11 @@ mod tests {
             "redis://10.0.0.1:6379",
             "https://127.0.0.1:6379",
         ] {
-            assert!(validate_loopback_redis(url).is_err(), "{url}");
+            assert!(validate_loopback_redis(url, Some("test")).is_err(), "{url}");
         }
+        assert!(
+            validate_loopback_redis("redis://host.docker.internal:6379/15", Some("test")).is_err()
+        );
     }
 
     #[test]
