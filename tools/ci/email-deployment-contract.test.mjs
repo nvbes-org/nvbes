@@ -38,6 +38,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 		workflow,
 		/nvbes-org\/nvbes-email-worker:\$\{\{ github\.sha \}\}/u,
 	);
+	assert.doesNotMatch(
+		workflow,
+		/^\s*\$\{\{ env\.REGISTRY \}\}\/\$\{\{ env\.IMAGE_NAME \}\}:\$\{\{ github\.ref_name \}\}\s*$/mu,
+	);
 	assert.match(workflow, /cosign verify/u);
 	assert.match(workflow, /docker login ghcr\.io/u);
 	assert.match(workflow, /-target=scaleway_registry_namespace\.email_worker/u);
