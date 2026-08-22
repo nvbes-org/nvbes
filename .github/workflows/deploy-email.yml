@@ -32,6 +32,7 @@ jobs:
         with:
           toolchain: 1.91.1
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.15.8
@@ -73,8 +74,8 @@ jobs:
           -input=false
       - name: "Pre-deploy: Validate email Terraform stack"
         run: terraform -chdir=infrastructure/stacks/email/production validate
-      - name: "Pre-build: Unit tests"
-        run: pnpm test:unit
+      - name: "Pre-build: Email worker tests"
+        run: pnpm nx run email-worker:test
       - name: Validate email container contract
         run: node --test apps/email-worker/tests/container-contract.test.mjs
 
