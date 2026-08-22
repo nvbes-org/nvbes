@@ -37,7 +37,8 @@ fn validate_loopback_host(host: &str, resource: &str) -> Result<(), String> {
         || normalized_host
             .parse::<IpAddr>()
             .is_ok_and(|address| address.is_loopback());
-    if is_loopback {
+    let is_local_docker_host = normalized_host.eq_ignore_ascii_case("host.docker.internal");
+    if is_loopback || is_local_docker_host {
         Ok(())
     } else {
         Err(format!(
@@ -314,6 +315,15 @@ mod resource_guard_tests {
                 validate_test_database_url(url, Some("test"), Some("account-quality-v1")).is_ok()
             );
         }
+
+        assert!(
+            validate_test_database_url(
+                "postgres://user:secret@host.docker.internal:5432/nvbes_test",
+                Some("test"),
+                Some("account-quality-v1"),
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -359,6 +369,9 @@ mod resource_guard_tests {
     fn redis_guard_rejects_non_loopback_and_non_test_environments() {
         assert!(validate_test_redis_url("redis://127.0.0.1:6379/15", Some("ci")).is_ok());
         assert!(validate_test_redis_url("rediss://[::1]:6380/15", Some("test")).is_ok());
+        assert!(
+            validate_test_redis_url("redis://host.docker.internal:6379/15", Some("test")).is_ok()
+        );
         assert!(validate_test_redis_url("redis://redis.internal:6379", Some("test")).is_err());
         assert!(validate_test_redis_url("redis://localhost.evil.test:6379", Some("test")).is_err());
         assert!(validate_test_redis_url("redis://127.0.0.1:6379", Some("staging")).is_err());

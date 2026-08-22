@@ -27,12 +27,8 @@ jobs:
       CI: "true"
       CARGO_INCREMENTAL: "0"
       RUSTFLAGS: "-C debuginfo=0"
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
       NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
-      NVBES_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
-      NVBES_ENV: test
-      NVBES_IDENTITY_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
-      NVBES_REDIS_URL: redis://127.0.0.1:6379/15
+      NVBES_ENV: ci
       NVBES_REDIS_PASSWORD: ""
     services:
       postgres:
@@ -42,7 +38,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
         ports:
-          - 5432:5432
+          - 5432/tcp
         options: >-
           --health-cmd "pg_isready -U postgres -d nvbes_identity_test"
           --health-interval 10s
@@ -51,7 +47,7 @@ jobs:
       redis:
         image: redis:7-alpine
         ports:
-          - 6379:6379
+          - 6379/tcp
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -62,15 +58,22 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Export test service URLs
+        run: |
+          postgres_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
+          redis_url="redis://host.docker.internal:${{ job.services.redis.ports[6379] }}/15"
+          printf '%s\n' "DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
+          printf '%s\n' "NVBES_DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
+          printf '%s\n' "NVBES_IDENTITY_TEST_DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
+          printf '%s\n' "NVBES_REDIS_URL=${redis_url}" >> "${GITHUB_ENV}"
       - name: CI/CD security gate
-        run: >-
-          node tools/security/check-ci-cd-security.mjs
-          --workflow .github/workflows/ci.yml
+        run: |
+          node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
+          node --test tools/ci/continuous-integration-contract.test.mjs
       - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
         with:
           toolchain: 1.91.1
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - name: Enable pnpm
         run: |
           corepack enable
@@ -78,8 +81,6 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
       - name: Format check
@@ -92,7 +93,47 @@ jobs:
         run: pnpm check:contracts && pnpm check:codegen
       - name: "Pre-build: Linting"
         run: pnpm lint:web
-      - name: "Pre-build: Setup test services (PostgreSQL & Redis)"
-        run: bash scripts/ci/setup-test-services.sh
       - name: "Pre-build: Unit tests"
         run: pnpm test:unit
+
+  identity-migration-checks:
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: "-C debuginfo=0"
+      NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
+      NVBES_ENV: ci
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: nvbes_identity_test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nvbes_identity_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Export test service URLs
+        run: |
+          postgres_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
+          printf '%s\n' "DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/ci.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+      - name: Identity migration scenarios
+        run: bash scripts/test-identity-service-migrations.sh
