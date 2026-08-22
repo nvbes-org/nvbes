@@ -102,7 +102,8 @@ test("email CI validates the isolated deployment stack", () => {
 		workflow,
 		/  ci-test-gate:\n    runs-on: [^\n]+\n    timeout-minutes:\s*(?:4[5-9]|[5-9]\d|\d{3,})/u,
 	);
-	assert.match(workflow, /Swatinem\/rust-cache@/u);
+	assert.doesNotMatch(workflow, /Swatinem\/rust-cache@/u);
+	assert.doesNotMatch(workflow, /^\s+cache: pnpm\s*$/mu);
 	assert.match(workflow, /pnpm test:pre-deploy/u);
 	assert.match(workflow, /pnpm nx run email-worker:test/u);
 	assert.doesNotMatch(workflow, /pnpm test:unit/u);
