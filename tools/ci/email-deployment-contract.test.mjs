@@ -106,6 +106,11 @@ test("email CI validates the isolated deployment stack", () => {
 	assert.match(workflow, /pnpm test:pre-deploy/u);
 	assert.match(workflow, /pnpm nx run email-worker:test/u);
 	assert.doesNotMatch(workflow, /pnpm test:unit/u);
+	assert.match(
+		workflow,
+		/name: Generate CycloneDX SBOM[\s\S]*?format: cyclonedx(?:\s|$)/u,
+	);
+	assert.doesNotMatch(workflow, /format: cyclonedx-json/u);
 	assert.match(packageScripts["test:pre-deploy"], /terraform fmt -check/u);
 	assert.match(
 		workflow,
