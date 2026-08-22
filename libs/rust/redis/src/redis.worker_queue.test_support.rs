@@ -125,7 +125,8 @@ fn validate_loopback_redis(redis_url: &str) -> Result<(), String> {
         || host
             .parse::<IpAddr>()
             .is_ok_and(|address| address.is_loopback());
-    if is_loopback {
+    let is_local_docker_host = host.eq_ignore_ascii_case("host.docker.internal");
+    if is_loopback || is_local_docker_host {
         Ok(())
     } else {
         Err(format!(
@@ -146,6 +147,7 @@ mod tests {
         for url in ["redis://localhost:6379", "redis://127.42.0.1:16379/15"] {
             assert!(validate_loopback_redis(url).is_ok(), "{url}");
         }
+        assert!(validate_loopback_redis("redis://host.docker.internal:6379/15").is_ok());
     }
 
     #[test]
