@@ -7,7 +7,9 @@ source "$SCRIPT_DIR/lib/test-env.sh"
 
 cd "$ROOT_DIR"
 
-bash "$ROOT_DIR/scripts/ci/setup-test-services.sh"
+if [ "${GITHUB_ACTIONS:-}" != "true" ]; then
+	bash "$ROOT_DIR/scripts/ci/setup-test-services.sh"
+fi
 
 log_step "web typecheck"
 pnpm --dir apps/cloud-web typecheck

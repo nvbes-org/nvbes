@@ -32,6 +32,8 @@ test("continuous CI isolates migration scenarios and avoids remote cache stalls"
 	assert.match(workflow, /job\.services\.postgres\.ports\[5432\]/u);
 	assert.match(workflow, /job\.services\.redis\.ports\[6379\]/u);
 	assert.match(workflow, /name: Export test service URLs/u);
+	assert.match(workflow, /host\.docker\.internal/u);
+	assert.doesNotMatch(workflow, /Pre-build: Setup test services/u);
 	assert.doesNotMatch(workflow, /^\s+- 5432:5432\s*$/mu);
 	assert.doesNotMatch(workflow, /^\s+- 6379:6379\s*$/mu);
 	assert.doesNotMatch(workflow, /Swatinem\/rust-cache@/u);
@@ -40,4 +42,5 @@ test("continuous CI isolates migration scenarios and avoids remote cache stalls"
 		workflow,
 		/node --test tools\/ci\/continuous-integration-contract\.test\.mjs/u,
 	);
+	assert.match(unitRunner, /GITHUB_ACTIONS:-/u);
 });
