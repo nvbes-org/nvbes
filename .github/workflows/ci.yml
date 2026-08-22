@@ -28,7 +28,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
       RUSTFLAGS: "-C debuginfo=0"
       NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
-      NVBES_ENV: test
+      NVBES_ENV: ci
       NVBES_REDIS_PASSWORD: ""
     services:
       postgres:
@@ -104,7 +104,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
       RUSTFLAGS: "-C debuginfo=0"
       NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
-      NVBES_ENV: test
+      NVBES_ENV: ci
     services:
       postgres:
         image: postgres:17-alpine
