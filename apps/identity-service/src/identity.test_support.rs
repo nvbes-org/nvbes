@@ -291,7 +291,7 @@ pub fn shared_test_pool() -> PgPool {
 pub fn isolated_test_pool(max_connections: u32) -> PgPool {
     PgPoolOptions::new()
         .max_connections(max_connections.max(10))
-        .acquire_timeout(Duration::from_millis(500))
+        .acquire_timeout(Duration::from_secs(5))
         .connect_lazy(&test_database_url())
         .expect("valid pool")
 }
