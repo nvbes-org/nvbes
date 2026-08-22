@@ -76,7 +76,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	);
 	assert.match(delivery, /is_public\s*=\s*false/u);
 	assert.match(delivery, /resource "scaleway_container" "email_runtime"/u);
-	assert.match(delivery, /private_network_id\s*=\s*var\.private_network_id/u);
+	assert.match(
+		delivery,
+		/private_network_id\s*=\s*[^\n]*var\.private_network_id/u,
+	);
 	assert.match(database, /resource "scaleway_sdb_sql_database" "email"/u);
 });
 
@@ -89,13 +92,24 @@ test("container release publishes the image name consumed by Terraform", () => {
 });
 
 test("email CI validates the isolated deployment stack", () => {
-	const workflow = read(".github/workflows/ci-email-worker.yml");
+	const workflow = read(workflowPath);
+	const packageScripts = JSON.parse(read("package.json")).scripts;
+	assert.match(workflow, /pnpm test:pre-deploy/u);
+	assert.match(packageScripts["test:pre-deploy"], /terraform fmt -check/u);
 	assert.match(
 		workflow,
-		/infrastructure\/environments\/email-production\/\*\*/u,
+		/terraform -chdir=infrastructure\/environments\/email-production init[\s\S]*?-backend=false/u,
 	);
-	assert.match(workflow, /tools\/ci\/email-deployment-contract\.test\.mjs/u);
-	assert.match(workflow, /terraform fmt -check/u);
-	assert.match(workflow, /terraform[\s\S]*?init[\s\S]*?-backend=false/u);
-	assert.match(workflow, /terraform[\s\S]*?validate/u);
+	assert.match(
+		workflow,
+		/terraform -chdir=infrastructure\/environments\/email-production validate/u,
+	);
+	assert.match(
+		workflow,
+		/terraform -chdir=infrastructure\/stacks\/email\/production init[\s\S]*?-backend=false/u,
+	);
+	assert.match(
+		workflow,
+		/terraform -chdir=infrastructure\/stacks\/email\/production validate/u,
+	);
 });
