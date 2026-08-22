@@ -94,6 +94,10 @@ test("container release publishes the image name consumed by Terraform", () => {
 test("email CI validates the isolated deployment stack", () => {
 	const workflow = read(workflowPath);
 	const packageScripts = JSON.parse(read("package.json")).scripts;
+	assert.match(
+		workflow,
+		/  ci-test-gate:\n    runs-on: [^\n]+\n    timeout-minutes:\s*(?:4[5-9]|[5-9]\d|\d{3,})/u,
+	);
 	assert.match(workflow, /pnpm test:pre-deploy/u);
 	assert.match(packageScripts["test:pre-deploy"], /terraform fmt -check/u);
 	assert.match(
