@@ -27,12 +27,12 @@ jobs:
       CI: "true"
       CARGO_INCREMENTAL: "0"
       RUSTFLAGS: "-C debuginfo=0"
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
+      DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
       NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
-      NVBES_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
+      NVBES_DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
       NVBES_ENV: test
-      NVBES_IDENTITY_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
-      NVBES_REDIS_URL: redis://127.0.0.1:6379/15
+      NVBES_IDENTITY_TEST_DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
+      NVBES_REDIS_URL: "redis://127.0.0.1:${{ job.services.redis.ports[6379] }}/15"
       NVBES_REDIS_PASSWORD: ""
     services:
       postgres:
@@ -42,7 +42,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
         ports:
-          - 5432:5432
+          - 5432/tcp
         options: >-
           --health-cmd "pg_isready -U postgres -d nvbes_identity_test"
           --health-interval 10s
@@ -51,7 +51,7 @@ jobs:
       redis:
         image: redis:7-alpine
         ports:
-          - 6379:6379
+          - 6379/tcp
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -101,7 +101,7 @@ jobs:
       CI: "true"
       CARGO_INCREMENTAL: "0"
       RUSTFLAGS: "-C debuginfo=0"
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
+      DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
       NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
       NVBES_ENV: test
     services:
@@ -112,7 +112,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
         ports:
-          - 5432:5432
+          - 5432/tcp
         options: >-
           --health-cmd "pg_isready -U postgres -d nvbes_identity_test"
           --health-interval 10s
