@@ -99,11 +99,11 @@ if [ "$pg_ready" -eq 1 ]; then
   
   # Ensure superuser postgres and test databases exist if psql is present
   if command -v psql >/dev/null 2>&1; then
-    PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -c "CREATE DATABASE nvbes_identity_test OWNER postgres;" 2>/dev/null || \
-    psql -h 127.0.0.1 -d postgres -c "CREATE DATABASE nvbes_identity_test OWNER postgres;" 2>/dev/null || true
+    PGCONNECT_TIMEOUT=2 PGPASSWORD=postgres psql -w -h 127.0.0.1 -U postgres -d postgres -c "CREATE DATABASE nvbes_identity_test OWNER postgres;" 2>/dev/null || \
+    PGCONNECT_TIMEOUT=2 psql -w -h 127.0.0.1 -d postgres -c "CREATE DATABASE nvbes_identity_test OWNER postgres;" 2>/dev/null || true
 
-    PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -c "CREATE DATABASE nvbes_test OWNER postgres;" 2>/dev/null || \
-    psql -h 127.0.0.1 -d postgres -c "CREATE DATABASE nvbes_test OWNER postgres;" 2>/dev/null || true
+    PGCONNECT_TIMEOUT=2 PGPASSWORD=postgres psql -w -h 127.0.0.1 -U postgres -d postgres -c "CREATE DATABASE nvbes_test OWNER postgres;" 2>/dev/null || \
+    PGCONNECT_TIMEOUT=2 psql -w -h 127.0.0.1 -d postgres -c "CREATE DATABASE nvbes_test OWNER postgres;" 2>/dev/null || true
   fi
 else
   echo "warning: PostgreSQL is not responding on port 5432"

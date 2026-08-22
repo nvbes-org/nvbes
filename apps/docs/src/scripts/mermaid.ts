@@ -40,7 +40,10 @@ async function renderMermaidDiagrams() {
 
       const container = document.createElement('div');
       container.className = 'mermaid-card flex justify-center items-center overflow-x-auto my-4';
-      container.innerHTML = `<div class="mermaid">${code.trim()}</div>`;
+      const diagram = document.createElement('div');
+      diagram.className = 'mermaid';
+      diagram.textContent = code.trim();
+      container.append(diagram);
 
       const targetToReplace = block.closest('.expressive-code') || block.closest('figure') || block;
       targetToReplace.parentElement?.replaceChild(container, targetToReplace);

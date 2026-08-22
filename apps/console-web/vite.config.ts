@@ -2,7 +2,7 @@ import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import devtoolsJson from 'vite-plugin-devtools-json';
-import { defineConfig, loadEnv } from 'vite-plus';
+import { defineConfig, loadEnv, type PluginOption } from 'vite-plus';
 import {
   browserIsolationHeaders,
   buildWebCsp,
@@ -18,6 +18,10 @@ function cspFor(mode: string): string {
     styleSrc: ['https://fonts.googleapis.com'],
     fontSrc: ['https://fonts.gstatic.com'],
   });
+}
+
+function pluginList(plugin: unknown): PluginOption[] {
+  return Array.isArray(plugin) ? (plugin as PluginOption[]) : [plugin as PluginOption];
 }
 
 export default defineConfig(({ command, mode }) => {
@@ -43,11 +47,11 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [
-      react(),
-      tailwindcss(),
+      ...pluginList(react()),
+      ...pluginList(tailwindcss()),
       devtoolsJson(),
       ...observabilitySourceMapPlugins({ appName: 'console-web', command, envSources }),
-    ],
+    ].filter(Boolean),
     build: {
       target: 'esnext',
       sourcemap: 'hidden',

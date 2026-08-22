@@ -1,125 +1,175 @@
 # nvbes
 
-nvbes est une factory de micro-SaaS EU-first.
+**nvbes** est une factory de micro-SaaS souverains, sécurisés et européens (EU-first).
 
-Le premier produit est nvbes Drive: un drive cloud europeen securise pour petites equipes.
+L'écosystème comprend des produits autonomes et modulaires bâtis sur un socle multi-tenant unifié :
+- **nvbes Drive / Cloud** : Stockage cloud d'équipe sécurisé, souverain et chiffré.
+- **nvbes Identity / Account** : Fournisseur d'identité (IdP) et serveur d'autorisation OAuth2 / OIDC / FAPI, WebAuthn & Passkeys.
+- **nvbes Developer / Console** : Portail développeurs pour la gestion d'applications, API keys et webhooks.
+- **nvbes Billing** : Moteur de facturation unifié avec gestion d'abonnements et routage de paiements.
+- **nvbes Enterprise & Backoffice** : Gestion multi-organisations, conformité RGPD, audit append-only et console d'administration.
 
-## Monorepo V1
+---
 
-Structure runtime cible:
+## Architecture & Structure du Monorepo
 
-- `apps/cloud-web`: frontend React + Vite + TypeScript pour Cloud/Drive.
-- `apps/account-web`: frontend React + Vite + TypeScript pour Account.
-- `apps/console-web`: frontend React + Vite + TypeScript pour Developer.
-- `apps/backoffice-web`: frontend React + Vite + TypeScript pour Backoffice.
-- `apps/cloud-service`: backend Rust Cloud/Drive.
-- `apps/account-service`: backend Rust Account.
-- `apps/billing-service`: backend Rust Billing.
-- `apps/developer-service`: backend Rust Developer.
-- `apps/enterprise-service`: backend Rust Enterprise.
-- `apps/gateway-cloud`: gateway Cloud.
-- `apps/cloud-worker`: worker asynchrone Cloud.
-- `apps/account-worker`: worker asynchrone Account.
-- `apps/billing-worker`: worker asynchrone Billing.
-- `libs/rust/core`: primitives Rust partagees.
-- `libs/ts/http-client`, `libs/ts/identity-client`, `libs/ts/web-runtime`: runtime frontend partage.
-- `infrastructure`: socle IaC et overlays d'environnements.
-- `docs`: documentation produit, architecture, legal et testing.
+Le monorepo est orchestré via **pnpm workspaces**, **Cargo workspace** et **Nx** :
 
-## Orchestration Nx
+```text
+nvbes/
+├── apps/
+│   ├── cloud-web/            # Frontend Cloud / Drive (React 19 + Vite + Tailwind + shadcn)
+│   ├── account-web/          # Frontend Account (React + Vite + shadcn)
+│   ├── identity-web/         # Frontend Identity / Authentification (React + Vite)
+│   ├── console-web/          # Frontend Developer Console (React + Vite)
+│   ├── enterprise-web/       # Frontend Enterprise Portal (React + Vite)
+│   ├── backoffice-web/       # Frontend Administration & Backoffice (React + Vite)
+│   ├── cloud-service/        # API Rust Cloud / Drive (Axum + SQLx)
+│   ├── account-service-next/ # API Rust Account (Axum + SQLx)
+│   ├── identity-service/     # API Rust Identity / OIDC (Axum + SQLx)
+│   ├── billing-service/      # API Rust Billing (Axum + SQLx)
+│   ├── developer-service/    # API Rust Developer (Axum + SQLx)
+│   ├── enterprise-service/   # API Rust Enterprise (Axum + SQLx)
+│   ├── backoffice-service/   # API Rust Backoffice (Axum + SQLx)
+│   ├── gateway-cloud/        # Gateway Cloud & Proxy Edge
+│   └── *-worker/             # Workers asynchrones Rust (cloud, account, identity, billing, email)
+├── libs/
+│   ├── rust/                 # Primitives partagées (core, platform, ports, observability, dpop, storage...)
+│   └── ts/                   # SDKs TS, clients HTTP typés, web-runtime, web-ui, design-system
+├── contracts/                # Contrats d'interfaces OpenAPI, Protobuf, GraphQL, Events
+├── infrastructure/           # IaC OpenTofu/Terraform, Docker Compose local & observabilité Grafana
+└── docs/                     # Documentation architecture, produit, conformité, sécurité et ADRs
+```
 
-Nx est utilisé comme couche de graphe projet et de ciblage des tâches au-dessus de `pnpm` et Cargo.
+---
 
-Commandes utiles:
+## Stack Technique
 
-- `pnpm nx:show-projects`
-- `pnpm nx:show-project <project>`
-- `pnpm nx:affected`
+| Domaine | Technologies |
+|---|---|
+| **Backend** | Rust (Axum 0.8, SQLx 0.8, Tokio, PostgreSQL, Redis, Utoipa OpenAPI) |
+| **Frontend** | TypeScript, React 19, Vite, TanStack Router / Query, Effect, Tailwind CSS, shadcn/ui |
+| **Monorepo** | pnpm workspaces, Cargo workspace, Nx |
+| **Sécurité & Auth** | OAuth2 / OIDC, FAPI 2.0, DPoP (RFC 9449), WebAuthn / Passkeys, PKCE |
+| **Billing** | Stripe, Stripe Webhooks, routage de paiements multi-prestataires |
+| **Infra & Observabilité** | Scaleway (EU), Docker Compose, OpenTofu, Grafana, Alloy, Beyla, Prometheus, Sentry |
 
-## Conventions pour agents et LLMs
+---
 
-- Lire [AGENTS.md](AGENTS.md) avant toute modification.
-- Les fichiers Rust doivent rester plats, en dot-notation, et sous les seuils de taille définis dans [AGENTS.md](AGENTS.md).
+## Démarrage Rapide
 
-## Demarrage local
+### Prérequis
 
-Prerequis:
+- **Node.js** : `>= 24.0.0` (support LTS)
+- **pnpm** : `>= 11.1.2`
+- **Rust** : stable récent (édition 2024)
+- **Docker & Docker Compose** (pour l'infrastructure locale)
+- **OpenTofu** : `>= 1.6` (pour les validations IaC)
 
-- Node.js 25+
-- pnpm 11+
-- Rust stable recent
-- OpenTofu 1.6+ pour les validations IaC
-
-Commandes:
+### Initialisation
 
 ```bash
+# 1. Synchroniser et vérifier l'environnement
 pnpm env:sync
+pnpm env:check
+
+# 2. Installer les dépendances frontend et outils
 pnpm install
+
+# 3. Démarrer l'infrastructure locale (Postgres, Redis, etc.)
+pnpm dev:infra
+
+# 4. Appliquer les migrations de base de données
 pnpm db:migrate
+
+# 5. Lancer l'environnement de développement
 pnpm dev
 ```
 
-`.env.example` est le contrat versionné et documenté. La commande crée ou
-réaligne le `.env` local sans écraser ses valeurs existantes; `pnpm env:check`
-détecte ensuite les variables manquantes, inconnues ou dupliquées.
+---
 
-Commandes utiles:
+## Commandes Principales
+
+### Développement local
 
 ```bash
-pnpm dev:web
-pnpm dev:api
-pnpm dev:account-worker
-pnpm dev:cloud-worker
-pnpm dev:cloud-db:reset
+pnpm dev                     # Runtimes locaux principaux (Web + APIs)
+pnpm dev:web                 # Tous les frontends
+pnpm dev:api                 # Tous les services Rust
+pnpm dev:cloud               # Stack Cloud / Drive (web + API)
+pnpm dev:account             # Stack Account / Identity (web + API)
+pnpm dev:cloud-service       # Service Cloud uniquement
+pnpm dev:identity-service    # Service Identity uniquement
+pnpm dev:infra               # PostgreSQL, Redis, MinIO via Docker Compose
+pnpm dev:infra:obs           # Stack d'observabilité locale (Grafana, Alloy, Beyla)
 ```
 
-Conventions de scripts:
+### Qualité, Lint & Tests
 
-- `pnpm dev`: lance les runtimes locaux principaux.
-- `pnpm dev:web`: lance les frontends locaux.
-- `pnpm dev:api`: lance les services Rust locaux.
-- `pnpm dev:account-service` / `pnpm dev:cloud-service`: lancent une API ciblee.
-- `pnpm dev:account-worker` / `pnpm dev:cloud-worker`: lancent un worker cible.
-- `pnpm dev:cloud-db:reset`: recree la base Cloud locale quand une migration dev a change.
-- `pnpm db:migrate`: applique les migrations locales configurees.
-- `pnpm generate:openapi`: regenere les specs OpenAPI et le SDK core.
-- `pnpm format`: reformate TypeScript, JSON, Markdown et Rust.
-- `pnpm format:check`: verifie le format sans modifier les fichiers.
-- `pnpm lint`: lint frontend et `cargo clippy`.
-- `pnpm check`: validation structure LLM-friendly, typecheck frontend et `cargo check`.
-- `pnpm test`: tests unitaires et integration executable.
-- `pnpm test:smoke`: smoke tests contre un environnement deploye.
-- `pnpm test:e2e:critical`: E2E critiques contre un environnement deploye.
-- `pnpm release:gate:staging`: gate de release staging.
-- `pnpm release:gate:production`: gate de promotion production.
-- `pnpm verify`: enchaine format, lint, checks et tests locaux.
+```bash
+pnpm check                   # Suite complète de vérifications (contrats, secrets, types, cargo check)
+pnpm verify                  # Validation pré-commit complète (format, lint, check, tests)
+pnpm test                    # Tests unitaires et d'intégration
+pnpm test:unit               # Tests unitaires
+pnpm test:integration        # Tests d'intégration Rust et IaC
+pnpm test:e2e:critical       # Tests E2E critiques
+pnpm lint                    # Linter web et Rust (cargo clippy)
+pnpm format                  # Formatage automatique TS, JSON, Rust, Markdown
+pnpm format:check            # Vérification du formatage
+```
 
-## Direction Produit
+### Orchestration Nx & Génération
 
-- Infrastructure et residence des donnees en Europe.
-- RGPD by design.
-- Securite par defaut sur chaque produit.
-- Modules plateforme reutilisables pour les futurs SaaS.
-- Pricing par package avec extension pay-as-you-use.
-- nvbes Account est la fondation IdP / Authorization Server multi-tenant pour les produits du groupe.
+```bash
+pnpm nx:show-projects        # Lister tous les projets du graphe Nx
+pnpm nx:show-project <nom>   # Inspecter la configuration d'un projet cible
+pnpm nx:affected             # Exécuter les tâches affectées par les changements en cours
+pnpm generate:openapi        # Régénérer les schémas OpenAPI et les SDKs TypeScript
+pnpm generate:email          # Compiler les composants et templates email
+```
 
-## Documentation
+---
 
-- [PRD V1](docs/product/nvbes-drive-v1-prd.md)
-- [Monorepo agentic refactor workplan](docs/blueprint/nvbes-monorepo-agentic-refactor.work.md)
-- [Nx workspace and dependency graph](docs/architecture/nx-workspace.md)
-- [Architecture technique](docs/architecture/technical-architecture.md)
-- [Architecture Identity](docs/architecture/identity-product.md)
-- [Infrastructure, Network et DevOps](docs/architecture/infrastructure-devops.md)
-- [Modèle de données](docs/architecture/data-model.md)
-- [Contrats API V1](docs/api/v1-contracts.md)
-- [API Publique V1](docs/api/public-api-v1.md)
-- [Beta readiness](docs/product/beta-readiness.md)
-- [Runbooks incidents](docs/operations/incident-runbooks.md)
-- [Roadmap](docs/roadmap.md)
+## Règles et Conventions du Codebase
 
-## Gouvernance Documentaire
+Pour assurer une maintenabilité optimale par des agents IA et des développeurs :
 
-- Les decisions structurantes sont documentees dans `docs/adr/`.
-- Chaque document produit ou architecture doit distinguer les decisions acceptees des hypotheses.
-- Les changements qui affectent les scripts, la structure du repo ou les conventions d’agent doivent mettre à jour `AGENTS.md` et `.codex/instructions.md`.
+1. **Règle V0 (Zéro Dette)** : Aucun compromis temporaire ni rustine sur les zones modifiées. Redesign privilégié.
+2. **Conventions Rust** :
+   - Fichiers source dans `src/` avec nommage plat en dot-notation (ex: `identity.domains.billing.service.rs`).
+   - Modules déclarés explicitement via `#[path = "..."]` dans `mod.rs`.
+   - Respect strict des limites de taille : **< 300 lignes** recommandé, **500 lignes** max.
+3. **Conventions TypeScript** :
+   - Interdiction stricte de `any` (`unknown` ou typage précis obligatoire).
+4. **Hiérarchie UI Frontend** :
+   - 1. Registry interne (`libs/ts/web-ui`, `apps/*/components/ui`)
+   - 2. Registry officiel shadcn/ui (`pnpm dlx shadcn@latest add <component>`)
+   - 3. Registries externes compatibles
+   - 4. Tailwind CSS (classes utilitaires)
+   - 5. CSS pur / modules (dernier recours uniquement)
+5. **Agent OS** :
+   - Lire [AGENTS.md](AGENTS.md) avant toute contribution.
+   - Instructions et mémoire synchronisées depuis `docs/agent/*` et `.codex/instructions.md`.
+
+---
+
+## Documentation de Référence
+
+- **Produit** :
+  - [PRD V1 Drive](docs/product/nvbes-drive-v1-prd.md)
+  - [Beta Readiness](docs/product/beta-readiness.md)
+  - [Roadmap](docs/roadmap.md)
+- **Architecture** :
+  - [Architecture Technique Globale](docs/architecture/technical-architecture.md)
+  - [Architecture Identity](docs/architecture/identity-product.md)
+  - [Graphe Nx & Dépendances](docs/architecture/nx-workspace.md)
+  - [Modèle de Données](docs/architecture/data-model.md)
+  - [Runtime Frontend](docs/architecture/frontend-runtime.md)
+  - [Infrastructure & DevOps](docs/architecture/infrastructure-devops.md)
+- **APIs & Contrats** :
+  - [Contrats API V1](docs/api/v1-contracts.md)
+  - [API Publique V1](docs/api/public-api-v1.md)
+- **Conformité & Opérations** :
+  - [Conformité Entreprise & RGPD](docs/compliance/enterprise-compliance-summary.md)
+  - [Runbooks d'Incidents](docs/operations/incident-runbooks.md)
+  - [Registre ADR (Architecture Decision Records)](docs/adr/)

@@ -29,11 +29,18 @@ async fn reminder_candidates_are_claimed_by_enterprise_once() {
     )
     .await
     .expect("reminder candidates should be claimed");
-    assert_eq!(first_claim.candidates.len(), 1);
-    let candidate = &first_claim.candidates[0];
+
+    let candidate = first_claim
+        .candidates
+        .iter()
+        .find(|c| {
+            c.tenant_id == fixture.tenant_id.to_string() && c.campaign_id == campaign_id.to_string()
+        })
+        .expect("reminder candidate for current fixture should be claimed");
+    let expected_email = format!("owner-{}@example.test", fixture.actor_id.simple());
     assert_eq!(candidate.tenant_id, fixture.tenant_id.to_string());
     assert_eq!(candidate.campaign_id, campaign_id.to_string());
-    assert_eq!(candidate.recipient_email, "owner@example.test");
+    assert_eq!(candidate.recipient_email, expected_email);
     assert_eq!(candidate.reminder_kind, "due_soon");
 
     let second_claim = reminders::claim_reminder_candidates(
@@ -45,7 +52,10 @@ async fn reminder_candidates_are_claimed_by_enterprise_once() {
     )
     .await
     .expect("claimed reminders should not be returned again");
-    assert!(second_claim.candidates.is_empty());
+    let second_candidate = second_claim.candidates.iter().find(|c| {
+        c.tenant_id == fixture.tenant_id.to_string() && c.campaign_id == campaign_id.to_string()
+    });
+    assert!(second_candidate.is_none());
 
     let reminder_count = sqlx::query_scalar::<_, i64>(
         r#"
@@ -82,16 +92,18 @@ async fn seed_owner_user(pool: &sqlx::PgPool, fixture: &crate::test_support::Ent
     .await
     .expect("actor should be promoted to owner");
 
+    let owner_email = format!("owner-{}@example.test", fixture.actor_id.simple());
     sqlx::query(
         r#"
         INSERT INTO users (
           principal_id, email, username, status, created_at, updated_at
         )
-        VALUES ($1, 'owner@example.test', 'owner', 'active', $2, $2)
-        ON CONFLICT (principal_id) DO UPDATE SET email = EXCLUDED.email
+        VALUES ($1, $2, 'owner', 'active', $3, $3)
+        ON CONFLICT (principal_id) DO UPDATE SET email = EXCLUDED.email, username = EXCLUDED.username
         "#,
     )
     .bind(fixture.actor_id)
+    .bind(owner_email)
     .bind(fixture.now)
     .execute(pool)
     .await
