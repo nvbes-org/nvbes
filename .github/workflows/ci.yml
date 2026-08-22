@@ -27,12 +27,8 @@ jobs:
       CI: "true"
       CARGO_INCREMENTAL: "0"
       RUSTFLAGS: "-C debuginfo=0"
-      DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
       NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
-      NVBES_DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
       NVBES_ENV: test
-      NVBES_IDENTITY_TEST_DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
-      NVBES_REDIS_URL: "redis://127.0.0.1:${{ job.services.redis.ports[6379] }}/15"
       NVBES_REDIS_PASSWORD: ""
     services:
       postgres:
@@ -62,6 +58,14 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Export test service URLs
+        run: |
+          postgres_url="postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
+          redis_url="redis://127.0.0.1:${{ job.services.redis.ports[6379] }}/15"
+          printf '%s\n' "DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
+          printf '%s\n' "NVBES_DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
+          printf '%s\n' "NVBES_IDENTITY_TEST_DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
+          printf '%s\n' "NVBES_REDIS_URL=${redis_url}" >> "${GITHUB_ENV}"
       - name: CI/CD security gate
         run: |
           node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
@@ -101,7 +105,6 @@ jobs:
       CI: "true"
       CARGO_INCREMENTAL: "0"
       RUSTFLAGS: "-C debuginfo=0"
-      DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
       NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
       NVBES_ENV: test
     services:
@@ -123,6 +126,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Export test service URLs
+        run: |
+          postgres_url="postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
+          printf '%s\n' "DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
       - name: CI/CD security gate
         run: >-
           node tools/security/check-ci-cd-security.mjs

@@ -31,6 +31,7 @@ test("continuous CI isolates migration scenarios and avoids remote cache stalls"
 	assert.match(workflow, /bash scripts\/test-identity-service-migrations\.sh/u);
 	assert.match(workflow, /job\.services\.postgres\.ports\[5432\]/u);
 	assert.match(workflow, /job\.services\.redis\.ports\[6379\]/u);
+	assert.match(workflow, /name: Export test service URLs/u);
 	assert.doesNotMatch(workflow, /^\s+- 5432:5432\s*$/mu);
 	assert.doesNotMatch(workflow, /^\s+- 6379:6379\s*$/mu);
 	assert.doesNotMatch(workflow, /Swatinem\/rust-cache@/u);
