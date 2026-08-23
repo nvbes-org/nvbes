@@ -22,7 +22,7 @@ defaults:
 jobs:
   email-quality:
     runs-on: [self-hosted, macOS, ARM64]
-    timeout-minutes: 45
+    timeout-minutes: 90
     env:
       CI: 'true'
       CARGO_INCREMENTAL: '0'

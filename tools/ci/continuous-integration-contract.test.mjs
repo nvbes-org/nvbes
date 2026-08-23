@@ -8,6 +8,10 @@ test('continuous CI runs on every active delivery branch', () => {
   assert.match(workflow, /branches: \['main', 'staging', 'dev'\]/u);
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /email-quality:/u);
+  assert.match(
+    workflow,
+    /email-quality:\n    runs-on: \[[^\n]+\]\n    timeout-minutes: (?:9\d|[1-9]\d{2,})/u,
+  );
 });
 
 test('continuous CI validates only the active email runtime', () => {
