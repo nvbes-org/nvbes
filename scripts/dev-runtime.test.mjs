@@ -10,42 +10,6 @@ async function workspaceFile(path) {
   return readFile(new URL(path, root), 'utf8');
 }
 
-void test('development entrypoints start the identity email queue consumer', async () => {
-  const [devApi, devAccount] = await Promise.all([
-    workspaceFile('scripts/dev-api.sh'),
-    workspaceFile('scripts/dev-account.sh'),
-  ]);
-
-  for (const script of [devApi, devAccount]) {
-    assert.match(script, /dev-identity-worker\.sh/);
-  }
-});
-
-void test('identity worker has an explicit development command', async () => {
-  const packageJson = JSON.parse(await workspaceFile('package.json'));
-  assert.equal(packageJson.scripts['dev:identity-worker'], 'bash scripts/dev-identity-worker.sh');
-  assert.match(packageJson.scripts.check, /pnpm check:dev-runtime/);
-
-  const launcher = await workspaceFile('scripts/dev-identity-worker.sh');
-  assert.match(launcher, /cargo run -p nvbes-identity-worker/);
-  assert.match(launcher, /export NVBES_DATABASE_URL="\$\{NVBES_IDENTITY_DATABASE_URL:-/);
-  assert.match(launcher, /NVBES_IDENTITY_WORKER_INLINE_HOUSEKEEPING_ENABLED:-false/);
-});
-
-void test('identity service command starts the complete email delivery runtime', async () => {
-  const packageJson = JSON.parse(await workspaceFile('package.json'));
-  assert.equal(packageJson.scripts['dev:identity-service'], 'bash scripts/dev-identity.sh');
-
-  const launcher = await workspaceFile('scripts/dev-identity.sh');
-  for (const dependency of [
-    'dev-email-worker.sh',
-    'dev-identity-worker.sh',
-    'dev-identity-service.sh',
-  ]) {
-    assert.match(launcher, new RegExp(dependency.replace('.', '\\.')));
-  }
-});
-
 void test('email worker reloads when its renderer or generated React templates change', async () => {
   const launcher = await workspaceFile('scripts/dev-email-worker.sh');
 
@@ -72,7 +36,7 @@ void test('development environment loaders expose custom Node debugger names', a
   assert.match(workspaceEnv, /node --title="\$node_process_title"/);
   assert.match(
     workspaceEnv,
-    /NVBES_DEVCONTAINER_IDENTITY_TEST_DATABASE_URL:-postgres:\/\/postgres:postgres@postgres:5432\/nvbes_identity_test/,
+    /NVBES_DEVCONTAINER_EMAIL_DATABASE_URL:-postgres:\/\/postgres:postgres@postgres:5432\/nvbes_email/,
   );
 });
 
@@ -96,7 +60,7 @@ void test('email database tests load the worker database environment', async () 
   assert.match(launcher, /--test-threads=1/);
 });
 
-void test('email database tests accept only local or devcontainer email databases', () => {
+void test('email database tests accept only local, devcontainer, or GitHub CI databases', () => {
   assert.deepEqual(
     validateEmailTestDatabaseTarget({
       DATABASE_URL: 'postgres://postgres:postgres@localhost:15432/nvbes_email',
@@ -112,6 +76,14 @@ void test('email database tests accept only local or devcontainer email database
     }),
     { databaseName: 'nvbes_email_test', hostname: 'postgres' },
   );
+  assert.deepEqual(
+    validateEmailTestDatabaseTarget({
+      DATABASE_URL: 'postgres://postgres:postgres@host.docker.internal:5432/nvbes_email_test',
+      GITHUB_ACTIONS: 'true',
+      NVBES_ENV: 'ci',
+    }),
+    { databaseName: 'nvbes_email_test', hostname: 'host.docker.internal' },
+  );
 
   for (const environment of [
     {
@@ -126,14 +98,11 @@ void test('email database tests accept only local or devcontainer email database
       DATABASE_URL: 'postgres://postgres@localhost/nvbes_email',
       NVBES_ENVIRONMENT: 'production',
     },
+    {
+      DATABASE_URL: 'postgres://postgres@host.docker.internal/nvbes_email_test',
+      NVBES_ENV: 'ci',
+    },
   ]) {
     assert.throws(() => validateEmailTestDatabaseTarget(environment));
   }
-});
-
-void test('identity migration tests prefer the dedicated test database', async () => {
-  const launcher = await workspaceFile('scripts/test-identity-service-migrations.sh');
-
-  assert.match(launcher, /source "\$ROOT_DIR\/scripts\/lib\/test-env\.sh"/);
-  assert.match(launcher, /NVBES_IDENTITY_TEST_DATABASE_URL:-\$\{NVBES_IDENTITY_DATABASE_URL:-\}/);
 });

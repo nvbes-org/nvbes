@@ -40,7 +40,11 @@ export function validateEmailTestDatabaseTarget(environment) {
     (isIP(hostname) === 4 && hostname.split('.')[0] === '127') ||
     (isIP(hostname) === 6 && hostname === '::1');
   const devcontainerPostgres = environment.NVBES_DEVCONTAINER === 'true' && hostname === 'postgres';
-  if (!loopback && !devcontainerPostgres) {
+  const githubActionsPostgres =
+    environment.GITHUB_ACTIONS === 'true' &&
+    targetEnvironment === 'ci' &&
+    hostname === 'host.docker.internal';
+  if (!loopback && !devcontainerPostgres && !githubActionsPostgres) {
     reject(`email database tests refuse PostgreSQL host ${hostname}`);
   }
 
