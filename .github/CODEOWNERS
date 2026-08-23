@@ -1,9 +1,13 @@
 # Default review owner. GitHub branch rules must require code-owner review.
 * @shaynlink
 
-# Identity, authentication, OAuth, authorization and session boundaries.
-/apps/account-service/ @shaynlink
-/apps/account-web/ @shaynlink
+# Active email runtime and delivery boundaries.
+/apps/email-worker/ @shaynlink
+/libs/rust/email/ @shaynlink
+/libs/rust/adapters/email-scaleway/ @shaynlink
+/libs/ts/email-ui/ @shaynlink
+
+# Identity SDKs retained as shared libraries.
 /libs/ts/identity-client/ @shaynlink
 /libs/ts/identity-sdk*/ @shaynlink
 /libs/rust/identity-sdk-backend/ @shaynlink

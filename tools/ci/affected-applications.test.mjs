@@ -6,26 +6,16 @@ const workspaceRoot = '/workspace';
 const catalog = {
   rust: [
     {
-      project: 'identity-service',
-      package: 'nvbes-identity-service',
-      dockerfile: 'infrastructure/docker/rust-application.Dockerfile',
-    },
-    {
       project: 'email-worker',
       package: 'nvbes-email-worker',
       dockerfile: 'apps/email-worker/Dockerfile',
     },
   ],
-  web: [{ project: 'identity-web' }, { project: 'account-web' }],
+  web: [],
 };
 const cargoMetadata = {
-  workspace_members: ['identity', 'email', 'email-lib'],
+  workspace_members: ['email', 'email-lib'],
   packages: [
-    {
-      id: 'identity',
-      name: 'nvbes-identity-service',
-      manifest_path: '/workspace/apps/identity-service/Cargo.toml',
-    },
     {
       id: 'email',
       name: 'nvbes-email-worker',
@@ -39,7 +29,6 @@ const cargoMetadata = {
   ],
   resolve: {
     nodes: [
-      { id: 'identity', deps: [{ pkg: 'email-lib' }] },
       { id: 'email', deps: [{ pkg: 'email-lib' }] },
       { id: 'email-lib', deps: [] },
     ],
@@ -72,19 +61,17 @@ void test('a shared Rust crate selects only its transitive consumers', () => {
   const result = select({ changedPaths: ['libs/rust/email/src/lib.rs'] });
   assert.deepEqual(
     result.rust.map(({ project }) => project),
-    ['identity-service', 'email-worker'],
+    ['email-worker'],
   );
 });
 
-void test('Nx selects one affected web application', () => {
+void test('web mode stays empty while no web application is active', () => {
   const result = select({
-    changedPaths: ['apps/identity-web/src/main.tsx'],
-    nxAffected: ['identity-web'],
+    changedPaths: ['libs/ts/email-ui/src/index.ts'],
+    nxAffected: ['email-ui'],
+    mode: 'web',
   });
-  assert.deepEqual(
-    result.web.map(({ project }) => project),
-    ['identity-web'],
-  );
+  assert.deepEqual(result, { rust: [], web: [] });
 });
 
 void test('one custom Dockerfile selects only its image', () => {
@@ -98,14 +85,13 @@ void test('one custom Dockerfile selects only its image', () => {
   );
 });
 
-void test('the generic Dockerfile selects only applications using it', () => {
+void test('a global Rust manifest selects the active application', () => {
   const result = select({
-    changedPaths: ['infrastructure/docker/rust-application.Dockerfile'],
-    mode: 'containers',
+    changedPaths: ['Cargo.toml'],
   });
   assert.deepEqual(
     result.rust.map(({ project }) => project),
-    ['identity-service'],
+    ['email-worker'],
   );
 });
 

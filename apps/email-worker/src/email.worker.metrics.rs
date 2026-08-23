@@ -148,10 +148,17 @@ mod tests {
         use axum::{body::Body, http::Request};
         use tower::ServiceExt;
 
-        let response = super::router(crate::test_support::state(pool))
+        let mut config = crate::test_support::config(crate::config::ProviderConfig::Mock);
+        config.observability_internal_token = Some(crate::test_support::INTERNAL_TOKEN.to_string());
+        let state = crate::state::EmailWorkerState::new(config, pool).unwrap();
+        let response = super::router(state)
             .oneshot(
                 Request::builder()
                     .uri("/metrics")
+                    .header(
+                        "x-nvbes-internal-token",
+                        crate::test_support::INTERNAL_TOKEN,
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )

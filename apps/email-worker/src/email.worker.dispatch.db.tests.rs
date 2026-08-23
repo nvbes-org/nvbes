@@ -70,7 +70,9 @@ async fn dispatch_attempts_cover_success_retry_expiry_and_stale_leases(pool: PgP
 
     let expiring_id = accept(&pool, "dispatch-expiry", "expiry@example.com").await;
     let expiring = claim(&pool, expiring_id).await;
-    sqlx::query("UPDATE email_messages SET deliver_before = clock_timestamp() + INTERVAL '100 milliseconds' WHERE id = $1")
+    sqlx::query(
+        "UPDATE email_messages SET accepted_at = clock_timestamp() - INTERVAL '2 seconds', deliver_before = clock_timestamp() - INTERVAL '1 second' WHERE id = $1",
+    )
         .bind(expiring.id)
         .execute(&pool)
         .await

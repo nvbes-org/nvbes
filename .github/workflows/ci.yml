@@ -2,9 +2,9 @@ name: continuous integration
 
 on:
   push:
-    branches: ['main']
+    branches: ['main', 'staging', 'dev']
   pull_request:
-    branches: ['main']
+    branches: ['main', 'staging', 'dev']
   workflow_dispatch:
 
 concurrency:
@@ -20,52 +20,37 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
-  quality-checks:
+  email-quality:
     runs-on: [self-hosted, macOS, ARM64]
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
-      CI: "true"
-      CARGO_INCREMENTAL: "0"
-      RUSTFLAGS: "-C debuginfo=0"
-      NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
+      CI: 'true'
+      CARGO_INCREMENTAL: '0'
+      RUSTFLAGS: '-C debuginfo=0'
       NVBES_ENV: ci
-      NVBES_REDIS_PASSWORD: ""
     services:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB: nvbes_identity_test
+          POSTGRES_DB: nvbes_email_test
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
         ports:
           - 5432/tcp
         options: >-
-          --health-cmd "pg_isready -U postgres -d nvbes_identity_test"
-          --health-interval 10s
+          --health-cmd "pg_isready -U postgres -d nvbes_email_test"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379/tcp
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Export test service URLs
+      - name: Export email test database URL
         run: |
-          postgres_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
-          redis_url="redis://host.docker.internal:${{ job.services.redis.ports[6379] }}/15"
-          printf '%s\n' "DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
-          printf '%s\n' "NVBES_DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
-          printf '%s\n' "NVBES_IDENTITY_TEST_DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
-          printf '%s\n' "NVBES_REDIS_URL=${redis_url}" >> "${GITHUB_ENV}"
+          database_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports[5432] }}/nvbes_email_test"
+          printf '%s\n' "DATABASE_URL=${database_url}" >> "${GITHUB_ENV}"
       - name: CI/CD security gate
         run: |
           node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
@@ -74,6 +59,10 @@ jobs:
         with:
           toolchain: 1.91.1
           components: rustfmt, clippy
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
       - name: Enable pnpm
         run: |
           corepack enable
@@ -83,57 +72,37 @@ jobs:
           node-version: 24
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Format check
-        run: pnpm format:check
-      - name: Structure check
-        run: pnpm check:structure
-      - name: Nx boundaries check
-        run: pnpm check:nx-boundaries
-      - name: "Pre-build: Contracts & Codegen check"
-        run: pnpm check:contracts && pnpm check:codegen
-      - name: "Pre-build: Linting"
-        run: pnpm lint:web
-      - name: "Pre-build: Unit tests"
-        run: pnpm test:unit
-
-  identity-migration-checks:
-    runs-on: [self-hosted, macOS, ARM64]
-    timeout-minutes: 30
-    env:
-      CI: "true"
-      CARGO_INCREMENTAL: "0"
-      RUSTFLAGS: "-C debuginfo=0"
-      NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
-      NVBES_ENV: ci
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: nvbes_identity_test
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-        ports:
-          - 5432/tcp
-        options: >-
-          --health-cmd "pg_isready -U postgres -d nvbes_identity_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Export test service URLs
+      - name: Validate active workspace
         run: |
-          postgres_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports[5432] }}/nvbes_identity_test"
-          printf '%s\n' "DATABASE_URL=${postgres_url}" >> "${GITHUB_ENV}"
-      - name: CI/CD security gate
+          pnpm format:check
+          pnpm check:structure
+          pnpm check:nx-boundaries
+          pnpm check:secrets
+          pnpm check:web
+          pnpm check:api
+      - name: Validate email deployment contract
+        run: pnpm test:pre-deploy
+      - name: Initialize isolated email Terraform providers
         run: >-
-          node tools/security/check-ci-cd-security.mjs
-          --workflow .github/workflows/ci.yml
-      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
-        with:
-          toolchain: 1.91.1
-      - name: Identity migration scenarios
-        run: bash scripts/test-identity-service-migrations.sh
+          terraform -chdir=infrastructure/environments/email-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated email Terraform stack
+        run: terraform -chdir=infrastructure/environments/email-production validate
+      - name: Initialize email stack Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/stacks/email/production init
+          -backend=false
+          -input=false
+      - name: Validate email Terraform stack
+        run: terraform -chdir=infrastructure/stacks/email/production validate
+      - name: Test email Terraform deployment and rotation
+        run: >-
+          PATH="$PWD/infrastructure/stacks/email/production/tests/bin:$PATH"
+          terraform -chdir=infrastructure/stacks/email/production test
+      - name: Test email contract and runtime
+        run: pnpm test
+      - name: Test email database invariants
+        run: bash scripts/test-email-worker-database.sh
+      - name: Validate email container contract
+        run: node --test apps/email-worker/tests/container-contract.test.mjs

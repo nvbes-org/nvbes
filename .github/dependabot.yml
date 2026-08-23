@@ -38,14 +38,6 @@ updates:
     open-pull-requests-limit: 10
 
   - package-ecosystem: docker
-    directory: /apps/account-worker
-    schedule:
-      interval: weekly
-  - package-ecosystem: docker
-    directory: /apps/billing-worker
-    schedule:
-      interval: weekly
-  - package-ecosystem: docker
-    directory: /apps/cloud-worker
+    directory: /apps/email-worker
     schedule:
       interval: weekly

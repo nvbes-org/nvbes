@@ -30,7 +30,10 @@ requireText(
   '.github/workflows-archive/container-release.yml',
   'include: $' + '{{ fromJSON(needs.detect-affected.outputs.rust) }}',
 );
-requireText('.github/workflows-archive/container-release.yml', 'node tools/ci/affected-applications.mjs');
+requireText(
+  '.github/workflows-archive/container-release.yml',
+  'node tools/ci/affected-applications.mjs',
+);
 requireText('.dockerignore', '.env');
 requireText('.dockerignore', 'target');
 
@@ -48,21 +51,7 @@ for (const dockerfile of dockerfiles) {
   requireText(dockerfile, 'USER 10001:10001');
 }
 
-const releaseImages = [
-  'nvbes-account-service',
-  'nvbes-account-worker',
-  'nvbes-backoffice-service',
-  'nvbes-billing-service',
-  'nvbes-billing-worker',
-  'nvbes-cloud-service',
-  'nvbes-cloud-worker',
-  'nvbes-developer-service',
-  'nvbes-email-worker',
-  'nvbes-enterprise-service',
-  'nvbes-gateway-cloud',
-  'nvbes-identity-service',
-  'nvbes-identity-worker',
-];
+const releaseImages = ['nvbes-email-worker'];
 
 const catalogImages = new Set(catalog.rust.map(({ image }) => image));
 for (const image of releaseImages) {

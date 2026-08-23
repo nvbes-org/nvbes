@@ -45,33 +45,31 @@ jobs:
           node-version: 24
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Format check
-        run: pnpm format:check
-      - name: Structure check
-        run: pnpm check:structure
-      - name: Nx boundaries check
-        run: pnpm check:nx-boundaries
-      - name: "Pre-build: Contracts & Codegen check"
-        run: pnpm check:contracts && pnpm check:codegen
-      - name: "Pre-build: Linting"
-        run: pnpm lint:web
-      - name: "Pre-deploy: Validate email deployment contract"
+      - name: Validate active workspace
+        run: |
+          pnpm format:check
+          pnpm check:structure
+          pnpm check:nx-boundaries
+          pnpm check:secrets
+          pnpm check:web
+          pnpm check:api
+      - name: 'Pre-deploy: Validate email deployment contract'
         run: pnpm test:pre-deploy
-      - name: "Pre-deploy: Initialize email Terraform providers"
+      - name: 'Pre-deploy: Initialize email Terraform providers'
         run: >-
           terraform -chdir=infrastructure/environments/email-production init
           -backend=false
           -input=false
-      - name: "Pre-deploy: Validate isolated email Terraform stack"
+      - name: 'Pre-deploy: Validate isolated email Terraform stack'
         run: terraform -chdir=infrastructure/environments/email-production validate
-      - name: "Pre-deploy: Initialize email stacks Terraform providers"
+      - name: 'Pre-deploy: Initialize email stacks Terraform providers'
         run: >-
           terraform -chdir=infrastructure/stacks/email/production init
           -backend=false
           -input=false
-      - name: "Pre-deploy: Validate email Terraform stack"
+      - name: 'Pre-deploy: Validate email Terraform stack'
         run: terraform -chdir=infrastructure/stacks/email/production validate
-      - name: "Pre-build: Email worker tests"
+      - name: 'Pre-build: Email worker tests'
         run: pnpm nx run email-worker:test
       - name: Validate email container contract
         run: node --test apps/email-worker/tests/container-contract.test.mjs
@@ -379,7 +377,7 @@ jobs:
           terraform -chdir="$STACK_ROOT" apply
           -lock-timeout=5m
           email-runtime.tfplan
-      - name: "Post-deploy: Verify public email ingress health and readiness"
+      - name: 'Post-deploy: Verify public email ingress health and readiness'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}

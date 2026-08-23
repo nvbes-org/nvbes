@@ -53,22 +53,31 @@ async fn submit_email_enforces_authentication_validation_and_idempotency(pool: s
     );
 }
 
-#[test]
-fn persistence_error_mapping_never_exposes_internal_details() {
+#[sqlx::test(migrations = "./migrations")]
+async fn persistence_error_mapping_never_exposes_internal_details(pool: sqlx::PgPool) {
+    let state = test_support::state(pool);
     assert_eq!(
-        map_accept_error(AcceptCommandError::Invalid).code(),
+        map_accept_error(AcceptCommandError::Invalid, &state).code(),
         Code::InvalidArgument
     );
     assert_eq!(
-        map_accept_error(AcceptCommandError::Conflict).code(),
+        map_accept_error(AcceptCommandError::Conflict, &state).code(),
         Code::AlreadyExists
     );
     assert_eq!(
-        map_accept_error(AcceptCommandError::Database(sqlx::Error::RowNotFound)).code(),
+        map_accept_error(
+            AcceptCommandError::Database(sqlx::Error::RowNotFound),
+            &state,
+        )
+        .code(),
         Code::Unavailable
     );
     assert_eq!(
-        map_accept_error(AcceptCommandError::Encryption(anyhow::anyhow!("secret"))).code(),
+        map_accept_error(
+            AcceptCommandError::Encryption(anyhow::anyhow!("secret")),
+            &state,
+        )
+        .code(),
         Code::Unavailable
     );
 }

@@ -69,7 +69,7 @@ async fn duplicate_commands_are_stable_and_conflicts_are_rejected(pool: PgPool) 
 }
 
 #[sqlx::test(migrations = "./migrations")]
-async fn active_suppression_cannot_race_with_dispatch_claim(pool: PgPool) {
+async fn active_suppression_settles_current_message_and_release_allows_future_claims(pool: PgPool) {
     let receipt = accept(&pool, &command("security-event-2", "blocked@nvbes.fr")).await;
     let message_id: uuid::Uuid =
         sqlx::query_scalar("SELECT id FROM email_messages WHERE message_id = $1")
@@ -101,8 +101,19 @@ async fn active_suppression_cannot_race_with_dispatch_claim(pool: PgPool) {
             .await
             .unwrap()
     );
+    let retry = accept(
+        &pool,
+        &command("security-event-after-release", "blocked@nvbes.fr"),
+    )
+    .await;
+    let retry_id: uuid::Uuid =
+        sqlx::query_scalar("SELECT id FROM email_messages WHERE message_id = $1")
+            .bind(&retry.message_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert!(matches!(
-        dispatch_db::claim_message(&pool, message_id).await.unwrap(),
+        dispatch_db::claim_message(&pool, retry_id).await.unwrap(),
         dispatch_db::ClaimResult::Claimed(_)
     ));
 }
