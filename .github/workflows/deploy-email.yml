@@ -222,6 +222,20 @@ jobs:
         with:
           terraform_version: 1.15.8
           terraform_wrapper: false
+      - name: Resolve Scaleway organization context
+        env:
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          uuid_pattern='^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          [[ "$SCW_DEFAULT_PROJECT_ID" =~ $uuid_pattern ]]
+          organization_id="$(
+            curl --fail --silent --show-error --retry 3 \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" \
+              "https://api.scaleway.com/account/v3/projects/$SCW_DEFAULT_PROJECT_ID" |
+              jq --exit-status --raw-output '.organization_id'
+          )"
+          [[ "$organization_id" =~ $uuid_pattern ]]
+          printf 'SCW_DEFAULT_ORGANIZATION_ID=%s\n' "$organization_id" >> "$GITHUB_ENV"
       - name: Initialize isolated email state
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}

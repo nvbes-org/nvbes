@@ -44,6 +44,16 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	);
 	assert.match(workflow, /cosign verify/u);
 	assert.match(workflow, /docker login ghcr\.io/u);
+	assert.match(
+		workflow,
+		/https:\/\/api\.scaleway\.com\/account\/v3\/projects\/\$SCW_DEFAULT_PROJECT_ID/u,
+	);
+	assert.match(workflow, /X-Auth-Token: \$SCW_SECRET_KEY/u);
+	assert.match(workflow, /SCW_DEFAULT_ORGANIZATION_ID=%s/u);
+	assert.match(
+		workflow,
+		/\^\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[1-5\]\[0-9a-f\]\{3\}-\[89ab\]\[0-9a-f\]\{3\}-\[0-9a-f\]\{12\}\$/u,
+	);
 	assert.match(workflow, /-target=scaleway_registry_namespace\.email_worker/u);
 	assert.match(workflow, /docker login "\$EMAIL_REGISTRY_ENDPOINT"/u);
 	assert.match(workflow, /docker pull --platform linux\/amd64/u);
