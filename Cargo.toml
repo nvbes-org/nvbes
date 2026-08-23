@@ -1,18 +1,6 @@
 [workspace]
 members = [
-  "apps/billing-service",
-  "apps/billing-worker",
-  "apps/cloud-service",
-  "apps/cloud-worker",
-  "apps/developer-service",
   "apps/email-worker",
-  "apps/gateway-cloud",
-  "apps/identity-service",
-  "apps/identity-worker",
-  "apps/account-service-next",
-  "apps/account-worker",
-  "apps/enterprise-service",
-  "apps/backoffice-service",
   "libs/rust/audit",
   "libs/rust/billing",
   "libs/rust/core",
@@ -95,9 +83,6 @@ tower-http = { version = "0.6", features = ["cors", "timeout", "compression-full
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
-
-[patch.crates-io]
-xmlsec = { path = "vendor/xmlsec" }
 
 [profile.dev]
 incremental = true

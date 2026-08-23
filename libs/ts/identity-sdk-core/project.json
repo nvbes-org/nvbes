@@ -4,7 +4,6 @@
   "root": "libs/ts/identity-sdk-core",
   "sourceRoot": "libs/ts/identity-sdk-core/src",
   "tags": ["scope:oss", "type:lib", "domain:identity", "layer:sdk"],
-  "implicitDependencies": ["identity-service"],
   "targets": {
     "check": {
       "executor": "nx:run-commands",
@@ -12,8 +11,7 @@
       "inputs": [
         "{projectRoot}/openapi.json",
         "{projectRoot}/openapi.contract.test.mjs",
-        "{projectRoot}/src/types.gen.ts",
-        "{workspaceRoot}/apps/identity-service/openapi.json"
+        "{projectRoot}/src/types.gen.ts"
       ],
       "options": {
         "command": "pnpm --dir libs/ts/identity-sdk-core check"
@@ -37,8 +35,7 @@
       "inputs": [
         "{projectRoot}/openapi.json",
         "{projectRoot}/openapi.contract.test.mjs",
-        "{projectRoot}/src/types.gen.ts",
-        "{workspaceRoot}/apps/identity-service/openapi.json"
+        "{projectRoot}/src/types.gen.ts"
       ],
       "options": {
         "command": "pnpm --dir libs/ts/identity-sdk-core test"
