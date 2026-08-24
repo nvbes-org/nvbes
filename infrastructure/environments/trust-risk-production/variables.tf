@@ -3,6 +3,16 @@ variable "scaleway_project_id" {
   type        = string
 }
 
+variable "scaleway_organization_id" {
+  description = "Scaleway Organization owning the production Trust/Risk IAM applications."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.scaleway_organization_id))
+    error_message = "scaleway_organization_id must be a valid UUID."
+  }
+}
+
 variable "scaleway_region" {
   type    = string
   default = "fr-par"

@@ -17,7 +17,8 @@ Critical database and registry resources use `prevent_destroy`.
 ## GitHub environment
 
 Create a protected environment named `production-trust-risk` with variables
-`SCW_PROJECT_ID`, `SCW_PRIVATE_NETWORK_ID` and `TERRAFORM_STATE_BUCKET`.
+`SCW_ORGANIZATION_ID`, `SCW_PROJECT_ID`, `SCW_PRIVATE_NETWORK_ID` and
+`TERRAFORM_STATE_BUCKET`.
 It requires these secrets:
 
 - `SCW_ACCESS_KEY` and `SCW_SECRET_KEY` for the least-privilege deployment identity;
