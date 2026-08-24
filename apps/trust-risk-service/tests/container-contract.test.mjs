@@ -23,6 +23,10 @@ test("image builds and runs the Trust/Risk service as non-root", () => {
 		dockerfile,
 		/cargo build --locked --release --bin nvbes-trust-risk-service/,
 	);
+	assert.equal(
+		dockerfile.match(/^ARG DEBIAN_FRONTEND=noninteractive$/gm)?.length,
+		2,
+	);
 	assert.ok(dockerfile.includes("USER 10001:10001"));
 	assert.ok(dockerfile.includes("EXPOSE 8080"));
 	assert.ok(dockerfile.includes('NVBES_TRUST_RISK_BIND_ADDR="0.0.0.0:8080"'));
