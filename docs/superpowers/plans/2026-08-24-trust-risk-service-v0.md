@@ -72,7 +72,7 @@
 - Modify: `Cargo.toml`
 - Modify: `tools/rust-workspace/project.json`
 
-- [ ] **Step 1: Verify no Rust Nx generator exists**
+- [x] **Step 1: Verify no Rust Nx generator exists**
 
 Run:
 
@@ -83,7 +83,7 @@ rtk find tools -maxdepth 4 -type f | rtk rg 'generator|generators.json'
 
 Expected: only Nx setup generators and no local Rust application/library generator. Manual scaffolding is therefore required.
 
-- [ ] **Step 2: Add the protobuf contract**
+- [x] **Step 2: Add the protobuf contract**
 
 Create `trust_risk.proto` with four services and typed messages:
 
@@ -109,7 +109,7 @@ service TrustRiskOperationsService {
 
 Define `RiskSignal`, `SubjectReference`, `AttributeValue`, `AssessRiskRequest`, `RiskEvaluation`, `RiskLabel`, operator context, review messages and bounded canonical JSON rule-set messages. Reserve enum zero values as unspecified.
 
-- [ ] **Step 3: Add manual Nx/Cargo scaffolding**
+- [x] **Step 3: Add manual Nx/Cargo scaffolding**
 
 Add workspace members:
 
@@ -130,11 +130,11 @@ Create `project.json` targets using `nx:run-commands`:
 
 Use tags `type:app,domain:trust-risk,layer:app` for the service and `type:lib,domain:trust-risk,layer:core` for the crate.
 
-- [ ] **Step 4: Add protobuf generation and empty module roots**
+- [x] **Step 4: Add protobuf generation and empty module roots**
 
 `build.rs` must compile `common.proto` and `trust_risk.proto` with vendored protoc. `proto.rs` must expose `nvbes::platform::v1` and `nvbes::trust_risk::v1`. `lib.rs` and `main.rs` declare only explicit flat modules.
 
-- [ ] **Step 5: Run the first compile**
+- [x] **Step 5: Run the first compile**
 
 Run:
 
@@ -144,7 +144,7 @@ rtk pnpm nx run trust-risk-service:check
 
 Expected: PASS with generated protobuf modules available.
 
-- [ ] **Step 6: Commit the scaffold**
+- [x] **Step 6: Commit the scaffold**
 
 ```bash
 rtk git add Cargo.toml Cargo.lock contracts/protobuf/nvbes/trust_risk apps/trust-risk-service libs/rust/trust-risk tools/rust-workspace/project.json

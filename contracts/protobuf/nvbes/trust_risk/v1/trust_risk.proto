@@ -1,0 +1,265 @@
+syntax = "proto3";
+
+package nvbes.trust_risk.v1;
+
+import "google/protobuf/timestamp.proto";
+import "nvbes/platform/v1/common.proto";
+
+service TrustRiskSignalService {
+  rpc SubmitSignals(SubmitSignalsRequest) returns (SubmitSignalsResponse);
+}
+
+service TrustRiskAssessmentService {
+  rpc AssessRisk(AssessRiskRequest) returns (RiskEvaluation);
+}
+
+service TrustRiskLabelService {
+  rpc SubmitLabels(SubmitLabelsRequest) returns (SubmitLabelsResponse);
+}
+
+service TrustRiskOperationsService {
+  rpc GetEvaluation(GetEvaluationRequest) returns (RiskEvaluationDetail);
+  rpc ListReviewCases(ListReviewCasesRequest) returns (ListReviewCasesResponse);
+  rpc TransitionReviewCase(TransitionReviewCaseRequest) returns (ReviewCase);
+  rpc StageRuleSet(StageRuleSetRequest) returns (RuleSetReceipt);
+  rpc ActivateRuleSet(ActivateRuleSetRequest) returns (RuleSetReceipt);
+  rpc RollbackRuleSet(RollbackRuleSetRequest) returns (RuleSetReceipt);
+}
+
+enum DataScope {
+  DATA_SCOPE_UNSPECIFIED = 0;
+  DATA_SCOPE_TENANT = 1;
+  DATA_SCOPE_REGIONAL = 2;
+  DATA_SCOPE_GLOBAL_DERIVED = 3;
+}
+
+enum SubjectKind {
+  SUBJECT_KIND_UNSPECIFIED = 0;
+  SUBJECT_KIND_PRINCIPAL = 1;
+  SUBJECT_KIND_DEVICE = 2;
+  SUBJECT_KIND_NETWORK = 3;
+  SUBJECT_KIND_TENANT = 4;
+  SUBJECT_KIND_WORKLOAD = 5;
+  SUBJECT_KIND_ANONYMOUS_SESSION = 6;
+}
+
+message SubjectReference {
+  SubjectKind kind = 1;
+  string namespace = 2;
+  string opaque_id = 3;
+  DataScope scope = 4;
+  optional string tenant_id = 5;
+}
+
+message AttributeValue {
+  oneof value {
+    string string_value = 1;
+    sint64 signed_value = 2;
+    uint64 unsigned_value = 3;
+    bool bool_value = 4;
+    double decimal_value = 5;
+    bytes opaque_value = 6;
+  }
+}
+
+message RiskSignal {
+  string signal_id = 1;
+  uint32 schema_version = 2;
+  string producer = 3;
+  string signal_kind = 4;
+  google.protobuf.Timestamp occurred_at = 5;
+  string partition_key = 6;
+  repeated SubjectReference subjects = 7;
+  map<string, AttributeValue> attributes = 8;
+  nvbes.platform.v1.RequestContext context = 9;
+  DataScope scope = 10;
+}
+
+message SubmitSignalsRequest {
+  repeated RiskSignal signals = 1;
+}
+
+message SignalReceipt {
+  string signal_id = 1;
+  google.protobuf.Timestamp accepted_at = 2;
+  bool duplicate = 3;
+}
+
+message SubmitSignalsResponse {
+  repeated SignalReceipt receipts = 1;
+}
+
+enum RiskBand {
+  RISK_BAND_UNSPECIFIED = 0;
+  RISK_BAND_LOW = 1;
+  RISK_BAND_ELEVATED = 2;
+  RISK_BAND_HIGH = 3;
+  RISK_BAND_CRITICAL = 4;
+}
+
+enum RiskRecommendation {
+  RISK_RECOMMENDATION_UNSPECIFIED = 0;
+  RISK_RECOMMENDATION_ALLOW = 1;
+  RISK_RECOMMENDATION_CHALLENGE = 2;
+  RISK_RECOMMENDATION_REVIEW = 3;
+  RISK_RECOMMENDATION_DENY = 4;
+}
+
+message AssessRiskRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string producer = 2;
+  string assessment_key = 3;
+  string operation_class = 4;
+  repeated SubjectReference subjects = 5;
+  repeated RiskSignal instantaneous_signals = 6;
+}
+
+message RiskReason {
+  string code = 1;
+  map<string, string> parameters = 2;
+}
+
+message RiskEvaluation {
+  string evaluation_id = 1;
+  uint32 score = 2;
+  RiskBand band = 3;
+  RiskRecommendation recommendation = 4;
+  repeated RiskReason reasons = 5;
+  string feature_version = 6;
+  string rule_set_version = 7;
+  google.protobuf.Timestamp evaluated_at = 8;
+  google.protobuf.Timestamp expires_at = 9;
+  bool duplicate = 10;
+}
+
+enum RiskLabelKind {
+  RISK_LABEL_KIND_UNSPECIFIED = 0;
+  RISK_LABEL_KIND_LEGITIMATE = 1;
+  RISK_LABEL_KIND_CONFIRMED_FRAUD = 2;
+  RISK_LABEL_KIND_BOT = 3;
+  RISK_LABEL_KIND_ACCOUNT_TAKEOVER = 4;
+  RISK_LABEL_KIND_CHARGEBACK = 5;
+  RISK_LABEL_KIND_FALSE_POSITIVE = 6;
+}
+
+enum LabelSourceClass {
+  LABEL_SOURCE_CLASS_UNSPECIFIED = 0;
+  LABEL_SOURCE_CLASS_HUMAN = 1;
+  LABEL_SOURCE_CLASS_AUTHORITATIVE_EXTERNAL = 2;
+  LABEL_SOURCE_CLASS_VERIFIED_PRODUCT = 3;
+  LABEL_SOURCE_CLASS_HEURISTIC = 4;
+}
+
+message RiskLabel {
+  string label_id = 1;
+  uint32 schema_version = 2;
+  string producer = 3;
+  string evaluation_id = 4;
+  optional string review_case_id = 5;
+  RiskLabelKind kind = 6;
+  LabelSourceClass source_class = 7;
+  string source_id = 8;
+  double confidence = 9;
+  optional string actor = 10;
+  google.protobuf.Timestamp knowledge_at = 11;
+  optional string evidence_reference = 12;
+  string mapping_version = 13;
+  optional string corrects_label_id = 14;
+}
+
+message SubmitLabelsRequest {
+  repeated RiskLabel labels = 1;
+}
+
+message LabelReceipt {
+  string label_id = 1;
+  google.protobuf.Timestamp accepted_at = 2;
+  bool duplicate = 3;
+}
+
+message SubmitLabelsResponse {
+  repeated LabelReceipt receipts = 1;
+}
+
+message OperatorContext {
+  nvbes.platform.v1.RequestContext request_context = 1;
+  string caller = 2;
+  string actor = 3;
+  string reason = 4;
+}
+
+message GetEvaluationRequest {
+  OperatorContext operator = 1;
+  string evaluation_id = 2;
+}
+
+message FeatureValue {
+  string name = 1;
+  double value = 2;
+}
+
+message RiskEvaluationDetail {
+  RiskEvaluation evaluation = 1;
+  string producer = 2;
+  string operation_class = 3;
+  repeated FeatureValue features = 4;
+  optional string canonical_label = 5;
+}
+
+enum ReviewCaseState {
+  REVIEW_CASE_STATE_UNSPECIFIED = 0;
+  REVIEW_CASE_STATE_OPEN = 1;
+  REVIEW_CASE_STATE_IN_REVIEW = 2;
+  REVIEW_CASE_STATE_RESOLVED = 3;
+  REVIEW_CASE_STATE_INCONCLUSIVE = 4;
+}
+
+message ReviewCase {
+  string review_case_id = 1;
+  string evaluation_id = 2;
+  ReviewCaseState state = 3;
+  optional string assigned_to = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ListReviewCasesRequest {
+  OperatorContext operator = 1;
+  ReviewCaseState state = 2;
+  uint32 limit = 3;
+}
+
+message ListReviewCasesResponse {
+  repeated ReviewCase cases = 1;
+}
+
+message TransitionReviewCaseRequest {
+  OperatorContext operator = 1;
+  string review_case_id = 2;
+  ReviewCaseState target_state = 3;
+  optional string assign_to = 4;
+  optional RiskLabel resolution_label = 5;
+}
+
+message StageRuleSetRequest {
+  OperatorContext operator = 1;
+  string version = 2;
+  bytes canonical_json = 3;
+}
+
+message ActivateRuleSetRequest {
+  OperatorContext operator = 1;
+  string version = 2;
+}
+
+message RollbackRuleSetRequest {
+  OperatorContext operator = 1;
+  string version = 2;
+}
+
+message RuleSetReceipt {
+  string version = 1;
+  string state = 2;
+  string checksum = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
