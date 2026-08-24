@@ -92,6 +92,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(delivery, /resource "scaleway_container" "email_runtime"/u);
 	assert.match(
 		delivery,
+		/startup_probe\s*\{[\s\S]*?interval\s*=\s*"(?:[5-9]|[1-9]\d+)s"[\s\S]*?\}/u,
+	);
+	assert.match(
+		delivery,
 		/private_network_id\s*=\s*[^\n]*var\.private_network_id/u,
 	);
 	assert.match(database, /resource "scaleway_sdb_sql_database" "email"/u);

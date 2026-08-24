@@ -163,7 +163,7 @@ resource "scaleway_container" "email_runtime" {
       path = "/health/ready"
     }
     failure_threshold = 10
-    interval          = "2s"
+    interval          = "5s"
     timeout           = "1s"
   }
 
