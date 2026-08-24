@@ -364,27 +364,27 @@ rtk git commit -S -m "feat(trust-risk): project replayable features"
 **Files:**
 - Create assessment DB/GRPC files and tests.
 
-- [ ] **Step 1: Write failing assessment tests**
+- [x] **Step 1: Write failing assessment tests**
 
 Test evidence plus evaluation rollback, current feature loading, instantaneous evidence contribution, stable idempotent replay across rule activation, conflicting assessment reuse, score/reason persistence and unavailable error mapping.
 
-- [ ] **Step 2: Verify failure**
+- [x] **Step 2: Verify failure**
 
 Run `rtk cargo test -p nvbes-trust-risk-service assessment`.
 
-- [ ] **Step 3: Seed and load the baseline shared rule set**
+- [x] **Step 3: Seed and load the baseline shared rule set**
 
 The migration stages and activates a reviewed V1 rule set with generic rules for high network risk, high automation confidence, subject reuse, high velocity, negative labels and bounded positive reputation. Thresholds map final score to `allow`, `challenge`, `review`, `deny` without Billing-specific fields.
 
-- [ ] **Step 4: Implement atomic evaluation**
+- [x] **Step 4: Implement atomic evaluation**
 
 Within one transaction, persist validated instantaneous signals, combine current subject feature maps with instantaneous evidence, evaluate the active immutable rule set and insert evaluation, exact feature snapshot and ordered reasons. Store request fingerprint and return the original row for identical retries.
 
-- [ ] **Step 5: Implement authenticated gRPC assessment**
+- [x] **Step 5: Implement authenticated gRPC assessment**
 
 Apply assessment ACL, size limit and deadline. Return typed statuses and never manufacture an allow result during an error.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 ```bash
 rtk cargo test -p nvbes-trust-risk-service assessment

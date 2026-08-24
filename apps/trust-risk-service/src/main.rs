@@ -1,5 +1,9 @@
 #[path = "trust_risk.app.rs"]
 mod app;
+#[path = "trust_risk.assessment.db.rs"]
+mod assessment_db;
+#[path = "trust_risk.assessment.grpc.rs"]
+mod assessment_grpc;
 #[path = "trust_risk.auth.rs"]
 mod auth;
 #[path = "trust_risk.config.rs"]

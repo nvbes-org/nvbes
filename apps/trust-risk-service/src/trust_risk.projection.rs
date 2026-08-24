@@ -2,7 +2,6 @@ use std::{collections::BTreeSet, time::Duration};
 
 use chrono::{DateTime, Utc};
 use nvbes_trust_risk::{attribute::Attribute, rules::FeatureMap, signal::RiskSignal};
-use sqlx::PgPool;
 use tokio::sync::watch;
 use uuid::Uuid;
 

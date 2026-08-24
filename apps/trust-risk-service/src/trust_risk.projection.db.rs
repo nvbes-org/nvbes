@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use nvbes_trust_risk::{proto::nvbes::trust_risk::v1 as pb, signal::RiskSignal};
 use prost::Message;
 use sqlx::PgPool;

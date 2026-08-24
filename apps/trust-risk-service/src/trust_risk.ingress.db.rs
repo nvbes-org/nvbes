@@ -24,12 +24,27 @@ pub async fn persist_signal(
     signal: &RiskSignal,
     retention_days: u32,
 ) -> Result<SignalReceipt, PersistSignalError> {
-    let fingerprint = fingerprint(signal);
     let payload = wire.encode_to_vec();
     if payload.len() > 192 * 1024 {
         return Err(PersistSignalError::PayloadTooLarge);
     }
     let mut tx = pool.begin().await?;
+    let receipt = persist_signal_in_transaction(&mut tx, wire, signal, retention_days).await?;
+    tx.commit().await?;
+    Ok(receipt)
+}
+
+pub async fn persist_signal_in_transaction(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    wire: &pb::RiskSignal,
+    signal: &RiskSignal,
+    retention_days: u32,
+) -> Result<SignalReceipt, PersistSignalError> {
+    let fingerprint = fingerprint(signal);
+    let payload = wire.encode_to_vec();
+    if payload.len() > 192 * 1024 {
+        return Err(PersistSignalError::PayloadTooLarge);
+    }
     let retention_deadline = signal.occurred_at() + Duration::days(i64::from(retention_days));
     let inserted = sqlx::query_scalar::<_, DateTime<Utc>>(
         r#"
@@ -50,11 +65,11 @@ pub async fn persist_signal(
     .bind(fingerprint.as_slice())
     .bind(payload)
     .bind(retention_deadline)
-    .fetch_optional(&mut *tx)
+    .fetch_optional(&mut **tx)
     .await?;
 
     if let Some(accepted_at) = inserted {
-        insert_subjects(&mut tx, signal.id(), signal.subjects()).await?;
+        insert_subjects(tx, signal.id(), signal.subjects()).await?;
         sqlx::query(
             r#"
             INSERT INTO trust_risk_outbox (
@@ -69,9 +84,8 @@ pub async fn persist_signal(
         .bind(signal.occurred_at())
         .bind(signal.producer())
         .bind(signal.kind())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
-        tx.commit().await?;
         return Ok(SignalReceipt {
             id: signal.id(),
             accepted_at,
@@ -83,12 +97,11 @@ pub async fn persist_signal(
         "SELECT fingerprint, accepted_at FROM trust_risk_signals WHERE id = $1",
     )
     .bind(signal.id())
-    .fetch_one(&mut *tx)
+    .fetch_one(&mut **tx)
     .await?;
     if !constant_time_eq(&existing.0, &fingerprint) {
         return Err(PersistSignalError::Conflict);
     }
-    tx.commit().await?;
     Ok(SignalReceipt {
         id: signal.id(),
         accepted_at: existing.1,
