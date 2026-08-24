@@ -364,6 +364,22 @@ jobs:
             sleep 10
           done
           [[ "$migration_state" == "succeeded" ]]
+      - name: Plan isolated email runtime
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          TF_VAR_email_data_encryption_key: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
+          TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
+          TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
+          TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
+        run: >-
+          terraform -chdir="$STACK_ROOT" plan
+          -lock-timeout=5m
+          -out=email-runtime.tfplan
       - name: Validate production runtime configuration
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
@@ -375,7 +391,10 @@ jobs:
           NVBES_SCALEWAY_EMAIL_SECRET_KEY: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
         run: |
           export NVBES_EMAIL_DATABASE_URL
-          NVBES_EMAIL_DATABASE_URL="$(terraform -chdir="$STACK_ROOT" output -raw email_database_runtime_url)"
+          NVBES_EMAIL_DATABASE_URL="$(
+            terraform -chdir="$STACK_ROOT" show -json email-runtime.tfplan |
+              jq -er '.planned_values.outputs.email_database_runtime_url.value'
+          )"
           docker run --rm --platform linux/amd64 \
             --env NVBES_EMAIL_DATABASE_URL \
             --env NVBES_EMAIL_DATA_ENCRYPTION_KEY \
@@ -400,22 +419,6 @@ jobs:
             --env NVBES_EMAIL_PAYLOAD_RETENTION_DAYS=30 \
             --env NVBES_EMAIL_LEDGER_RETENTION_DAYS=400 \
             "$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime
-      - name: Plan isolated email runtime
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
-          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
-          TF_VAR_email_data_encryption_key: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
-          TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
-          TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
-          TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
-          TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
-        run: >-
-          terraform -chdir="$STACK_ROOT" plan
-          -lock-timeout=5m
-          -out=email-runtime.tfplan
       - name: Apply reviewed email runtime plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}

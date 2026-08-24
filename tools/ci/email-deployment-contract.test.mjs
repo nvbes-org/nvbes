@@ -68,7 +68,7 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /migration_state.*succeeded/su);
 	assert.match(
 		workflow,
-		/name: Validate production runtime configuration[\s\S]*?email_database_runtime_url[\s\S]*?"\$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime/u,
+		/name: Plan isolated email runtime[\s\S]*?name: Validate production runtime configuration[\s\S]*?show -json email-runtime\.tfplan[\s\S]*?email_database_runtime_url\.value[\s\S]*?"\$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime/u,
 	);
 	assert.match(
 		workflow,
