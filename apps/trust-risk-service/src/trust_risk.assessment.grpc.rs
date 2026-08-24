@@ -48,6 +48,7 @@ impl TrustRiskAssessmentService for AssessmentService {
             &assessment,
             self.state.config.retention.evaluations_days,
             self.state.config.retention.signals_days,
+            self.state.config.retention.reviews_days,
         )
         .await
         .map_err(map_error)?;

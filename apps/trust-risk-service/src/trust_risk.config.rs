@@ -78,7 +78,7 @@ impl TrustRiskConfig {
         let operator_json = optional("NVBES_TRUST_RISK_OPERATOR_TOKENS").or_else(|| {
             development.then(|| {
                 format!(
-                    r#"[{{"actor":"development-operator","token":"{DEVELOPMENT_TOKEN}","permissions":["evaluation:read","review:write","rules:write"]}}]"#
+                    r#"[{{"actor":"development-operator","token":"{DEVELOPMENT_TOKEN}","permissions":["evaluation:read","review:write","rules:write","labels:human"]}}]"#
                 )
             })
         });

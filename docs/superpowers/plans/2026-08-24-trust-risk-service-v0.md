@@ -397,23 +397,23 @@ rtk git commit -S -m "feat(trust-risk): add explainable assessments"
 **Files:**
 - Create label/review DB/GRPC and tests.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Cover automatic source ACL, human operator ACL, immutable correction chains, canonical precedence, weak heuristics excluded from authoritative resolution, idempotent `review` case creation and valid/invalid state transitions.
 
-- [ ] **Step 2: Verify failure**
+- [x] **Step 2: Verify failure**
 
 Run `rtk cargo test -p nvbes-trust-risk-service labels review`.
 
-- [ ] **Step 3: Implement append-only label resolution**
+- [x] **Step 3: Implement append-only label resolution**
 
 Insert assertions with source-scoped idempotency. Recompute canonical resolution in the same transaction using precedence `human > authoritative external > verified product`; retain heuristics without resolving the label. A correction must reference an existing assertion and cannot form a cycle.
 
-- [ ] **Step 4: Implement review state machine**
+- [x] **Step 4: Implement review state machine**
 
 Create one case per review evaluation. Permit only `open -> in_review -> resolved|inconclusive`; resolved requires an authoritative label. Append every transition with actor and reason.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```bash
 rtk cargo test -p nvbes-trust-risk-service labels

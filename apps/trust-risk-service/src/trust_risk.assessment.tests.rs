@@ -62,11 +62,11 @@ fn assessment_fingerprint_is_stable_and_content_sensitive() {
 async fn assessment_persists_evidence_and_replays_original_result(pool: sqlx::PgPool) {
     let wire = request();
     let domain = Assessment::try_from(wire.clone()).unwrap();
-    let first = assess(&pool, &wire, &domain, 400, 30).await.unwrap();
+    let first = assess(&pool, &wire, &domain, 400, 30, 400).await.unwrap();
     assert!(!first.duplicate);
     assert_eq!(first.rule_set_version, "baseline-v1");
 
-    let duplicate = assess(&pool, &wire, &domain, 400, 30).await.unwrap();
+    let duplicate = assess(&pool, &wire, &domain, 400, 30, 400).await.unwrap();
     assert!(duplicate.duplicate);
     assert_eq!(duplicate.id, first.id);
 
@@ -74,7 +74,7 @@ async fn assessment_persists_evidence_and_replays_original_result(pool: sqlx::Pg
     changed_wire.operation_class = "identity.login".to_string();
     let changed = Assessment::try_from(changed_wire.clone()).unwrap();
     assert!(matches!(
-        assess(&pool, &changed_wire, &changed, 400, 30)
+        assess(&pool, &changed_wire, &changed, 400, 30, 400)
             .await
             .unwrap_err(),
         AssessmentPersistenceError::Conflict

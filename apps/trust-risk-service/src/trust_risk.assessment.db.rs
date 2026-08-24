@@ -37,6 +37,7 @@ pub async fn assess(
     assessment: &Assessment,
     evaluation_retention_days: u32,
     signal_retention_days: u32,
+    review_retention_days: u32,
 ) -> Result<StoredEvaluation, AssessmentPersistenceError> {
     let request_fingerprint = fingerprint(assessment);
     let mut tx = pool.begin().await?;
@@ -102,6 +103,9 @@ pub async fn assess(
     .execute(&mut *tx)
     .await?;
     persist_snapshot(&mut tx, id, &features, &result.reason_codes).await?;
+    if result.recommendation == Recommendation::Review {
+        crate::review_db::ensure_case_in_transaction(&mut tx, id, review_retention_days).await?;
+    }
     tx.commit().await?;
 
     Ok(StoredEvaluation {

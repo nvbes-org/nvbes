@@ -29,6 +29,14 @@ impl LabelAssertion {
         self.evaluation_id
     }
 
+    pub fn producer(&self) -> &str {
+        &self.producer
+    }
+
+    pub fn review_case_id(&self) -> Option<Uuid> {
+        self.review_case_id
+    }
+
     pub fn kind(&self) -> pb::RiskLabelKind {
         self.kind
     }
@@ -41,8 +49,28 @@ impl LabelAssertion {
         self.source_class
     }
 
+    pub fn source_id(&self) -> &str {
+        &self.source_id
+    }
+
     pub fn actor(&self) -> Option<&str> {
         self.actor.as_deref()
+    }
+
+    pub fn knowledge_at(&self) -> DateTime<Utc> {
+        self.knowledge_at
+    }
+
+    pub fn evidence_reference(&self) -> Option<&str> {
+        self.evidence_reference.as_deref()
+    }
+
+    pub fn mapping_version(&self) -> &str {
+        &self.mapping_version
+    }
+
+    pub fn corrects_label_id(&self) -> Option<Uuid> {
+        self.corrects_label_id
     }
 }
 
