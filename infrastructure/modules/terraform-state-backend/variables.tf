@@ -33,6 +33,22 @@ variable "state_stacks" {
   }
 }
 
+variable "external_state_application_ids" {
+  description = "Pre-bootstrapped state application IDs receiving isolated prefixes without duplicate IAM resources."
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition = alltrue([
+      for stack, application_id in var.external_state_application_ids :
+      can(regex("^[a-z][a-z0-9-]*$", stack)) &&
+      can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", application_id)) &&
+      !contains(var.state_stacks, stack)
+    ])
+    error_message = "external state stacks must be unique lowercase kebab-case names mapped to Scaleway application UUIDs."
+  }
+}
+
 variable "tags" {
   description = "Tags applied to the state bucket."
   type        = list(string)

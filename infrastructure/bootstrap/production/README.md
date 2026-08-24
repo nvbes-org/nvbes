@@ -17,7 +17,14 @@ production/platform/terraform.tfstate
 production/email/terraform.tfstate
 production/billing/terraform.tfstate
 production/identity/terraform.tfstate
+production/trust-risk/terraform.tfstate
 ```
+
+L'identité state Trust/Risk est pré-bootstrapée séparément afin que son premier
+déploiement puisse initialiser son backend. La racine bootstrap conserve la
+propriété déclarative de son accès au bucket via
+`external_state_application_ids`; elle n'essaie pas de recréer son application
+IAM ni ses credentials.
 
 Object Lock/WORM est volontairement désactivé: il ne remplace pas le lockfile
 Terraform et pourrait empêcher les mises à jour normales du state.
