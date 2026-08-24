@@ -2,6 +2,7 @@ FROM rust:1.91.1-slim-bookworm@sha256:8514999d4786ef12efe89239e86b3d0a021b94b9d3
 
 ARG SOURCE_DATE_EPOCH=0
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
+ARG DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=C \
     TZ=UTC \
     SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH}" \
@@ -34,6 +35,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS runtime
 
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
+ARG DEBIAN_FRONTEND=noninteractive
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
     && printf '%s\n' \
       "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
