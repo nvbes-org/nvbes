@@ -19,7 +19,7 @@ variable "bucket_name" {
 }
 
 variable "state_stacks" {
-  description = "Stacks receiving isolated credentials and state prefixes."
+  description = "Stacks receiving isolated credentials and exact state-object access."
   type        = set(string)
 
   validation {
@@ -34,7 +34,7 @@ variable "state_stacks" {
 }
 
 variable "external_state_application_ids" {
-  description = "Pre-bootstrapped state application IDs receiving isolated prefixes without duplicate IAM resources."
+  description = "Pre-bootstrapped state application IDs receiving exact state-object access without duplicate IAM resources."
   type        = map(string)
   default     = {}
 
