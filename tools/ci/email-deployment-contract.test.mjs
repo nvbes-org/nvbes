@@ -68,6 +68,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /migration_state.*succeeded/su);
 	assert.match(
 		workflow,
+		/name: Validate production runtime configuration[\s\S]*?email_database_runtime_url[\s\S]*?"\$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime/u,
+	);
+	assert.match(
+		workflow,
 		/terraform[\s\S]*?plan[\s\S]*?-out=email-runtime\.tfplan/u,
 	);
 	assert.match(
@@ -84,6 +88,8 @@ test("email production deploy is isolated and uses an immutable signed image", (
 
 	const delivery = read(`${stackRoot}/email-delivery.tf`);
 	const database = read(`${stackRoot}/email-database.tf`);
+	const provider = read(`${stackRoot}/email-provider.tf`);
+	const outputs = read(`${stackRoot}/outputs.tf`);
 	assert.match(
 		delivery,
 		/resource "scaleway_registry_namespace" "email_worker"/u,
@@ -106,6 +112,14 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(
 		database,
 		/"postgres:\/\/%s:%s@%s\?sslmode=verify-full"/u,
+	);
+	assert.match(
+		provider,
+		/resource "scaleway_mnq_sns_credentials" "email_events_terraform"[\s\S]*?can_receive\s*=\s*true/u,
+	);
+	assert.match(
+		outputs,
+		/output "email_database_runtime_url"[\s\S]*?sensitive\s*=\s*true/u,
 	);
 });
 

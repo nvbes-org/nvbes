@@ -58,6 +58,12 @@ output "email_database_endpoint" {
   value       = scaleway_sdb_sql_database.email.endpoint
 }
 
+output "email_database_runtime_url" {
+  description = "Sensitive data-only database URL consumed by runtime configuration validation."
+  sensitive   = true
+  value       = local.email_database_runtime_url
+}
+
 output "email_database_migration_job_id" {
   description = "Job definition that applies email-worker SQLx migrations."
   value       = scaleway_job_definition.email_database_migration.id

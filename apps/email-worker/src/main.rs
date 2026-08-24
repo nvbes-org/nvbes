@@ -68,6 +68,13 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let config = config::EmailWorkerConfig::from_env()?;
+    if matches!(command.as_slice(), [action] if action == "validate-runtime") {
+        let db = database::connect_lazy(&config.database_url)?;
+        let _state = state::EmailWorkerState::new(config, db)?;
+        println!("email runtime configuration is valid");
+        return Ok(());
+    }
+
     let _error_reporting_guard = error_reporting::init(&config);
     nvbes_observability::install_safe_panic_hook();
     nvbes_observability::init_tracing_with_config(
@@ -94,7 +101,7 @@ async fn main() -> anyhow::Result<()> {
             return Ok(());
         }
         _ => anyhow::bail!(
-            "usage: nvbes-email-worker [migrate|error-reporting-smoke|release-suppression <message-id> <actor> <reason>]"
+            "usage: nvbes-email-worker [migrate|validate-runtime|error-reporting-smoke|release-suppression <message-id> <actor> <reason>]"
         ),
     }
 

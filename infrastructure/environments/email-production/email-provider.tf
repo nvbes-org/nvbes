@@ -92,7 +92,7 @@ resource "scaleway_mnq_sns_credentials" "email_events_terraform" {
   permissions {
     can_manage  = true
     can_publish = false
-    can_receive = false
+    can_receive = true
   }
 }
 

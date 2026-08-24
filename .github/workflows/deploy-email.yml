@@ -364,6 +364,42 @@ jobs:
             sleep 10
           done
           [[ "$migration_state" == "succeeded" ]]
+      - name: Validate production runtime configuration
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          NVBES_EMAIL_DATA_ENCRYPTION_KEY: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
+          NVBES_EMAIL_PRODUCER_TOKENS: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
+          NVBES_EMAIL_RECIPIENT_HMAC_KEY: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          NVBES_EMAIL_SNS_CA_BUNDLE_PEM: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
+          NVBES_SCALEWAY_EMAIL_SECRET_KEY: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
+        run: |
+          export NVBES_EMAIL_DATABASE_URL
+          NVBES_EMAIL_DATABASE_URL="$(terraform -chdir="$STACK_ROOT" output -raw email_database_runtime_url)"
+          docker run --rm --platform linux/amd64 \
+            --env NVBES_EMAIL_DATABASE_URL \
+            --env NVBES_EMAIL_DATA_ENCRYPTION_KEY \
+            --env NVBES_EMAIL_PRODUCER_TOKENS \
+            --env NVBES_EMAIL_RECIPIENT_HMAC_KEY \
+            --env NVBES_EMAIL_SNS_CA_BUNDLE_PEM \
+            --env NVBES_SCALEWAY_EMAIL_SECRET_KEY \
+            --env NVBES_ENVIRONMENT=production \
+            --env NVBES_EMAIL_FROM_EMAIL="no-reply@notify.${TF_VAR_base_domain}" \
+            --env NVBES_EMAIL_FROM_NAME=nvbes \
+            --env NVBES_EMAIL_MESSAGE_ID_DOMAIN="notify.${TF_VAR_base_domain}" \
+            --env NVBES_EMAIL_PROVIDER=scaleway \
+            --env NVBES_SCALEWAY_EMAIL_PROJECT_ID="$SCW_DEFAULT_PROJECT_ID" \
+            --env NVBES_SCALEWAY_EMAIL_REGION=fr-par \
+            --env NVBES_EMAIL_QUEUE_ENDPOINT=https://sqs.mnq.fr-par.scaleway.com \
+            --env NVBES_EMAIL_QUEUE_URL=https://sqs.mnq.fr-par.scaleway.com/preflight/email-dispatch \
+            --env NVBES_EMAIL_QUEUE_REGION=fr-par \
+            --env NVBES_EMAIL_QUEUE_ACCESS_KEY=preflight-access-key \
+            --env NVBES_EMAIL_QUEUE_SECRET_KEY=preflight-secret-key \
+            --env NVBES_EMAIL_SNS_TOPIC_ARN=arn:scw:sns:fr-par:preflight:email-events \
+            --env NVBES_EMAIL_RUNTIME_ROLE=ingress \
+            --env NVBES_EMAIL_PAYLOAD_RETENTION_DAYS=30 \
+            --env NVBES_EMAIL_LEDGER_RETENTION_DAYS=400 \
+            "$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime
       - name: Plan isolated email runtime
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
