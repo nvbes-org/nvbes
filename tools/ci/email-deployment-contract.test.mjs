@@ -95,6 +95,14 @@ test("email production deploy is isolated and uses an immutable signed image", (
 		/private_network_id\s*=\s*[^\n]*var\.private_network_id/u,
 	);
 	assert.match(database, /resource "scaleway_sdb_sql_database" "email"/u);
+	assert.match(
+		database,
+		/split\([\s\S]*?"\?"[\s\S]*?trimprefix\(scaleway_sdb_sql_database\.email\.endpoint, "postgres:\/\/"\)[\s\S]*?\)\[0\]/u,
+	);
+	assert.match(
+		database,
+		/"postgres:\/\/%s:%s@%s\?sslmode=verify-full"/u,
+	);
 });
 
 test("container release publishes the image name consumed by Terraform", () => {

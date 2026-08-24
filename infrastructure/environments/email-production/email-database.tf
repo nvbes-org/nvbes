@@ -55,7 +55,10 @@ resource "scaleway_iam_api_key" "email_database_migrator" {
 }
 
 locals {
-  email_database_endpoint = trimprefix(scaleway_sdb_sql_database.email.endpoint, "postgres://")
+  email_database_endpoint = split(
+    "?",
+    trimprefix(scaleway_sdb_sql_database.email.endpoint, "postgres://"),
+  )[0]
   email_database_runtime_url = format(
     "postgres://%s:%s@%s?sslmode=verify-full",
     scaleway_iam_application.email_database_runtime.id,
