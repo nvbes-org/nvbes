@@ -13,7 +13,6 @@ locals {
 
   state_paths = {
     for stack in local.all_state_stacks : stack => {
-      prefix   = "${var.environment}/${stack}"
       state    = "${var.environment}/${stack}/terraform.tfstate"
       lockfile = "${var.environment}/${stack}/terraform.tfstate.tflock"
     }
@@ -92,34 +91,18 @@ resource "scaleway_object_bucket_policy" "terraform_state" {
   policy = jsonencode({
     Version = "2023-04-17"
     Id      = "nvbes-${var.environment}-terraform-state"
-    Statement = concat(
-      [
-        for stack, path in local.state_paths : {
-          Sid       = "List${replace(title(replace(stack, "-", " ")), " ", "")}StatePrefix"
-          Effect    = "Allow"
-          Principal = { SCW = "application_id:${local.state_application_ids[stack]}" }
-          Action    = ["s3:ListBucket"]
-          Resource  = [scaleway_object_bucket.terraform_state.name]
-          Condition = merge(local.tls_condition, {
-            StringLike = {
-              "s3:prefix" = ["${path.prefix}/*"]
-            }
-          })
-        }
-      ],
-      [
-        for stack, path in local.state_paths : {
-          Sid       = "Manage${replace(title(replace(stack, "-", " ")), " ", "")}StateAndLock"
-          Effect    = "Allow"
-          Principal = { SCW = "application_id:${local.state_application_ids[stack]}" }
-          Action    = ["s3:DeleteObject", "s3:GetObject", "s3:PutObject"]
-          Resource = [
-            "${scaleway_object_bucket.terraform_state.name}/${path.state}",
-            "${scaleway_object_bucket.terraform_state.name}/${path.lockfile}",
-          ]
-          Condition = local.tls_condition
-        }
-      ],
-    )
+    Statement = [
+      for stack, path in local.state_paths : {
+        Sid       = "Manage${replace(title(replace(stack, "-", " ")), " ", "")}StateAndLock"
+        Effect    = "Allow"
+        Principal = { SCW = "application_id:${local.state_application_ids[stack]}" }
+        Action    = ["s3:DeleteObject", "s3:GetObject", "s3:PutObject"]
+        Resource = [
+          "${scaleway_object_bucket.terraform_state.name}/${path.state}",
+          "${scaleway_object_bucket.terraform_state.name}/${path.lockfile}",
+        ]
+        Condition = local.tls_condition
+      }
+    ]
   })
 }
