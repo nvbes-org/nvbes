@@ -1,0 +1,9 @@
+scaleway_project_id = "e5e54340-62c8-4bd5-af4d-d3d5ea2c8706"
+private_network_id  = ""
+
+trust_risk_image = "rg.fr-par.scw.cloud/nvbes-prod-trust-risk/nvbes-trust-risk-service@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+# Supply these only through TF_VAR_* or the CI environment secret store.
+trust_risk_producer_policies = "replace-with-non-empty-json-array"
+trust_risk_operator_tokens   = "replace-with-non-empty-json-array"
+trust_risk_metrics_token     = "replace-with-at-least-32-safe-characters"

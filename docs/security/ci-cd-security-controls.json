@@ -179,6 +179,17 @@
                 "cosign verify",
                 "email-runtime.tfplan"
               ]
+            },
+            {
+              "path": ".github/workflows/deploy-trust-risk.yml",
+              "includes": [
+                "name: production-trust-risk",
+                "if: github.ref == 'refs/heads/main'",
+                "ref: ${{ github.sha }}",
+                "production/trust-risk/terraform.tfstate",
+                "cosign verify",
+                "trust-risk-runtime.tfplan"
+              ]
             }
           ]
         }
@@ -327,7 +338,12 @@
     "SCALEWAY_EMAIL_SECRET_KEY",
     "SCW_ACCESS_KEY",
     "SCW_SECRET_KEY",
-    "SENTRY_AUTH_TOKEN"
+    "SENTRY_AUTH_TOKEN",
+    "TRUST_RISK_METRICS_TOKEN",
+    "TRUST_RISK_OPERATOR_TOKENS",
+    "TRUST_RISK_PRODUCER_POLICIES",
+    "TRUST_RISK_TERRAFORM_STATE_ACCESS_KEY",
+    "TRUST_RISK_TERRAFORM_STATE_SECRET_KEY"
   ],
   "allowedContinueOnError": [],
   "allowedWritePermissions": ["id-token", "packages", "security-events"],

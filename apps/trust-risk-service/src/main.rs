@@ -52,16 +52,17 @@ use tokio::sync::watch;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let command: Vec<String> = std::env::args().skip(1).collect();
-    let config = config::TrustRiskConfig::from_env()?;
     if matches!(command.as_slice(), [action] if action == "migrate") {
+        let database_url = config::database_url_from_env()?;
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(2)
-            .connect(&config.database_url)
+            .connect(&database_url)
             .await?;
         database::migrate(&pool).await?;
         println!("trust/risk database migrations applied");
         return Ok(());
     }
+    let config = config::TrustRiskConfig::from_env()?;
     if matches!(command.as_slice(), [action] if action == "validate-runtime") {
         database::connect_lazy(&config.database_url)?;
         println!("trust/risk runtime configuration is valid");

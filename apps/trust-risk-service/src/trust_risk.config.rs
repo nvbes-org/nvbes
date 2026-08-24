@@ -63,9 +63,7 @@ impl TrustRiskConfig {
     pub fn from_env() -> Result<Self, ConfigError> {
         let environment = env_or("NVBES_ENVIRONMENT", "development");
         let development = matches!(environment.as_str(), "development" | "test");
-        let database_url = optional("NVBES_TRUST_RISK_DATABASE_URL")
-            .or_else(|| development.then(|| "postgres://localhost/nvbes_trust_risk".to_string()))
-            .ok_or(ConfigError::Missing("NVBES_TRUST_RISK_DATABASE_URL"))?;
+        let database_url = database_url(&environment)?;
         let bind_addr = env_or("NVBES_TRUST_RISK_BIND_ADDR", "127.0.0.1:3050")
             .parse()
             .map_err(|_| ConfigError::Invalid("NVBES_TRUST_RISK_BIND_ADDR"))?;
@@ -112,6 +110,18 @@ impl TrustRiskConfig {
             projection_heartbeat_max_age: Duration::from_secs(30),
         })
     }
+}
+
+pub fn database_url_from_env() -> Result<String, ConfigError> {
+    let environment = env_or("NVBES_ENVIRONMENT", "development");
+    database_url(&environment)
+}
+
+fn database_url(environment: &str) -> Result<String, ConfigError> {
+    let development = matches!(environment, "development" | "test");
+    optional("NVBES_TRUST_RISK_DATABASE_URL")
+        .or_else(|| development.then(|| "postgres://localhost/nvbes_trust_risk".to_string()))
+        .ok_or(ConfigError::Missing("NVBES_TRUST_RISK_DATABASE_URL"))
 }
 
 pub fn parse_producers(value: &str) -> Result<BTreeMap<String, ProducerPolicy>, ConfigError> {
