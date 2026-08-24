@@ -10,7 +10,7 @@ catalog:
   '@tanstack/react-router': ^1.170.31
   '@tanstack/react-router-devtools': ^1.167.1
   typescript: ^7.0.2
-  vite: ^8.2.1
+  vite: ^8.2.2
   vite-plus: ^0.2.9
   '@vitejs/plugin-react': ^6.0.5
   react-router-dom: ^7.15.1
