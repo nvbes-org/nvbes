@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
@@ -89,7 +89,6 @@ pub async fn transition(
     assign_to: Option<String>,
     actor: &str,
     reason: &str,
-    has_authoritative_label: bool,
 ) -> Result<ReviewCase, ReviewError> {
     if actor.len() < 3 || reason.trim().len() < 3 || reason.len() > 300 {
         return Err(ReviewError::InvalidInput);
@@ -103,6 +102,18 @@ pub async fn transition(
     .await?
     .ok_or(ReviewError::NotFound)?;
     let current = ReviewState::parse(&row.1)?;
+    let has_authoritative_label = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS (
+            SELECT 1 FROM trust_risk_canonical_labels AS canonical
+            JOIN trust_risk_labels AS label ON label.id = canonical.label_id
+            WHERE canonical.evaluation_id = $1 AND label.source_class IN (1, 2, 3)
+        )
+        "#,
+    )
+    .bind(row.0)
+    .fetch_one(&mut *tx)
+    .await?;
     if !current.permits(target, has_authoritative_label) {
         return Err(ReviewError::InvalidTransition);
     }

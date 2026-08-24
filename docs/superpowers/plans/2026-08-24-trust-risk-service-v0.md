@@ -427,27 +427,27 @@ rtk git commit -S -m "feat(trust-risk): add labels and review workflow"
 **Files:**
 - Create operations/rules/audit/retention modules and tests.
 
-- [ ] **Step 1: Write failing operations tests**
+- [x] **Step 1: Write failing operations tests**
 
 Test safe evaluation detail, operator auth, stage validation, activation by a different actor, rollback to a validated version, append-only audit, retention class enforcement, legal-hold exemption and subject erasure/rebuild scheduling.
 
-- [ ] **Step 2: Verify failure**
+- [x] **Step 2: Verify failure**
 
 Run `rtk cargo test -p nvbes-trust-risk-service operations retention`.
 
-- [ ] **Step 3: Implement rule lifecycle and dual control**
+- [x] **Step 3: Implement rule lifecycle and dual control**
 
 Stage canonical typed JSON with checksum and creator. Activation requires a distinct authenticated actor and atomically retires the active version, activates the staged version and writes audit. Rollback follows the same dual-control rule and activates an already validated version.
 
-- [ ] **Step 4: Implement operations reads and review transitions**
+- [x] **Step 4: Implement operations reads and review transitions**
 
 Return only safe feature names/values and reason codes. Do not return correlation keys, other-tenant identifiers, tokens or raw signal attributes.
 
-- [ ] **Step 5: Implement retention and erasure**
+- [x] **Step 5: Implement retention and erasure**
 
 Delete projected signals past their configured class deadline only when no legal hold applies. Purge feature rows after window plus replay margin. Retain evaluation/label/review/audit rows per class policy. Erasure removes subject links, deletes active feature projections and appends a rebuild request/audit event.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 ```bash
 rtk cargo test -p nvbes-trust-risk-service operations

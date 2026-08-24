@@ -76,7 +76,7 @@ CREATE TABLE trust_risk_rule_sets (
     created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     activated_by TEXT,
     activated_at TIMESTAMPTZ,
-    CHECK ((state = 'active') = (activated_at IS NOT NULL))
+    CHECK (state <> 'active' OR activated_at IS NOT NULL)
 );
 CREATE UNIQUE INDEX trust_risk_one_active_rule_set_idx
     ON trust_risk_rule_sets ((state)) WHERE state = 'active';
@@ -94,6 +94,7 @@ CREATE TABLE trust_risk_evaluations (
     rule_set_version TEXT NOT NULL REFERENCES trust_risk_rule_sets(version),
     evaluated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     expires_at TIMESTAMPTZ NOT NULL,
+    legal_hold BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE (producer, assessment_key)
 );
 CREATE INDEX trust_risk_evaluations_retention_idx ON trust_risk_evaluations (expires_at);
@@ -134,12 +135,13 @@ CREATE TABLE trust_risk_labels (
     fingerprint BYTEA NOT NULL CHECK (octet_length(fingerprint) = 32),
     accepted_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     expires_at TIMESTAMPTZ NOT NULL,
+    legal_hold BOOLEAN NOT NULL DEFAULT FALSE,
     CHECK (corrects_label_id IS NULL OR corrects_label_id <> id)
 );
 
 CREATE TABLE trust_risk_canonical_labels (
     evaluation_id UUID PRIMARY KEY REFERENCES trust_risk_evaluations(id) ON DELETE CASCADE,
-    label_id UUID NOT NULL UNIQUE REFERENCES trust_risk_labels(id),
+    label_id UUID NOT NULL UNIQUE REFERENCES trust_risk_labels(id) ON DELETE CASCADE,
     resolved_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 
@@ -150,7 +152,8 @@ CREATE TABLE trust_risk_review_cases (
     assigned_to TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-    expires_at TIMESTAMPTZ NOT NULL
+    expires_at TIMESTAMPTZ NOT NULL,
+    legal_hold BOOLEAN NOT NULL DEFAULT FALSE
 );
 ALTER TABLE trust_risk_labels
     ADD CONSTRAINT trust_risk_labels_review_case_fk

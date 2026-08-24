@@ -4,6 +4,8 @@ mod app;
 mod assessment_db;
 #[path = "trust_risk.assessment.grpc.rs"]
 mod assessment_grpc;
+#[path = "trust_risk.audit.rs"]
+mod audit;
 #[path = "trust_risk.auth.rs"]
 mod auth;
 #[path = "trust_risk.config.rs"]
@@ -20,13 +22,21 @@ mod ingress_grpc;
 mod labels_db;
 #[path = "trust_risk.labels.grpc.rs"]
 mod labels_grpc;
+#[path = "trust_risk.operations.grpc.rs"]
+mod operations_grpc;
+#[path = "trust_risk.operations.types.rs"]
+mod operations_types;
 #[path = "trust_risk.projection.rs"]
 mod projection;
 #[path = "trust_risk.projection.db.rs"]
 mod projection_db;
+#[path = "trust_risk.retention.rs"]
+mod retention;
 #[path = "trust_risk.review.db.rs"]
 mod review_db;
 #[path = "trust_risk.metrics.rs"]
 mod risk_metrics;
+#[path = "trust_risk.rules.db.rs"]
+mod rules_db;
 
 fn main() {}
