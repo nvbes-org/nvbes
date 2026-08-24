@@ -3420,6 +3420,56 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvbes-trust-risk"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "proptest",
+ "prost 0.14.4",
+ "prost-types",
+ "protoc-bin-vendored",
+ "rustls",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+ "uuid",
+]
+
+[[package]]
+name = "nvbes-trust-risk-service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "nvbes-core",
+ "nvbes-observability",
+ "nvbes-trust-risk",
+ "proptest",
+ "prost 0.14.4",
+ "prost-types",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "thiserror 2.0.20",
+ "tokio",
+ "tonic",
+ "tonic-health",
+ "tonic-prost",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "objc2"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
