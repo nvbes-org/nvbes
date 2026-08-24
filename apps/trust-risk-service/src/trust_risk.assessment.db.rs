@@ -10,10 +10,9 @@ use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::{
+    assessment_error::AssessmentPersistenceError,
     auth::constant_time_eq,
-    ingress_db::{
-        PersistSignalError, fingerprint as signal_fingerprint, persist_signal_in_transaction,
-    },
+    ingress_db::{fingerprint as signal_fingerprint, persist_signal_in_transaction},
     projection::derive_features,
 };
 
@@ -283,24 +282,6 @@ fn parse_recommendation(value: &str) -> Result<Recommendation, AssessmentPersist
         "deny" => Ok(Recommendation::Deny),
         _ => Err(AssessmentPersistenceError::CorruptLedger),
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum AssessmentPersistenceError {
-    #[error("assessment key conflicts with different content")]
-    Conflict,
-    #[error("no valid active rule set is available")]
-    NoActiveRules,
-    #[error("active rule set is invalid")]
-    InvalidRules,
-    #[error("feature state is invalid")]
-    CorruptFeatureState,
-    #[error("evaluation ledger is invalid")]
-    CorruptLedger,
-    #[error(transparent)]
-    Signal(#[from] PersistSignalError),
-    #[error("assessment database operation failed")]
-    Database(#[from] sqlx::Error),
 }
 
 #[cfg(test)]

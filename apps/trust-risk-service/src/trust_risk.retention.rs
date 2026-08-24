@@ -1,3 +1,4 @@
+use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use tokio::sync::watch;
 use uuid::Uuid;
@@ -64,13 +65,50 @@ pub async fn erase_subject(
     }
     let request_id = Uuid::new_v4();
     let audit_target = request_id.to_string();
+    let erased_reference = Sha256::digest(format!("{namespace}:{opaque_id}").as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
     let mut tx = pool.begin().await?;
+    let held = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS (
+            SELECT 1 FROM trust_risk_signals AS signal
+            JOIN trust_risk_signal_subjects AS subject ON subject.signal_id = signal.id
+            WHERE subject.kind = $1 AND subject.namespace = $2 AND subject.opaque_id = $3
+              AND signal.legal_hold
+        )
+        "#,
+    )
+    .bind(kind)
+    .bind(namespace)
+    .bind(opaque_id)
+    .fetch_one(&mut *tx)
+    .await?;
+    if held {
+        return Err(ErasureError::LegalHold);
+    }
+    sqlx::query(
+        r#"
+        DELETE FROM trust_risk_signals AS signal
+        WHERE EXISTS (
+            SELECT 1 FROM trust_risk_signal_subjects AS subject
+            WHERE subject.signal_id = signal.id
+              AND subject.kind = $1 AND subject.namespace = $2 AND subject.opaque_id = $3
+        )
+        "#,
+    )
+    .bind(kind)
+    .bind(namespace)
+    .bind(opaque_id)
+    .execute(&mut *tx)
+    .await?;
     sqlx::query("DELETE FROM trust_risk_signal_subjects WHERE kind = $1 AND namespace = $2 AND opaque_id = $3")
         .bind(kind).bind(namespace).bind(opaque_id).execute(&mut *tx).await?;
     sqlx::query("DELETE FROM trust_risk_feature_state WHERE subject_kind = $1 AND namespace = $2 AND opaque_id = $3")
         .bind(kind).bind(namespace).bind(opaque_id).execute(&mut *tx).await?;
     sqlx::query("INSERT INTO trust_risk_rebuild_requests (id, subject_kind, namespace, opaque_id, reason, requested_by) VALUES ($1, $2, $3, $4, $5, $6)")
-        .bind(request_id).bind(kind).bind(namespace).bind(opaque_id).bind(reason.trim()).bind(actor)
+        .bind(request_id).bind(kind).bind("erased.sha256").bind(erased_reference).bind(reason.trim()).bind(actor)
         .execute(&mut *tx).await?;
     audit::append(
         &mut tx,
@@ -93,6 +131,8 @@ pub async fn erase_subject(
 pub enum ErasureError {
     #[error("erasure request is invalid")]
     InvalidInput,
+    #[error("subject data is protected by an active legal hold")]
+    LegalHold,
     #[error("erasure persistence failed")]
     Database(#[from] sqlx::Error),
 }

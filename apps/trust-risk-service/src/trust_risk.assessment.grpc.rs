@@ -10,7 +10,8 @@ use tonic::{Request, Response, Status};
 
 use crate::{
     app::TrustRiskState,
-    assessment_db::{AssessmentPersistenceError, StoredEvaluation, assess},
+    assessment_db::{StoredEvaluation, assess},
+    assessment_error::AssessmentPersistenceError,
     auth,
 };
 
@@ -54,7 +55,6 @@ impl TrustRiskAssessmentService for AssessmentService {
         .await
         .map_err(map_error)?;
         crate::risk_metrics::assessment(
-            assessment.operation_class(),
             recommendation_name(stored.recommendation),
             "ok",
             started.elapsed(),

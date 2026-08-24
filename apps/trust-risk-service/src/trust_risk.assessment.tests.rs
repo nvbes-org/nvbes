@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use nvbes_trust_risk::{assessment::Assessment, proto::nvbes::trust_risk::v1 as pb};
 
+#[cfg(feature = "database-tests")]
+use super::assess;
 use super::fingerprint;
 #[cfg(feature = "database-tests")]
-use super::{AssessmentPersistenceError, assess};
+use crate::assessment_error::AssessmentPersistenceError;
 
 fn request() -> pb::AssessRiskRequest {
     let subject = pb::SubjectReference {

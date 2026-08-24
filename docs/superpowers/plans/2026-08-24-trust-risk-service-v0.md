@@ -495,7 +495,7 @@ rtk git commit -S -m "feat(trust-risk): complete independent runtime"
 **Files:**
 - Modify README/spec only for factual implementation notes discovered during execution.
 
-- [ ] **Step 1: Format and run targeted checks**
+- [x] **Step 1: Format and run targeted checks**
 
 ```bash
 rtk cargo fmt --all --check
@@ -508,7 +508,7 @@ rtk git diff --check
 
 Expected: PASS.
 
-- [ ] **Step 2: Run workspace verification**
+- [x] **Step 2: Run workspace verification**
 
 ```bash
 rtk cargo check --workspace --locked
@@ -517,11 +517,11 @@ rtk pnpm check
 
 Expected: PASS. If database tests were skipped solely because no isolated PostgreSQL target exists, document the exact missing environment variable and keep all compile/unit/E2E-without-database tests green.
 
-- [ ] **Step 3: Self-review against the design completion criteria**
+- [x] **Step 3: Self-review against the design completion criteria**
 
 Confirm public contract versioning, reproducible evaluations, projection rebuild equivalence, absence of product DTOs, ACL/isolation/redaction, retention/erasure behavior, latency instrumentation and streaming migration invariants.
 
-- [ ] **Step 4: Commit final verification documentation if changed**
+- [x] **Step 4: Commit final verification documentation if changed**
 
 ```bash
 rtk git add docs apps/trust-risk-service/README.md
@@ -529,3 +529,8 @@ rtk git commit -S -m "docs(trust-risk): document runtime verification"
 ```
 
 Skip this commit when verification produces no documentation change.
+
+Execution note: database-gated tests compile with `--features database-tests`,
+but were not executed on 2026-08-24 because neither `DATABASE_URL` nor
+`NVBES_TRUST_RISK_DATABASE_URL` identified an isolated PostgreSQL database.
+The guarded Nx target rejected execution before making any connection.

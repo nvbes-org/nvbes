@@ -2,6 +2,8 @@
 mod app;
 #[path = "trust_risk.assessment.db.rs"]
 mod assessment_db;
+#[path = "trust_risk.assessment.error.rs"]
+mod assessment_error;
 #[path = "trust_risk.assessment.grpc.rs"]
 mod assessment_grpc;
 #[path = "trust_risk.audit.rs"]

@@ -49,14 +49,8 @@ pub fn signal(producer: &str, family: &str, outcome: &'static str) {
     metrics::counter!("trust_risk_signals_total", "producer" => producer.to_string(), "family" => family.to_string(), "outcome" => outcome).increment(1);
 }
 
-pub fn assessment(
-    operation: &str,
-    recommendation: &str,
-    outcome: &'static str,
-    duration: Duration,
-) {
+pub fn assessment(recommendation: &str, outcome: &'static str, duration: Duration) {
     let labels = [
-        ("operation", operation.to_string()),
         ("recommendation", recommendation.to_string()),
         ("outcome", outcome.to_string()),
     ];
