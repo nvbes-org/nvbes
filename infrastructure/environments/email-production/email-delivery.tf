@@ -115,13 +115,14 @@ locals {
   }
 
   email_runtime_secrets = {
-    NVBES_EMAIL_DATABASE_URL        = local.email_database_runtime_url
-    NVBES_EMAIL_PRODUCER_TOKENS     = var.email_producer_tokens
-    NVBES_EMAIL_DATA_ENCRYPTION_KEY = var.email_data_encryption_key
-    NVBES_EMAIL_RECIPIENT_HMAC_KEY  = var.email_recipient_hmac_key
-    NVBES_SCALEWAY_EMAIL_SECRET_KEY = var.scaleway_email_secret_key
-    NVBES_EMAIL_QUEUE_SECRET_KEY    = scaleway_mnq_sqs_credentials.email_dispatch_publisher.secret_key
-    NVBES_EMAIL_SNS_CA_BUNDLE_PEM   = var.email_sns_ca_bundle_pem
+    NVBES_EMAIL_DATABASE_URL           = local.email_database_runtime_url
+    NVBES_EMAIL_PRODUCER_TOKENS        = var.email_producer_tokens
+    NVBES_EMAIL_DATA_ENCRYPTION_KEY    = var.email_data_encryption_key
+    NVBES_EMAIL_RECIPIENT_HMAC_KEY     = var.email_recipient_hmac_key
+    NVBES_OBSERVABILITY_INTERNAL_TOKEN = var.email_observability_internal_token
+    NVBES_SCALEWAY_EMAIL_SECRET_KEY    = var.scaleway_email_secret_key
+    NVBES_EMAIL_QUEUE_SECRET_KEY       = scaleway_mnq_sqs_credentials.email_dispatch_publisher.secret_key
+    NVBES_EMAIL_SNS_CA_BUNDLE_PEM      = var.email_sns_ca_bundle_pem
   }
 }
 

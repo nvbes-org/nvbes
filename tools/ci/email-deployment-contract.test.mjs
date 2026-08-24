@@ -68,7 +68,15 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /migration_state.*succeeded/su);
 	assert.match(
 		workflow,
-		/name: Plan isolated email runtime[\s\S]*?name: Validate production runtime configuration[\s\S]*?show -json email-runtime\.tfplan[\s\S]*?email_database_runtime_url\.value[\s\S]*?"\$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime/u,
+		/name: Plan email runtime foundation[\s\S]*?-target=scaleway_container\.email_runtime[\s\S]*?name: Validate production runtime configuration[\s\S]*?show -json email-runtime-foundation\.tfplan[\s\S]*?email_database_runtime_url\.value[\s\S]*?"\$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime[\s\S]*?name: Apply reviewed email runtime foundation plan[\s\S]*?email-runtime-foundation\.tfplan[\s\S]*?name: Plan isolated email runtime/u,
+	);
+	assert.match(
+		workflow,
+		/TF_VAR_email_observability_internal_token: \$\{\{ secrets\.EMAIL_OBSERVABILITY_INTERNAL_TOKEN \}\}/u,
+	);
+	assert.match(
+		workflow,
+		/NVBES_OBSERVABILITY_INTERNAL_TOKEN: \$\{\{ secrets\.EMAIL_OBSERVABILITY_INTERNAL_TOKEN \}\}/u,
 	);
 	assert.match(
 		workflow,
@@ -99,6 +107,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(
 		delivery,
 		/startup_probe\s*\{[\s\S]*?interval\s*=\s*"(?:[5-9]|[1-9]\d+)s"[\s\S]*?\}/u,
+	);
+	assert.match(
+		delivery,
+		/NVBES_OBSERVABILITY_INTERNAL_TOKEN\s*=\s*var\.email_observability_internal_token/u,
 	);
 	assert.match(
 		delivery,

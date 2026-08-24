@@ -85,6 +85,20 @@ variable "email_recipient_hmac_key" {
   sensitive   = true
 }
 
+variable "email_observability_internal_token" {
+  description = "Bearer token protecting the email-worker metrics endpoint."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition = (
+      length(var.email_observability_internal_token) >= 32 &&
+      !strcontains(lower(var.email_observability_internal_token), "change-me")
+    )
+    error_message = "email_observability_internal_token must contain at least 32 non-placeholder characters."
+  }
+}
+
 variable "scaleway_email_secret_key" {
   description = "Scaleway TEM secret key limited to transactional email sending."
   type        = string
