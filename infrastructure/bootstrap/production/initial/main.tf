@@ -23,5 +23,8 @@ module "terraform_state" {
   environment  = "production"
   bucket_name  = var.terraform_state_bucket
   state_stacks = local.state_stacks
-  tags         = local.tags
+  external_state_application_ids = {
+    trust-risk = "4baaab67-b29e-4ba7-aed8-f8efce064a02"
+  }
+  tags = local.tags
 }

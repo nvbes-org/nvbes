@@ -78,7 +78,7 @@ resource "scaleway_container" "email_worker" {
   protocol               = "h2c"
   privacy                = "public"
   https_connections_only = true
-  min_scale              = 1
+  min_scale              = 0
   max_scale              = 1
   timeout                = 300
   tags                   = concat(local.tags, ["service:email-worker"])

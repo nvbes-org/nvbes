@@ -9,9 +9,7 @@ output "state_keys" {
 }
 
 output "application_ids" {
-  value = {
-    for stack, application in scaleway_iam_application.state : stack => application.id
-  }
+  value = local.state_application_ids
 }
 
 output "access_keys" {
