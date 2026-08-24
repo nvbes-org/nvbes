@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "apps/email-worker",
+  "apps/trust-risk-service",
   "libs/rust/audit",
   "libs/rust/billing",
   "libs/rust/core",
@@ -23,6 +24,7 @@ members = [
   "libs/rust/scan",
   "libs/rust/storage",
   "libs/rust/tenancy",
+  "libs/rust/trust-risk",
 ]
 resolver = "2"
 

@@ -1,0 +1,7 @@
+{
+  "name": "trust-risk",
+  "projectType": "library",
+  "root": "libs/rust/trust-risk",
+  "sourceRoot": "libs/rust/trust-risk/src",
+  "tags": ["scope:oss", "type:lib", "domain:trust-risk", "layer:sdk"]
+}

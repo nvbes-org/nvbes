@@ -1,0 +1,39 @@
+[package]
+name = "nvbes-trust-risk-service"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[features]
+database-tests = []
+
+[[bin]]
+name = "nvbes-trust-risk-service"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+chrono.workspace = true
+metrics.workspace = true
+metrics-exporter-prometheus.workspace = true
+nvbes-core = { path = "../../libs/rust/core" }
+nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
+nvbes-trust-risk = { path = "../../libs/rust/trust-risk" }
+prost = "0.14.4"
+prost-types = "0.14"
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tonic.workspace = true
+tonic-prost = "0.14.6"
+tonic-health.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tower = "0.5"
