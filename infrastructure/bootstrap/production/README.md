@@ -6,7 +6,8 @@ autres stacks de production:
 - un bucket Object Storage partagé, privé et versionné;
 - le chiffrement serveur AES-256;
 - une identité et une API key par stack;
-- une bucket policy limitée à une clé de state et son `.tflock` par identité;
+- une bucket policy limitée à une clé de state et son `.tflock` par identité,
+  sans droit d'énumération du bucket;
 - une condition TLS obligatoire sur chaque accès autorisé.
 
 Le bucket utilise des clés indépendantes:
