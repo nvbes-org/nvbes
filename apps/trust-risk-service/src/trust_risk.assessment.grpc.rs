@@ -31,6 +31,7 @@ impl TrustRiskAssessmentService for AssessmentService {
         &self,
         request: Request<pb::AssessRiskRequest>,
     ) -> Result<Response<pb::RiskEvaluation>, Status> {
+        let started = std::time::Instant::now();
         if request.get_ref().encoded_len() > 256 * 1024 {
             return Err(Status::resource_exhausted("request exceeds size budget"));
         }
@@ -52,7 +53,22 @@ impl TrustRiskAssessmentService for AssessmentService {
         )
         .await
         .map_err(map_error)?;
+        crate::risk_metrics::assessment(
+            assessment.operation_class(),
+            recommendation_name(stored.recommendation),
+            "ok",
+            started.elapsed(),
+        );
         Ok(Response::new(to_proto(stored)))
+    }
+}
+
+fn recommendation_name(value: Recommendation) -> &'static str {
+    match value {
+        Recommendation::Allow => "allow",
+        Recommendation::Challenge => "challenge",
+        Recommendation::Review => "review",
+        Recommendation::Deny => "deny",
     }
 }
 

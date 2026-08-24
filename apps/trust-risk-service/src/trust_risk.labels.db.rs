@@ -1,5 +1,7 @@
 use chrono::{DateTime, Duration, Utc};
-use nvbes_trust_risk::{label::LabelAssertion, proto::nvbes::trust_risk::v1 as pb};
+use nvbes_trust_risk::label::LabelAssertion;
+#[cfg(test)]
+use nvbes_trust_risk::proto::nvbes::trust_risk::v1 as pb;
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -104,6 +106,7 @@ async fn recompute_canonical(
     Ok(())
 }
 
+#[cfg(test)]
 pub fn authority_rank(source: pb::LabelSourceClass) -> Option<u8> {
     match source {
         pb::LabelSourceClass::Human => Some(3),

@@ -54,6 +54,7 @@ pub struct TrustRiskConfig {
     pub bind_addr: SocketAddr,
     pub producers: BTreeMap<String, ProducerPolicy>,
     pub operators: BTreeMap<String, OperatorPolicy>,
+    pub metrics_token: String,
     pub retention: RetentionConfig,
     pub projection_heartbeat_max_age: Duration,
 }
@@ -93,6 +94,12 @@ impl TrustRiskConfig {
                 .ok_or(ConfigError::Missing("NVBES_TRUST_RISK_OPERATOR_TOKENS"))?,
         )?;
         let retention = retention_from_env(development)?;
+        let metrics_token = optional("NVBES_TRUST_RISK_METRICS_TOKEN")
+            .or_else(|| development.then(|| DEVELOPMENT_TOKEN.to_string()))
+            .ok_or(ConfigError::Missing("NVBES_TRUST_RISK_METRICS_TOKEN"))?;
+        if metrics_token.len() < 32 || metrics_token.contains(['\r', '\n']) {
+            return Err(ConfigError::WeakToken);
+        }
 
         Ok(Self {
             environment,
@@ -100,6 +107,7 @@ impl TrustRiskConfig {
             bind_addr,
             producers,
             operators,
+            metrics_token,
             retention,
             projection_heartbeat_max_age: Duration::from_secs(30),
         })

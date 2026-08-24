@@ -3,7 +3,7 @@ use prost::Message;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::projection::{FEATURE_VERSION, derive_features, retry_delay};
+use crate::projection::{FEATURE_VERSION, derive_features, is_too_late, retry_delay};
 
 #[derive(Debug)]
 struct ClaimedSignal {
@@ -72,6 +72,9 @@ async fn claim(
 async fn recompute(pool: &PgPool, claim: &ClaimedSignal) -> Result<(), ProjectionError> {
     let source = decode(&claim.payload)?;
     let watermark = crate::database::database_now(pool).await?;
+    if is_too_late(source.occurred_at(), watermark) {
+        crate::risk_metrics::projection("too_late", 1);
+    }
     let mut tx = pool.begin().await?;
     for subject in source.subjects() {
         let payloads = sqlx::query_scalar::<_, Vec<u8>>(

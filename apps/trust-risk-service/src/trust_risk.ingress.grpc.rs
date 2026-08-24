@@ -57,6 +57,15 @@ impl TrustRiskSignalService for SignalService {
             )
             .await
             .map_err(map_persistence)?;
+            crate::risk_metrics::signal(
+                signal.producer(),
+                signal.kind().split('.').next().unwrap_or("unknown"),
+                if receipt.duplicate {
+                    "duplicate"
+                } else {
+                    "accepted"
+                },
+            );
             receipts.push(PbSignalReceipt {
                 signal_id: receipt.id.to_string(),
                 accepted_at: Some(prost_types::Timestamp {

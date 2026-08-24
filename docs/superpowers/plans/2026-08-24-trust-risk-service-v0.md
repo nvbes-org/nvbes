@@ -461,19 +461,19 @@ rtk git commit -S -m "feat(trust-risk): add governed operations"
 **Files:**
 - Modify composition root/app/metrics/README and create acceptance tests.
 
-- [ ] **Step 1: Write failing end-to-end fixtures**
+- [x] **Step 1: Write failing end-to-end fixtures**
 
 Use a test producer named `billing-checkout-fixture` with canonical signals only. Cover legitimate residential use, elevated network risk, coordinated device/network reuse, repeated attempts, chargeback feedback, human false-positive correction, idempotent retries and explicit simulated fail-open on service outage.
 
-- [ ] **Step 2: Compose the runtime**
+- [x] **Step 2: Compose the runtime**
 
 Run migrations only through the explicit `migrate` command. Normal startup uses lazy connection, installs safe tracing/metrics, starts the projection loop, mounts four gRPC services plus gRPC health and HTTP health/metrics on one Axum listener, and shuts down without abandoning accepted records.
 
-- [ ] **Step 3: Add bounded metrics**
+- [x] **Step 3: Add bounded metrics**
 
 Record accepted/duplicate/rejected/conflicting signals, assessment duration/outcomes, processor lag/retry/quarantine, active versions, score bands/recommendations, review backlog and label coverage. Never use subject, request or evaluation IDs as metric labels.
 
-- [ ] **Step 4: Run E2E and contract tests**
+- [x] **Step 4: Run E2E and contract tests**
 
 ```bash
 rtk cargo test -p nvbes-trust-risk-service acceptance
@@ -483,7 +483,7 @@ rtk pnpm nx run trust-risk-service:check
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 rtk git add apps/trust-risk-service libs/rust/trust-risk .env.example

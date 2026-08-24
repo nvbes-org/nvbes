@@ -11,9 +11,8 @@ use crate::{
     app::TrustRiskState,
     auth, labels_db,
     operations_types::{
-        band_value, evaluation, label_kind_name, map_label, map_review, map_rule,
-        recommendation_value, review_case, review_case_row, review_state, review_state_name,
-        rule_receipt, unavailable, uuid,
+        evaluation, label_kind_name, map_label, map_review, map_rule, review_case, review_case_row,
+        review_state, review_state_name, rule_receipt, unavailable, uuid,
     },
     review_db, rules_db,
 };

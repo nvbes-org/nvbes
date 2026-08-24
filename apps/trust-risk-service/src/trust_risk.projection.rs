@@ -101,8 +101,14 @@ pub async fn run(state: TrustRiskState, mut shutdown: watch::Receiver<bool>) {
             break;
         }
         match projection_db::process_batch(&state.db, worker_id, 64).await {
-            Ok(_) => *state.projection_heartbeat.write().await = Some(std::time::Instant::now()),
-            Err(error) => tracing::warn!(error = %error, "trust/risk projection cycle failed"),
+            Ok(count) => {
+                *state.projection_heartbeat.write().await = Some(std::time::Instant::now());
+                crate::risk_metrics::projection("projected", count as u64);
+            }
+            Err(error) => {
+                crate::risk_metrics::projection("failed", 1);
+                tracing::warn!(error = %error, "trust/risk projection cycle failed");
+            }
         }
         tokio::select! {
             _ = tokio::time::sleep(Duration::from_millis(250)) => {}

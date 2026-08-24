@@ -1,4 +1,5 @@
 use sqlx::PgPool;
+use tokio::sync::watch;
 use uuid::Uuid;
 
 use crate::{
@@ -94,6 +95,20 @@ pub enum ErasureError {
     InvalidInput,
     #[error("erasure persistence failed")]
     Database(#[from] sqlx::Error),
+}
+
+pub async fn run(pool: PgPool, mut shutdown: watch::Receiver<bool>) {
+    loop {
+        tokio::select! {
+            _ = tokio::time::sleep(std::time::Duration::from_secs(3600)) => {
+                match apply(&pool).await {
+                    Ok(result) => tracing::info!(signals = result.signals, features = result.features, evaluations = result.evaluations, labels = result.labels, reviews = result.reviews, audit = result.audit, "trust/risk retention applied"),
+                    Err(error) => tracing::warn!(error = %error, "trust/risk retention failed"),
+                }
+            }
+            result = shutdown.changed() => if result.is_err() || *shutdown.borrow() { break; },
+        }
+    }
 }
 
 #[cfg(test)]

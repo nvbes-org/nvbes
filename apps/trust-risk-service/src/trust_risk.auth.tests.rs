@@ -30,6 +30,7 @@ fn config() -> TrustRiskConfig {
                 permissions: vec!["evaluation:read".to_string()],
             },
         )]),
+        metrics_token: TOKEN.to_string(),
         retention: RetentionConfig {
             signals_days: 30,
             evaluations_days: 400,
