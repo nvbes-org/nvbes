@@ -156,7 +156,7 @@ rtk git commit -S -m "feat(trust-risk): scaffold service contracts"
 **Files:**
 - Create/modify the public crate domain and test files.
 
-- [ ] **Step 1: Write failing validation tests**
+- [x] **Step 1: Write failing validation tests**
 
 Cover an opaque subject, forbidden email-like subject, valid namespaced signal, unknown attribute, score bounds, unspecified enums, rule nesting depth and deterministic ordering:
 
@@ -176,13 +176,13 @@ fn evaluator_is_deterministic_and_bounded() {
 }
 ```
 
-- [ ] **Step 2: Verify the tests fail**
+- [x] **Step 2: Verify the tests fail**
 
 Run `rtk cargo test -p nvbes-trust-risk --lib`.
 
 Expected: FAIL because the domain modules and conversions are not implemented.
 
-- [ ] **Step 3: Implement bounded primitives and conversions**
+- [x] **Step 3: Implement bounded primitives and conversions**
 
 Implement `SignalKind`, `OpaqueSubjectId`, `AssessmentKey`, `ReasonCode`, `RiskScore`, `RiskBand`, `Recommendation`, `LabelKind` and request conversion. Each constructor trims input, enforces documented lengths/character sets and returns a typed `thiserror` error.
 
@@ -200,13 +200,13 @@ pub fn allowed_attribute(signal_kind: &str, key: &str) -> bool {
 }
 ```
 
-- [ ] **Step 4: Implement the pure typed rule engine**
+- [x] **Step 4: Implement the pure typed rule engine**
 
 Deserialize canonical JSON into `#[serde(deny_unknown_fields)]` types. Support bounded `all`, `any`, `not` and comparison predicates, score deltas, stable reasons and minimum recommendations. Reject depth over eight, more than 256 rules, duplicate rule/reason codes, non-finite thresholds and invalid recommendation thresholds.
 
 Evaluation returns an ordered, deduplicated reason list and clamps the final score to `0..=100`.
 
-- [ ] **Step 5: Run domain tests**
+- [x] **Step 5: Run domain tests**
 
 Run `rtk cargo test -p nvbes-trust-risk --lib`.
 
