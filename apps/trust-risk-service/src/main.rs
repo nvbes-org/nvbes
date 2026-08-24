@@ -8,6 +8,10 @@ mod config;
 mod database;
 #[path = "trust_risk.health.rs"]
 mod health;
+#[path = "trust_risk.ingress.db.rs"]
+mod ingress_db;
+#[path = "trust_risk.ingress.grpc.rs"]
+mod ingress_grpc;
 #[path = "trust_risk.metrics.rs"]
 mod risk_metrics;
 

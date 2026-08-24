@@ -297,29 +297,29 @@ rtk git commit -S -m "feat(trust-risk): add secure runtime shell"
 **Files:**
 - Create migration, ingestion DB/GRPC modules and database test tooling.
 
-- [ ] **Step 1: Write the migration and database contract tests**
+- [x] **Step 1: Write the migration and database contract tests**
 
 The migration must create all tables from the design with checks, unique idempotency constraints, foreign keys and claim indexes. Tests assert that a new signal inserts once, an identical retry is duplicate, a changed retry conflicts and forbidden data never reaches SQL.
 
-- [ ] **Step 2: Add safe database-test validation**
+- [x] **Step 2: Add safe database-test validation**
 
 The validation script accepts only a database name containing `trust_risk_test` and rejects production-like hosts unless the explicit repository destructive-test guard is present. The shell runner loads `.env` as data, exports the Trust/Risk test URL, validates it and runs the feature-gated tests serially.
 
-- [ ] **Step 3: Verify tests fail**
+- [x] **Step 3: Verify tests fail**
 
 Run `rtk pnpm nx run trust-risk-service:test:database`.
 
 Expected: FAIL because persistence is not implemented; if no local database is configured, record that environmental limitation and continue with compile/unit tests.
 
-- [ ] **Step 4: Implement idempotent persistence**
+- [x] **Step 4: Implement idempotent persistence**
 
 Fingerprint the canonical protobuf bytes with SHA-256. Insert signal, subjects and semantic outbox rows in one transaction. On unique conflict, compare fingerprints in constant time and return the original receipt only for identical content.
 
-- [ ] **Step 5: Implement bounded gRPC ingestion**
+- [x] **Step 5: Implement bounded gRPC ingestion**
 
 Authenticate against the request producer, authorize every signal kind/scope, validate domain conversion before SQL and enforce 256 KiB transport plus 192 KiB persistence budgets. Return per-signal stable receipts.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 ```bash
 rtk cargo test -p nvbes-trust-risk-service ingress
