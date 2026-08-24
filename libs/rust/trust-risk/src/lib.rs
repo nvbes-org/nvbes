@@ -2,6 +2,8 @@
 pub mod assessment;
 #[path = "trust_risk.attribute.rs"]
 pub mod attribute;
+#[path = "trust_risk.client.rs"]
+pub mod client;
 #[path = "trust_risk.label.rs"]
 pub mod label;
 pub mod proto;

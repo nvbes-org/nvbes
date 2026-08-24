@@ -212,7 +212,7 @@ Run `rtk cargo test -p nvbes-trust-risk --lib`.
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 rtk git add libs/rust/trust-risk
@@ -224,7 +224,7 @@ rtk git commit -S -m "feat(trust-risk): add validated risk domain"
 **Files:**
 - Create `trust_risk.client.rs` and its unit/integration tests.
 
-- [ ] **Step 1: Write failing client tests**
+- [x] **Step 1: Write failing client tests**
 
 Test HTTPS enforcement outside development, token length, positive timeouts, authorization metadata, timeout propagation and status mapping:
 
@@ -238,19 +238,19 @@ fn production_requires_https() {
 }
 ```
 
-- [ ] **Step 2: Verify failure**
+- [x] **Step 2: Verify failure**
 
 Run `rtk cargo test -p nvbes-trust-risk client`.
 
 Expected: FAIL because the client is missing.
 
-- [ ] **Step 3: Implement client configuration and calls**
+- [x] **Step 3: Implement client configuration and calls**
 
 Use `NVBES_TRUST_RISK_GRPC_ENDPOINT`, `NVBES_TRUST_RISK_GRPC_AUTH_TOKEN`, TLS roots outside development, a default 100 ms assessment timeout and a 3 second durable-ingest timeout. Clone tonic clients per call, attach Bearer metadata and set request timeout.
 
 Map invalid input, conflict, unauthorized, unavailable and protocol errors without exposing remote payloads.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 Run `rtk cargo test -p nvbes-trust-risk client` and commit:
 
