@@ -264,25 +264,25 @@ rtk git commit -S -m "feat(trust-risk): add authenticated client"
 **Files:**
 - Create runtime config/auth/app/database/health/metrics files and tests.
 
-- [ ] **Step 1: Write failing configuration and ACL tests**
+- [x] **Step 1: Write failing configuration and ACL tests**
 
 Test development defaults, mandatory production database/token/policy values, minimum token length, duplicate policy rejection, exact bearer matching, signal-family ACL, assessment permission and operator permission.
 
-- [ ] **Step 2: Verify failure**
+- [x] **Step 2: Verify failure**
 
 Run `rtk cargo test -p nvbes-trust-risk-service config auth health`.
 
-- [ ] **Step 3: Implement strict configuration**
+- [x] **Step 3: Implement strict configuration**
 
 Parse `NVBES_TRUST_RISK_PRODUCER_POLICIES` into explicit producer policies containing token, signal prefixes and permissions. Parse a distinct `NVBES_TRUST_RISK_OPERATOR_TOKENS` map. Refuse production startup without reviewed retention days for signals, evaluations, labels, reviews and audit.
 
 Development defaults may use only fixed non-secret test values and localhost binds.
 
-- [ ] **Step 4: Implement state, auth and health**
+- [x] **Step 4: Implement state, auth and health**
 
 State contains only `Arc<TrustRiskConfig>`, `PgPool`, metrics handle and projection heartbeat. Authentication compares exact Bearer tokens in constant time. `/health/live` is shallow; `/health/ready` checks migrations, active rules and projection heartbeat using bounded database calls.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```bash
 rtk cargo test -p nvbes-trust-risk-service config
