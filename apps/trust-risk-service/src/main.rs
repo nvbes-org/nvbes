@@ -12,6 +12,10 @@ mod health;
 mod ingress_db;
 #[path = "trust_risk.ingress.grpc.rs"]
 mod ingress_grpc;
+#[path = "trust_risk.projection.rs"]
+mod projection;
+#[path = "trust_risk.projection.db.rs"]
+mod projection_db;
 #[path = "trust_risk.metrics.rs"]
 mod risk_metrics;
 

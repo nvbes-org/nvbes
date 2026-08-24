@@ -333,25 +333,25 @@ rtk git commit -S -m "feat(trust-risk): persist canonical signals"
 **Files:**
 - Create projection DB/logic modules and tests.
 
-- [ ] **Step 1: Write failing projection tests**
+- [x] **Step 1: Write failing projection tests**
 
 Cover concurrent claims, lease expiry, recompute idempotency, event-time 1h/24h windows, distinct principal/tenant reuse, allowed lateness, too-late metric, retry backoff and quarantine after the configured attempt limit.
 
-- [ ] **Step 2: Verify failure**
+- [x] **Step 2: Verify failure**
 
 Run `rtk cargo test -p nvbes-trust-risk-service projection`.
 
-- [ ] **Step 3: Implement claim and recompute**
+- [x] **Step 3: Implement claim and recompute**
 
 Use one atomic CTE with `FOR UPDATE SKIP LOCKED` to lease due events. Recompute each affected subject from retained immutable rows into a versioned feature map containing `events_1h`, `events_24h`, `high_risk_events_1h`, `linked_principals_24h`, `linked_tenants_24h`, `automation_confidence_max_1h`, `negative_labels` and `positive_labels`.
 
 Write feature state and mark the source event projected in one transaction. Re-running must produce byte-equivalent canonical feature JSON.
 
-- [ ] **Step 4: Implement loop and failure policy**
+- [x] **Step 4: Implement loop and failure policy**
 
 Poll with shutdown watch, refresh a monotonic heartbeat after successful cycles, use bounded exponential retry with jitter and quarantine deterministic failures without deleting the source event.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```bash
 rtk cargo test -p nvbes-trust-risk-service projection
