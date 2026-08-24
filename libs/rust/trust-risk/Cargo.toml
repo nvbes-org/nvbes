@@ -1,0 +1,27 @@
+[package]
+name = "nvbes-trust-risk"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+build = "build.rs"
+
+[dependencies]
+chrono.workspace = true
+prost = "0.14.4"
+prost-types = "0.14"
+rustls = { version = "0.23.41", default-features = false, features = ["aws_lc_rs", "std"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tonic = { workspace = true, features = ["tls-webpki-roots"] }
+tonic-prost = "0.14.6"
+uuid.workspace = true
+
+[build-dependencies]
+protoc-bin-vendored = "3.2.0"
+tonic-prost-build = "0.14.6"
+
+[dev-dependencies]
+proptest.workspace = true
+tokio-stream = { version = "0.1.18", features = ["net"] }

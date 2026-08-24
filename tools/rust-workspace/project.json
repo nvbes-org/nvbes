@@ -6,6 +6,7 @@
   "tags": ["scope:oss", "type:workspace", "domain:shared", "layer:tooling"],
   "implicitDependencies": [
     "email-worker",
+    "trust-risk-service",
     "audit",
     "billing",
     "core",
@@ -13,7 +14,8 @@
     "observability",
     "platform",
     "ports",
-    "tenancy"
+    "tenancy",
+    "trust-risk"
   ],
   "namedInputs": {
     "default": [
