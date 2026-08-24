@@ -4,8 +4,15 @@ locals {
     { data_class = "terraform_state" },
   )
 
+  state_application_ids = merge(
+    { for stack, application in scaleway_iam_application.state : stack => application.id },
+    var.external_state_application_ids,
+  )
+
+  all_state_stacks = setunion(var.state_stacks, keys(var.external_state_application_ids))
+
   state_paths = {
-    for stack in var.state_stacks : stack => {
+    for stack in local.all_state_stacks : stack => {
       prefix   = "${var.environment}/${stack}"
       state    = "${var.environment}/${stack}/terraform.tfstate"
       lockfile = "${var.environment}/${stack}/terraform.tfstate.tflock"
@@ -88,9 +95,9 @@ resource "scaleway_object_bucket_policy" "terraform_state" {
     Statement = concat(
       [
         for stack, path in local.state_paths : {
-          Sid       = "List${title(replace(stack, "-", " "))}StatePrefix"
+          Sid       = "List${replace(title(replace(stack, "-", " ")), " ", "")}StatePrefix"
           Effect    = "Allow"
-          Principal = { SCW = "application_id:${scaleway_iam_application.state[stack].id}" }
+          Principal = { SCW = "application_id:${local.state_application_ids[stack]}" }
           Action    = ["s3:ListBucket"]
           Resource  = [scaleway_object_bucket.terraform_state.name]
           Condition = merge(local.tls_condition, {
@@ -102,11 +109,11 @@ resource "scaleway_object_bucket_policy" "terraform_state" {
       ],
       [
         for stack, path in local.state_paths : {
-          Sid       = "Manage${title(replace(stack, "-", " "))}StateAndLock"
+          Sid       = "Manage${replace(title(replace(stack, "-", " ")), " ", "")}StateAndLock"
           Effect    = "Allow"
-          Principal = { SCW = "application_id:${scaleway_iam_application.state[stack].id}" }
+          Principal = { SCW = "application_id:${local.state_application_ids[stack]}" }
           Action    = ["s3:DeleteObject", "s3:GetObject", "s3:PutObject"]
-          Resource  = [
+          Resource = [
             "${scaleway_object_bucket.terraform_state.name}/${path.state}",
             "${scaleway_object_bucket.terraform_state.name}/${path.lockfile}",
           ]
