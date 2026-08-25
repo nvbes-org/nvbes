@@ -57,7 +57,7 @@ resource "scaleway_container" "trust_risk" {
   memory_limit_bytes     = 1073741824
   timeout                = 45
   min_scale              = 0
-  max_scale              = 10
+  max_scale              = 1
 
   environment_variables        = local.trust_risk_runtime_environment
   secret_environment_variables = local.trust_risk_runtime_secrets
