@@ -51,19 +51,29 @@ function assertFailClosedGateJob(gate, jobName, shell) {
 function assertCriticalSteps(entries, jobName) {
 	assert.equal(
 		entries.every(
-			({ step }) => isFailClosed(step) && !Object.hasOwn(step, "shell"),
+			({ step }) =>
+				isRecord(step) && isFailClosed(step) && !Object.hasOwn(step, "shell"),
 		),
 		true,
 		`critical ${jobName} steps must be unconditional and fail closed`,
 	);
 }
 
-function isExactUsesStep(step, action) {
-	return isRecord(step) && step.uses === action && !Object.hasOwn(step, "run");
-}
-
-function isExactRunStep(step, command) {
-	return isRecord(step) && step.run === command && !Object.hasOwn(step, "uses");
+function expectedPreGatePrefix(contract) {
+	return [
+		{
+			uses: CHECKOUT_ACTION,
+			with: { "fetch-depth": 0, "persist-credentials": false },
+		},
+		{ uses: SETUP_NODE_ACTION, with: { "node-version": 24 } },
+		{
+			name: "CI/CD security gate",
+			run: `node tools/security/check-ci-cd-security.mjs --workflow ${contract.workflowPath}`,
+		},
+		{ name: "Enable pnpm", run: COREPACK_COMMAND },
+		{ name: "Install locked dependencies", run: LOCKED_INSTALL_COMMAND },
+		{ name: "Enforce FinOps contract", run: FINOPS_COMMAND },
+	];
 }
 
 function assertPreGatePrefix(gate, contract) {
@@ -73,38 +83,42 @@ function assertPreGatePrefix(gate, contract) {
 		6,
 		`${contract.job} must use the allowlisted pre-gate step prefix`,
 	);
-	const [checkout, setupNode, security, corepack, install, finOps] = prefix;
-	assert.ok(
-		isExactUsesStep(checkout, CHECKOUT_ACTION),
-		`${contract.job} must use the allowlisted pre-gate step prefix`,
-	);
-	assert.ok(
-		isExactUsesStep(setupNode, SETUP_NODE_ACTION) &&
-			String(setupNode.with?.["node-version"]) === "24",
-		`${contract.job} must use the allowlisted pre-gate step prefix`,
-	);
-	assert.ok(
-		isExactRunStep(
-			security,
-			`node tools/security/check-ci-cd-security.mjs --workflow ${contract.workflowPath}`,
-		),
-		`${contract.job} must use the allowlisted pre-gate step prefix`,
-	);
-	assert.ok(
-		isExactRunStep(corepack, COREPACK_COMMAND),
-		`${contract.job} must use the allowlisted pre-gate step prefix`,
-	);
-	assert.ok(
-		isExactRunStep(install, LOCKED_INSTALL_COMMAND),
-		`${contract.job} must use the allowlisted pre-gate step prefix`,
-	);
-	assert.ok(
-		isExactRunStep(finOps, FINOPS_COMMAND),
-		`${contract.job} must use the allowlisted pre-gate step prefix`,
-	);
 	assertCriticalSteps(
 		prefix.map((step) => ({ step })),
 		contract.job,
+	);
+	assert.deepEqual(
+		prefix,
+		expectedPreGatePrefix(contract),
+		`${contract.job} must use the allowlisted pre-gate step prefix`,
+	);
+}
+
+function assertExecutionContext(workflow, gate, contract) {
+	assert.deepEqual(
+		workflow.defaults,
+		{ run: { shell: contract.shell } },
+		"workflow defaults must exactly define the fail-closed shell",
+	);
+	assert.equal(
+		Object.hasOwn(workflow, "env"),
+		false,
+		"workflow env is forbidden",
+	);
+	assert.deepEqual(
+		gate.env,
+		contract.gateEnv,
+		`${contract.job} env must match`,
+	);
+	assert.deepEqual(
+		gate["runs-on"],
+		contract.runsOn,
+		`${contract.job} runner labels must match`,
+	);
+	assert.equal(
+		Object.hasOwn(gate, "defaults") || Object.hasOwn(gate, "container"),
+		false,
+		`${contract.job} defaults and container are forbidden`,
 	);
 }
 
@@ -150,11 +164,6 @@ export function validateWorkflowContract(source, contract) {
 		"workflow must define jobs",
 	);
 	assert.equal(
-		workflow.defaults?.run?.shell,
-		contract.shell,
-		"workflow must use the required fail-closed default shell",
-	);
-	assert.equal(
 		typeof contract.terraformValidation,
 		"string",
 		"workflow contract must define its Terraform validation",
@@ -164,9 +173,15 @@ export function validateWorkflowContract(source, contract) {
 		"string",
 		"workflow contract must define its workflow path",
 	);
+	assert.equal(
+		typeof contract.terraformValidationStepName,
+		"string",
+		"workflow contract must define its Terraform validation step name",
+	);
 
 	const gate = workflow.jobs[contract.job];
 	assertFailClosedGateJob(gate, contract.job, contract.shell);
+	assertExecutionContext(workflow, gate, contract);
 	const gateRunSteps = runSteps(gate);
 	const finOpsSteps = gateRunSteps.filter(({ run }) => run === FINOPS_COMMAND);
 	assert.equal(
@@ -195,6 +210,14 @@ export function validateWorkflowContract(source, contract) {
 		"Terraform validation must run after pnpm check:finops",
 	);
 	assertCriticalSteps(terraformSteps, contract.job);
+	assert.deepEqual(
+		terraformSteps[0].step,
+		{
+			name: contract.terraformValidationStepName,
+			run: contract.terraformValidation,
+		},
+		"Terraform validation must be an exact dedicated step",
+	);
 
 	assertDownstreamJobs(workflow, contract);
 }

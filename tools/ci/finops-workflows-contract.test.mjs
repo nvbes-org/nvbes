@@ -18,16 +18,28 @@ const deployContract = {
 	buildIf: `\${{ success() }}`,
 	deployJob: "deploy-email",
 	deployIf: `\${{ success() && github.ref == 'refs/heads/main' }}`,
+	gateEnv: undefined,
+	runsOn: ["self-hosted", "macOS", "ARM64"],
 	shell: safeShell,
 	terraformValidation: emailTerraformValidation,
+	terraformValidationStepName:
+		"Pre-deploy: Validate isolated email Terraform stack",
 	workflowPath: ".github/workflows/deploy-email.yml",
 };
 const workflowContracts = [
 	{
 		path: ".github/workflows/ci.yml",
 		job: "email-quality",
+		gateEnv: {
+			CARGO_INCREMENTAL: "0",
+			CI: "true",
+			NVBES_ENV: "ci",
+			RUSTFLAGS: "-C debuginfo=0",
+		},
+		runsOn: ["self-hosted", "macOS", "ARM64"],
 		shell: safeShell,
 		terraformValidation: emailTerraformValidation,
+		terraformValidationStepName: "Validate isolated email Terraform stack",
 		workflowPath: ".github/workflows/ci.yml",
 	},
 	deployContract,
@@ -37,23 +49,32 @@ const workflowContracts = [
 		deployJob: "deploy-trust-risk",
 		terraformValidation:
 			"terraform -chdir=infrastructure/environments/trust-risk-production validate",
+		terraformValidationStepName: "Validate isolated Trust/Risk Terraform stack",
 		workflowPath: ".github/workflows/deploy-trust-risk.yml",
 	},
 ];
 
 const validPrefix = `
       - uses: ${checkoutAction}
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: ${setupNodeAction}
         with:
           node-version: 24
-      - run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/deploy-email.yml
-      - run: |-
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/deploy-email.yml
+      - name: Enable pnpm
+        run: |-
           corepack enable
           corepack prepare pnpm@11.18.0 --activate
-      - run: ${lockedInstall}
-      - run: pnpm check:finops`;
+      - name: Install locked dependencies
+        run: ${lockedInstall}
+      - name: Enforce FinOps contract
+        run: pnpm check:finops`;
 const validGateSteps = `${validPrefix}
-      - run: ${emailTerraformValidation}`;
+      - name: 'Pre-deploy: Validate isolated email Terraform stack'
+        run: ${emailTerraformValidation}`;
 const validDeployNeeds = `
   build-scan-sign:
     needs: ci-test-gate
@@ -76,14 +97,15 @@ defaults:
     shell: ${safeShell}
 jobs:
   ci-test-gate:
-${property}    steps:${steps}
+${property}    runs-on: [self-hosted, macOS, ARM64]
+    steps:${steps}
 ${downstream}`;
 }
 
 function withStepProperty(steps, command, property) {
 	return steps.replace(
-		`      - run: ${command}`,
-		`      - run: ${command}\n        ${property}`,
+		`        run: ${command}`,
+		`        run: ${command}\n        ${property}`,
 	);
 }
 
@@ -128,7 +150,7 @@ for (const [scenario, command, property] of [
 	});
 }
 
-test("accepts explicit false continue-on-error values on the gate and critical steps", () => {
+test("rejects explicit false continue-on-error values on critical steps", () => {
 	let steps = validGateSteps;
 	for (const command of [
 		lockedInstall,
@@ -137,11 +159,13 @@ test("accepts explicit false continue-on-error values on the gate and critical s
 	]) {
 		steps = withStepProperty(steps, command, "continue-on-error: false");
 	}
-	assert.doesNotThrow(() =>
-		validateWorkflowContract(
-			deployWorkflow({ steps, gateProperty: "    continue-on-error: false" }),
-			deployContract,
-		),
+	assert.throws(
+		() =>
+			validateWorkflowContract(
+				deployWorkflow({ steps, gateProperty: "    continue-on-error: false" }),
+				deployContract,
+			),
+		/must use the allowlisted pre-gate step prefix/u,
 	);
 });
 
@@ -158,8 +182,8 @@ test("rejects a Terraform mention without a real Terraform command after the gat
 
 test("rejects an invocation moved outside the gate even when a gate comment mentions it", () => {
 	const steps = validGateSteps.replace(
-		"      - run: pnpm check:finops",
-		`      - run: |
+		"        run: pnpm check:finops",
+		`        run: |
           # pnpm check:finops`,
 	);
 	const downstream = `

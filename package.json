@@ -58,7 +58,7 @@
     "check:finops": "pnpm check:finops-production-budget && pnpm check:finops-scale-to-zero && pnpm check:finops-workflows",
     "check:finops-production-budget": "node --test tools/finops/production-budget.test.mjs && node tools/finops/check-production-budget.mjs",
     "check:finops-scale-to-zero": "node --test tools/finops/check-scale-to-zero.test.mjs && node tools/finops/check-scale-to-zero.mjs",
-    "check:finops-workflows": "node --test tools/ci/finops-workflows-contract.test.mjs tools/ci/finops-workflows-contract.adversarial.test.mjs",
+    "check:finops-workflows": "node --test tools/ci/finops-workflows-contract.test.mjs tools/ci/finops-workflows-contract.adversarial.test.mjs tools/ci/finops-workflows-context.adversarial.test.mjs",
     "check:compliance-standards": "node tools/security/check-compliance-standards.mjs",
     "check:content-security-policy": "node tools/security/check-content-security-policy.mjs",
     "check:cookie-theft-mitigation": "node tools/security/check-cookie-theft-mitigation.mjs",

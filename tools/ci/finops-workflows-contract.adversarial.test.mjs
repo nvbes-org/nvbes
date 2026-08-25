@@ -17,23 +17,35 @@ const contract = {
 	buildIf: `\${{ success() }}`,
 	deployJob: "deploy-email",
 	deployIf: `\${{ success() && github.ref == 'refs/heads/main' }}`,
+	gateEnv: undefined,
+	runsOn: ["self-hosted", "macOS", "ARM64"],
 	shell: safeShell,
 	terraformValidation,
+	terraformValidationStepName:
+		"Pre-deploy: Validate isolated email Terraform stack",
 	workflowPath,
 };
 
 const validCriticalSteps = `
       - uses: ${checkoutAction}
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: ${setupNodeAction}
         with:
           node-version: 24
-      - run: ${securityCommand}
-      - run: |-
+      - name: CI/CD security gate
+        run: ${securityCommand}
+      - name: Enable pnpm
+        run: |-
           corepack enable
           corepack prepare pnpm@11.18.0 --activate
-      - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm check:finops
-      - run: ${terraformValidation}`;
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Enforce FinOps contract
+        run: pnpm check:finops
+      - name: 'Pre-deploy: Validate isolated email Terraform stack'
+        run: ${terraformValidation}`;
 
 function workflowWithCriticalSteps(criticalSteps, defaultShell = safeShell) {
 	return `
@@ -42,6 +54,7 @@ defaults:
     shell: ${defaultShell}
 jobs:
   ci-test-gate:
+    runs-on: [self-hosted, macOS, ARM64]
     steps:${criticalSteps}
   build-scan-sign:
     needs: ci-test-gate
@@ -86,8 +99,8 @@ for (const property of [
 ]) {
 	test(`rejects ${property} on the dedicated security gate`, () => {
 		const steps = validCriticalSteps.replace(
-			`      - run: ${securityCommand}`,
-			`      - run: ${securityCommand}\n        ${property}`,
+			`        run: ${securityCommand}`,
+			`        run: ${securityCommand}\n        ${property}`,
 		);
 		assert.throws(
 			() =>
@@ -153,8 +166,8 @@ const disguisedGates = [
 for (const [scenario, run] of disguisedGates) {
 	test(`rejects a FinOps command ${scenario}`, () => {
 		const steps = validCriticalSteps.replace(
-			"      - run: pnpm check:finops",
-			`      - run: ${run}`,
+			"        run: pnpm check:finops",
+			`        run: ${run}`,
 		);
 
 		assert.throws(
@@ -167,9 +180,10 @@ for (const [scenario, run] of disguisedGates) {
 
 test("rejects a step inserted between the locked install and FinOps gate", () => {
 	const steps = validCriticalSteps.replace(
-		"      - run: pnpm check:finops",
+		"        run: pnpm check:finops",
 		`      - run: echo ready
-      - run: pnpm check:finops`,
+      - name: Enforce FinOps contract
+        run: pnpm check:finops`,
 	);
 
 	assert.throws(
@@ -185,15 +199,15 @@ test("rejects a workflow whose default shell neutralizes failures", () => {
 				workflowWithCriticalSteps(validCriticalSteps, "bash {0} || true"),
 				contract,
 			),
-		/required fail-closed default shell/u,
+		/workflow defaults must exactly define the fail-closed shell/u,
 	);
 });
 
 for (const command of ["terraform version", "echo terraform"]) {
 	test(`rejects ${command} as the required Terraform validation`, () => {
 		const steps = validCriticalSteps.replace(
-			`      - run: ${terraformValidation}`,
-			`      - run: ${command}`,
+			`        run: ${terraformValidation}`,
+			`        run: ${command}`,
 		);
 
 		assert.throws(
@@ -218,8 +232,8 @@ for (const [stepName, command] of criticalCommands) {
 	]) {
 		test(`rejects ${property} on the dedicated ${stepName} step`, () => {
 			const steps = validCriticalSteps.replace(
-				`- run: ${command}`,
-				`- run: ${command}\n        ${property}`,
+				`run: ${command}`,
+				`run: ${command}\n        ${property}`,
 			);
 
 			assert.throws(
