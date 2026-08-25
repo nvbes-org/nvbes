@@ -149,6 +149,18 @@ export function validateBudgetContract(contract) {
 		if (isRecord(contract.stages[0]) && contract.stages[0].fromCents !== 0) {
 			errors.push("normal stage must start at 0 cents");
 		}
+		const essentialOnlyStage = contract.stages.at(-1);
+		if (
+			isCents(hardLimitCents) &&
+			isRecord(essentialOnlyStage) &&
+			essentialOnlyStage.name === BudgetStage.EssentialOnly &&
+			isCents(essentialOnlyStage.fromCents) &&
+			essentialOnlyStage.fromCents > hardLimitCents
+		) {
+			errors.push(
+				"essential_only stage must start no later than monthly hard limit",
+			);
+		}
 	}
 
 	if (errors.length > 0)

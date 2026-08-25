@@ -135,6 +135,37 @@ test("rejects freeze_cost_creation later than 2800 cents", () => {
 	);
 });
 
+test("rejects essential_only starting after the monthly hard limit", () => {
+	const contract = validContract();
+	contract.monthly.targetCents = 1500;
+	contract.monthly.hardLimitCents = 2500;
+	contract.monthly.alertsCents = [1500, 2000, 2500];
+	contract.categories.safety_margin.targetCents = 300;
+
+	assert.throws(
+		() => validateBudgetContract(contract),
+		new Error(
+			"Invalid production FinOps budget: essential_only stage must start no later than monthly hard limit",
+		),
+	);
+});
+
+test("accepts essential_only starting at a lowered monthly hard limit", () => {
+	const contract = validContract();
+	contract.monthly.targetCents = 1500;
+	contract.monthly.hardLimitCents = 2500;
+	contract.monthly.alertsCents = [1500, 2000, 2500];
+	contract.categories.safety_margin.targetCents = 300;
+	contract.stages = [
+		{ name: BudgetStage.Normal, fromCents: 0 },
+		{ name: BudgetStage.DisableNonEssential, fromCents: 2000 },
+		{ name: BudgetStage.FreezeCostCreation, fromCents: 2400 },
+		{ name: BudgetStage.EssentialOnly, fromCents: 2500 },
+	];
+
+	assert.equal(validateBudgetContract(contract), contract);
+});
+
 test("selects stages at inclusive spend boundaries and above the hard limit", () => {
 	const contract = validContract();
 
