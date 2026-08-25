@@ -118,7 +118,8 @@ nouvelle décision de conception.
 
 Les seuils peuvent être avancés par configuration Rust pour agir plus tôt. Ils
 ne peuvent jamais dépasser les maxima V1 respectifs de **2 500**, **2 800** et
-**3 000** centimes.
+**3 000** centimes. Dans le contrat budgétaire, `essential_only` doit aussi
+commencer au plus tard à la limite dure configurée.
 
 ## Lots exécutés
 
@@ -134,7 +135,7 @@ Comportements livrés : sept clés de catégorie exactes, entiers non négatifs 
 alertes obligatoires à 15, 20 et 25 EUR, alertes strictement croissantes, dernière alerte
 égale à la limite, cibles totalisant 20 EUR, sélection déterministe du palier et chargement
 du contrat réel. Le validateur n’affirme pas rejeter les propriétés supplémentaires hors
-de ces invariants documentés. **14 tests passent.**
+de ces invariants documentés. **16 tests passent.**
 
 Critère de sortie : un contrat invalide échoue avant tout changement
 d’infrastructure.
@@ -308,6 +309,7 @@ par le trust store local).
 | `e03e6f15`, `52d768c3`, `038aa559`, `c53fa62a`, `1de7e63f` | Gate CI structurel, contexte fermé et validation Terraform contiguë |
 | `3986bfbe` | Inventaire exact des jobs de workflows protégé |
 | `86a7eeaa`, `00ac323a` | Modules Terraform confinés et racines liées ou templatisées refusées |
+| `2013bec9` | Palier final aligné sur toute limite dure abaissée |
 
 Les commits intermédiaires `59d0b1cc`, `5d90eee5`, `7764c9f8`, `4f1a220d` et
 `34979bc5` documentent la tentative de scanner maison. Leur implémentation est
@@ -317,7 +319,7 @@ entièrement remplacée par `bfa40644` et ne constitue pas l’état final.
 
 - [x] Budget TTC versionné : cible 20 EUR, limite 30 EUR.
 - [x] Catégories, alertes et paliers validés automatiquement.
-- [x] Contrat couvert par 14 tests.
+- [x] Contrat couvert par 16 tests, avec palier final au plus tard à la limite dure.
 - [x] Parse HCL réel, sans regex, version de dépendance épinglée.
 - [x] Contrôle des bornes couvert par 34 tests, avec modules externes, `.tf.json` et symlinks refusés.
 - [x] Toutes les ressources Scaleway ciblées descendent à zéro et plafonnent à 1.
