@@ -67,6 +67,17 @@ variable "email_worker_image" {
   }
 }
 
+variable "email_database_runtime_credential_generation" {
+  description = "Operator-controlled generation that rotates the data-only database API key."
+  type        = string
+  default     = "bootstrap"
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9-]{0,63}$", var.email_database_runtime_credential_generation))
+    error_message = "email_database_runtime_credential_generation must be a lowercase identifier of at most 64 characters."
+  }
+}
+
 variable "email_producer_tokens" {
   description = "Comma-separated producer-to-token bindings accepted by the email gRPC API."
   type        = string

@@ -106,6 +106,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	);
 	assert.match(
 		workflow,
+		/TF_VAR_email_database_runtime_credential_generation: \$\{\{ vars\.EMAIL_DATABASE_RUNTIME_CREDENTIAL_GENERATION \}\}/u,
+	);
+	assert.match(
+		workflow,
 		/TF_VAR_grafana_service_account_token: \$\{\{ secrets\.GRAFANA_SERVICE_ACCOUNT_TOKEN \}\}/u,
 	);
 	assert.match(workflow, /error-reporting-smoke/u);
@@ -181,6 +185,14 @@ test("email production deploy is isolated and uses an immutable signed image", (
 		/private_network_id\s*=\s*[^\n]*var\.private_network_id/u,
 	);
 	assert.match(database, /resource "scaleway_sdb_sql_database" "email"/u);
+	assert.match(
+		database,
+		/resource "terraform_data" "email_database_runtime_credential_generation"/u,
+	);
+	assert.match(
+		database,
+		/resource "scaleway_iam_api_key" "email_database_runtime"[\s\S]*?create_before_destroy\s*=\s*true[\s\S]*?replace_triggered_by\s*=\s*\[terraform_data\.email_database_runtime_credential_generation\]/u,
+	);
 	assert.match(
 		database,
 		/split\([\s\S]*?"\?"[\s\S]*?trimprefix\(scaleway_sdb_sql_database\.email\.endpoint, "postgres:\/\/"\)[\s\S]*?\)\[0\]/u,

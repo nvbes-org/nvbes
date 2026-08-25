@@ -26,10 +26,19 @@ resource "scaleway_iam_policy" "email_database_runtime" {
   }
 }
 
+resource "terraform_data" "email_database_runtime_credential_generation" {
+  input = var.email_database_runtime_credential_generation
+}
+
 resource "scaleway_iam_api_key" "email_database_runtime" {
   application_id     = scaleway_iam_application.email_database_runtime.id
   default_project_id = var.scaleway_project_id
   description        = "Rotating data-only credential for the email runtime."
+
+  lifecycle {
+    create_before_destroy = true
+    replace_triggered_by  = [terraform_data.email_database_runtime_credential_generation]
+  }
 }
 
 resource "scaleway_iam_application" "email_database_migrator" {
