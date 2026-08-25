@@ -65,6 +65,48 @@ ${validDeployNeeds}`;
   );
 });
 
+const indirectTerraformCommands = [
+  ['a chained directory change', 'cd infrastructure && terraform plan'],
+  ['the command builtin', 'command terraform plan'],
+  ['the env utility', 'env TF_IN_AUTOMATION=true terraform plan'],
+  ['a shell conditional', 'if true; then terraform plan; fi'],
+];
+
+for (const [scenario, command] of indirectTerraformCommands) {
+  test(`rejects Terraform before the FinOps gate through ${scenario}`, () => {
+    const workflow = `
+jobs:
+  ci-test-gate:
+    steps:
+      - run: pnpm install --frozen-lockfile
+      - run: ${command}
+      - run: pnpm check:finops
+      - run: terraform -chdir=. validate
+${validDeployNeeds}`;
+
+    assert.throws(
+      () => validateWorkflowContract(workflow, workflowContracts[1]),
+      /Terraform command must not run before pnpm check:finops/u,
+    );
+  });
+}
+
+test('rejects a locked install whose failure is ignored', () => {
+  const workflow = `
+jobs:
+  ci-test-gate:
+    steps:
+      - run: pnpm install --frozen-lockfile || true
+      - run: pnpm check:finops
+      - run: terraform -chdir=. validate
+${validDeployNeeds}`;
+
+  assert.throws(
+    () => validateWorkflowContract(workflow, workflowContracts[1]),
+    /locked pnpm install must run before pnpm check:finops/u,
+  );
+});
+
 test('rejects a deploy workflow whose build job bypasses the gate', () => {
   const workflow = `
 jobs:
@@ -109,12 +151,14 @@ function isFinOpsCommand(command) {
 }
 
 function isLockedInstall(command) {
-  const tokens = command.split(/\s+/u);
-  return tokens[0] === 'pnpm' && tokens[1] === 'install' && tokens.includes('--frozen-lockfile');
+  return (
+    command === 'pnpm install --frozen-lockfile' ||
+    command === 'pnpm install --frozen-lockfile --prefer-offline'
+  );
 }
 
 function isTerraformCommand(command) {
-  return /^(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S+)\s+)*terraform(?:\s|$)/u.test(command);
+  return /(^|[^A-Za-z0-9_])terraform(?=$|[^A-Za-z0-9_])/u.test(command);
 }
 
 function jobNeeds(job) {
