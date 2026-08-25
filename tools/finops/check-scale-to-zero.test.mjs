@@ -119,3 +119,96 @@ test('ignores line-commented fake resources', async (t) => {
 
   assert.equal(result.status, 0, result.stderr);
 });
+
+test('handles HCL structural edge cases', async (t) => {
+  const fixtures = [
+    {
+      name: 'strings and nested blocks',
+      terraform: `
+resource "scaleway_container" "strings" {
+  description = "braces { } and comments # // /* */ and escaped \\\"quote\\\""
+  template = "${'${var.fake}'}"
+  nested {
+    min_scale = 1
+    max_scale = 10
+  }
+  min_scale = 0
+  max_scale = 1
+}
+resource "scaleway_sdb_sql_database" "strings" {
+  description = "braces { } and comments # // /* */"
+  nested {
+    min_cpu = 1
+    max_cpu = 2
+  }
+  min_cpu = 0
+  max_cpu = 1
+}
+`,
+      status: 0,
+      messages: [],
+    },
+    {
+      name: 'heredocs hide fake resources',
+      terraform: `
+resource "scaleway_container" "heredoc" {
+  description = <<EOF
+resource "scaleway_container" "fake" {
+  min_scale = 1
+  max_scale = 10
+}
+EOF
+  other = <<-INDENTED
+    resource "scaleway_sdb_sql_database" "fake" {
+      min_cpu = 1
+      max_cpu = 2
+    }
+    INDENTED
+  min_scale = 0
+  max_scale = 1
+}
+`,
+      status: 0,
+      messages: [],
+    },
+    {
+      name: 'unsigned literal policy',
+      terraform: `
+resource "scaleway_container" "signed" {
+  min_scale = +0
+  max_scale = -1
+}
+resource "scaleway_sdb_sql_database" "signed" {
+  min_cpu = -0
+  max_cpu = +1
+}
+`,
+      status: 1,
+      messages: [
+        'scaleway_container must declare max_scale as an integer <= 1',
+        'scaleway_container must declare min_scale = 0',
+        'scaleway_sdb_sql_database must declare max_cpu as an integer <= 1',
+        'scaleway_sdb_sql_database must declare min_cpu = 0',
+      ],
+    },
+    {
+      name: 'CRLF assignments',
+      terraform: 'resource "scaleway_container" "crlf" {\r\n  min_scale = 0\r\n  max_scale = 1\r\n}\r\n',
+      status: 0,
+      messages: [],
+    },
+  ];
+
+  for (const fixture of fixtures) {
+    await t.test(fixture.name, async (subtest) => {
+      const result = await runChecker(fixture.terraform, subtest);
+      assert.equal(result.status, fixture.status, result.stderr);
+      const messages = result.stderr
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => line.slice(line.indexOf(': ') + 2));
+      assert.deepEqual(messages, fixture.messages);
+    });
+  }
+});
