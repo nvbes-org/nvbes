@@ -33,6 +33,50 @@ async function terraformFiles(directory) {
   return files;
 }
 
+function stripHclBlockComments(source) {
+  let output = '';
+  let inString = false;
+  let escaped = false;
+  let inComment = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    const nextCharacter = source[index + 1];
+
+    if (inComment) {
+      if (character === '*' && nextCharacter === '/') {
+        output += '  ';
+        index += 1;
+        inComment = false;
+      } else {
+        output += character === '\n' || character === '\r' ? character : ' ';
+      }
+      continue;
+    }
+
+    if (inString) {
+      output += character;
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+
+    if (character === '"') {
+      output += character;
+      inString = true;
+    } else if (character === '/' && nextCharacter === '*') {
+      output += '  ';
+      index += 1;
+      inComment = true;
+    } else {
+      output += character;
+    }
+  }
+
+  return output;
+}
+
 function resourceBlocks(source, resourceType) {
   const pattern = new RegExp(`resource\\s+"${resourceType}"\\s+"[^"]+"\\s*\\{`, 'g');
   const blocks = [];
@@ -64,8 +108,9 @@ const violations = [];
 
 for (const file of await terraformFiles(ROOT)) {
   const source = await readFile(file, 'utf8');
+  const uncommentedSource = stripHclBlockComments(source);
   for (const [resourceType, policy] of RESOURCE_POLICIES) {
-    for (const block of resourceBlocks(source, resourceType)) {
+    for (const block of resourceBlocks(uncommentedSource, resourceType)) {
       if (literalInteger(block, policy.minimumAttribute) !== 0) {
         violations.push(
           `${path.relative(process.cwd(), file)}: ${resourceType} must declare ${policy.minimumAttribute} = 0`,
