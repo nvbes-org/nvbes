@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import { parse } from "yaml";
 
 const FINOPS_COMMAND = "pnpm check:finops";
-const LOCKED_INSTALL_COMMANDS = new Set([
-	"pnpm install --frozen-lockfile",
-	"pnpm install --frozen-lockfile --prefer-offline",
-]);
+const CHECKOUT_ACTION =
+	"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
+const SETUP_NODE_ACTION =
+	"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
+const COREPACK_COMMAND =
+	"corepack enable\ncorepack prepare pnpm@11.18.0 --activate";
+const LOCKED_INSTALL_COMMAND =
+	"pnpm install --frozen-lockfile --prefer-offline";
 
 function isRecord(value) {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -19,10 +23,6 @@ function runSteps(job) {
 		if (!isRecord(step) || typeof step.run !== "string") return [];
 		return [{ run: step.run, step, stepIndex }];
 	});
-}
-
-function containsTerraformToken(command) {
-	return /(^|[^A-Za-z0-9_])terraform(?=$|[^A-Za-z0-9_])/u.test(command);
 }
 
 function isFailClosed(value) {
@@ -55,6 +55,56 @@ function assertCriticalSteps(entries, jobName) {
 		),
 		true,
 		`critical ${jobName} steps must be unconditional and fail closed`,
+	);
+}
+
+function isExactUsesStep(step, action) {
+	return isRecord(step) && step.uses === action && !Object.hasOwn(step, "run");
+}
+
+function isExactRunStep(step, command) {
+	return isRecord(step) && step.run === command && !Object.hasOwn(step, "uses");
+}
+
+function assertPreGatePrefix(gate, contract) {
+	const prefix = gate.steps.slice(0, 6);
+	assert.equal(
+		prefix.length,
+		6,
+		`${contract.job} must use the allowlisted pre-gate step prefix`,
+	);
+	const [checkout, setupNode, security, corepack, install, finOps] = prefix;
+	assert.ok(
+		isExactUsesStep(checkout, CHECKOUT_ACTION),
+		`${contract.job} must use the allowlisted pre-gate step prefix`,
+	);
+	assert.ok(
+		isExactUsesStep(setupNode, SETUP_NODE_ACTION) &&
+			String(setupNode.with?.["node-version"]) === "24",
+		`${contract.job} must use the allowlisted pre-gate step prefix`,
+	);
+	assert.ok(
+		isExactRunStep(
+			security,
+			`node tools/security/check-ci-cd-security.mjs --workflow ${contract.workflowPath}`,
+		),
+		`${contract.job} must use the allowlisted pre-gate step prefix`,
+	);
+	assert.ok(
+		isExactRunStep(corepack, COREPACK_COMMAND),
+		`${contract.job} must use the allowlisted pre-gate step prefix`,
+	);
+	assert.ok(
+		isExactRunStep(install, LOCKED_INSTALL_COMMAND),
+		`${contract.job} must use the allowlisted pre-gate step prefix`,
+	);
+	assert.ok(
+		isExactRunStep(finOps, FINOPS_COMMAND),
+		`${contract.job} must use the allowlisted pre-gate step prefix`,
+	);
+	assertCriticalSteps(
+		prefix.map((step) => ({ step })),
+		contract.job,
 	);
 }
 
@@ -109,6 +159,11 @@ export function validateWorkflowContract(source, contract) {
 		"string",
 		"workflow contract must define its Terraform validation",
 	);
+	assert.equal(
+		typeof contract.workflowPath,
+		"string",
+		"workflow contract must define its workflow path",
+	);
 
 	const gate = workflow.jobs[contract.job];
 	assertFailClosedGateJob(gate, contract.job, contract.shell);
@@ -128,49 +183,18 @@ export function validateWorkflowContract(source, contract) {
 			`${jobName} must not invoke pnpm check:finops`,
 		);
 	}
-	assert.equal(
-		gateRunSteps.some(
-			({ run }) => run !== FINOPS_COMMAND && run.includes(FINOPS_COMMAND),
-		),
-		false,
-		`${contract.job} FinOps gate must be a dedicated exact step`,
-	);
-
-	const finOpsStep = finOpsSteps[0];
-	const commandsBeforeGate = runSteps({
-		steps: gate.steps.slice(0, finOpsStep.stepIndex),
-	});
-	assert.equal(
-		commandsBeforeGate.some(({ run }) => containsTerraformToken(run)),
-		false,
-		"Terraform command must not run before pnpm check:finops",
-	);
-
-	const precedingStep = gate.steps[finOpsStep.stepIndex - 1];
-	const installStep =
-		isRecord(precedingStep) &&
-		typeof precedingStep.run === "string" &&
-		LOCKED_INSTALL_COMMANDS.has(precedingStep.run)
-			? { run: precedingStep.run, step: precedingStep }
-			: undefined;
-	assert.ok(
-		installStep,
-		"locked pnpm install must run before pnpm check:finops",
-	);
+	assertPreGatePrefix(gate, contract);
 
 	const terraformSteps = gateRunSteps.filter(
 		({ run, stepIndex }) =>
-			run === contract.terraformValidation && stepIndex > finOpsStep.stepIndex,
+			run === contract.terraformValidation && stepIndex > 5,
 	);
 	assert.equal(
 		terraformSteps.length,
 		1,
 		"Terraform validation must run after pnpm check:finops",
 	);
-	assertCriticalSteps(
-		[installStep, finOpsStep, terraformSteps[0]],
-		contract.job,
-	);
+	assertCriticalSteps(terraformSteps, contract.job);
 
 	assertDownstreamJobs(workflow, contract);
 }

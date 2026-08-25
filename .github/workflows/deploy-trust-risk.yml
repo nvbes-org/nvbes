@@ -24,10 +24,19 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
       - name: CI/CD security gate
-        run: >-
-          node tools/security/check-ci-cd-security.mjs
-          --workflow .github/workflows/deploy-trust-risk.yml
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/deploy-trust-risk.yml
+      - name: Enable pnpm
+        run: |-
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Enforce FinOps contract
+        run: pnpm check:finops
       - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
         with:
           toolchain: 1.91.1
@@ -36,17 +45,6 @@ jobs:
         with:
           terraform_version: 1.15.8
           terraform_wrapper: false
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.18.0 --activate
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 24
-      - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Enforce FinOps contract
-        run: pnpm check:finops
       - name: Validate workspace and Trust/Risk contracts
         run: |
           pnpm format:check

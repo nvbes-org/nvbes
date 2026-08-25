@@ -3,6 +3,12 @@ import test from "node:test";
 import { validateWorkflowContract } from "./finops-workflows-contract.mjs";
 
 const safeShell = "bash --noprofile --norc -euo pipefail {0}";
+const checkoutAction =
+	"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
+const setupNodeAction =
+	"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
+const workflowPath = ".github/workflows/deploy-email.yml";
+const securityCommand = `node tools/security/check-ci-cd-security.mjs --workflow ${workflowPath}`;
 const terraformValidation =
 	"terraform -chdir=infrastructure/environments/email-production validate";
 const contract = {
@@ -13,10 +19,19 @@ const contract = {
 	deployIf: `\${{ success() && github.ref == 'refs/heads/main' }}`,
 	shell: safeShell,
 	terraformValidation,
+	workflowPath,
 };
 
 const validCriticalSteps = `
-      - run: pnpm install --frozen-lockfile
+      - uses: ${checkoutAction}
+      - uses: ${setupNodeAction}
+        with:
+          node-version: 24
+      - run: ${securityCommand}
+      - run: |-
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm check:finops
       - run: ${terraformValidation}`;
 
@@ -48,6 +63,70 @@ test("accepts the dedicated fail-closed baseline", () => {
 	);
 });
 
+for (const command of [
+	"node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml",
+	`|-
+          ${securityCommand}
+          exit 0`,
+]) {
+	test("rejects a non-exact dedicated security gate", () => {
+		const steps = validCriticalSteps.replace(securityCommand, command);
+		assert.throws(
+			() =>
+				validateWorkflowContract(workflowWithCriticalSteps(steps), contract),
+			/must use the allowlisted pre-gate step prefix/u,
+		);
+	});
+}
+
+for (const property of [
+	"if: false",
+	"continue-on-error: true",
+	"shell: bash {0} || true",
+]) {
+	test(`rejects ${property} on the dedicated security gate`, () => {
+		const steps = validCriticalSteps.replace(
+			`      - run: ${securityCommand}`,
+			`      - run: ${securityCommand}\n        ${property}`,
+		);
+		assert.throws(
+			() =>
+				validateWorkflowContract(workflowWithCriticalSteps(steps), contract),
+			/critical ci-test-gate steps must be unconditional and fail closed/u,
+		);
+	});
+}
+
+const unauthorizedPreGateSteps = [
+	[
+		"an obfuscated Terraform invocation",
+		`      - run: |-
+          t=terra
+          f=form
+          "$t$f" version`,
+	],
+	[
+		"an additional action",
+		"      - uses: actions/cache@0000000000000000000000000000000000000000",
+	],
+	["an additional command", "      - run: echo ready"],
+];
+
+for (const [scenario, step] of unauthorizedPreGateSteps) {
+	test(`rejects ${scenario} before the FinOps gate`, () => {
+		const steps = validCriticalSteps.replace(
+			`      - uses: ${setupNodeAction}`,
+			`${step}\n      - uses: ${setupNodeAction}`,
+		);
+
+		assert.throws(
+			() =>
+				validateWorkflowContract(workflowWithCriticalSteps(steps), contract),
+			/must use the allowlisted pre-gate step prefix/u,
+		);
+	});
+}
+
 const disguisedGates = [
 	[
 		"after an early successful exit",
@@ -73,10 +152,10 @@ const disguisedGates = [
 
 for (const [scenario, run] of disguisedGates) {
 	test(`rejects a FinOps command ${scenario}`, () => {
-		const steps = `
-      - run: pnpm install --frozen-lockfile
-      - run: ${run}
-      - run: ${terraformValidation}`;
+		const steps = validCriticalSteps.replace(
+			"      - run: pnpm check:finops",
+			`      - run: ${run}`,
+		);
 
 		assert.throws(
 			() =>
@@ -87,15 +166,15 @@ for (const [scenario, run] of disguisedGates) {
 }
 
 test("rejects a step inserted between the locked install and FinOps gate", () => {
-	const steps = `
-      - run: pnpm install --frozen-lockfile
-      - run: echo ready
-      - run: pnpm check:finops
-      - run: ${terraformValidation}`;
+	const steps = validCriticalSteps.replace(
+		"      - run: pnpm check:finops",
+		`      - run: echo ready
+      - run: pnpm check:finops`,
+	);
 
 	assert.throws(
 		() => validateWorkflowContract(workflowWithCriticalSteps(steps), contract),
-		/locked pnpm install must run before pnpm check:finops/u,
+		/must use the allowlisted pre-gate step prefix/u,
 	);
 });
 
@@ -112,10 +191,10 @@ test("rejects a workflow whose default shell neutralizes failures", () => {
 
 for (const command of ["terraform version", "echo terraform"]) {
 	test(`rejects ${command} as the required Terraform validation`, () => {
-		const steps = `
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check:finops
-      - run: ${command}`;
+		const steps = validCriticalSteps.replace(
+			`      - run: ${terraformValidation}`,
+			`      - run: ${command}`,
+		);
 
 		assert.throws(
 			() =>
@@ -126,7 +205,7 @@ for (const command of ["terraform version", "echo terraform"]) {
 }
 
 const criticalCommands = [
-	["locked install", "pnpm install --frozen-lockfile"],
+	["locked install", "pnpm install --frozen-lockfile --prefer-offline"],
 	["FinOps gate", "pnpm check:finops"],
 	["Terraform validation", terraformValidation],
 ];
