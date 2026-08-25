@@ -7,6 +7,8 @@ ENV LC_ALL=C \
     TZ=UTC \
     SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH}" \
     CARGO_INCREMENTAL=0 \
+    CARGO_BUILD_JOBS=1 \
+    CMAKE_BUILD_PARALLEL_LEVEL=1 \
     RUSTFLAGS="--remap-path-prefix=/usr/src/nvbes=/src"
 
 WORKDIR /usr/src/nvbes
