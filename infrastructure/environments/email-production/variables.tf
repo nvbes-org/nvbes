@@ -99,6 +99,64 @@ variable "email_observability_internal_token" {
   }
 }
 
+variable "email_sentry_dsn" {
+  description = "HTTPS DSN for the dedicated production email-worker Sentry project."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition = (
+      var.email_sentry_dsn == trimspace(var.email_sentry_dsn) &&
+      startswith(var.email_sentry_dsn, "https://") &&
+      strcontains(var.email_sentry_dsn, "@")
+    )
+    error_message = "email_sentry_dsn must be a non-empty HTTPS Sentry DSN."
+  }
+}
+
+variable "email_sentry_traces_sample_rate" {
+  description = "Sentry transaction sampling rate for production email-worker runtimes."
+  type        = number
+  default     = 0.1
+
+  validation {
+    condition = (
+      var.email_sentry_traces_sample_rate >= 0 &&
+      var.email_sentry_traces_sample_rate <= 1
+    )
+    error_message = "email_sentry_traces_sample_rate must be between 0 and 1."
+  }
+}
+
+variable "grafana_url" {
+  description = "Grafana Cloud stack URL used to provision Email dashboards and alert rules."
+  type        = string
+
+  validation {
+    condition     = startswith(var.grafana_url, "https://")
+    error_message = "grafana_url must use HTTPS."
+  }
+}
+
+variable "grafana_service_account_token" {
+  description = "Grafana service account token limited to dashboard and alert provisioning."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = null
+  nullable    = true
+}
+
+variable "grafana_prometheus_datasource_uid" {
+  description = "UID of the production Prometheus datasource in Grafana Cloud."
+  type        = string
+}
+
+variable "grafana_email_contact_point" {
+  description = "Existing Grafana Alerting contact point for Email incidents."
+  type        = string
+}
+
 variable "scaleway_email_secret_key" {
   description = "Scaleway TEM secret key limited to transactional email sending."
   type        = string

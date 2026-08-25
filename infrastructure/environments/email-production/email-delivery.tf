@@ -112,6 +112,8 @@ locals {
     NVBES_EMAIL_SNS_TOPIC_ARN          = scaleway_mnq_sns_topic.email_events.arn
     NVBES_EMAIL_PAYLOAD_RETENTION_DAYS = "30"
     NVBES_EMAIL_LEDGER_RETENTION_DAYS  = "400"
+    SENTRY_RELEASE                     = split("@", var.email_worker_image)[1]
+    SENTRY_TRACES_SAMPLE_RATE          = tostring(var.email_sentry_traces_sample_rate)
   }
 
   email_runtime_secrets = {
@@ -123,6 +125,7 @@ locals {
     NVBES_SCALEWAY_EMAIL_SECRET_KEY    = var.scaleway_email_secret_key
     NVBES_EMAIL_QUEUE_SECRET_KEY       = scaleway_mnq_sqs_credentials.email_dispatch_publisher.secret_key
     NVBES_EMAIL_SNS_CA_BUNDLE_PEM      = var.email_sns_ca_bundle_pem
+    SENTRY_DSN                         = var.email_sentry_dsn
   }
 }
 

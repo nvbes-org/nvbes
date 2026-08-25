@@ -53,7 +53,7 @@ impl TrustRiskAssessmentService for AssessmentService {
             self.state.config.retention.reviews_days,
         )
         .await
-        .map_err(map_error)?;
+        .map_err(|error| map_error(&self.state, error))?;
         crate::risk_metrics::assessment(
             recommendation_name(stored.recommendation),
             "ok",
@@ -113,7 +113,18 @@ fn timestamp(value: chrono::DateTime<chrono::Utc>) -> prost_types::Timestamp {
     }
 }
 
-fn map_error(error: AssessmentPersistenceError) -> Status {
+fn map_error(state: &TrustRiskState, error: AssessmentPersistenceError) -> Status {
+    if matches!(
+        &error,
+        AssessmentPersistenceError::Database(_)
+            | AssessmentPersistenceError::Signal(crate::ingress_db::PersistSignalError::Database(
+                _
+            ))
+            | AssessmentPersistenceError::CorruptFeatureState
+            | AssessmentPersistenceError::CorruptLedger
+    ) {
+        crate::error_reporting::capture_operation(&state.config, "assessment.persist", &error);
+    }
     match error {
         AssessmentPersistenceError::Conflict => Status::already_exists("assessment key conflicts"),
         AssessmentPersistenceError::NoActiveRules | AssessmentPersistenceError::InvalidRules => {

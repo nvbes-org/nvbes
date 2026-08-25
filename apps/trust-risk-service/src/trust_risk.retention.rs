@@ -4,6 +4,7 @@ use tokio::sync::watch;
 use uuid::Uuid;
 
 use crate::{
+    app::TrustRiskState,
     audit::{self, AuditEvent},
     config::RetentionConfig,
 };
@@ -137,13 +138,20 @@ pub enum ErasureError {
     Database(#[from] sqlx::Error),
 }
 
-pub async fn run(pool: PgPool, mut shutdown: watch::Receiver<bool>) {
+pub async fn run(state: TrustRiskState, mut shutdown: watch::Receiver<bool>) {
     loop {
         tokio::select! {
             _ = tokio::time::sleep(std::time::Duration::from_secs(3600)) => {
-                match apply(&pool).await {
+                match apply(&state.db).await {
                     Ok(result) => tracing::info!(signals = result.signals, features = result.features, evaluations = result.evaluations, labels = result.labels, reviews = result.reviews, audit = result.audit, "trust/risk retention applied"),
-                    Err(error) => tracing::warn!(error = %error, "trust/risk retention failed"),
+                    Err(error) => {
+                        crate::error_reporting::capture_operation(
+                            &state.config,
+                            "retention.apply",
+                            &error,
+                        );
+                        tracing::warn!(error = %error, "trust/risk retention failed");
+                    },
                 }
             }
             result = shutdown.changed() => if result.is_err() || *shutdown.borrow() { break; },

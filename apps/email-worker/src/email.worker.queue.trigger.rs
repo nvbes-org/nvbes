@@ -1,7 +1,7 @@
 use axum::{Router, body::Bytes, extract::State, http::StatusCode, routing::post};
 use uuid::Uuid;
 
-use crate::{dispatcher, state::EmailWorkerState};
+use crate::{dispatcher, error_reporting, state::EmailWorkerState};
 
 pub fn router(state: EmailWorkerState) -> Router {
     Router::new()
@@ -19,6 +19,7 @@ async fn dispatch(State(state): State<EmailWorkerState>, body: Bytes) -> StatusC
         Ok(dispatcher::DispatchOutcome::Acknowledged) => StatusCode::NO_CONTENT,
         Ok(dispatcher::DispatchOutcome::Retry) => StatusCode::SERVICE_UNAVAILABLE,
         Err(error) => {
+            error_reporting::capture_operation(&state.config, "queue_dispatch", error.as_ref());
             tracing::error!(%message_id, error = ?error, "email queue trigger failed");
             StatusCode::SERVICE_UNAVAILABLE
         }

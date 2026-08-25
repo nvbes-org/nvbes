@@ -1,0 +1,91 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: nvbes-trust-risk
+    folder: nvbes-trust-risk
+    interval: 1m
+    rules:
+      - uid: nvbes-trust-risk-error-rate
+        title: Trust/Risk error rate is elevated
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          description: More than five percent of sampled Trust/Risk spans are failing.
+          runbook_url: docs/operations/trust-risk-observability-runbook.md#error-rate
+        labels: { severity: critical, owner: platform, service: trust-risk }
+        data:
+          - refId: A
+            datasourceUid: Prometheus
+            relativeTimeRange: { from: 1200, to: 0 }
+            model:
+              datasource: { type: prometheus, uid: Prometheus }
+              editorMode: code
+              expr: 'sum(rate(traces_spanmetrics_calls_total{service_name="nvbes-trust-risk-service",status_code="STATUS_CODE_ERROR"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{service_name="nvbes-trust-risk-service"}[5m])), 0.001)'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0.05], type: gt }
+                  operator: { type: and }
+                  query: { params: [C] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              refId: C
+              type: threshold
+
+      - uid: nvbes-trust-risk-latency
+        title: Trust/Risk p95 latency is elevated
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          description: Sampled Trust/Risk request latency has exceeded one second at p95.
+          runbook_url: docs/operations/trust-risk-observability-runbook.md#latency
+        labels: { severity: warning, owner: platform, service: trust-risk }
+        data:
+          - refId: A
+            datasourceUid: Prometheus
+            relativeTimeRange: { from: 1200, to: 0 }
+            model:
+              datasource: { type: prometheus, uid: Prometheus }
+              editorMode: code
+              expr: 'histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{service_name="nvbes-trust-risk-service"}[5m])))'
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [1], type: gt }
+                  operator: { type: and }
+                  query: { params: [C] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              refId: C
+              type: threshold

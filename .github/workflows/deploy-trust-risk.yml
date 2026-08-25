@@ -180,11 +180,19 @@ jobs:
       TF_IN_AUTOMATION: 'true'
       TF_INPUT: 'false'
       TF_VAR_private_network_id: ${{ vars.SCW_PRIVATE_NETWORK_ID }}
+      TF_VAR_grafana_otlp_authorization_header: ${{ secrets.GRAFANA_OTLP_AUTHORIZATION_HEADER }}
+      TF_VAR_grafana_otlp_endpoint: ${{ vars.GRAFANA_OTLP_ENDPOINT }}
+      TF_VAR_grafana_prometheus_datasource_uid: ${{ vars.GRAFANA_PROMETHEUS_DATASOURCE_UID }}
+      TF_VAR_grafana_service_account_token: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
+      TF_VAR_grafana_tempo_datasource_uid: ${{ vars.GRAFANA_TEMPO_DATASOURCE_UID }}
+      TF_VAR_grafana_trust_risk_contact_point: ${{ vars.GRAFANA_TRUST_RISK_CONTACT_POINT }}
+      TF_VAR_grafana_url: ${{ vars.GRAFANA_URL }}
       TF_VAR_scaleway_organization_id: ${{ vars.SCW_ORGANIZATION_ID }}
       TF_VAR_scaleway_project_id: ${{ vars.SCW_PROJECT_ID }}
       TF_VAR_trust_risk_metrics_token: ${{ secrets.TRUST_RISK_METRICS_TOKEN }}
       TF_VAR_trust_risk_operator_tokens: ${{ secrets.TRUST_RISK_OPERATOR_TOKENS }}
       TF_VAR_trust_risk_producer_policies: ${{ secrets.TRUST_RISK_PRODUCER_POLICIES }}
+      TF_VAR_trust_risk_sentry_dsn: ${{ secrets.TRUST_RISK_SENTRY_DSN }}
       TERRAFORM_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
       TRUST_RISK_TERRAFORM_STATE_KEY: production/trust-risk/terraform.tfstate
       TRUST_RISK_REGISTRY_ENDPOINT: rg.fr-par.scw.cloud/nvbes-prod-trust-risk
@@ -357,9 +365,14 @@ jobs:
         run: terraform -chdir="$STACK_ROOT" plan -lock-timeout=5m -out=trust-risk-runtime.tfplan
       - name: Validate production runtime configuration
         env:
+          NVBES_OTLP_AUTHORIZATION_HEADER: ${{ secrets.GRAFANA_OTLP_AUTHORIZATION_HEADER }}
+          NVBES_OTLP_ENDPOINT: ${{ vars.GRAFANA_OTLP_ENDPOINT }}
           NVBES_TRUST_RISK_METRICS_TOKEN: ${{ secrets.TRUST_RISK_METRICS_TOKEN }}
           NVBES_TRUST_RISK_OPERATOR_TOKENS: ${{ secrets.TRUST_RISK_OPERATOR_TOKENS }}
           NVBES_TRUST_RISK_PRODUCER_POLICIES: ${{ secrets.TRUST_RISK_PRODUCER_POLICIES }}
+          SENTRY_DSN: ${{ secrets.TRUST_RISK_SENTRY_DSN }}
+          SENTRY_RELEASE: ${{ github.sha }}
+          SENTRY_TRACES_SAMPLE_RATE: "0.1"
         run: |
           export NVBES_TRUST_RISK_DATABASE_URL
           NVBES_TRUST_RISK_DATABASE_URL="$(terraform -chdir="$STACK_ROOT" show -json trust-risk-runtime.tfplan | jq -er '.planned_values.outputs.trust_risk_database_runtime_url.value')"
@@ -375,7 +388,24 @@ jobs:
             --env NVBES_TRUST_RISK_LABELS_RETENTION_DAYS=400 \
             --env NVBES_TRUST_RISK_REVIEWS_RETENTION_DAYS=400 \
             --env NVBES_TRUST_RISK_AUDIT_RETENTION_DAYS=730 \
+            --env NVBES_OTLP_AUTHORIZATION_HEADER \
+            --env NVBES_OTLP_ENDPOINT \
+            --env SENTRY_DSN \
+            --env SENTRY_RELEASE \
+            --env SENTRY_TRACES_SAMPLE_RATE \
             "$SOURCE_TRUST_RISK_IMAGE_DIGEST" validate-runtime
+          docker run --rm --platform linux/amd64 \
+            --env NVBES_TRUST_RISK_DATABASE_URL \
+            --env NVBES_TRUST_RISK_METRICS_TOKEN \
+            --env NVBES_TRUST_RISK_OPERATOR_TOKENS \
+            --env NVBES_TRUST_RISK_PRODUCER_POLICIES \
+            --env NVBES_ENVIRONMENT=production \
+            --env NVBES_OTLP_AUTHORIZATION_HEADER \
+            --env NVBES_OTLP_ENDPOINT \
+            --env SENTRY_DSN \
+            --env SENTRY_RELEASE \
+            --env SENTRY_TRACES_SAMPLE_RATE \
+            "$SOURCE_TRUST_RISK_IMAGE_DIGEST" error-reporting-smoke | jq -e '.configured == true'
       - name: Apply reviewed Trust/Risk runtime plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TRUST_RISK_TERRAFORM_STATE_ACCESS_KEY }}
