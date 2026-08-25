@@ -84,6 +84,7 @@ async fn main() -> anyhow::Result<()> {
             environment: &config.environment,
             otlp_endpoint: config.otlp_endpoint.as_deref(),
             otlp_authorization_header: config.otlp_authorization_header.as_deref(),
+            protocol: nvbes_observability::OtlpProtocol::Grpc,
         },
         error_reporting::APP_NAME,
     );

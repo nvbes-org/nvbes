@@ -1,11 +1,19 @@
 use nvbes_core::config::AppConfig;
 use tracing_subscriber::prelude::*;
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum OtlpProtocol {
+    #[default]
+    Grpc,
+    Http,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct TracingConfig<'a> {
     pub environment: &'a str,
     pub otlp_endpoint: Option<&'a str>,
     pub otlp_authorization_header: Option<&'a str>,
+    pub protocol: OtlpProtocol,
 }
 
 pub fn init_tracing(config: &AppConfig) {
@@ -18,6 +26,7 @@ pub fn init_tracing_for_service(config: &AppConfig, service_name: &str) {
             environment: &config.environment,
             otlp_endpoint: config.otlp_endpoint.as_deref(),
             otlp_authorization_header: config.otlp_authorization_header.as_deref(),
+            protocol: OtlpProtocol::Grpc,
         },
         service_name,
     );
@@ -77,19 +86,27 @@ where
 
     use opentelemetry::KeyValue;
     use opentelemetry::trace::TracerProvider;
-    use opentelemetry_otlp::{WithExportConfig, WithTonicConfig};
+    use opentelemetry_otlp::{WithExportConfig, WithHttpConfig, WithTonicConfig};
     use opentelemetry_sdk::Resource;
     use opentelemetry_sdk::trace::SdkTracerProvider;
 
-    let mut exporter = opentelemetry_otlp::SpanExporter::builder()
-        .with_tonic()
-        .with_endpoint(endpoint.to_owned());
-
-    if let Some(metadata) = otlp_metadata(config) {
-        exporter = exporter.with_metadata(metadata);
+    let exporter = match config.protocol {
+        OtlpProtocol::Grpc => {
+            let mut exporter = opentelemetry_otlp::SpanExporter::builder()
+                .with_tonic()
+                .with_endpoint(endpoint.to_owned());
+            if let Some(metadata) = otlp_metadata(config) {
+                exporter = exporter.with_metadata(metadata);
+            }
+            exporter.build()
+        }
+        OtlpProtocol::Http => opentelemetry_otlp::SpanExporter::builder()
+            .with_http()
+            .with_endpoint(otlp_http_signal_endpoint(endpoint, "v1/traces"))
+            .with_headers(otlp_headers(config))
+            .build(),
     }
-
-    let exporter = exporter.build().expect("failed to create OTLP exporter");
+    .expect("failed to create OTLP exporter");
 
     let provider = SdkTracerProvider::builder()
         .with_batch_exporter(exporter)
@@ -113,6 +130,26 @@ where
     Some(tracing_opentelemetry::layer().with_tracer(tracer))
 }
 
+pub fn otlp_http_signal_endpoint(base_endpoint: &str, signal_path: &str) -> String {
+    format!(
+        "{}/{}",
+        base_endpoint.trim_end_matches('/'),
+        signal_path.trim_start_matches('/')
+    )
+}
+
+#[cfg(feature = "otlp")]
+fn otlp_headers(config: TracingConfig<'_>) -> std::collections::HashMap<String, String> {
+    config
+        .otlp_authorization_header
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            std::collections::HashMap::from([("authorization".to_string(), value.to_string())])
+        })
+        .unwrap_or_default()
+}
+
 #[cfg(feature = "otlp")]
 fn otlp_metadata(config: TracingConfig<'_>) -> Option<tonic::metadata::MetadataMap> {
     let authorization = config.otlp_authorization_header?.trim();
@@ -126,4 +163,17 @@ fn otlp_metadata(config: TracingConfig<'_>) -> Option<tonic::metadata::MetadataM
     let mut metadata = tonic::metadata::MetadataMap::new();
     metadata.insert("authorization", value);
     Some(metadata)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::otlp_http_signal_endpoint;
+
+    #[test]
+    fn http_signal_endpoint_is_canonical() {
+        assert_eq!(
+            otlp_http_signal_endpoint("https://example.grafana.net/otlp/", "/v1/traces"),
+            "https://example.grafana.net/otlp/v1/traces"
+        );
+    }
 }

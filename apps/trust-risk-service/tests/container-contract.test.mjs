@@ -12,6 +12,10 @@ const serviceRoot = join(workspaceRoot, "apps/trust-risk-service");
 const dockerfile = readFileSync(join(serviceRoot, "Dockerfile"), "utf8");
 const manifest = readFileSync(join(serviceRoot, "Cargo.toml"), "utf8");
 const mainSource = readFileSync(join(serviceRoot, "src/main.rs"), "utf8");
+const metricsSource = readFileSync(
+	join(serviceRoot, "src/trust_risk.metrics.rs"),
+	"utf8",
+);
 const deploymentWorkflow = readFileSync(
 	join(workspaceRoot, ".github/workflows/deploy-trust-risk.yml"),
 	"utf8",
@@ -120,6 +124,8 @@ test("artifact reuse keeps the CI gate lightweight after source equivalence", ()
 
 test("runtime initializes Sentry and authenticated Grafana OTLP", () => {
 	assert.ok(mainSource.includes("init_error_reporting_with_config"));
+	assert.ok(mainSource.includes("protocol: nvbes_observability::OtlpProtocol::Http"));
+	assert.ok(metricsSource.includes(".with_http()"));
 	assert.ok(mainSource.includes("otlp_endpoint: config.otlp_endpoint.as_deref()"));
 	assert.ok(
 		mainSource.includes(

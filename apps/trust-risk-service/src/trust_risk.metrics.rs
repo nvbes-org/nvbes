@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     sync::atomic::{AtomicBool, Ordering},
     sync::{Arc, OnceLock},
     time::Duration,
@@ -13,7 +14,7 @@ use axum::{
 };
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use opentelemetry::{KeyValue, global};
-use opentelemetry_otlp::{WithExportConfig, WithTonicConfig};
+use opentelemetry_otlp::{WithExportConfig, WithHttpConfig};
 use opentelemetry_sdk::{Resource, metrics::SdkMeterProvider};
 
 use crate::{
@@ -49,16 +50,20 @@ pub fn init_otlp(config: &TrustRiskConfig) -> anyhow::Result<GrafanaMetricsGuard
         return Ok(GrafanaMetricsGuard { provider: None });
     };
 
-    let mut exporter = opentelemetry_otlp::MetricExporter::builder()
-        .with_tonic()
-        .with_endpoint(endpoint.to_owned());
-    if let Some(authorization) = config.otlp_authorization_header.as_deref() {
-        let value = tonic::metadata::MetadataValue::try_from(authorization)
-            .map_err(|_| anyhow::anyhow!("NVBES_OTLP_AUTHORIZATION_HEADER is invalid"))?;
-        let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert("authorization", value);
-        exporter = exporter.with_metadata(metadata);
-    }
+    let headers = config
+        .otlp_authorization_header
+        .as_deref()
+        .map(|authorization| {
+            HashMap::from([("authorization".to_string(), authorization.to_string())])
+        })
+        .unwrap_or_default();
+    let exporter = opentelemetry_otlp::MetricExporter::builder()
+        .with_http()
+        .with_endpoint(nvbes_observability::otlp_http_signal_endpoint(
+            endpoint,
+            "v1/metrics",
+        ))
+        .with_headers(headers);
     let exporter = exporter.build()?;
     let provider = SdkMeterProvider::builder()
         .with_periodic_exporter(exporter)
