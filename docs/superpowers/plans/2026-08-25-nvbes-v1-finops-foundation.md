@@ -290,7 +290,8 @@ par le trust store local).
 | `f22fbfd6` | Plafonds des runtimes Terraform actifs |
 | `9eda4d23`, `8b00671e` | Primitive Rust et enforcement des maxima V1 |
 | `c39f65a2`, `7f19a962` | Procédure opérateur et autorité manuelle clarifiée |
-| `fc0416a` | Enforcement CI du gate FinOps avant déploiement |
+| `4c4b9c74`, `c216b0c6` | Registre d’exécution aligné et enforcement CI consigné |
+| `fc0416a2`, `72e1421d`, `d3df194e`, `3c52ff60` | Gate CI et contrat adversarial avant les jobs payants ou privilégiés |
 
 Les commits intermédiaires `59d0b1cc`, `5d90eee5`, `7764c9f8`, `4f1a220d` et
 `34979bc5` documentent la tentative de scanner maison. Leur implémentation est
@@ -310,6 +311,7 @@ entièrement remplacée par `bfa40644` et ne constitue pas l’état final.
 - [x] Aucun runtime produit ou collecteur de dépense ajouté.
 - [x] Gate `pnpm check:finops` vert sur l’arbre réel.
 - [x] Gate FinOps exécuté avant Terraform par les trois workflows concernés.
+- [x] Contrat CI couvert par 13 tests, avec dépendances `success()` explicites.
 
 ## Condition d’ouverture future
 
