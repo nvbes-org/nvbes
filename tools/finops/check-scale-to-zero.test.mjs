@@ -1,38 +1,96 @@
-import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { spawnSync } from 'node:child_process';
-import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
 
-const checker = fileURLToPath(new URL('./check-scale-to-zero.mjs', import.meta.url));
+const checker = fileURLToPath(
+	new URL("./check-scale-to-zero.mjs", import.meta.url),
+);
 
-async function runChecker(terraform, t) {
-  const directory = await mkdtemp(path.join(tmpdir(), 'nvbes-scale-to-zero-'));
-  t.after(() => rm(directory, { recursive: true, force: true }));
-  const file = path.join(directory, 'runtime.tf');
-  await writeFile(file, terraform);
-  return {
-    file,
-    result: spawnSync(process.execPath, [checker, directory], { encoding: 'utf8' }),
-  };
+async function runChecker(terraform, t, fileName = "runtime.tf") {
+	const directory = await mkdtemp(path.join(tmpdir(), "nvbes-scale-to-zero-"));
+	t.after(() => rm(directory, { recursive: true, force: true }));
+	const file = path.join(directory, fileName);
+	await mkdir(path.dirname(file), { recursive: true });
+	await writeFile(file, terraform);
+	return {
+		file,
+		result: spawnSync(process.execPath, [checker, directory], {
+			encoding: "utf8",
+		}),
+	};
 }
 
-async function assertChecker(terraform, expectedStatus, expectedMessages, t) {
-  const { file, result } = await runChecker(terraform, t);
-  const prefix = path.relative(process.cwd(), file);
-  const expectedStderr = expectedMessages.length
-    ? `${expectedMessages.map((message) => `${prefix}: ${message}`).join('\n')}\n`
-    : '';
-  assert.equal(result.status, expectedStatus, result.stderr || result.stdout);
-  assert.equal(result.stderr, expectedStderr);
-  assert.equal(result.stdout, expectedMessages.length ? '' : 'FinOps scale bounds passed for all Scaleway runtimes.\n');
+async function assertChecker(
+	terraform,
+	expectedStatus,
+	expectedMessages,
+	t,
+	fileName,
+) {
+	const { file, result } = await runChecker(terraform, t, fileName);
+	const prefix = path.relative(process.cwd(), file);
+	const expectedStderr = expectedMessages.length
+		? `${expectedMessages.map((message) => `${prefix}: ${message}`).join("\n")}\n`
+		: "";
+	assert.equal(result.status, expectedStatus, result.stderr || result.stdout);
+	assert.equal(result.stderr, expectedStderr);
+	assert.equal(
+		result.stdout,
+		expectedMessages.length
+			? ""
+			: "FinOps scale bounds passed for all Scaleway runtimes.\n",
+	);
 }
 
-test('accepts bounded zero-minimum resources', async (t) => {
-  await assertChecker(
-    `
+test("rejects Terraform JSON before it can bypass scale bounds", async (t) => {
+	await assertChecker(
+		JSON.stringify({
+			resource: {
+				scaleway_container: {
+					bypass: {
+						min_scale: 0,
+						max_scale: 10,
+					},
+				},
+			},
+		}),
+		1,
+		["Terraform JSON syntax is not supported by the FinOps gate"],
+		t,
+		"runtime.tf.json",
+	);
+});
+
+test("rejects compliant Terraform JSON because the gate cannot parse it", async (t) => {
+	await assertChecker(
+		JSON.stringify({
+			resource: {
+				scaleway_container: {
+					bounded: {
+						min_scale: 0,
+						max_scale: 1,
+					},
+				},
+			},
+		}),
+		1,
+		["Terraform JSON syntax is not supported by the FinOps gate"],
+		t,
+		"runtime.tf.json",
+	);
+});
+
+test("ignores Terraform JSON inside .terraform directories", async (t) => {
+	await assertChecker("{}", 0, [], t, ".terraform/runtime.tf.json");
+});
+
+test("accepts bounded zero-minimum resources", async (t) => {
+	await assertChecker(
+		`
 resource "scaleway_container" "api" {
   min_scale = 0
   max_scale = 1
@@ -42,36 +100,38 @@ resource "scaleway_sdb_sql_database" "api" {
   max_cpu = 1
 }
 `,
-    0,
-    [],
-    t,
-  );
+		0,
+		[],
+		t,
+	);
 });
 
 const rejectedFixtures = [
-  {
-    name: 'container maximum above one',
-    terraform: `
+	{
+		name: "container maximum above one",
+		terraform: `
 resource "scaleway_container" "too_many" {
   min_scale = 0
   max_scale = 10
 }
 `,
-    messages: ['scaleway_container must declare max_scale as an integer <= 1'],
-  },
-  {
-    name: 'database maximum above one',
-    terraform: `
+		messages: ["scaleway_container must declare max_scale as an integer <= 1"],
+	},
+	{
+		name: "database maximum above one",
+		terraform: `
 resource "scaleway_sdb_sql_database" "too_many" {
   min_cpu = 0
   max_cpu = 2
 }
 `,
-    messages: ['scaleway_sdb_sql_database must declare max_cpu as an integer <= 1'],
-  },
-  {
-    name: 'nonzero and missing bounds',
-    terraform: `
+		messages: [
+			"scaleway_sdb_sql_database must declare max_cpu as an integer <= 1",
+		],
+	},
+	{
+		name: "nonzero and missing bounds",
+		terraform: `
 resource "scaleway_container" "always_on" {
   min_scale = 1
   max_scale = 1
@@ -80,14 +140,14 @@ resource "scaleway_sdb_sql_database" "missing" {
   min_cpu = 0
 }
 `,
-    messages: [
-      'scaleway_container must declare min_scale = 0',
-      'scaleway_sdb_sql_database must declare max_cpu as an integer <= 1',
-    ],
-  },
-  {
-    name: 'expressions are not literals',
-    terraform: `
+		messages: [
+			"scaleway_container must declare min_scale = 0",
+			"scaleway_sdb_sql_database must declare max_cpu as an integer <= 1",
+		],
+	},
+	{
+		name: "expressions are not literals",
+		terraform: `
 resource "scaleway_container" "expression" {
   min_scale = var.minimum
   max_scale = 1 + var.burst
@@ -97,16 +157,16 @@ resource "scaleway_sdb_sql_database" "expression" {
   max_cpu = var.maximum
 }
 `,
-    messages: [
-      'scaleway_container must declare max_scale as an integer <= 1',
-      'scaleway_container must declare min_scale = 0',
-      'scaleway_sdb_sql_database must declare max_cpu as an integer <= 1',
-      'scaleway_sdb_sql_database must declare min_cpu = 0',
-    ],
-  },
-  {
-    name: 'comments do not provide bounds or resources',
-    terraform: `
+		messages: [
+			"scaleway_container must declare max_scale as an integer <= 1",
+			"scaleway_container must declare min_scale = 0",
+			"scaleway_sdb_sql_database must declare max_cpu as an integer <= 1",
+			"scaleway_sdb_sql_database must declare min_cpu = 0",
+		],
+	},
+	{
+		name: "comments do not provide bounds or resources",
+		terraform: `
 # resource "scaleway_container" "fake_hash" { min_scale = 1 max_scale = 10 }
 // resource "scaleway_sdb_sql_database" "fake_slash" { min_cpu = 1 max_cpu = 2 }
 /* resource "scaleway_container" "fake_block" {
@@ -118,17 +178,17 @@ resource "scaleway_container" "commented_attrs" {
   // max_scale = 1
 }
 `,
-    messages: [
-      'scaleway_container must declare max_scale as an integer <= 1',
-      'scaleway_container must declare min_scale = 0',
-    ],
-  },
-  {
-    name: 'strings and nested blocks are opaque and direct only',
-    terraform: `
+		messages: [
+			"scaleway_container must declare max_scale as an integer <= 1",
+			"scaleway_container must declare min_scale = 0",
+		],
+	},
+	{
+		name: "strings and nested blocks are opaque and direct only",
+		terraform: `
 resource "scaleway_container" "opaque" {
-  description = "braces { } comments # // /* */ escaped \\\"quote\\\""
-  template = "${'${var.fake}'}"
+  description = "braces { } comments # // /* */ escaped \\"quote\\""
+  template = "\${var.fake}"
   nested {
     min_scale = 1
     max_scale = 10
@@ -143,14 +203,14 @@ resource "scaleway_sdb_sql_database" "cross_block" {
   }
 }
 `,
-    messages: [
-      'scaleway_sdb_sql_database must declare max_cpu as an integer <= 1',
-      'scaleway_sdb_sql_database must declare min_cpu = 0',
-    ],
-  },
-  {
-    name: 'heredocs hide fake attributes and resources',
-    terraform: `
+		messages: [
+			"scaleway_sdb_sql_database must declare max_cpu as an integer <= 1",
+			"scaleway_sdb_sql_database must declare min_cpu = 0",
+		],
+	},
+	{
+		name: "heredocs hide fake attributes and resources",
+		terraform: `
 resource "scaleway_container" "heredocs" {
   ordinary = <<EOF
 resource "scaleway_sdb_sql_database" "fake" {
@@ -168,11 +228,11 @@ EOF
   max_scale = 1
 }
 `,
-    messages: [],
-  },
-  {
-    name: 'signed literals are rejected except parser-normalized negative zero',
-    terraform: `
+		messages: [],
+	},
+	{
+		name: "signed literals are rejected except parser-normalized negative zero",
+		terraform: `
 resource "scaleway_container" "signed" {
   min_scale = -0
   max_scale = -1
@@ -182,31 +242,37 @@ resource "scaleway_sdb_sql_database" "signed" {
   max_cpu = -1
 }
 `,
-    messages: [
-      'scaleway_container must declare max_scale as an integer <= 1',
-      'scaleway_container must declare min_scale = 0',
-      'scaleway_sdb_sql_database must declare max_cpu as an integer <= 1',
-      'scaleway_sdb_sql_database must declare min_cpu = 0',
-    ],
-  },
-  {
-    name: 'CRLF source remains valid',
-    terraform: 'resource "scaleway_container" "crlf" {\r\n  min_scale = 0\r\n  max_scale = 1\r\n}\r\n',
-    messages: [],
-  },
+		messages: [
+			"scaleway_container must declare max_scale as an integer <= 1",
+			"scaleway_container must declare min_scale = 0",
+			"scaleway_sdb_sql_database must declare max_cpu as an integer <= 1",
+			"scaleway_sdb_sql_database must declare min_cpu = 0",
+		],
+	},
+	{
+		name: "CRLF source remains valid",
+		terraform:
+			'resource "scaleway_container" "crlf" {\r\n  min_scale = 0\r\n  max_scale = 1\r\n}\r\n',
+		messages: [],
+	},
 ];
 
 for (const fixture of rejectedFixtures) {
-  test(`checks ${fixture.name}`, async (t) => {
-    await assertChecker(fixture.terraform, fixture.messages.length === 0 ? 0 : 1, fixture.messages, t);
-  });
+	test(`checks ${fixture.name}`, async (t) => {
+		await assertChecker(
+			fixture.terraform,
+			fixture.messages.length === 0 ? 0 : 1,
+			fixture.messages,
+			t,
+		);
+	});
 }
 
-test('reports parse failures without a stack trace', async (t) => {
-  await assertChecker(
-    'resource "scaleway_container" "broken" { min_scale = 0\n',
-    1,
-    ['failed to parse Terraform HCL'],
-    t,
-  );
+test("reports parse failures without a stack trace", async (t) => {
+	await assertChecker(
+		'resource "scaleway_container" "broken" { min_scale = 0\n',
+		1,
+		["failed to parse Terraform HCL"],
+		t,
+	);
 });
