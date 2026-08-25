@@ -9,22 +9,28 @@ const workflowContracts = [
     path: '.github/workflows/deploy-email.yml',
     job: 'ci-test-gate',
     buildJob: 'build-scan-sign',
+    buildIf: '${{ success() }}',
     deployJob: 'deploy-email',
+    deployIf: "${{ success() && github.ref == 'refs/heads/main' }}",
   },
   {
     path: '.github/workflows/deploy-trust-risk.yml',
     job: 'ci-test-gate',
     buildJob: 'build-scan-sign',
+    buildIf: '${{ success() }}',
     deployJob: 'deploy-trust-risk',
+    deployIf: "${{ success() && github.ref == 'refs/heads/main' }}",
   },
 ];
 
 const validDeployNeeds = `
   build-scan-sign:
     needs: ci-test-gate
+    if: \${{ success() }}
     steps: []
   deploy-email:
     needs: [ci-test-gate, build-scan-sign]
+    if: \${{ success() && github.ref == 'refs/heads/main' }}
     steps: []
 `;
 
@@ -128,6 +134,54 @@ jobs:
   );
 });
 
+test('rejects a build job that runs regardless of gate failure', () => {
+  const workflow = `
+jobs:
+  ci-test-gate:
+    steps:
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:finops
+      - run: terraform -chdir=. validate
+  build-scan-sign:
+    needs: ci-test-gate
+    if: \${{ always() }}
+    steps: []
+  deploy-email:
+    needs: [ci-test-gate, build-scan-sign]
+    if: \${{ success() && github.ref == 'refs/heads/main' }}
+    steps: []
+`;
+
+  assert.throws(
+    () => validateWorkflowContract(workflow, workflowContracts[1]),
+    /build-scan-sign must use the required success condition/u,
+  );
+});
+
+test('rejects a deploy job that runs regardless of dependency failure', () => {
+  const workflow = `
+jobs:
+  ci-test-gate:
+    steps:
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:finops
+      - run: terraform -chdir=. validate
+  build-scan-sign:
+    needs: ci-test-gate
+    if: \${{ success() }}
+    steps: []
+  deploy-email:
+    needs: [ci-test-gate, build-scan-sign]
+    if: \${{ always() }}
+    steps: []
+`;
+
+  assert.throws(
+    () => validateWorkflowContract(workflow, workflowContracts[1]),
+    /deploy-email must use the required success and branch condition/u,
+  );
+});
+
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -212,11 +266,21 @@ function validateWorkflowContract(source, contract) {
     jobNeeds(workflow.jobs[contract.buildJob]).includes(contract.job),
     `${contract.buildJob} must need ${contract.job}`,
   );
+  assert.equal(
+    workflow.jobs[contract.buildJob].if,
+    contract.buildIf,
+    `${contract.buildJob} must use the required success condition`,
+  );
   const deployNeeds = jobNeeds(workflow.jobs[contract.deployJob]);
   assert.ok(deployNeeds.includes(contract.job), `${contract.deployJob} must need ${contract.job}`);
   assert.ok(
     deployNeeds.includes(contract.buildJob),
     `${contract.deployJob} must need ${contract.buildJob}`,
+  );
+  assert.equal(
+    workflow.jobs[contract.deployJob].if,
+    contract.deployIf,
+    `${contract.deployJob} must use the required success and branch condition`,
   );
 }
 
