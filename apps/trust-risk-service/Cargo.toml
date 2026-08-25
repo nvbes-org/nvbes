@@ -20,6 +20,9 @@ metrics-exporter-prometheus.workspace = true
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
 nvbes-trust-risk = { path = "../../libs/rust/trust-risk" }
+opentelemetry.workspace = true
+opentelemetry-otlp = { workspace = true, features = ["metrics"] }
+opentelemetry_sdk.workspace = true
 prost = "0.14.4"
 prost-types = "0.14"
 serde.workspace = true

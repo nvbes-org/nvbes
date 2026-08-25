@@ -50,7 +50,7 @@ impl TrustRiskLabelService for LabelService {
                 self.state.config.retention.labels_days,
             )
             .await
-            .map_err(map_error)?;
+            .map_err(|error| map_error(&self.state, error))?;
             receipts.push(PbLabelReceipt {
                 label_id: receipt.id.to_string(),
                 accepted_at: Some(timestamp(receipt.accepted_at)),
@@ -89,7 +89,10 @@ fn timestamp(value: chrono::DateTime<chrono::Utc>) -> prost_types::Timestamp {
     }
 }
 
-fn map_error(error: LabelPersistenceError) -> Status {
+fn map_error(state: &TrustRiskState, error: LabelPersistenceError) -> Status {
+    if matches!(&error, LabelPersistenceError::Database(_)) {
+        crate::error_reporting::capture_operation(&state.config, "label.persist", &error);
+    }
     match error {
         LabelPersistenceError::Conflict => Status::already_exists("label identifier conflicts"),
         LabelPersistenceError::InvalidCorrection => {

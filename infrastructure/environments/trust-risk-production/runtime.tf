@@ -19,6 +19,7 @@ resource "scaleway_container_namespace" "trust_risk" {
 }
 
 locals {
+  trust_risk_image_digest = split("@", var.trust_risk_image)[1]
   trust_risk_runtime_environment = {
     NVBES_ENVIRONMENT                           = local.environment
     NVBES_TRUST_RISK_BIND_ADDR                  = "0.0.0.0:8080"
@@ -27,6 +28,9 @@ locals {
     NVBES_TRUST_RISK_LABELS_RETENTION_DAYS      = "400"
     NVBES_TRUST_RISK_REVIEWS_RETENTION_DAYS     = "400"
     NVBES_TRUST_RISK_AUDIT_RETENTION_DAYS       = "730"
+    NVBES_OTLP_ENDPOINT                         = var.grafana_otlp_endpoint
+    SENTRY_RELEASE                              = local.trust_risk_image_digest
+    SENTRY_TRACES_SAMPLE_RATE                   = tostring(var.trust_risk_sentry_traces_sample_rate)
   }
 
   trust_risk_runtime_secrets = {
@@ -34,6 +38,8 @@ locals {
     NVBES_TRUST_RISK_PRODUCER_POLICIES = var.trust_risk_producer_policies
     NVBES_TRUST_RISK_OPERATOR_TOKENS   = var.trust_risk_operator_tokens
     NVBES_TRUST_RISK_METRICS_TOKEN     = var.trust_risk_metrics_token
+    NVBES_OTLP_AUTHORIZATION_HEADER    = var.grafana_otlp_authorization_header
+    SENTRY_DSN                         = var.trust_risk_sentry_dsn
   }
 }
 
