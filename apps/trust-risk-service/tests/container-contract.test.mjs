@@ -12,6 +12,10 @@ const serviceRoot = join(workspaceRoot, "apps/trust-risk-service");
 const dockerfile = readFileSync(join(serviceRoot, "Dockerfile"), "utf8");
 const manifest = readFileSync(join(serviceRoot, "Cargo.toml"), "utf8");
 const mainSource = readFileSync(join(serviceRoot, "src/main.rs"), "utf8");
+const deploymentWorkflow = readFileSync(
+	join(workspaceRoot, ".github/workflows/deploy-trust-risk.yml"),
+	"utf8",
+);
 
 test("image builds and runs the Trust/Risk service as non-root", () => {
 	assert.match(manifest, /^name = "nvbes-trust-risk-service"$/m);
@@ -44,4 +48,27 @@ test("container exposes shallow liveness and supports deployment commands", () =
 	assert.ok(mainSource.includes('action == "migrate"'));
 	assert.ok(mainSource.includes('action == "validate-runtime"'));
 	assert.ok(mainSource.includes("SignalKind::terminate()"));
+});
+
+test("deployment materializes the data-only database identity before runtime validation", () => {
+	const foundationStart = deploymentWorkflow.indexOf(
+		"- name: Plan migration foundation",
+	);
+	const validationStart = deploymentWorkflow.indexOf(
+		"- name: Validate production runtime configuration",
+	);
+	const foundation = deploymentWorkflow.slice(foundationStart, validationStart);
+
+	assert.ok(foundationStart >= 0);
+	assert.ok(validationStart > foundationStart);
+	assert.ok(
+		foundation.includes(
+			"-target=scaleway_iam_api_key.trust_risk_database_runtime",
+		),
+	);
+	assert.ok(
+		foundation.includes(
+			"-target=scaleway_iam_policy.trust_risk_database_runtime",
+		),
+	);
 });
