@@ -24,27 +24,34 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: CI/CD security gate
-        run: >-
-          node tools/security/check-ci-cd-security.mjs
-          --workflow .github/workflows/deploy-trust-risk.yml
-      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          toolchain: 1.91.1
-          components: rustfmt, clippy
+          node-version: 24
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/deploy-trust-risk.yml
+      - name: Enable pnpm
+        run: |-
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Enforce FinOps contract
+        run: pnpm check:finops
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.15.8
           terraform_wrapper: false
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.18.0 --activate
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - name: Initialize Trust/Risk Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/environments/trust-risk-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated Trust/Risk Terraform stack
+        run: terraform -chdir=infrastructure/environments/trust-risk-production validate
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
         with:
-          node-version: 24
-      - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
+          toolchain: 1.91.1
+          components: rustfmt, clippy
       - name: Validate workspace and Trust/Risk contracts
         run: |
           pnpm format:check
@@ -72,16 +79,9 @@ jobs:
             apps/trust-risk-service/src \
             contracts/protobuf/nvbes/trust_risk \
             libs/rust
-      - name: Initialize Trust/Risk Terraform providers
-        run: >-
-          terraform -chdir=infrastructure/environments/trust-risk-production init
-          -backend=false
-          -input=false
-      - name: Validate isolated Trust/Risk Terraform stack
-        run: terraform -chdir=infrastructure/environments/trust-risk-production validate
-
   build-scan-sign:
     needs: [ci-test-gate]
+    if: ${{ success() }}
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 60
     permissions:
@@ -162,7 +162,7 @@ jobs:
 
   deploy-trust-risk:
     needs: [ci-test-gate, build-scan-sign]
-    if: github.ref == 'refs/heads/main'
+    if: ${{ success() && github.ref == 'refs/heads/main' }}
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 90
     environment:
@@ -210,6 +210,7 @@ jobs:
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/deploy-trust-risk.yml
       - name: Verify protected production candidate
+        if: github.ref == 'refs/heads/main'
         run: |
           [[ "$GITHUB_REF" == "refs/heads/main" ]]
           [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]

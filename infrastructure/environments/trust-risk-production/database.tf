@@ -3,7 +3,7 @@ resource "scaleway_sdb_sql_database" "trust_risk" {
   project_id = var.scaleway_project_id
   region     = var.scaleway_region
   min_cpu    = 0
-  max_cpu    = 2
+  max_cpu    = 1
 
   lifecycle {
     prevent_destroy = true

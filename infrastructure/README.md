@@ -22,6 +22,12 @@ Ce dossier contient l'infrastructure as code V1, les conventions d'environnement
 - IAM runtime par environnement.
 - Inventaire des secrets a provisionner dans Secret Manager sans inscrire les valeurs dans Git.
 
+## FinOps gate
+
+The executable V1 production budget and its operating procedure live in
+[`finops/`](finops/README.md). Run `pnpm check:finops` before applying any
+production infrastructure change.
+
 ## Roadmap production Scaleway
 
 La trajectoire cible est documentee dans

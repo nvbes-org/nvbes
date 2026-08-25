@@ -145,7 +145,7 @@ resource "scaleway_container" "email_runtime" {
   memory_limit_bytes     = 536870912
   timeout                = 45
   min_scale              = 0
-  max_scale              = 10
+  max_scale              = 1
 
   environment_variables = merge(local.email_runtime_environment, {
     NVBES_EMAIL_RUNTIME_ROLE = each.key
