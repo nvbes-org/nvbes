@@ -88,6 +88,30 @@ test("rejects an invalid local module source path without a stack trace", async 
 	);
 });
 
+for (const directive of [
+	"./%{ if true }../outside%{ endif }",
+	"./%{~ if true ~}../outside%{~ endif ~}",
+]) {
+	test(`rejects the HCL template directive ${directive}`, async (t) => {
+		const base = await createFixture(t, {
+			"infrastructure/main.tf": `module "templated" { source = "${directive}" }`,
+			"infrastructure/%{if true}../outside%{endif}/.keep": "",
+			"outside/runtime.tf":
+				'resource "scaleway_container" "unbounded" {\n  min_scale = 0\n  max_scale = 10\n}',
+		});
+		const root = path.join(base, "infrastructure");
+		const result = runChecker(root);
+		const main = path.relative(process.cwd(), path.join(root, "main.tf"));
+
+		assert.equal(result.status, 1, result.stderr || result.stdout);
+		assert.equal(result.stdout, "");
+		assert.equal(
+			result.stderr,
+			`${main}: module templated source must be a literal local path starting with ./ or ../\n`,
+		);
+	});
+}
+
 for (const [name, source, extraFiles] of [
 	["missing directory", "./modules/missing", {}],
 	[
@@ -183,6 +207,23 @@ test("rejects a symlinked local module through the separate symlink gate", async
 	assert.equal(
 		result.stderr,
 		`${path.relative(process.cwd(), link)}: symbolic links are not supported by the FinOps gate\n`,
+	);
+});
+
+test("rejects a symbolic link passed as the FinOps root", async (t) => {
+	const base = await createFixture(t, {
+		"external/runtime.tf":
+			'resource "scaleway_container" "bounded" {\n  min_scale = 0\n  max_scale = 1\n}',
+	});
+	const root = path.join(base, "linked-root");
+	await symlink(path.join(base, "external"), root);
+	const result = runChecker(root);
+
+	assert.equal(result.status, 1, result.stderr || result.stdout);
+	assert.equal(result.stdout, "");
+	assert.equal(
+		result.stderr,
+		`${path.relative(process.cwd(), root)}: FinOps root must be an existing non-symbolic directory\n`,
 	);
 });
 

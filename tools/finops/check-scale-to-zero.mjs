@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { lstat, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { parse } from "@cdktn/hcl2json";
 
@@ -76,8 +76,18 @@ function isLiteralLocalModuleSource(source) {
 	return (
 		typeof source === "string" &&
 		(source.startsWith("./") || source.startsWith("../")) &&
-		!source.includes("${")
+		!source.includes("${") &&
+		!source.includes("%{")
 	);
+}
+
+async function isNonSymbolicDirectory(candidate) {
+	try {
+		const metadata = await lstat(candidate);
+		return metadata.isDirectory() && !metadata.isSymbolicLink();
+	} catch {
+		return false;
+	}
 }
 
 async function isExistingDirectory(candidate) {
@@ -89,7 +99,15 @@ async function isExistingDirectory(candidate) {
 }
 
 const violations = [];
-for (const file of (await terraformFiles(ROOT, violations)).sort()) {
+const rootIsValid = await isNonSymbolicDirectory(ROOT);
+if (!rootIsValid) {
+	violations.push(
+		`${path.relative(process.cwd(), ROOT)}: FinOps root must be an existing non-symbolic directory`,
+	);
+}
+
+const files = rootIsValid ? await terraformFiles(ROOT, violations) : [];
+for (const file of files.sort()) {
 	if (file.endsWith(".tf.json")) {
 		violations.push(
 			`${path.relative(process.cwd(), file)}: Terraform JSON syntax is not supported by the FinOps gate`,
