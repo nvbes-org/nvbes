@@ -130,10 +130,10 @@ Fichiers :
 - [`tools/finops/production-budget.test.mjs`](../../../tools/finops/production-budget.test.mjs) ;
 - [`infrastructure/finops/production-budget.json`](../../../infrastructure/finops/production-budget.json).
 
-Comportements livrés : schéma fermé, catégories exactes, entiers non négatifs en
-centimes, alertes strictement croissantes, dernière alerte égale à la limite,
-cibles totalisant 20 EUR, sélection déterministe du palier et chargement du
-contrat réel. **9 tests passent.**
+Comportements livrés : sept clés de catégorie exactes, entiers non négatifs en centimes,
+alertes strictement croissantes, dernière alerte égale à la limite, cibles totalisant
+20 EUR, sélection déterministe du palier et chargement du contrat réel. Le validateur
+n’affirme pas rejeter les propriétés supplémentaires hors de ces invariants documentés. **9 tests passent.**
 
 Critère de sortie : un contrat invalide échoue avant tout changement
 d’infrastructure.
@@ -143,11 +143,14 @@ d’infrastructure.
 Fichiers :
 
 - [`tools/finops/check-production-budget.mjs`](../../../tools/finops/check-production-budget.mjs) ;
+- [`tools/ci/finops-workflows-contract.test.mjs`](../../../tools/ci/finops-workflows-contract.test.mjs) ;
+- [workflows CI et déploiement](../../../.github/workflows) ;
 - [`package.json`](../../../package.json).
 
-`pnpm check:finops` enchaîne le contrat budgétaire et le contrôle des plafonds
-Terraform. Le `pnpm check` racine appelle ce gate ; les erreurs produisent un
-code de sortie non nul et un diagnostic stable.
+`pnpm check:finops` enchaîne le contrat budgétaire, les plafonds Terraform et le contrat
+des workflows. Le `pnpm check` racine l’appelle. Le workflow CI et les deux workflows de
+déploiement l’exécutent exactement une fois, après l’installation pnpm verrouillée et avant
+la première commande Terraform, dans `email-quality` ou `ci-test-gate`. Les jobs payants restent protégés par `needs`.
 
 Critère de sortie : aucun changement concerné ne peut être déclaré valide si le
 budget ou une borne de capacité échoue.
@@ -158,6 +161,7 @@ Fichiers :
 
 - [`tools/finops/check-scale-to-zero.mjs`](../../../tools/finops/check-scale-to-zero.mjs) ;
 - [`tools/finops/check-scale-to-zero.test.mjs`](../../../tools/finops/check-scale-to-zero.test.mjs) ;
+- [`package.json`](../../../package.json) ;
 - [`pnpm-lock.yaml`](../../../pnpm-lock.yaml).
 
 Le contrôle utilise exclusivement **`@cdktn/hcl2json@0.24.0`**, version épinglée.
@@ -186,9 +190,10 @@ Fichiers :
 - [`runtime.tf`](../../../infrastructure/environments/trust-risk-production/runtime.tf) ;
 - [`database.tf`](../../../infrastructure/environments/trust-risk-production/database.tf).
 
-Les deux conteneurs de production actifs ont `min_scale = 0` et `max_scale = 1`.
-La base Trust/Risk a `min_cpu = 0` et `max_cpu = 1`. Aucun maximum Scaleway
-ciblé supérieur à 1 ne subsiste dans l’infrastructure analysée.
+Les deux blocs de ressources conteneur ciblés ont `min_scale = 0` et `max_scale = 1` :
+`email_runtime`, dont le `for_each` crée les rôles `ingress` et `dispatch`, et le runtime
+Trust/Risk. La base Trust/Risk a `min_cpu = 0` et `max_cpu = 1`. Le stack Email historique
+sous `infrastructure/stacks/email` est distinct et déjà borné ; aucun maximum ciblé supérieur à 1 ne subsiste.
 
 Critère de sortie : le contrôle HCL passe sur l’arbre `infrastructure` réel.
 
@@ -260,6 +265,7 @@ node --test tools/finops/production-budget.test.mjs
 node tools/finops/check-production-budget.mjs
 node --test tools/finops/check-scale-to-zero.test.mjs
 node tools/finops/check-scale-to-zero.mjs infrastructure
+node --test tools/ci/finops-workflows-contract.test.mjs
 cargo test -p nvbes-platform
 cargo check --workspace --locked
 ```
@@ -284,6 +290,7 @@ par le trust store local).
 | `f22fbfd6` | Plafonds des runtimes Terraform actifs |
 | `9eda4d23`, `8b00671e` | Primitive Rust et enforcement des maxima V1 |
 | `c39f65a2`, `7f19a962` | Procédure opérateur et autorité manuelle clarifiée |
+| `À renseigner après commit` | Enforcement CI du gate FinOps avant déploiement |
 
 Les commits intermédiaires `59d0b1cc`, `5d90eee5`, `7764c9f8`, `4f1a220d` et
 `34979bc5` documentent la tentative de scanner maison. Leur implémentation est
@@ -302,6 +309,7 @@ entièrement remplacée par `bfa40644` et ne constitue pas l’état final.
 - [x] Procédure manuelle TTC et statut informatif des alertes documentés.
 - [x] Aucun runtime produit ou collecteur de dépense ajouté.
 - [x] Gate `pnpm check:finops` vert sur l’arbre réel.
+- [x] Gate FinOps exécuté avant Terraform par les trois workflows concernés.
 
 ## Condition d’ouverture future
 

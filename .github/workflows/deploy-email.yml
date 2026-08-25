@@ -47,6 +47,7 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
       - name: Validate active workspace
         run: |
+          pnpm check:finops
           pnpm format:check
           pnpm check:structure
           pnpm check:nx-boundaries
