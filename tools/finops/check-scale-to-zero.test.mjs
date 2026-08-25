@@ -11,22 +11,23 @@ const checker = fileURLToPath(new URL('./check-scale-to-zero.mjs', import.meta.u
 async function runChecker(terraform, t) {
   const directory = await mkdtemp(path.join(tmpdir(), 'nvbes-scale-to-zero-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  await writeFile(path.join(directory, 'runtime.tf'), terraform);
-  return spawnSync(process.execPath, [checker, directory], { encoding: 'utf8' });
-}
-
-function messages(result) {
-  return result.stderr
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => line.slice(line.indexOf(': ') + 2));
+  const file = path.join(directory, 'runtime.tf');
+  await writeFile(file, terraform);
+  return {
+    file,
+    result: spawnSync(process.execPath, [checker, directory], { encoding: 'utf8' }),
+  };
 }
 
 async function assertChecker(terraform, expectedStatus, expectedMessages, t) {
-  const result = await runChecker(terraform, t);
+  const { file, result } = await runChecker(terraform, t);
+  const prefix = path.relative(process.cwd(), file);
+  const expectedStderr = expectedMessages.length
+    ? `${expectedMessages.map((message) => `${prefix}: ${message}`).join('\n')}\n`
+    : '';
   assert.equal(result.status, expectedStatus, result.stderr || result.stdout);
-  assert.deepEqual(messages(result), expectedMessages);
+  assert.equal(result.stderr, expectedStderr);
+  assert.equal(result.stdout, expectedMessages.length ? '' : 'FinOps scale bounds passed for all Scaleway runtimes.\n');
 }
 
 test('accepts bounded zero-minimum resources', async (t) => {
@@ -48,6 +49,26 @@ resource "scaleway_sdb_sql_database" "api" {
 });
 
 const rejectedFixtures = [
+  {
+    name: 'container maximum above one',
+    terraform: `
+resource "scaleway_container" "too_many" {
+  min_scale = 0
+  max_scale = 10
+}
+`,
+    messages: ['scaleway_container must declare max_scale as an integer <= 1'],
+  },
+  {
+    name: 'database maximum above one',
+    terraform: `
+resource "scaleway_sdb_sql_database" "too_many" {
+  min_cpu = 0
+  max_cpu = 2
+}
+`,
+    messages: ['scaleway_sdb_sql_database must declare max_cpu as an integer <= 1'],
+  },
   {
     name: 'nonzero and missing bounds',
     terraform: `
