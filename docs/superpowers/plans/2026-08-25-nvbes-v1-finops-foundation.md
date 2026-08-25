@@ -131,9 +131,10 @@ Fichiers :
 - [`infrastructure/finops/production-budget.json`](../../../infrastructure/finops/production-budget.json).
 
 Comportements livrés : sept clés de catégorie exactes, entiers non négatifs en centimes,
-alertes strictement croissantes, dernière alerte égale à la limite, cibles totalisant
-20 EUR, sélection déterministe du palier et chargement du contrat réel. Le validateur
-n’affirme pas rejeter les propriétés supplémentaires hors de ces invariants documentés. **9 tests passent.**
+alertes obligatoires à 15, 20 et 25 EUR, alertes strictement croissantes, dernière alerte
+égale à la limite, cibles totalisant 20 EUR, sélection déterministe du palier et chargement
+du contrat réel. Le validateur n’affirme pas rejeter les propriétés supplémentaires hors
+de ces invariants documentés. **14 tests passent.**
 
 Critère de sortie : un contrat invalide échoue avant tout changement
 d’infrastructure.
@@ -143,14 +144,19 @@ d’infrastructure.
 Fichiers :
 
 - [`tools/finops/check-production-budget.mjs`](../../../tools/finops/check-production-budget.mjs) ;
+- [`tools/ci/finops-workflows-contract.mjs`](../../../tools/ci/finops-workflows-contract.mjs) ;
 - [`tools/ci/finops-workflows-contract.test.mjs`](../../../tools/ci/finops-workflows-contract.test.mjs) ;
+- [`tools/ci/finops-workflows-contract.adversarial.test.mjs`](../../../tools/ci/finops-workflows-contract.adversarial.test.mjs) ;
+- [`tools/ci/finops-workflows-context.adversarial.test.mjs`](../../../tools/ci/finops-workflows-context.adversarial.test.mjs) ;
 - [workflows CI et déploiement](../../../.github/workflows) ;
 - [`package.json`](../../../package.json).
 
 `pnpm check:finops` enchaîne le contrat budgétaire, les plafonds Terraform et le contrat
 des workflows. Le `pnpm check` racine l’appelle. Le workflow CI et les deux workflows de
-déploiement l’exécutent exactement une fois, après l’installation pnpm verrouillée et avant
-la première commande Terraform, dans `email-quality` ou `ci-test-gate`. Les jobs payants restent protégés par `needs`.
+déploiement utilisent un préfixe fermé de neuf étapes : checkout et outils épinglés,
+contrôle sécurité, installation pnpm verrouillée, gate FinOps, setup Terraform, init sans
+backend puis validation. Les contextes d’exécution sont comparés structurellement et les
+jobs payants restent protégés par `needs` et `success()`. **63 tests de contrat passent.**
 
 Critère de sortie : aucun changement concerné ne peut être déclaré valide si le
 budget ou une borne de capacité échoue.
@@ -165,9 +171,10 @@ Fichiers :
 - [`pnpm-lock.yaml`](../../../pnpm-lock.yaml).
 
 Le contrôle utilise exclusivement **`@cdktn/hcl2json@0.24.0`**, version épinglée.
-Il découvre récursivement et trie les fichiers `.tf`, ignore `.terraform`, puis
-parse chaque fichier séparément. Il inspecte uniquement les attributs directs
-des ressources :
+Il découvre récursivement et trie les fichiers Terraform, ignore `.terraform`, puis
+parse chaque fichier `.tf` séparément. La syntaxe `.tf.json` et tout lien symbolique
+hors `.terraform` sont refusés explicitement jusqu’à leur prise en charge sûre. Il
+inspecte uniquement les attributs directs des ressources :
 
 - `scaleway_container` exige `min_scale = 0` et `max_scale` égal à 0 ou 1 ;
 - `scaleway_sdb_sql_database` exige `min_cpu = 0` et `max_cpu` égal à 0 ou 1.
@@ -175,7 +182,7 @@ des ressources :
 Les valeurs admises sont les nombres sémantiques 0 et 1 produits par le
 parseur. Les expressions, chaînes, attributs manquants et `-0` sont rejetés. Les
 commentaires, blocs imbriqués, templates, heredocs, CRLF, erreurs de syntaxe et
-l’isolation entre ressources sont couverts. **11 tests passent.**
+l’isolation entre ressources sont couverts. **15 tests passent.**
 
 Le contrôle n’utilise **jamais de regex pour parser HCL**.
 
@@ -292,6 +299,10 @@ par le trust store local).
 | `c39f65a2`, `7f19a962` | Procédure opérateur et autorité manuelle clarifiée |
 | `4c4b9c74`, `c216b0c6` | Registre d’exécution aligné et enforcement CI consigné |
 | `fc0416a2`, `72e1421d`, `d3df194e`, `3c52ff60` | Gate CI et contrat adversarial avant les jobs payants ou privilégiés |
+| `708b605` | Historique du gate CI durci consigné |
+| `6244f548`, `b5974f5b` | Refus fail-closed de Terraform JSON et des liens symboliques |
+| `7d205ed8` | Alertes 15/20/25 EUR rendues obligatoires |
+| `e03e6f15`, `52d768c3`, `038aa559`, `c53fa62a`, `1de7e63f` | Gate CI structurel, contexte fermé et validation Terraform contiguë |
 
 Les commits intermédiaires `59d0b1cc`, `5d90eee5`, `7764c9f8`, `4f1a220d` et
 `34979bc5` documentent la tentative de scanner maison. Leur implémentation est
@@ -301,9 +312,9 @@ entièrement remplacée par `bfa40644` et ne constitue pas l’état final.
 
 - [x] Budget TTC versionné : cible 20 EUR, limite 30 EUR.
 - [x] Catégories, alertes et paliers validés automatiquement.
-- [x] Contrat couvert par 9 tests.
+- [x] Contrat couvert par 14 tests.
 - [x] Parse HCL réel, sans regex, version de dépendance épinglée.
-- [x] Contrôle des bornes couvert par 11 tests.
+- [x] Contrôle des bornes couvert par 15 tests, avec `.tf.json` et symlinks refusés.
 - [x] Toutes les ressources Scaleway ciblées descendent à zéro et plafonnent à 1.
 - [x] Maxima Rust V1 impossibles à repousser au-delà de 2 500/2 800/3 000.
 - [x] Seuils Rust anticipés permis.
@@ -311,7 +322,7 @@ entièrement remplacée par `bfa40644` et ne constitue pas l’état final.
 - [x] Aucun runtime produit ou collecteur de dépense ajouté.
 - [x] Gate `pnpm check:finops` vert sur l’arbre réel.
 - [x] Gate FinOps exécuté avant Terraform par les trois workflows concernés.
-- [x] Contrat CI couvert par 13 tests, avec dépendances `success()` explicites.
+- [x] Contrat CI couvert par 63 tests, avec contexte fermé et dépendances `success()` explicites.
 
 ## Condition d’ouverture future
 

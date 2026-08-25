@@ -33,3 +33,7 @@ and verified manually for each environment before production; they are
 informational only and do not enforce the hard limit. Until live spend
 collection exists, the manual tax-inclusive review of invoices and provider
 estimates remains authoritative.
+
+The repository scale gate accepts regular `.tf` files only. It rejects
+Terraform JSON files and symbolic links below `infrastructure/` so unsupported
+syntax or indirection cannot bypass the capacity limits.
