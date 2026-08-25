@@ -28,4 +28,8 @@ do not replace repository limits.
 
 Platform Operations will consume the shared Rust stage selector when live spend
 collection is implemented. Until that runtime exists, literal Terraform maxima
-and provider-side alerts are the automatic outer guardrails.
+are the automatic capacity guardrails. Provider spend alerts must be configured
+and verified manually for each environment before production; they are
+informational only and do not enforce the hard limit. Until live spend
+collection exists, the manual tax-inclusive review of invoices and provider
+estimates remains authoritative.
