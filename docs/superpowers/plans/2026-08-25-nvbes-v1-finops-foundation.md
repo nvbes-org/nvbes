@@ -290,7 +290,7 @@ par le trust store local).
 | `f22fbfd6` | Plafonds des runtimes Terraform actifs |
 | `9eda4d23`, `8b00671e` | Primitive Rust et enforcement des maxima V1 |
 | `c39f65a2`, `7f19a962` | Procédure opérateur et autorité manuelle clarifiée |
-| `À renseigner après commit` | Enforcement CI du gate FinOps avant déploiement |
+| `fc0416a` | Enforcement CI du gate FinOps avant déploiement |
 
 Les commits intermédiaires `59d0b1cc`, `5d90eee5`, `7764c9f8`, `4f1a220d` et
 `34979bc5` documentent la tentative de scanner maison. Leur implémentation est
