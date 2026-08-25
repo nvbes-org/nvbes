@@ -74,6 +74,39 @@ jobs:
 `;
 }
 
+const unexpectedJobs = [
+	[
+		"an independent Terraform apply job",
+		`  emergency-apply:
+    runs-on: ubuntu-latest
+    steps:
+      - run: terraform apply -auto-approve`,
+	],
+	[
+		"an additional benign job",
+		`  harmless-report:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ready`,
+	],
+];
+
+for (const [scenario, job] of unexpectedJobs) {
+	test(`rejects ${scenario}`, () => {
+		const workflow = `${workflowWithCriticalSteps(validCriticalSteps)}${job}\n`;
+		assert.throws(
+			() => validateWorkflowContract(workflow, contract),
+			(error) => {
+				assert.equal(
+					error.message,
+					"workflow jobs must exactly match contract: build-scan-sign, ci-test-gate, deploy-email",
+				);
+				return true;
+			},
+		);
+	});
+}
+
 test("accepts the dedicated fail-closed baseline", () => {
 	assert.doesNotThrow(() =>
 		validateWorkflowContract(

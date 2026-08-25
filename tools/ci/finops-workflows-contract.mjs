@@ -150,6 +150,21 @@ function jobNeeds(job) {
 	return Array.isArray(job.needs) ? job.needs : [];
 }
 
+function assertJobInventory(workflow, contract) {
+	const expectedJobs = [contract.job, contract.buildJob, contract.deployJob]
+		.filter((jobName) => jobName !== undefined)
+		.sort();
+	const actualJobs = Object.keys(workflow.jobs).sort();
+	const matches =
+		actualJobs.length === expectedJobs.length &&
+		actualJobs.every((jobName, index) => jobName === expectedJobs[index]);
+	if (!matches) {
+		assert.fail(
+			`workflow jobs must exactly match contract: ${expectedJobs.join(", ")}`,
+		);
+	}
+}
+
 function assertDownstreamJobs(workflow, contract) {
 	if (contract.buildJob === undefined || contract.deployJob === undefined)
 		return;
@@ -239,4 +254,5 @@ export function validateWorkflowContract(source, contract) {
 	assertCriticalSteps(terraformSteps, contract.job);
 
 	assertDownstreamJobs(workflow, contract);
+	assertJobInventory(workflow, contract);
 }
