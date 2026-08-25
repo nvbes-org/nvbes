@@ -82,7 +82,7 @@ jobs:
 
   build-scan-sign:
     needs: [ci-test-gate]
-    runs-on: ${{ vars.TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST != '' && fromJSON('["self-hosted","macOS","ARM64"]') || 'ubuntu-24.04' }}
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 60
     permissions:
       actions: read

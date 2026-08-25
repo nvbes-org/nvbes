@@ -91,10 +91,14 @@ test("deployment materializes the data-only database identity before runtime val
 	);
 });
 
-test("new image builds use an ephemeral native x86 runner", () => {
+test("new image builds use the local Docker runner for linux/amd64", () => {
 	assert.ok(
-		deploymentWorkflow.includes("|| 'ubuntu-24.04'"),
+		deploymentWorkflow.includes(
+			"build-scan-sign:\n    needs: [ci-test-gate]\n    runs-on: [self-hosted, macOS, ARM64]",
+		),
 	);
+	assert.ok(deploymentWorkflow.includes("platforms: linux/amd64"));
+	assert.equal(deploymentWorkflow.includes("ubuntu-24.04"), false);
 });
 
 test("deployment can reuse only a signed artifact with unchanged runtime inputs", () => {
