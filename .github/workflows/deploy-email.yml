@@ -171,6 +171,10 @@ jobs:
       TF_VAR_accept_scaleway_tem_terms: ${{ vars.SCALEWAY_TEM_TERMS_ACCEPTED }}
       TF_VAR_base_domain: ${{ vars.BASE_DOMAIN }}
       TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+      TF_VAR_email_sentry_traces_sample_rate: ${{ vars.EMAIL_SENTRY_TRACES_SAMPLE_RATE }}
+      TF_VAR_grafana_email_contact_point: ${{ vars.GRAFANA_EMAIL_CONTACT_POINT }}
+      TF_VAR_grafana_prometheus_datasource_uid: ${{ vars.GRAFANA_PROMETHEUS_DATASOURCE_UID }}
+      TF_VAR_grafana_url: ${{ vars.GRAFANA_URL }}
       TF_VAR_private_network_id: ${{ vars.SCW_PRIVATE_NETWORK_ID }}
       TF_VAR_scaleway_project_id: ${{ vars.SCW_PROJECT_ID }}
       TERRAFORM_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
@@ -257,6 +261,7 @@ jobs:
           TF_VAR_email_observability_internal_token: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
           TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
           TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sentry_dsn: ${{ secrets.EMAIL_SENTRY_DSN }}
           TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
           TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
         run: >-
@@ -314,6 +319,7 @@ jobs:
           TF_VAR_email_observability_internal_token: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
           TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
           TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sentry_dsn: ${{ secrets.EMAIL_SENTRY_DSN }}
           TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
           TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
         run: >-
@@ -377,6 +383,7 @@ jobs:
           TF_VAR_email_observability_internal_token: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
           TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
           TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sentry_dsn: ${{ secrets.EMAIL_SENTRY_DSN }}
           TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
           TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
         run: >-
@@ -384,7 +391,7 @@ jobs:
           -lock-timeout=5m
           -target=scaleway_container.email_runtime
           -out=email-runtime-foundation.tfplan
-      - name: Validate production runtime configuration
+      - name: Validate production runtime and Sentry reporting configuration
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
@@ -394,13 +401,16 @@ jobs:
           NVBES_EMAIL_RECIPIENT_HMAC_KEY: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
           NVBES_EMAIL_SNS_CA_BUNDLE_PEM: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
           NVBES_SCALEWAY_EMAIL_SECRET_KEY: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
+          SENTRY_DSN: ${{ secrets.EMAIL_SENTRY_DSN }}
+          SENTRY_RELEASE: ${{ github.sha }}
+          SENTRY_TRACES_SAMPLE_RATE: ${{ vars.EMAIL_SENTRY_TRACES_SAMPLE_RATE }}
         run: |
           export NVBES_EMAIL_DATABASE_URL
           NVBES_EMAIL_DATABASE_URL="$(
             terraform -chdir="$STACK_ROOT" show -json email-runtime-foundation.tfplan |
               jq -er '.planned_values.outputs.email_database_runtime_url.value'
           )"
-          docker run --rm --platform linux/amd64 \
+          runtime_environment=(
             --env NVBES_EMAIL_DATABASE_URL \
             --env NVBES_EMAIL_DATA_ENCRYPTION_KEY \
             --env NVBES_OBSERVABILITY_INTERNAL_TOKEN \
@@ -408,6 +418,9 @@ jobs:
             --env NVBES_EMAIL_RECIPIENT_HMAC_KEY \
             --env NVBES_EMAIL_SNS_CA_BUNDLE_PEM \
             --env NVBES_SCALEWAY_EMAIL_SECRET_KEY \
+            --env SENTRY_DSN \
+            --env SENTRY_RELEASE \
+            --env SENTRY_TRACES_SAMPLE_RATE \
             --env NVBES_ENVIRONMENT=production \
             --env NVBES_EMAIL_FROM_EMAIL="no-reply@notify.${TF_VAR_base_domain}" \
             --env NVBES_EMAIL_FROM_NAME=nvbes \
@@ -423,8 +436,19 @@ jobs:
             --env NVBES_EMAIL_SNS_TOPIC_ARN=arn:scw:sns:fr-par:preflight:email-events \
             --env NVBES_EMAIL_RUNTIME_ROLE=ingress \
             --env NVBES_EMAIL_PAYLOAD_RETENTION_DAYS=30 \
-            --env NVBES_EMAIL_LEDGER_RETENTION_DAYS=400 \
+            --env NVBES_EMAIL_LEDGER_RETENTION_DAYS=400
+          )
+          docker run --rm --platform linux/amd64 \
+            "${runtime_environment[@]}" \
             "$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime
+          smoke_result="$(
+            docker run --rm --platform linux/amd64 \
+              "${runtime_environment[@]}" \
+              "$SOURCE_EMAIL_IMAGE_DIGEST" error-reporting-smoke
+          )"
+          jq --exit-status \
+            '.status == "sent" and .configured == true and .flushed == true' \
+            <<<"$smoke_result" >/dev/null
       - name: Apply reviewed email runtime foundation plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
@@ -447,7 +471,9 @@ jobs:
           TF_VAR_email_observability_internal_token: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
           TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
           TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sentry_dsn: ${{ secrets.EMAIL_SENTRY_DSN }}
           TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
+          TF_VAR_grafana_service_account_token: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
           TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
         run: >-
           terraform -chdir="$STACK_ROOT" plan
@@ -458,6 +484,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_grafana_service_account_token: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
           SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
         run: >-
@@ -482,3 +509,24 @@ jobs:
             --retry-all-errors \
             --retry-delay 5 \
             "${endpoint}/health/ready"
+      - name: 'Post-deploy: Verify protected Prometheus metrics for Grafana Alloy'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          EMAIL_OBSERVABILITY_INTERNAL_TOKEN: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
+        run: |
+          metrics_endpoint="$(terraform -chdir="$STACK_ROOT" output -raw email_worker_metrics_endpoint)"
+          anonymous_status="$(
+            curl --silent --output /dev/null --write-out '%{http_code}' "$metrics_endpoint"
+          )"
+          [[ "$anonymous_status" == "401" ]]
+          metrics_payload="$(
+            curl --fail --silent --show-error \
+              --retry 12 \
+              --retry-all-errors \
+              --retry-delay 5 \
+              --header "Authorization: Bearer $EMAIL_OBSERVABILITY_INTERNAL_TOKEN" \
+              "$metrics_endpoint"
+          )"
+          grep -q '^email_queue_depth ' <<<"$metrics_payload"
+          grep -q '^email_queue_oldest_age_seconds ' <<<"$metrics_payload"

@@ -6,6 +6,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "= 5.19.0"
     }
+    grafana = {
+      source  = "grafana/grafana"
+      version = "= 4.37.0"
+    }
     scaleway = {
       source  = "scaleway/scaleway"
       version = "= 2.79.0"
@@ -20,3 +24,8 @@ provider "scaleway" {
 }
 
 provider "cloudflare" {}
+
+provider "grafana" {
+  url  = var.grafana_url
+  auth = var.grafana_service_account_token
+}
