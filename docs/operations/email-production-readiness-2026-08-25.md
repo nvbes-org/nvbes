@@ -6,8 +6,10 @@
 
 The production Email stack already exists and is healthy at the shallow
 liveness level, but its live configuration predates the V1 FinOps contract now
-merged locally. No Terraform apply, provider mutation, email delivery or restore
-operation was performed during this audit.
+merged locally. No Terraform apply, email delivery or restore operation was
+performed during this audit. After explicit operator approval, three narrowly
+scoped provider updates capped the two Email containers and the Trust/Risk
+container at one instance; the post-change evidence is recorded below.
 
 ## Scope and authority
 
@@ -32,6 +34,7 @@ blocker until a reviewed plan reconciles it.
 | Database | `nvbes-prod-email`, PostgreSQL 16 | Ready, idle, CPU 0/1 |
 | Backups | Managed backups from 24 and 25 August | Ready, seven-day expiry |
 | Runtime image | Private immutable registry image by digest | Present |
+| Live capacity remediation | Email ingress, Email dispatch and Trust/Risk, 25 August 2026 | `ready`, `min_scale = 0`, `max_scale = 1` |
 | Local Email tests | 58 library + 2 adapter + 37 worker tests | 97 passed |
 | Container contract | Nx `email-worker:container-contract` | 3 passed |
 | Terraform | init without backend and validate | Valid |
@@ -69,17 +72,20 @@ economic shutdown path before it can be considered.
 
 ## Blocking findings
 
-### 1. Live capacity exceeds the repository contract
+### 1. Live capacity is capped, but the hard cost guard is absent
 
-Both live Email containers have `min_scale = 0` but `max_scale = 10`. The
-current Terraform contract requires `max_scale = 1`. The live Trust/Risk
-container also reports `max_scale = 10`, which matters because the 30 EUR limit
-covers the entire project.
+After explicit operator approval, the Email ingress container
+`1dae2d4b-cb66-42fc-9714-4fb878580078`, Email dispatch container
+`cbf4b82a-4838-4c15-898c-aad6a4919a78` and Trust/Risk container
+`aa046726-26c9-4970-8c3e-3038f5a20ade` were each updated from
+`max_scale = 10` to `max_scale = 1`. An independent post-change read verified
+all three as `ready`, with `min_scale = 0`, `max_scale = 1` and no provider
+error. Public Email and Trust/Risk liveness also returned `alive`.
 
-No new production apply or traffic opening is allowed until all targeted live
-runtimes are capped at one and a post-change read verifies the result.
-The cap permits internal synthetic validation only; it does not close the
-continuous-usage cost risk described above.
+This closes the live capacity mismatch, but not the continuous-usage cost risk
+described above. The cap permits internal synthetic validation only. No public
+traffic or new production apply is allowed until the project has an observed,
+tested control that prevents total spend from crossing 30 EUR TTC.
 
 ### 2. The audited code is not published
 
@@ -144,8 +150,8 @@ processing before any product is connected.
 5. Configure Scaleway informational budget alerts at 15, 20, 25, 28 and 30 EUR.
 6. Run a remote-state, plan-only Terraform refresh; reject any unexpected
    replacement, deletion, ownership change or capacity increase.
-7. Reconcile Email and Trust/Risk live capacity to `min = 0`, `max = 1` through
-   the reviewed infrastructure path.
+7. Run a second post-plan read and reject any drift from the verified Email and
+   Trust/Risk capacity bound of `min = 0`, `max = 1`.
 8. Define and test the time or request budget that turns off non-essential live
    compute before the project can cross 30 EUR TTC.
 9. Verify liveness, authenticated metrics, anonymous metrics denial, Sentry and
