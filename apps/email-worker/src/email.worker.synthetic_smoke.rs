@@ -23,8 +23,8 @@ pub async fn run() -> anyhow::Result<()> {
     let recipient = required_env(RECIPIENT_ENV)?;
     let run_id = required_env(RUN_ID_ENV)?;
     let command = command(&recipient, &run_id, Utc::now())?;
-    let client = EmailClient::connect(EmailClientConfig::from_env("production")?).await?;
-    let (receipt, attempts) = submit_after_cold_start(&client, &command).await?;
+    let config = EmailClientConfig::from_env("production")?;
+    let (receipt, attempts) = submit_after_cold_start(&config, &command).await?;
 
     println!(
         "{}",
@@ -40,11 +40,16 @@ pub async fn run() -> anyhow::Result<()> {
 }
 
 async fn submit_after_cold_start(
-    client: &EmailClient,
+    config: &EmailClientConfig,
     command: &EmailCommand,
 ) -> Result<(EmailReceipt, u8), EmailClientError> {
     for attempt in 1..=MAX_COLD_START_ATTEMPTS {
-        match client.send(command.clone()).await {
+        let result = match EmailClient::connect(config.clone()).await {
+            Ok(client) => client.send(command.clone()).await,
+            Err(error) => Err(error),
+        };
+
+        match result {
             Ok(receipt) => return Ok((receipt, attempt)),
             Err(EmailClientError::Unavailable) if attempt < MAX_COLD_START_ATTEMPTS => {
                 tokio::time::sleep(std::time::Duration::from_secs(
