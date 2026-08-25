@@ -142,6 +142,29 @@ test("runtime initializes Sentry and authenticated Grafana OTLP", () => {
 	assert.ok(runtimeTerraform.includes("NVBES_OTLP_AUTHORIZATION_HEADER"));
 });
 
+test("error reporting smoke receives the complete production runtime config", () => {
+	const smokeCommand = '"$SOURCE_TRUST_RISK_IMAGE_DIGEST" error-reporting-smoke';
+	const smokeEnd = deploymentWorkflow.indexOf(smokeCommand);
+	const smokeStart = deploymentWorkflow.lastIndexOf(
+		"docker run --rm --platform linux/amd64",
+		smokeEnd,
+	);
+	const smokeInvocation = deploymentWorkflow.slice(smokeStart, smokeEnd);
+
+	assert.ok(smokeStart >= 0);
+	assert.ok(smokeEnd > smokeStart);
+	for (const variable of [
+		"NVBES_TRUST_RISK_BIND_ADDR",
+		"NVBES_TRUST_RISK_SIGNALS_RETENTION_DAYS",
+		"NVBES_TRUST_RISK_EVALUATIONS_RETENTION_DAYS",
+		"NVBES_TRUST_RISK_LABELS_RETENTION_DAYS",
+		"NVBES_TRUST_RISK_REVIEWS_RETENTION_DAYS",
+		"NVBES_TRUST_RISK_AUDIT_RETENTION_DAYS",
+	]) {
+		assert.ok(smokeInvocation.includes(`--env ${variable}`), variable);
+	}
+});
+
 test("deployment provisions Trust/Risk Grafana and injects observability secrets", () => {
 	assert.ok(observabilityTerraform.includes('resource "grafana_folder"'));
 	assert.ok(observabilityTerraform.includes('resource "grafana_dashboard"'));
