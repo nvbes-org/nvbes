@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   BudgetStage,
+  loadBudgetContract,
   stageForSpend,
   validateBudgetContract,
 } from './production-budget.mjs';
@@ -15,8 +16,8 @@ function validContract() {
     monthly: {
       targetCents: 2000,
       hardLimitCents: 3000,
+      alertsCents: [1500, 2000, 2500, 2800, 3000],
     },
-    alerts: [1500, 2000, 2500, 2800, 3000],
     categories: {
       domain_dns: { targetCents: 200, limitCents: 300 },
       compute: { targetCents: 300, limitCents: 600 },
@@ -27,10 +28,10 @@ function validContract() {
       safety_margin: { targetCents: 800, limitCents: 800 },
     },
     stages: [
-      { name: BudgetStage.normal, startsAtCents: 0 },
-      { name: BudgetStage.disableNonEssential, startsAtCents: 2500 },
-      { name: BudgetStage.freezeCostCreation, startsAtCents: 2800 },
-      { name: BudgetStage.essentialOnly, startsAtCents: 3000 },
+      { name: BudgetStage.Normal, fromCents: 0 },
+      { name: BudgetStage.DisableNonEssential, fromCents: 2500 },
+      { name: BudgetStage.FreezeCostCreation, fromCents: 2800 },
+      { name: BudgetStage.EssentialOnly, fromCents: 3000 },
     ],
   };
 }
@@ -71,14 +72,14 @@ test('rejects category target sum drift', () => {
 
 test('rejects unordered alerts', () => {
   const contract = validContract();
-  contract.alerts = [1500, 2500, 2000, 2800, 3000];
+  contract.monthly.alertsCents = [1500, 2500, 2000, 2800, 3000];
 
   assert.throws(() => validateBudgetContract(contract), /alerts must be strictly increasing/);
 });
 
 test('rejects freeze_cost_creation later than 2800 cents', () => {
   const contract = validContract();
-  contract.stages[2].startsAtCents = 2801;
+  contract.stages[2].fromCents = 2801;
 
   assert.throws(() => validateBudgetContract(contract), /freeze_cost_creation stage must start no later than 2800 cents/);
 });
@@ -86,10 +87,24 @@ test('rejects freeze_cost_creation later than 2800 cents', () => {
 test('selects stages at inclusive spend boundaries and above the hard limit', () => {
   const contract = validContract();
 
-  assert.equal(stageForSpend(contract, 0), BudgetStage.normal);
-  assert.equal(stageForSpend(contract, 2499), BudgetStage.normal);
-  assert.equal(stageForSpend(contract, 2500), BudgetStage.disableNonEssential);
-  assert.equal(stageForSpend(contract, 2800), BudgetStage.freezeCostCreation);
-  assert.equal(stageForSpend(contract, 3000), BudgetStage.essentialOnly);
-  assert.equal(stageForSpend(contract, 3001), BudgetStage.essentialOnly);
+  assert.equal(stageForSpend(contract, 0), BudgetStage.Normal);
+  assert.equal(stageForSpend(contract, 2499), BudgetStage.Normal);
+  assert.equal(stageForSpend(contract, 2500), BudgetStage.DisableNonEssential);
+  assert.equal(stageForSpend(contract, 2800), BudgetStage.FreezeCostCreation);
+  assert.equal(stageForSpend(contract, 3000), BudgetStage.EssentialOnly);
+  assert.equal(stageForSpend(contract, 3001), BudgetStage.EssentialOnly);
+});
+
+test('loads the pinned approved production budget fixture', async () => {
+  const contract = await loadBudgetContract(new URL('../../infrastructure/finops/production-budget.json', import.meta.url));
+
+  assert.deepEqual(contract.categories, {
+    domain_dns: { targetCents: 200, limitCents: 300 },
+    compute: { targetCents: 300, limitCents: 600 },
+    postgres: { targetCents: 400, limitCents: 800 },
+    email: { targetCents: 100, limitCents: 200 },
+    storage_registry: { targetCents: 200, limitCents: 400 },
+    observability: { targetCents: 0, limitCents: 200 },
+    safety_margin: { targetCents: 800, limitCents: 800 },
+  });
 });

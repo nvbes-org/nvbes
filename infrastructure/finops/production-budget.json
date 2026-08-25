@@ -4,9 +4,9 @@
   "taxesIncluded": true,
   "monthly": {
     "targetCents": 2000,
-    "hardLimitCents": 3000
+    "hardLimitCents": 3000,
+    "alertsCents": [1500, 2000, 2500, 2800, 3000]
   },
-  "alerts": [1500, 2000, 2500, 2800, 3000],
   "categories": {
     "domain_dns": { "targetCents": 200, "limitCents": 300 },
     "compute": { "targetCents": 300, "limitCents": 600 },
@@ -17,9 +17,9 @@
     "safety_margin": { "targetCents": 800, "limitCents": 800 }
   },
   "stages": [
-    { "name": "normal", "startsAtCents": 0 },
-    { "name": "disable_non_essential", "startsAtCents": 2500 },
-    { "name": "freeze_cost_creation", "startsAtCents": 2800 },
-    { "name": "essential_only", "startsAtCents": 3000 }
+    { "name": "normal", "fromCents": 0 },
+    { "name": "disable_non_essential", "fromCents": 2500 },
+    { "name": "freeze_cost_creation", "fromCents": 2800 },
+    { "name": "essential_only", "fromCents": 3000 }
   ]
 }

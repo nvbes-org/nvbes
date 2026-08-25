@@ -1,10 +1,10 @@
 import { readFile } from 'node:fs/promises';
 
 export const BudgetStage = Object.freeze({
-  normal: 'normal',
-  disableNonEssential: 'disable_non_essential',
-  freezeCostCreation: 'freeze_cost_creation',
-  essentialOnly: 'essential_only',
+  Normal: 'normal',
+  DisableNonEssential: 'disable_non_essential',
+  FreezeCostCreation: 'freeze_cost_creation',
+  EssentialOnly: 'essential_only',
 });
 
 const REQUIRED_CATEGORIES = Object.freeze([
@@ -18,10 +18,10 @@ const REQUIRED_CATEGORIES = Object.freeze([
 ]);
 
 const REQUIRED_STAGES = Object.freeze([
-  { name: BudgetStage.normal, maximumStartCents: 0 },
-  { name: BudgetStage.disableNonEssential, maximumStartCents: 2500 },
-  { name: BudgetStage.freezeCostCreation, maximumStartCents: 2800 },
-  { name: BudgetStage.essentialOnly, maximumStartCents: 3000 },
+  { name: BudgetStage.Normal, maximumStartCents: 0 },
+  { name: BudgetStage.DisableNonEssential, maximumStartCents: 2500 },
+  { name: BudgetStage.FreezeCostCreation, maximumStartCents: 2800 },
+  { name: BudgetStage.EssentialOnly, maximumStartCents: 3000 },
 ]);
 
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -48,14 +48,14 @@ export function validateBudgetContract(contract) {
     if (hardLimitCents - targetCents < 1000) errors.push('reserve must be at least 1000 cents');
   }
 
-  if (!Array.isArray(contract.alerts) || contract.alerts.length === 0) {
+  if (!Array.isArray(monthly.alertsCents) || monthly.alertsCents.length === 0) {
     errors.push('alerts must be a non-empty array');
   } else {
-    if (contract.alerts.some((alert) => !isCents(alert))) errors.push('alerts must contain non-negative integer cents');
-    if (contract.alerts.some((alert, index) => index > 0 && alert <= contract.alerts[index - 1])) {
+    if (monthly.alertsCents.some((alert) => !isCents(alert))) errors.push('alerts must contain non-negative integer cents');
+    if (monthly.alertsCents.some((alert, index) => index > 0 && alert <= monthly.alertsCents[index - 1])) {
       errors.push('alerts must be strictly increasing');
     }
-    if (isCents(hardLimitCents) && contract.alerts.at(-1) !== hardLimitCents) {
+    if (isCents(hardLimitCents) && monthly.alertsCents.at(-1) !== hardLimitCents) {
       errors.push('final alert must equal monthly hard limit');
     }
   }
@@ -89,17 +89,17 @@ export function validateBudgetContract(contract) {
     for (const [index, required] of REQUIRED_STAGES.entries()) {
       const stage = contract.stages[index];
       if (!isRecord(stage) || stage.name !== required.name) errors.push(`stage ${index + 1} must be ${required.name}`);
-      if (!isRecord(stage) || !isCents(stage.startsAtCents)) {
+      if (!isRecord(stage) || !isCents(stage.fromCents)) {
         errors.push(`${required.name} stage start must be a non-negative integer in cents`);
         continue;
       }
-      if (stage.startsAtCents > required.maximumStartCents) {
+      if (stage.fromCents > required.maximumStartCents) {
         errors.push(`${required.name} stage must start no later than ${required.maximumStartCents} cents`);
       }
-      if (stage.startsAtCents <= previousStart) errors.push('stage starts must be strictly increasing');
-      previousStart = stage.startsAtCents;
+      if (stage.fromCents <= previousStart) errors.push('stage starts must be strictly increasing');
+      previousStart = stage.fromCents;
     }
-    if (isRecord(contract.stages[0]) && contract.stages[0].startsAtCents !== 0) {
+    if (isRecord(contract.stages[0]) && contract.stages[0].fromCents !== 0) {
       errors.push('normal stage must start at 0 cents');
     }
   }
@@ -113,7 +113,7 @@ export function stageForSpend(contract, spendCents) {
   if (!isCents(spendCents)) throw new TypeError('spend must be a non-negative integer in cents');
   let activeStage = contract.stages[0].name;
   for (const stage of contract.stages) {
-    if (spendCents >= stage.startsAtCents) activeStage = stage.name;
+    if (spendCents >= stage.fromCents) activeStage = stage.name;
   }
   return activeStage;
 }
