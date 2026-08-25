@@ -45,15 +45,33 @@ jobs:
           node-version: 24
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Validate workspace and Trust/Risk
+      - name: Validate workspace and Trust/Risk contracts
         run: |
           pnpm format:check
           pnpm check:structure
           pnpm check:nx-boundaries
           pnpm check:secrets
+          pnpm nx run trust-risk-service:test:container
+      - name: Validate Trust/Risk Rust
+        if: vars.TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST == ''
+        run: |
           pnpm nx run trust-risk-service:check
           pnpm nx run trust-risk-service:test
-          pnpm nx run trust-risk-service:test:container
+      - name: Verify reused Trust/Risk source
+        if: vars.TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST != ''
+        env:
+          SOURCE_COMMIT_SHA: ${{ vars.TRUST_RISK_REUSE_SOURCE_COMMIT_SHA }}
+        run: |
+          [[ "$SOURCE_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "${SOURCE_COMMIT_SHA}^{commit}"
+          git diff --quiet "$SOURCE_COMMIT_SHA" "$GITHUB_SHA" -- \
+            Cargo.toml Cargo.lock \
+            apps/trust-risk-service/Cargo.toml \
+            apps/trust-risk-service/Dockerfile \
+            apps/trust-risk-service/migrations \
+            apps/trust-risk-service/src \
+            contracts/protobuf/nvbes/trust_risk \
+            libs/rust
       - name: Initialize Trust/Risk Terraform providers
         run: >-
           terraform -chdir=infrastructure/environments/trust-risk-production init
