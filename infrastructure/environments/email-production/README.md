@@ -32,6 +32,10 @@ reviewers. Configure these environment variables:
 - `SCW_PROJECT_ID`;
 - `TERRAFORM_STATE_BUCKET` (shared state bucket created by `infrastructure/bootstrap/production`).
 - `EMAIL_SENTRY_TRACES_SAMPLE_RATE` (`0.1` by default);
+- `EMAIL_DEPLOY_CONFIRMATION` (`deploy-email-production` only for an approved
+  deployment);
+- `EMAIL_DEPLOY_APPROVED_SHA` (the exact 40-character `main` commit approved
+  for deployment);
 - `GRAFANA_EMAIL_CONTACT_POINT`;
 - `GRAFANA_PROMETHEUS_DATASOURCE_UID`;
 - `GRAFANA_URL`.
@@ -67,6 +71,12 @@ Then run these GitHub Actions in order from `main`:
 1. `container release`, with application `email-worker`;
 2. `deploy email`.
 
+Immediately before dispatching `deploy email`, set the two approval variables
+to the exact confirmation phrase and full commit SHA reviewed by the operator.
+The workflow fails closed when either value is missing, malformed or refers to
+another commit. Rotate `EMAIL_DEPLOY_APPROVED_SHA` to the next reviewed commit
+before every later deployment.
+
 The deployment workflow resolves the commit image to its registry digest,
 verifies the release's keyless Cosign identity, creates the private image
 registry, mirrors only its `linux/amd64` image, signs that immutable private
@@ -80,11 +90,18 @@ pulls the potentially private GHCR package directly.
 The shared Terraform state bucket (`TERRAFORM_STATE_BUCKET`) must already exist, be private, encrypted, versioned,
 and have S3 lockfile permissions (created via `infrastructure/bootstrap/production`).
 
-If any TEM, DNS, SNS, SQS, Serverless SQL, Container, IAM, Secret Manager, or
-Job resource already exists outside this state, import it before enabling the
-GitHub workflow. Never let the first apply recreate an existing resource.
-Because no production apply has been performed for the current email stack,
-the expected first deployment starts with an empty email state.
+The current stack was first applied from GitHub Actions on 24 August 2026. Its
+Terraform state already owns the production Email registry, database, migration
+job, IAM identities, TEM domain, messaging resources and containers. Never
+assume an empty state or recreate these resources.
+
+Before every later apply, refresh the remote state and review a complete plan.
+If a matching TEM, DNS, SNS, SQS, Serverless SQL, Container, IAM, Secret Manager
+or Job resource exists outside this state, stop and import it before continuing.
+The dated readiness record in
+[`docs/operations/email-production-readiness-2026-08-25.md`](../../../docs/operations/email-production-readiness-2026-08-25.md)
+is the current operational baseline; it must be superseded by a new audit after
+the listed blockers are resolved.
 
 For local read-only planning, copy `terraform.tfvars.example` outside version
 control, export provider and S3 credentials, then initialize with:

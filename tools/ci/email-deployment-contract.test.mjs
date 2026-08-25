@@ -33,8 +33,29 @@ test("email production deploy is isolated and uses an immutable signed image", (
 
 	const workflow = read(workflowPath);
 	assert.match(workflow, /^\s*workflow_dispatch:\s*$/mu);
+	assert.doesNotMatch(workflow, /^\s+inputs:\s*$/mu);
 	assert.match(workflow, /name:\s*production-email/u);
 	assert.match(workflow, /refs\/heads\/main/u);
+	assert.match(
+		workflow,
+		/EMAIL_DEPLOY_CONFIRMATION: \$\{\{ vars\.EMAIL_DEPLOY_CONFIRMATION \}\}/u,
+	);
+	assert.match(
+		workflow,
+		/EMAIL_DEPLOY_APPROVED_SHA: \$\{\{ vars\.EMAIL_DEPLOY_APPROVED_SHA \}\}/u,
+	);
+	assert.match(
+		workflow,
+		/\[\[ "\$EMAIL_DEPLOY_CONFIRMATION" == "deploy-email-production" \]\]/u,
+	);
+	assert.match(
+		workflow,
+		/\[\[ "\$EMAIL_DEPLOY_APPROVED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u,
+	);
+	assert.match(
+		workflow,
+		/\[\[ "\$EMAIL_DEPLOY_APPROVED_SHA" == "\$GITHUB_SHA" \]\]/u,
+	);
 	assert.match(
 		workflow,
 		/nvbes-org\/nvbes-email-worker:\$\{\{ github\.sha \}\}/u,

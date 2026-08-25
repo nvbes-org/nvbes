@@ -292,6 +292,21 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes("if: github.ref == 'refs/heads/main'") &&
 			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
 			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+			text.includes(
+				`EMAIL_DEPLOY_CONFIRMATION: ${githubExpression("vars.EMAIL_DEPLOY_CONFIRMATION")}`,
+			) &&
+			text.includes(
+				`EMAIL_DEPLOY_APPROVED_SHA: ${githubExpression("vars.EMAIL_DEPLOY_APPROVED_SHA")}`,
+			) &&
+			text.includes(
+				'[[ "$EMAIL_DEPLOY_CONFIRMATION" == "deploy-email-production" ]]',
+			) &&
+			text.includes(
+				'[[ "$EMAIL_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]',
+			) &&
+			text.includes(
+				'[[ "$EMAIL_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]',
+			) &&
 			text.includes(`ref: ${githubExpression("github.sha")}`) &&
 			text.includes("production/email/terraform.tfstate") &&
 			text.includes("ghcr.io/nvbes-org/nvbes-email-worker") &&
