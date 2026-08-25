@@ -123,5 +123,6 @@ fn environment_configuration_requires_both_values() {
         ("NVBES_EMAIL_GRPC_ENDPOINT", Some("http://127.0.0.1:3041")),
         ("NVBES_EMAIL_GRPC_AUTH_TOKEN", Some(VALID_TOKEN)),
     ]);
-    EmailClientConfig::from_env("development").expect("complete environment");
+    let config = EmailClientConfig::from_env("development").expect("complete environment");
+    assert!(config.call_timeout >= Duration::from_secs(15));
 }

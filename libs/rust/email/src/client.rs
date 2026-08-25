@@ -19,7 +19,7 @@ use crate::{
 const ENDPOINT_ENV: &str = "NVBES_EMAIL_GRPC_ENDPOINT";
 const AUTH_TOKEN_ENV: &str = "NVBES_EMAIL_GRPC_AUTH_TOKEN";
 const MIN_AUTH_TOKEN_LENGTH: usize = 32;
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(3);
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(20);
 
 #[derive(Debug, thiserror::Error)]
 pub enum EmailClientError {
