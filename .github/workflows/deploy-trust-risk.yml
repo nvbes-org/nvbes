@@ -64,7 +64,7 @@ jobs:
 
   build-scan-sign:
     needs: [ci-test-gate]
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       actions: read
@@ -129,7 +129,7 @@ jobs:
   deploy-trust-risk:
     needs: [ci-test-gate, build-scan-sign]
     if: github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     environment:
       name: production-trust-risk

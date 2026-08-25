@@ -72,3 +72,10 @@ test("deployment materializes the data-only database identity before runtime val
 		),
 	);
 });
+
+test("image build and production deployment use ephemeral native x86 runners", () => {
+	assert.equal(
+		deploymentWorkflow.match(/^    runs-on: ubuntu-24\.04$/gm)?.length,
+		2,
+	);
+});
