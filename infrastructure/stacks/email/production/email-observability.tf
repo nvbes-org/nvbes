@@ -6,9 +6,13 @@ locals {
     for group in local.email_alert_document.groups : group.name => group
   }
   email_dashboard_json = replace(
-    file("../../../local/observability/grafana-dashboards/nvbes-email-communications.json"),
-    "\"uid\": \"Prometheus\"",
-    "\"uid\": \"${var.grafana_prometheus_datasource_uid}\""
+    replace(
+      file("../../../local/observability/grafana-dashboards/nvbes-email-communications.json"),
+      "\"uid\": \"Prometheus\"",
+      "\"uid\": \"${var.grafana_prometheus_datasource_uid}\""
+    ),
+    "\"uid\": \"nvbes-email-communications\"",
+    "\"uid\": \"nvbes-email-production-v1\""
   )
   email_sentry_dsn_slot_versions = {
     blue  = var.email_sentry_dsn_rotation.blue_version
@@ -67,8 +71,6 @@ resource "grafana_rule_group" "email" {
   name             = each.value.name
   folder_uid       = grafana_folder.email_observability.uid
   interval_seconds = 60
-  org_id           = each.value.orgId
-
   dynamic "rule" {
     for_each = each.value.rules
 

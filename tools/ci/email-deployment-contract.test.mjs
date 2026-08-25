@@ -166,6 +166,13 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(delivery, /SENTRY_RELEASE\s*=\s*split/u);
 	assert.match(observability, /resource "grafana_dashboard" "email_communications"/u);
 	assert.match(observability, /resource "grafana_rule_group" "email"/u);
+	assert.match(observability, /nvbes-email-production-v1/u);
+	assert.doesNotMatch(observability, /^\s*org_id\s*=/mu);
+	const reusableObservability = read(
+		"infrastructure/stacks/email/production/email-observability.tf",
+	);
+	assert.match(reusableObservability, /nvbes-email-production-v1/u);
+	assert.doesNotMatch(reusableObservability, /^\s*org_id\s*=/mu);
 	assert.match(
 		delivery,
 		/private_network_id\s*=\s*[^\n]*var\.private_network_id/u,
