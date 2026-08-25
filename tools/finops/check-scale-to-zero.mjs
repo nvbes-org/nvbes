@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { parse } from "@cdktn/hcl2json";
 
@@ -56,6 +56,38 @@ function violation(file, resourceType, message) {
 	return `${path.relative(process.cwd(), file)}: ${resourceType} ${message}`;
 }
 
+function moduleViolation(file, moduleName, message) {
+	return `${path.relative(process.cwd(), file)}: module ${moduleName} ${message}`;
+}
+
+function isInsideRoot(candidate) {
+	const relative = path.relative(ROOT, candidate);
+	return (
+		relative === "" ||
+		(!relative.startsWith(`..${path.sep}`) && relative !== "..")
+	);
+}
+
+function isExcludedFromScan(candidate) {
+	return path.relative(ROOT, candidate).split(path.sep).includes(".terraform");
+}
+
+function isLiteralLocalModuleSource(source) {
+	return (
+		typeof source === "string" &&
+		(source.startsWith("./") || source.startsWith("../")) &&
+		!source.includes("${")
+	);
+}
+
+async function isExistingDirectory(candidate) {
+	try {
+		return (await stat(candidate)).isDirectory();
+	} catch {
+		return false;
+	}
+}
+
 const violations = [];
 for (const file of (await terraformFiles(ROOT, violations)).sort()) {
 	if (file.endsWith(".tf.json")) {
@@ -73,6 +105,52 @@ for (const file of (await terraformFiles(ROOT, violations)).sort()) {
 			`${path.relative(process.cwd(), file)}: failed to parse Terraform HCL`,
 		);
 		continue;
+	}
+
+	for (const [moduleName, bodies] of Object.entries(parsed.module ?? {})) {
+		for (const body of Array.isArray(bodies) ? bodies : []) {
+			const source = body.source;
+			if (!isLiteralLocalModuleSource(source)) {
+				violations.push(
+					moduleViolation(
+						file,
+						moduleName,
+						"source must be a literal local path starting with ./ or ../",
+					),
+				);
+				continue;
+			}
+			const modulePath = path.resolve(path.dirname(file), source);
+			if (!isInsideRoot(modulePath)) {
+				violations.push(
+					moduleViolation(
+						file,
+						moduleName,
+						"source resolves outside the FinOps root",
+					),
+				);
+				continue;
+			}
+			if (isExcludedFromScan(modulePath)) {
+				violations.push(
+					moduleViolation(
+						file,
+						moduleName,
+						"source directory is excluded from the FinOps scan",
+					),
+				);
+				continue;
+			}
+			if (!(await isExistingDirectory(modulePath))) {
+				violations.push(
+					moduleViolation(
+						file,
+						moduleName,
+						"source must resolve to an existing directory",
+					),
+				);
+			}
+		}
 	}
 
 	for (const [resourceType, policy] of RESOURCE_POLICIES) {
