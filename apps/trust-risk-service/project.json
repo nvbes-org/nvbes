@@ -35,7 +35,8 @@
         "{projectRoot}/Dockerfile",
         "{projectRoot}/tests/**/*",
         "{projectRoot}/Cargo.toml",
-        "{projectRoot}/src/main.rs"
+        "{projectRoot}/src/main.rs",
+        "{workspaceRoot}/.github/workflows/deploy-trust-risk.yml"
       ],
       "options": {
         "command": "node --test apps/trust-risk-service/tests/container-contract.test.mjs",
