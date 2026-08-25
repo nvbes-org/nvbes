@@ -36,4 +36,6 @@ estimates remains authoritative.
 
 The repository scale gate accepts regular `.tf` files only. It rejects
 Terraform JSON files and symbolic links below `infrastructure/` so unsupported
-syntax or indirection cannot bypass the capacity limits.
+syntax or indirection cannot bypass the capacity limits. Module sources must be
+literal local directories that remain below the analyzed infrastructure root;
+remote, external and templated sources are rejected.
