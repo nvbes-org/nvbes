@@ -14,15 +14,22 @@ const RESOURCE_POLICIES = new Map([
 	],
 ]);
 
-async function terraformFiles(directory) {
+async function terraformFiles(directory, violations) {
 	const entries = await readdir(directory, { withFileTypes: true });
 	const files = [];
 
 	for (const entry of entries) {
 		if (entry.name === ".terraform") continue;
 		const entryPath = path.join(directory, entry.name);
-		if (entry.isDirectory()) files.push(...(await terraformFiles(entryPath)));
-		else if (
+		if (entry.isSymbolicLink()) {
+			violations.push(
+				`${path.relative(process.cwd(), entryPath)}: symbolic links are not supported by the FinOps gate`,
+			);
+			continue;
+		}
+		if (entry.isDirectory()) {
+			files.push(...(await terraformFiles(entryPath, violations)));
+		} else if (
 			entry.isFile() &&
 			(entry.name.endsWith(".tf") || entry.name.endsWith(".tf.json"))
 		) {
@@ -50,7 +57,7 @@ function violation(file, resourceType, message) {
 }
 
 const violations = [];
-for (const file of (await terraformFiles(ROOT)).sort()) {
+for (const file of (await terraformFiles(ROOT, violations)).sort()) {
 	if (file.endsWith(".tf.json")) {
 		violations.push(
 			`${path.relative(process.cwd(), file)}: Terraform JSON syntax is not supported by the FinOps gate`,

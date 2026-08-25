@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -46,46 +46,64 @@ async function assertChecker(
 	);
 }
 
-test("rejects Terraform JSON before it can bypass scale bounds", async (t) => {
-	await assertChecker(
-		JSON.stringify({
+for (const [name, maximum] of [
+	["unbounded", 10],
+	["bounded", 1],
+]) {
+	test(`rejects ${name} Terraform JSON`, async (t) => {
+		const terraform = JSON.stringify({
 			resource: {
-				scaleway_container: {
-					bypass: {
-						min_scale: 0,
-						max_scale: 10,
-					},
-				},
+				scaleway_container: { runtime: { min_scale: 0, max_scale: maximum } },
 			},
-		}),
-		1,
-		["Terraform JSON syntax is not supported by the FinOps gate"],
-		t,
-		"runtime.tf.json",
-	);
-});
-
-test("rejects compliant Terraform JSON because the gate cannot parse it", async (t) => {
-	await assertChecker(
-		JSON.stringify({
-			resource: {
-				scaleway_container: {
-					bounded: {
-						min_scale: 0,
-						max_scale: 1,
-					},
-				},
-			},
-		}),
-		1,
-		["Terraform JSON syntax is not supported by the FinOps gate"],
-		t,
-		"runtime.tf.json",
-	);
-});
+		});
+		await assertChecker(
+			terraform,
+			1,
+			["Terraform JSON syntax is not supported by the FinOps gate"],
+			t,
+			"runtime.tf.json",
+		);
+	});
+}
 
 test("ignores Terraform JSON inside .terraform directories", async (t) => {
 	await assertChecker("{}", 0, [], t, ".terraform/runtime.tf.json");
+});
+
+test("rejects every symbolic link outside .terraform", async (t) => {
+	const directory = await mkdtemp(path.join(tmpdir(), "nvbes-scale-to-zero-"));
+	t.after(() => rm(directory, { recursive: true, force: true }));
+	const targetFile = path.join(directory, "unbounded.source");
+	const targetDirectory = path.join(directory, "target-directory");
+	await writeFile(
+		targetFile,
+		'resource "scaleway_container" "bypass" { min_scale = 0 max_scale = 10 }',
+	);
+	await mkdir(targetDirectory);
+	for (const [name, target] of [
+		["linked-directory", targetDirectory],
+		["notes.link", targetFile],
+		["runtime.tf", targetFile],
+		["runtime.tf.json", targetFile],
+	]) {
+		await symlink(target, path.join(directory, name));
+	}
+
+	const result = spawnSync(process.execPath, [checker, directory], {
+		encoding: "utf8",
+	});
+	const message = "symbolic links are not supported by the FinOps gate";
+	assert.equal(result.status, 1, result.stderr || result.stdout);
+	assert.equal(result.stdout, "");
+	assert.equal(
+		result.stderr,
+		`${["linked-directory", "notes.link", "runtime.tf.json", "runtime.tf"]
+			.map(
+				(name) =>
+					`${path.relative(process.cwd(), path.join(directory, name))}: ${message}`,
+			)
+			.join("\n")}\n`,
+	);
 });
 
 test("accepts bounded zero-minimum resources", async (t) => {
