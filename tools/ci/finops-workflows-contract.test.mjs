@@ -1,38 +1,183 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { parse } from 'yaml';
 
 const workflowContracts = [
   { path: '.github/workflows/ci.yml', job: 'email-quality' },
-  { path: '.github/workflows/deploy-email.yml', job: 'ci-test-gate' },
-  { path: '.github/workflows/deploy-trust-risk.yml', job: 'ci-test-gate' },
+  {
+    path: '.github/workflows/deploy-email.yml',
+    job: 'ci-test-gate',
+    buildJob: 'build-scan-sign',
+    deployJob: 'deploy-email',
+  },
+  {
+    path: '.github/workflows/deploy-trust-risk.yml',
+    job: 'ci-test-gate',
+    buildJob: 'build-scan-sign',
+    deployJob: 'deploy-trust-risk',
+  },
 ];
 
-function jobBody(workflow, jobName) {
-  const startMarker = `  ${jobName}:\n`;
-  const start = workflow.indexOf(startMarker);
-  assert.notEqual(start, -1, `missing ${jobName} job`);
+const validDeployNeeds = `
+  build-scan-sign:
+    needs: ci-test-gate
+    steps: []
+  deploy-email:
+    needs: [ci-test-gate, build-scan-sign]
+    steps: []
+`;
 
-  const remaining = workflow.slice(start + startMarker.length);
-  const nextJob = remaining.match(/^  [a-z0-9-]+:\s*$/mu);
-  const end = nextJob?.index === undefined ? undefined : start + startMarker.length + nextJob.index;
-  return workflow.slice(start, end);
+test('rejects an invocation moved outside the gate even when a gate comment mentions it', () => {
+  const workflow = `
+jobs:
+  ci-test-gate:
+    steps:
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          # pnpm check:finops
+          terraform -chdir=. validate
+  other:
+    steps:
+      - run: pnpm check:finops
+${validDeployNeeds}`;
+
+  assert.throws(
+    () => validateWorkflowContract(workflow, workflowContracts[1]),
+    /ci-test-gate must invoke pnpm check:finops exactly once/u,
+  );
+});
+
+test('rejects an inline Terraform command before the FinOps gate', () => {
+  const workflow = `
+jobs:
+  ci-test-gate:
+    steps:
+      - run: pnpm install --frozen-lockfile
+      - run: terraform plan
+      - run: pnpm check:finops
+      - run: terraform -chdir=. validate
+${validDeployNeeds}`;
+
+  assert.throws(
+    () => validateWorkflowContract(workflow, workflowContracts[1]),
+    /Terraform command must not run before pnpm check:finops/u,
+  );
+});
+
+test('rejects a deploy workflow whose build job bypasses the gate', () => {
+  const workflow = `
+jobs:
+  ci-test-gate:
+    steps:
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:finops
+      - run: terraform -chdir=. validate
+  build-scan-sign:
+    steps: []
+  deploy-email:
+    needs: [ci-test-gate, build-scan-sign]
+    steps: []
+`;
+
+  assert.throws(
+    () => validateWorkflowContract(workflow, workflowContracts[1]),
+    /build-scan-sign must need ci-test-gate/u,
+  );
+});
+
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-for (const { path, job } of workflowContracts) {
-  test(`${path} enforces FinOps in ${job} before infrastructure validation`, () => {
-    const workflow = readFileSync(path, 'utf8');
-    const gate = jobBody(workflow, job);
-    const invocations = workflow.match(/^\s*pnpm check:finops\s*$/gmu) ?? [];
-    const installIndex = gate.indexOf('pnpm install --frozen-lockfile');
-    const finopsIndex = gate.indexOf('pnpm check:finops');
-    const terraformIndex = gate.search(/^\s*terraform -chdir=/mu);
+function commandsForJob(job) {
+  assert.ok(isRecord(job), 'workflow job must be an object');
+  assert.ok(Array.isArray(job.steps), 'workflow job must contain steps');
 
-    assert.equal(invocations.length, 1, 'workflow must invoke the FinOps gate exactly once');
-    assert.notEqual(installIndex, -1, 'locked pnpm install must exist in the gate job');
-    assert.notEqual(finopsIndex, -1, 'FinOps gate must run in the gate job');
-    assert.notEqual(terraformIndex, -1, 'Terraform validation must exist in the gate job');
-    assert.ok(installIndex < finopsIndex, 'FinOps gate must run after dependency installation');
-    assert.ok(finopsIndex < terraformIndex, 'FinOps gate must run before Terraform validation');
+  return job.steps.flatMap((step, stepIndex) => {
+    if (!isRecord(step) || typeof step.run !== 'string') return [];
+
+    return step.run
+      .split(/\r?\n/u)
+      .map((line, lineIndex) => ({ command: line.trim(), lineIndex, stepIndex }))
+      .filter(({ command }) => command.length > 0 && !command.startsWith('#'));
+  });
+}
+
+function isFinOpsCommand(command) {
+  return command === 'pnpm check:finops';
+}
+
+function isLockedInstall(command) {
+  const tokens = command.split(/\s+/u);
+  return tokens[0] === 'pnpm' && tokens[1] === 'install' && tokens.includes('--frozen-lockfile');
+}
+
+function isTerraformCommand(command) {
+  return /^(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S+)\s+)*terraform(?:\s|$)/u.test(command);
+}
+
+function jobNeeds(job) {
+  if (!isRecord(job)) return [];
+  if (typeof job.needs === 'string') return [job.needs];
+  return Array.isArray(job.needs) ? job.needs : [];
+}
+
+function validateWorkflowContract(source, contract) {
+  const workflow = parse(source);
+  assert.ok(isRecord(workflow) && isRecord(workflow.jobs), 'workflow must define jobs');
+
+  const gate = workflow.jobs[contract.job];
+  const gateCommands = commandsForJob(gate);
+  const gateFinOpsIndexes = gateCommands
+    .map(({ command }, index) => (isFinOpsCommand(command) ? index : -1))
+    .filter((index) => index >= 0);
+
+  assert.equal(
+    gateFinOpsIndexes.length,
+    1,
+    `${contract.job} must invoke pnpm check:finops exactly once`,
+  );
+
+  for (const [jobName, job] of Object.entries(workflow.jobs)) {
+    if (jobName === contract.job) continue;
+    assert.equal(
+      commandsForJob(job).filter(({ command }) => isFinOpsCommand(command)).length,
+      0,
+      `${jobName} must not invoke pnpm check:finops`,
+    );
+  }
+
+  const finOpsIndex = gateFinOpsIndexes[0];
+  assert.ok(
+    gateCommands.slice(0, finOpsIndex).some(({ command }) => isLockedInstall(command)),
+    'locked pnpm install must run before pnpm check:finops',
+  );
+  assert.equal(
+    gateCommands.slice(0, finOpsIndex).some(({ command }) => isTerraformCommand(command)),
+    false,
+    'Terraform command must not run before pnpm check:finops',
+  );
+  assert.ok(
+    gateCommands.slice(finOpsIndex + 1).some(({ command }) => isTerraformCommand(command)),
+    'Terraform validation must run after pnpm check:finops',
+  );
+
+  if (contract.buildJob === undefined || contract.deployJob === undefined) return;
+  assert.ok(
+    jobNeeds(workflow.jobs[contract.buildJob]).includes(contract.job),
+    `${contract.buildJob} must need ${contract.job}`,
+  );
+  const deployNeeds = jobNeeds(workflow.jobs[contract.deployJob]);
+  assert.ok(deployNeeds.includes(contract.job), `${contract.deployJob} must need ${contract.job}`);
+  assert.ok(
+    deployNeeds.includes(contract.buildJob),
+    `${contract.deployJob} must need ${contract.buildJob}`,
+  );
+}
+
+for (const contract of workflowContracts) {
+  test(`${contract.path} enforces FinOps before infrastructure validation`, () => {
+    validateWorkflowContract(readFileSync(contract.path, 'utf8'), contract);
   });
 }
