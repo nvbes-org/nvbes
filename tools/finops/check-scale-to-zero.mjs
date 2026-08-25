@@ -2,9 +2,21 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const ROOT = path.resolve(process.argv[2] ?? 'infrastructure');
-const RESOURCE_TYPES = new Map([
-  ['scaleway_container', 'min_scale'],
-  ['scaleway_sdb_sql_database', 'min_cpu'],
+const RESOURCE_POLICIES = new Map([
+  [
+    'scaleway_container',
+    {
+      minimumAttribute: 'min_scale',
+      maximumAttribute: 'max_scale',
+    },
+  ],
+  [
+    'scaleway_sdb_sql_database',
+    {
+      minimumAttribute: 'min_cpu',
+      maximumAttribute: 'max_cpu',
+    },
+  ],
 ]);
 
 async function terraformFiles(directory) {
@@ -39,15 +51,27 @@ function resourceBlocks(source, resourceType) {
   return blocks;
 }
 
+function literalInteger(block, attribute) {
+  const pattern = new RegExp(`\\b${attribute}\\s*=\\s*([+-]?\\d+)(?![\\w.])`);
+  const match = block.match(pattern);
+  return match === null ? undefined : Number(match[1]);
+}
+
 const violations = [];
 
 for (const file of await terraformFiles(ROOT)) {
   const source = await readFile(file, 'utf8');
-  for (const [resourceType, minimumAttribute] of RESOURCE_TYPES) {
+  for (const [resourceType, policy] of RESOURCE_POLICIES) {
     for (const block of resourceBlocks(source, resourceType)) {
-      if (!new RegExp(`\\b${minimumAttribute}\\s*=\\s*0\\b`).test(block)) {
+      if (literalInteger(block, policy.minimumAttribute) !== 0) {
         violations.push(
-          `${path.relative(process.cwd(), file)}: ${resourceType} must declare ${minimumAttribute} = 0`,
+          `${path.relative(process.cwd(), file)}: ${resourceType} must declare ${policy.minimumAttribute} = 0`,
+        );
+      }
+      const maximum = literalInteger(block, policy.maximumAttribute);
+      if (maximum === undefined || maximum > 1) {
+        violations.push(
+          `${path.relative(process.cwd(), file)}: ${resourceType} must declare ${policy.maximumAttribute} as an integer <= 1`,
         );
       }
     }
@@ -58,5 +82,5 @@ if (violations.length > 0) {
   console.error(violations.join('\n'));
   process.exitCode = 1;
 } else {
-  console.log('FinOps scale-to-zero guard passed for all Scaleway runtimes.');
+  console.log('FinOps scale bounds passed for all Scaleway runtimes.');
 }
