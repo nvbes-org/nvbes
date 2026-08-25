@@ -128,7 +128,7 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /synthetic-smoke/u);
 	assert.match(
 		workflow,
-		/\.message_id != "" and \.attempts >= 1 and \.attempts <= 5/u,
+		/\n {10}jq --exit-status \\\n {12}'\.message_id != "" and \.attempts >= 1 and \.attempts <= 5' \\/u,
 	);
 	assert.match(
 		workflow,

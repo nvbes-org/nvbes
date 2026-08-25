@@ -558,6 +558,6 @@ jobs:
               --env NVBES_EMAIL_SYNTHETIC_RUN_ID \
               "$SOURCE_EMAIL_IMAGE_DIGEST" synthetic-smoke
           )"
-        jq --exit-status \
-          '.message_id != "" and .attempts >= 1 and .attempts <= 5' \
-          <<<"$smoke_result" >/dev/null
+          jq --exit-status \
+            '.message_id != "" and .attempts >= 1 and .attempts <= 5' \
+            <<<"$smoke_result" >/dev/null
