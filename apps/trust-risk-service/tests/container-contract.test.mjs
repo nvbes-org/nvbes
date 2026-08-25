@@ -92,3 +92,14 @@ test("deployment can reuse only a signed artifact with unchanged runtime inputs"
 		),
 	);
 });
+
+test("artifact reuse keeps the CI gate lightweight after source equivalence", () => {
+	assert.ok(
+		deploymentWorkflow.includes("- name: Verify reused Trust/Risk source"),
+	);
+	assert.ok(
+		deploymentWorkflow.includes(
+			"if: vars.TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST == ''",
+		),
+	);
+});
