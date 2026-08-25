@@ -73,9 +73,22 @@ test("deployment materializes the data-only database identity before runtime val
 	);
 });
 
-test("image build and production deployment use ephemeral native x86 runners", () => {
-	assert.equal(
-		deploymentWorkflow.match(/^    runs-on: ubuntu-24\.04$/gm)?.length,
-		2,
+test("new image builds use an ephemeral native x86 runner", () => {
+	assert.ok(
+		deploymentWorkflow.includes("|| 'ubuntu-24.04'"),
+	);
+});
+
+test("deployment can reuse only a signed artifact with unchanged runtime inputs", () => {
+	assert.ok(
+		deploymentWorkflow.includes("TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST"),
+	);
+	assert.ok(
+		deploymentWorkflow.includes("TRUST_RISK_REUSE_SOURCE_COMMIT_SHA"),
+	);
+	assert.ok(
+		deploymentWorkflow.includes(
+			'git diff --quiet "$SOURCE_COMMIT_SHA" "$GITHUB_SHA" --',
+		),
 	);
 });
