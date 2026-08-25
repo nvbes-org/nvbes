@@ -3,16 +3,17 @@ import test from "node:test";
 import { validateWorkflowContract } from "./finops-workflows-contract.mjs";
 
 const workflowPath = ".github/workflows/deploy-email.yml";
-const terraformValidation =
-	"terraform -chdir=infrastructure/environments/email-production validate";
+const terraformEnvironmentPath = "infrastructure/environments/email-production";
+const terraformValidation = `terraform -chdir=${terraformEnvironmentPath} validate`;
 const contract = {
 	job: "ci-test-gate",
 	gateEnv: undefined,
 	runsOn: ["self-hosted", "macOS", "ARM64"],
 	shell: "bash --noprofile --norc -euo pipefail {0}",
+	terraformEnvironmentPath,
+	terraformInitStepName: "Pre-deploy: Initialize email Terraform providers",
 	terraformValidationStepName:
 		"Pre-deploy: Validate isolated email Terraform stack",
-	terraformValidation,
 	workflowPath,
 };
 
@@ -42,6 +43,12 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
       - name: Enforce FinOps contract
         run: pnpm check:finops
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: 'Pre-deploy: Initialize email Terraform providers'
+        run: terraform -chdir=${terraformEnvironmentPath} init -backend=false -input=false
       - name: 'Pre-deploy: Validate isolated email Terraform stack'
         run: ${terraformValidation}
 `;
@@ -49,6 +56,38 @@ jobs:
 test("accepts the exact gate execution context", () => {
 	assert.doesNotThrow(() => validateWorkflowContract(validWorkflow, contract));
 });
+
+const postGateInjections = [
+	[
+		"between FinOps and Terraform setup",
+		"      - uses: hashicorp/setup-terraform@",
+		`      - run: echo 'BASH_ENV=/tmp/override' >> "$GITHUB_ENV"
+      - uses: hashicorp/setup-terraform@`,
+	],
+	[
+		"between Terraform setup and init",
+		"      - name: 'Pre-deploy: Initialize email Terraform providers'",
+		`      - run: echo '/tmp' >> "$GITHUB_PATH"
+      - name: 'Pre-deploy: Initialize email Terraform providers'`,
+	],
+	[
+		"between Terraform init and validate",
+		"      - name: 'Pre-deploy: Validate isolated email Terraform stack'",
+		`      - run: echo 'BASH_ENV=/tmp/override' >> "$GITHUB_ENV"
+      - name: 'Pre-deploy: Validate isolated email Terraform stack'`,
+	],
+];
+
+for (const [scenario, needle, replacement] of postGateInjections) {
+	test(`rejects environment injection ${scenario}`, () => {
+		assert.throws(() =>
+			validateWorkflowContract(
+				validWorkflow.replace(needle, replacement),
+				contract,
+			),
+		);
+	});
+}
 
 const contextMutations = [
 	[

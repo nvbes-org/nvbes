@@ -6,6 +6,8 @@ const CHECKOUT_ACTION =
 	"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
 const SETUP_NODE_ACTION =
 	"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
+const SETUP_TERRAFORM_ACTION =
+	"hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e";
 const COREPACK_COMMAND =
 	"corepack enable\ncorepack prepare pnpm@11.18.0 --activate";
 const LOCKED_INSTALL_COMMAND =
@@ -59,7 +61,15 @@ function assertCriticalSteps(entries, jobName) {
 	);
 }
 
-function expectedPreGatePrefix(contract) {
+function terraformInitCommand(contract) {
+	return `terraform -chdir=${contract.terraformEnvironmentPath} init -backend=false -input=false`;
+}
+
+function terraformValidationCommand(contract) {
+	return `terraform -chdir=${contract.terraformEnvironmentPath} validate`;
+}
+
+function expectedGatePrefix(contract) {
 	return [
 		{
 			uses: CHECKOUT_ACTION,
@@ -73,15 +83,27 @@ function expectedPreGatePrefix(contract) {
 		{ name: "Enable pnpm", run: COREPACK_COMMAND },
 		{ name: "Install locked dependencies", run: LOCKED_INSTALL_COMMAND },
 		{ name: "Enforce FinOps contract", run: FINOPS_COMMAND },
+		{
+			uses: SETUP_TERRAFORM_ACTION,
+			with: { terraform_version: "1.15.8", terraform_wrapper: false },
+		},
+		{
+			name: contract.terraformInitStepName,
+			run: terraformInitCommand(contract),
+		},
+		{
+			name: contract.terraformValidationStepName,
+			run: terraformValidationCommand(contract),
+		},
 	];
 }
 
-function assertPreGatePrefix(gate, contract) {
-	const prefix = gate.steps.slice(0, 6);
+function assertGatePrefix(gate, contract) {
+	const prefix = gate.steps.slice(0, 9);
 	assert.equal(
 		prefix.length,
-		6,
-		`${contract.job} must use the allowlisted pre-gate step prefix`,
+		9,
+		`${contract.job} must use the allowlisted gate step prefix`,
 	);
 	assertCriticalSteps(
 		prefix.map((step) => ({ step })),
@@ -89,8 +111,8 @@ function assertPreGatePrefix(gate, contract) {
 	);
 	assert.deepEqual(
 		prefix,
-		expectedPreGatePrefix(contract),
-		`${contract.job} must use the allowlisted pre-gate step prefix`,
+		expectedGatePrefix(contract),
+		`${contract.job} must use the allowlisted gate step prefix`,
 	);
 }
 
@@ -164,14 +186,19 @@ export function validateWorkflowContract(source, contract) {
 		"workflow must define jobs",
 	);
 	assert.equal(
-		typeof contract.terraformValidation,
-		"string",
-		"workflow contract must define its Terraform validation",
-	);
-	assert.equal(
 		typeof contract.workflowPath,
 		"string",
 		"workflow contract must define its workflow path",
+	);
+	assert.equal(
+		typeof contract.terraformEnvironmentPath,
+		"string",
+		"workflow contract must define its Terraform environment path",
+	);
+	assert.equal(
+		typeof contract.terraformInitStepName,
+		"string",
+		"workflow contract must define its Terraform init step name",
 	);
 	assert.equal(
 		typeof contract.terraformValidationStepName,
@@ -198,11 +225,11 @@ export function validateWorkflowContract(source, contract) {
 			`${jobName} must not invoke pnpm check:finops`,
 		);
 	}
-	assertPreGatePrefix(gate, contract);
+	assertGatePrefix(gate, contract);
 
 	const terraformSteps = gateRunSteps.filter(
 		({ run, stepIndex }) =>
-			run === contract.terraformValidation && stepIndex > 5,
+			run === terraformValidationCommand(contract) && stepIndex > 5,
 	);
 	assert.equal(
 		terraformSteps.length,
@@ -210,14 +237,6 @@ export function validateWorkflowContract(source, contract) {
 		"Terraform validation must run after pnpm check:finops",
 	);
 	assertCriticalSteps(terraformSteps, contract.job);
-	assert.deepEqual(
-		terraformSteps[0].step,
-		{
-			name: contract.terraformValidationStepName,
-			run: contract.terraformValidation,
-		},
-		"Terraform validation must be an exact dedicated step",
-	);
 
 	assertDownstreamJobs(workflow, contract);
 }

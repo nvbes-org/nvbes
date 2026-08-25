@@ -37,14 +37,21 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
       - name: Enforce FinOps contract
         run: pnpm check:finops
-      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
-        with:
-          toolchain: 1.91.1
-          components: rustfmt, clippy
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.15.8
           terraform_wrapper: false
+      - name: 'Pre-deploy: Initialize email Terraform providers'
+        run: >-
+          terraform -chdir=infrastructure/environments/email-production init
+          -backend=false
+          -input=false
+      - name: 'Pre-deploy: Validate isolated email Terraform stack'
+        run: terraform -chdir=infrastructure/environments/email-production validate
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+          components: rustfmt, clippy
       - name: Validate active workspace
         run: |
           pnpm format:check
@@ -55,13 +62,6 @@ jobs:
           pnpm check:api
       - name: 'Pre-deploy: Validate email deployment contract'
         run: pnpm test:pre-deploy
-      - name: 'Pre-deploy: Initialize email Terraform providers'
-        run: >-
-          terraform -chdir=infrastructure/environments/email-production init
-          -backend=false
-          -input=false
-      - name: 'Pre-deploy: Validate isolated email Terraform stack'
-        run: terraform -chdir=infrastructure/environments/email-production validate
       - name: 'Pre-deploy: Initialize email stacks Terraform providers'
         run: >-
           terraform -chdir=infrastructure/stacks/email/production init

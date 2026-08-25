@@ -9,8 +9,8 @@ const setupNodeAction =
 	"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
 const workflowPath = ".github/workflows/deploy-email.yml";
 const securityCommand = `node tools/security/check-ci-cd-security.mjs --workflow ${workflowPath}`;
-const terraformValidation =
-	"terraform -chdir=infrastructure/environments/email-production validate";
+const terraformEnvironmentPath = "infrastructure/environments/email-production";
+const terraformValidation = `terraform -chdir=${terraformEnvironmentPath} validate`;
 const contract = {
 	job: "ci-test-gate",
 	buildJob: "build-scan-sign",
@@ -20,7 +20,8 @@ const contract = {
 	gateEnv: undefined,
 	runsOn: ["self-hosted", "macOS", "ARM64"],
 	shell: safeShell,
-	terraformValidation,
+	terraformEnvironmentPath,
+	terraformInitStepName: "Pre-deploy: Initialize email Terraform providers",
 	terraformValidationStepName:
 		"Pre-deploy: Validate isolated email Terraform stack",
 	workflowPath,
@@ -44,6 +45,12 @@ const validCriticalSteps = `
         run: pnpm install --frozen-lockfile --prefer-offline
       - name: Enforce FinOps contract
         run: pnpm check:finops
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: 'Pre-deploy: Initialize email Terraform providers'
+        run: terraform -chdir=${terraformEnvironmentPath} init -backend=false -input=false
       - name: 'Pre-deploy: Validate isolated email Terraform stack'
         run: ${terraformValidation}`;
 
@@ -87,7 +94,7 @@ for (const command of [
 		assert.throws(
 			() =>
 				validateWorkflowContract(workflowWithCriticalSteps(steps), contract),
-			/must use the allowlisted pre-gate step prefix/u,
+			/must use the allowlisted gate step prefix/u,
 		);
 	});
 }
@@ -135,7 +142,7 @@ for (const [scenario, step] of unauthorizedPreGateSteps) {
 		assert.throws(
 			() =>
 				validateWorkflowContract(workflowWithCriticalSteps(steps), contract),
-			/must use the allowlisted pre-gate step prefix/u,
+			/must use the allowlisted gate step prefix/u,
 		);
 	});
 }
@@ -188,7 +195,7 @@ test("rejects a step inserted between the locked install and FinOps gate", () =>
 
 	assert.throws(
 		() => validateWorkflowContract(workflowWithCriticalSteps(steps), contract),
-		/must use the allowlisted pre-gate step prefix/u,
+		/must use the allowlisted gate step prefix/u,
 	);
 });
 
@@ -213,7 +220,7 @@ for (const command of ["terraform version", "echo terraform"]) {
 		assert.throws(
 			() =>
 				validateWorkflowContract(workflowWithCriticalSteps(steps), contract),
-			/Terraform validation must run after pnpm check:finops/u,
+			/must use the allowlisted gate step prefix/u,
 		);
 	});
 }

@@ -60,6 +60,17 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
       - name: Enforce FinOps contract
         run: pnpm check:finops
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Initialize isolated email Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/environments/email-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated email Terraform stack
+        run: terraform -chdir=infrastructure/environments/email-production validate
       - name: Validate CI workflow contract
         run: node --test tools/ci/continuous-integration-contract.test.mjs
       - name: Export email test database URL
@@ -70,10 +81,6 @@ jobs:
         with:
           toolchain: 1.91.1
           components: rustfmt, clippy
-      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_version: 1.15.8
-          terraform_wrapper: false
       - name: Validate active workspace
         run: |
           pnpm format:check
@@ -84,13 +91,6 @@ jobs:
           pnpm check:api
       - name: Validate email deployment contract
         run: pnpm test:pre-deploy
-      - name: Initialize isolated email Terraform providers
-        run: >-
-          terraform -chdir=infrastructure/environments/email-production init
-          -backend=false
-          -input=false
-      - name: Validate isolated email Terraform stack
-        run: terraform -chdir=infrastructure/environments/email-production validate
       - name: Initialize email stack Terraform providers
         run: >-
           terraform -chdir=infrastructure/stacks/email/production init

@@ -9,8 +9,9 @@ const checkoutAction =
 const setupNodeAction =
 	"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
 const lockedInstall = "pnpm install --frozen-lockfile --prefer-offline";
-const emailTerraformValidation =
-	"terraform -chdir=infrastructure/environments/email-production validate";
+const emailTerraformEnvironmentPath =
+	"infrastructure/environments/email-production";
+const emailTerraformValidation = `terraform -chdir=${emailTerraformEnvironmentPath} validate`;
 const deployContract = {
 	path: ".github/workflows/deploy-email.yml",
 	job: "ci-test-gate",
@@ -21,7 +22,8 @@ const deployContract = {
 	gateEnv: undefined,
 	runsOn: ["self-hosted", "macOS", "ARM64"],
 	shell: safeShell,
-	terraformValidation: emailTerraformValidation,
+	terraformEnvironmentPath: emailTerraformEnvironmentPath,
+	terraformInitStepName: "Pre-deploy: Initialize email Terraform providers",
 	terraformValidationStepName:
 		"Pre-deploy: Validate isolated email Terraform stack",
 	workflowPath: ".github/workflows/deploy-email.yml",
@@ -38,7 +40,8 @@ const workflowContracts = [
 		},
 		runsOn: ["self-hosted", "macOS", "ARM64"],
 		shell: safeShell,
-		terraformValidation: emailTerraformValidation,
+		terraformEnvironmentPath: emailTerraformEnvironmentPath,
+		terraformInitStepName: "Initialize isolated email Terraform providers",
 		terraformValidationStepName: "Validate isolated email Terraform stack",
 		workflowPath: ".github/workflows/ci.yml",
 	},
@@ -47,8 +50,9 @@ const workflowContracts = [
 		...deployContract,
 		path: ".github/workflows/deploy-trust-risk.yml",
 		deployJob: "deploy-trust-risk",
-		terraformValidation:
-			"terraform -chdir=infrastructure/environments/trust-risk-production validate",
+		terraformEnvironmentPath:
+			"infrastructure/environments/trust-risk-production",
+		terraformInitStepName: "Initialize Trust/Risk Terraform providers",
 		terraformValidationStepName: "Validate isolated Trust/Risk Terraform stack",
 		workflowPath: ".github/workflows/deploy-trust-risk.yml",
 	},
@@ -73,6 +77,12 @@ const validPrefix = `
       - name: Enforce FinOps contract
         run: pnpm check:finops`;
 const validGateSteps = `${validPrefix}
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: 'Pre-deploy: Initialize email Terraform providers'
+        run: terraform -chdir=${emailTerraformEnvironmentPath} init -backend=false -input=false
       - name: 'Pre-deploy: Validate isolated email Terraform stack'
         run: ${emailTerraformValidation}`;
 const validDeployNeeds = `
@@ -165,7 +175,7 @@ test("rejects explicit false continue-on-error values on critical steps", () => 
 				deployWorkflow({ steps, gateProperty: "    continue-on-error: false" }),
 				deployContract,
 			),
-		/must use the allowlisted pre-gate step prefix/u,
+		/must use the allowlisted gate step prefix/u,
 	);
 });
 
@@ -176,7 +186,7 @@ test("rejects a Terraform mention without a real Terraform command after the gat
 	);
 	assert.throws(
 		() => validateWorkflowContract(deployWorkflow({ steps }), deployContract),
-		/Terraform validation must run after pnpm check:finops/u,
+		/must use the allowlisted gate step prefix/u,
 	);
 });
 
@@ -214,7 +224,7 @@ for (const [scenario, command] of preGateTerraformCommands) {
 		const steps = insertBeforeSetupNode(`      - run: ${command}`);
 		assert.throws(
 			() => validateWorkflowContract(deployWorkflow({ steps }), deployContract),
-			/must use the allowlisted pre-gate step prefix/u,
+			/must use the allowlisted gate step prefix/u,
 		);
 	});
 }
@@ -226,7 +236,7 @@ test("rejects a locked install whose failure is ignored", () => {
 	);
 	assert.throws(
 		() => validateWorkflowContract(deployWorkflow({ steps }), deployContract),
-		/must use the allowlisted pre-gate step prefix/u,
+		/must use the allowlisted gate step prefix/u,
 	);
 });
 
