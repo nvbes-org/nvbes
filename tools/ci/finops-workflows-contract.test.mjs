@@ -3,8 +3,16 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { validateWorkflowContract } from "./finops-workflows-contract.mjs";
 
+const safeShell = "bash --noprofile --norc -euo pipefail {0}";
+const emailTerraformValidation =
+	"terraform -chdir=infrastructure/environments/email-production validate";
 const workflowContracts = [
-	{ path: ".github/workflows/ci.yml", job: "email-quality" },
+	{
+		path: ".github/workflows/ci.yml",
+		job: "email-quality",
+		shell: safeShell,
+		terraformValidation: emailTerraformValidation,
+	},
 	{
 		path: ".github/workflows/deploy-email.yml",
 		job: "ci-test-gate",
@@ -12,6 +20,8 @@ const workflowContracts = [
 		buildIf: `\${{ success() }}`,
 		deployJob: "deploy-email",
 		deployIf: `\${{ success() && github.ref == 'refs/heads/main' }}`,
+		shell: safeShell,
+		terraformValidation: emailTerraformValidation,
 	},
 	{
 		path: ".github/workflows/deploy-trust-risk.yml",
@@ -20,8 +30,17 @@ const workflowContracts = [
 		buildIf: `\${{ success() }}`,
 		deployJob: "deploy-trust-risk",
 		deployIf: `\${{ success() && github.ref == 'refs/heads/main' }}`,
+		shell: safeShell,
+		terraformValidation:
+			"terraform -chdir=infrastructure/environments/trust-risk-production validate",
 	},
 ];
+
+const workflowHeader = `
+defaults:
+  run:
+    shell: ${safeShell}
+jobs:`;
 
 const validDeployNeeds = `
   build-scan-sign:
@@ -35,8 +54,7 @@ const validDeployNeeds = `
 `;
 
 function deployWorkflowWithGate(gate) {
-	return `
-jobs:
+	return `${workflowHeader}
   ci-test-gate:
 ${gate}
 ${validDeployNeeds}`;
@@ -54,7 +72,7 @@ for (const [scenario, gateProperty] of failOpenGateJobs) {
     steps:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:finops
-      - run: terraform validate`);
+      - run: ${emailTerraformValidation}`);
 
 		assert.throws(
 			() => validateWorkflowContract(workflow, workflowContracts[1]),
@@ -81,7 +99,7 @@ for (const [
 		const commands = [
 			"pnpm install --frozen-lockfile",
 			"pnpm check:finops",
-			"terraform validate",
+			emailTerraformValidation,
 		];
 		const steps = commands
 			.map((command, index) => {
@@ -106,7 +124,7 @@ test("accepts explicit false continue-on-error values on the gate and critical s
         continue-on-error: false
       - run: pnpm check:finops
         continue-on-error: false
-      - run: terraform validate
+      - run: ${emailTerraformValidation}
         continue-on-error: false`);
 
 	assert.doesNotThrow(() =>
@@ -127,8 +145,7 @@ test("rejects a Terraform mention without a real Terraform command after the gat
 });
 
 test("rejects an invocation moved outside the gate even when a gate comment mentions it", () => {
-	const workflow = `
-jobs:
+	const workflow = `${workflowHeader}
   ci-test-gate:
     steps:
       - run: pnpm install --frozen-lockfile
@@ -147,14 +164,13 @@ ${validDeployNeeds}`;
 });
 
 test("rejects an inline Terraform command before the FinOps gate", () => {
-	const workflow = `
-jobs:
+	const workflow = `${workflowHeader}
   ci-test-gate:
     steps:
       - run: pnpm install --frozen-lockfile
       - run: terraform plan
       - run: pnpm check:finops
-      - run: terraform -chdir=. validate
+      - run: ${emailTerraformValidation}
 ${validDeployNeeds}`;
 
 	assert.throws(
@@ -172,14 +188,13 @@ const indirectTerraformCommands = [
 
 for (const [scenario, command] of indirectTerraformCommands) {
 	test(`rejects Terraform before the FinOps gate through ${scenario}`, () => {
-		const workflow = `
-jobs:
+		const workflow = `${workflowHeader}
   ci-test-gate:
     steps:
       - run: pnpm install --frozen-lockfile
       - run: ${command}
       - run: pnpm check:finops
-      - run: terraform -chdir=. validate
+      - run: ${emailTerraformValidation}
 ${validDeployNeeds}`;
 
 		assert.throws(
@@ -190,13 +205,12 @@ ${validDeployNeeds}`;
 }
 
 test("rejects a locked install whose failure is ignored", () => {
-	const workflow = `
-jobs:
+	const workflow = `${workflowHeader}
   ci-test-gate:
     steps:
       - run: pnpm install --frozen-lockfile || true
       - run: pnpm check:finops
-      - run: terraform -chdir=. validate
+      - run: ${emailTerraformValidation}
 ${validDeployNeeds}`;
 
 	assert.throws(
@@ -206,13 +220,12 @@ ${validDeployNeeds}`;
 });
 
 test("rejects a deploy workflow whose build job bypasses the gate", () => {
-	const workflow = `
-jobs:
+	const workflow = `${workflowHeader}
   ci-test-gate:
     steps:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:finops
-      - run: terraform -chdir=. validate
+      - run: ${emailTerraformValidation}
   build-scan-sign:
     steps: []
   deploy-email:
@@ -227,13 +240,12 @@ jobs:
 });
 
 test("rejects a build job that runs regardless of gate failure", () => {
-	const workflow = `
-jobs:
+	const workflow = `${workflowHeader}
   ci-test-gate:
     steps:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:finops
-      - run: terraform -chdir=. validate
+      - run: ${emailTerraformValidation}
   build-scan-sign:
     needs: ci-test-gate
     if: \${{ always() }}
@@ -251,13 +263,12 @@ jobs:
 });
 
 test("rejects a deploy job that runs regardless of dependency failure", () => {
-	const workflow = `
-jobs:
+	const workflow = `${workflowHeader}
   ci-test-gate:
     steps:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:finops
-      - run: terraform -chdir=. validate
+      - run: ${emailTerraformValidation}
   build-scan-sign:
     needs: ci-test-gate
     if: \${{ success() }}
