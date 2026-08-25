@@ -38,10 +38,21 @@ function stripHclBlockComments(source) {
   let inString = false;
   let escaped = false;
   let inComment = false;
+  let inLineComment = false;
 
   for (let index = 0; index < source.length; index += 1) {
     const character = source[index];
     const nextCharacter = source[index + 1];
+
+    if (inLineComment) {
+      if (character === '\n' || character === '\r') {
+        output += character;
+        inLineComment = false;
+      } else {
+        output += ' ';
+      }
+      continue;
+    }
 
     if (inComment) {
       if (character === '*' && nextCharacter === '/') {
@@ -65,6 +76,13 @@ function stripHclBlockComments(source) {
     if (character === '"') {
       output += character;
       inString = true;
+    } else if (character === '#') {
+      output += ' ';
+      inLineComment = true;
+    } else if (character === '/' && nextCharacter === '/') {
+      output += '  ';
+      index += 1;
+      inLineComment = true;
     } else if (character === '/' && nextCharacter === '*') {
       output += '  ';
       index += 1;

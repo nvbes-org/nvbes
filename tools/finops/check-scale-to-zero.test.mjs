@@ -104,3 +104,18 @@ resource "scaleway_sdb_sql_database" "commented" {
   assert.match(result.stderr, /scaleway_sdb_sql_database must declare min_cpu = 0/);
   assert.match(result.stderr, /scaleway_sdb_sql_database must declare max_cpu as an integer <= 1/);
 });
+
+test('ignores line-commented fake resources', async (t) => {
+  const result = await runChecker(`
+# resource "scaleway_container" "fake_hash" {
+#   min_scale = 1
+#   max_scale = 10
+# }
+// resource "scaleway_sdb_sql_database" "fake_slash" {
+//   min_cpu = 1
+//   max_cpu = 2
+// }
+`, t);
+
+  assert.equal(result.status, 0, result.stderr);
+});
