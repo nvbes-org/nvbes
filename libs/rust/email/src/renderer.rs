@@ -103,6 +103,10 @@ impl EmailTemplate {
                 *review_due_at,
                 "UTC",
             ),
+            Self::OperationalReadinessV1 {
+                check_id,
+                environment,
+            } => operational_readiness(check_id, environment),
         };
         let preview_text = text.lines().next().unwrap_or(&subject).to_string();
         RenderedEmail {
@@ -112,6 +116,18 @@ impl EmailTemplate {
             preview_text,
         }
     }
+}
+
+fn operational_readiness(check_id: &str, environment: &str) -> (String, String, TemplateHtml) {
+    let subject = "nvbes email delivery test — no action required";
+    let statement = format!(
+        "This is an authorized nvbes email delivery test for {environment}. No action is required. Check ID: {check_id}."
+    );
+    (
+        subject.to_string(),
+        statement.clone(),
+        TemplateHtml::Body(format!("<p>{}</p>", escape(&statement))),
+    )
 }
 
 fn action(

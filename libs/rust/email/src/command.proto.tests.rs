@@ -158,6 +158,10 @@ fn enum_decoders_cover_all_values_and_reject_unspecified_events() {
             email_pb::TransactionalEmailCategory::Reminder,
             EmailCategory::Reminder,
         ),
+        (
+            email_pb::TransactionalEmailCategory::Operational,
+            EmailCategory::Operational,
+        ),
     ];
     for (wire, domain) in categories {
         assert_eq!(EmailCategory::try_from(wire).unwrap(), domain);

@@ -120,6 +120,13 @@ impl EmailTemplate {
                 review_url,
                 review_due_at: Some(timestamp(review_due_at)),
             }),
+            Self::OperationalReadinessV1 {
+                check_id,
+                environment,
+            } => Template::OperationalReadinessV1(email_pb::OperationalReadinessV1 {
+                check_id,
+                environment,
+            }),
         };
         email_pb::TransactionalEmailTemplate {
             template: Some(template),
@@ -134,6 +141,7 @@ impl EmailCategory {
             Self::AccountSecurity => email_pb::TransactionalEmailCategory::AccountSecurity,
             Self::Billing => email_pb::TransactionalEmailCategory::Billing,
             Self::Reminder => email_pb::TransactionalEmailCategory::Reminder,
+            Self::Operational => email_pb::TransactionalEmailCategory::Operational,
         }
     }
 }

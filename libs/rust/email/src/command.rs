@@ -36,6 +36,7 @@ pub enum EmailCategory {
     AccountSecurity,
     Billing,
     Reminder,
+    Operational,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,6 +92,10 @@ pub enum EmailTemplate {
         campaign_name: String,
         review_url: String,
         review_due_at: DateTime<Utc>,
+    },
+    OperationalReadinessV1 {
+        check_id: String,
+        environment: String,
     },
 }
 
@@ -151,6 +156,7 @@ impl EmailTemplate {
             Self::BillingReceiptV1 { .. } => "billing_receipt",
             Self::BillingPaymentFailureV1 { .. } => "billing_payment_failure",
             Self::AccessReviewReminderV1 { .. } => "access_review_reminder",
+            Self::OperationalReadinessV1 { .. } => "operational_readiness",
         };
         (name, 1)
     }
@@ -165,6 +171,7 @@ impl EmailTemplate {
                 EmailCategory::Billing
             }
             Self::AccessReviewReminderV1 { .. } => EmailCategory::Reminder,
+            Self::OperationalReadinessV1 { .. } => EmailCategory::Operational,
         }
     }
 }
@@ -176,6 +183,7 @@ impl EmailCategory {
             Self::AccountSecurity => "account_security",
             Self::Billing => "billing",
             Self::Reminder => "reminder",
+            Self::Operational => "operational",
         }
     }
 }

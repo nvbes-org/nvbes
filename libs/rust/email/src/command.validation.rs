@@ -133,6 +133,17 @@ impl EmailTemplate {
                 }
                 Ok(())
             }
+            Self::OperationalReadinessV1 {
+                check_id,
+                environment,
+            } => {
+                validate_identifier("template.check_id", check_id, MAX_IDEMPOTENCY_KEY_LENGTH)?;
+                validate_identifier("template.environment", environment, MAX_TEXT_FIELD_LENGTH)?;
+                if deliver_before - now > Duration::minutes(30) {
+                    return Err(EmailCommandError::field("deliver_before"));
+                }
+                Ok(())
+            }
         }
     }
 }

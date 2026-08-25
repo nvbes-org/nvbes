@@ -115,6 +115,20 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /anonymous_status[\s\S]*?== "401"/u);
 	assert.match(
 		workflow,
+		/if: \$\{\{ vars\.EMAIL_SYNTHETIC_SMOKE_ENABLED == 'true' \}\}/u,
+	);
+	assert.match(
+		workflow,
+		/NVBES_EMAIL_GRPC_AUTH_TOKEN: \$\{\{ secrets\.EMAIL_SYNTHETIC_PRODUCER_TOKEN \}\}/u,
+	);
+	assert.match(
+		workflow,
+		/NVBES_EMAIL_SYNTHETIC_RECIPIENT: \$\{\{ secrets\.EMAIL_SYNTHETIC_RECIPIENT \}\}/u,
+	);
+	assert.match(workflow, /synthetic-smoke/u);
+	assert.match(workflow, /\.message_id != "" and \.duplicate == false/u);
+	assert.match(
+		workflow,
 		/terraform[\s\S]*?plan[\s\S]*?-out=email-runtime\.tfplan/u,
 	);
 	assert.match(

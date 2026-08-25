@@ -230,6 +230,7 @@ fn business_type(template: &EmailTemplate) -> &'static str {
         EmailTemplate::BillingReceiptV1 { .. } => "billing_receipt",
         EmailTemplate::BillingPaymentFailureV1 { .. } => "billing_payment_failure",
         EmailTemplate::AccessReviewReminderV1 { .. } => "access_review_reminder",
+        EmailTemplate::OperationalReadinessV1 { .. } => "operational_readiness",
     }
 }
 

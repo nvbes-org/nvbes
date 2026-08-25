@@ -40,6 +40,7 @@ enum TransactionalEmailCategory {
   TRANSACTIONAL_EMAIL_CATEGORY_BILLING = 3;
   reserved 4;
   TRANSACTIONAL_EMAIL_CATEGORY_REMINDER = 5;
+  TRANSACTIONAL_EMAIL_CATEGORY_OPERATIONAL = 6;
 }
 
 message TransactionalEmailTemplate {
@@ -53,6 +54,7 @@ message TransactionalEmailTemplate {
     BillingReceiptV1 billing_receipt_v1 = 5;
     BillingPaymentFailureV1 billing_payment_failure_v1 = 6;
     AccessReviewReminderV1 access_review_reminder_v1 = 8;
+    OperationalReadinessV1 operational_readiness_v1 = 9;
   }
 }
 
@@ -112,6 +114,11 @@ message AccessReviewReminderV1 {
   string campaign_name = 2;
   string review_url = 3;
   google.protobuf.Timestamp review_due_at = 4;
+}
+
+message OperationalReadinessV1 {
+  string check_id = 1;
+  string environment = 2;
 }
 
 message EmailReceipt {

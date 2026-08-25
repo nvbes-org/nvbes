@@ -25,6 +25,7 @@ fn every_closed_template_variant_is_valid_and_self_describing() {
         ("billing_receipt", "billing"),
         ("billing_payment_failure", "billing"),
         ("access_review_reminder", "reminder"),
+        ("operational_readiness", "operational"),
     ];
 
     for (template, (name, category)) in templates().into_iter().zip(expected) {
@@ -278,6 +279,25 @@ fn code_money_optional_urls_and_reminders_reject_invalid_values() {
     reminder.deliver_before = now() + Duration::hours(24) + Duration::seconds(1);
     assert_eq!(
         reminder.validate(now()).unwrap_err().field_name(),
+        "deliver_before"
+    );
+}
+
+#[test]
+fn operational_readiness_is_bounded_and_uses_safe_identifiers() {
+    let mut unsafe_check = command(templates().remove(7));
+    if let EmailTemplate::OperationalReadinessV1 { check_id, .. } = &mut unsafe_check.template {
+        *check_id = "unsafe check".into();
+    }
+    assert_eq!(
+        unsafe_check.validate(now()).unwrap_err().field_name(),
+        "template.check_id"
+    );
+
+    let mut long_lived = command(templates().remove(7));
+    long_lived.deliver_before = now() + Duration::minutes(30) + Duration::seconds(1);
+    assert_eq!(
+        long_lived.validate(now()).unwrap_err().field_name(),
         "deliver_before"
     );
 }

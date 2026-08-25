@@ -106,6 +106,10 @@ impl TryFrom<email_pb::TransactionalEmailTemplate> for EmailTemplate {
                 review_url: value.review_url,
                 review_due_at: required_time(value.review_due_at)?,
             }),
+            Template::OperationalReadinessV1(value) => Ok(Self::OperationalReadinessV1 {
+                check_id: value.check_id,
+                environment: value.environment,
+            }),
         }
     }
 }
@@ -119,6 +123,7 @@ impl TryFrom<email_pb::TransactionalEmailCategory> for EmailCategory {
             email_pb::TransactionalEmailCategory::AccountSecurity => Ok(Self::AccountSecurity),
             email_pb::TransactionalEmailCategory::Billing => Ok(Self::Billing),
             email_pb::TransactionalEmailCategory::Reminder => Ok(Self::Reminder),
+            email_pb::TransactionalEmailCategory::Operational => Ok(Self::Operational),
             email_pb::TransactionalEmailCategory::Unspecified => {
                 Err(EmailCommandError::field("category"))
             }

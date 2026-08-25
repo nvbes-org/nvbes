@@ -537,3 +537,27 @@ jobs:
           )"
           grep -q '^email_queue_depth ' <<<"$metrics_payload"
           grep -q '^email_queue_oldest_age_seconds ' <<<"$metrics_payload"
+      - name: 'Post-deploy: Submit one authorized synthetic email'
+        if: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED == 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          NVBES_EMAIL_GRPC_AUTH_TOKEN: ${{ secrets.EMAIL_SYNTHETIC_PRODUCER_TOKEN }}
+          NVBES_EMAIL_SYNTHETIC_RECIPIENT: ${{ secrets.EMAIL_SYNTHETIC_RECIPIENT }}
+          NVBES_EMAIL_SYNTHETIC_RUN_ID: deploy-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          export NVBES_EMAIL_GRPC_ENDPOINT
+          NVBES_EMAIL_GRPC_ENDPOINT="$(
+            terraform -chdir="$STACK_ROOT" output -raw email_worker_endpoint
+          )"
+          smoke_result="$(
+            docker run --rm --platform linux/amd64 \
+              --env NVBES_EMAIL_GRPC_AUTH_TOKEN \
+              --env NVBES_EMAIL_GRPC_ENDPOINT \
+              --env NVBES_EMAIL_SYNTHETIC_RECIPIENT \
+              --env NVBES_EMAIL_SYNTHETIC_RUN_ID \
+              "$SOURCE_EMAIL_IMAGE_DIGEST" synthetic-smoke
+          )"
+          jq --exit-status \
+            '.message_id != "" and .duplicate == false' \
+            <<<"$smoke_result" >/dev/null

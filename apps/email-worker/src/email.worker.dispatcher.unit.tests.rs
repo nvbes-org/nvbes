@@ -84,11 +84,24 @@ fn every_template_and_retry_category_has_a_stable_dispatch_policy() {
             },
             "access_review_reminder",
         ),
+        (
+            EmailTemplate::OperationalReadinessV1 {
+                check_id: "deploy-123".into(),
+                environment: "production".into(),
+            },
+            "operational_readiness",
+        ),
     ];
     for (template, expected) in templates {
         assert_eq!(business_type(&template), expected);
     }
-    for category in ["account_security", "billing", "reminder", "unknown"] {
+    for category in [
+        "account_security",
+        "billing",
+        "reminder",
+        "operational",
+        "unknown",
+    ] {
         let policy = retry_policy(category, i32::MAX);
         assert!(policy.maximum_attempts >= 1);
         assert!(policy.retry_delay >= chrono::Duration::zero());

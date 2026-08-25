@@ -57,6 +57,10 @@ pub(super) fn templates() -> Vec<EmailTemplate> {
             review_url: "https://enterprise.nvbes.eu/reviews/1".into(),
             review_due_at: now() + Duration::days(2),
         },
+        EmailTemplate::OperationalReadinessV1 {
+            check_id: "deploy-123".into(),
+            environment: "production".into(),
+        },
     ]
 }
 
@@ -74,6 +78,7 @@ pub(super) fn command(template: EmailTemplate) -> EmailCommand {
             credential_expires_at,
             ..
         } => *credential_expires_at,
+        EmailTemplate::OperationalReadinessV1 { .. } => now() + Duration::minutes(30),
         _ => now() + Duration::hours(1),
     };
     EmailCommand {

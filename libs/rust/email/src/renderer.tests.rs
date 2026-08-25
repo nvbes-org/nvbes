@@ -49,6 +49,10 @@ fn every_template_renders_multipart_content() {
             review_url: "https://enterprise.nvbes.fr/reviews/1".into(),
             review_due_at: expiry,
         },
+        EmailTemplate::OperationalReadinessV1 {
+            check_id: "deploy-123".into(),
+            environment: "production".into(),
+        },
     ];
 
     for template in templates {

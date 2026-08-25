@@ -1,0 +1,100 @@
+use chrono::{Duration, Utc};
+use nvbes_email::{
+    EmailCategory, EmailClient, EmailClientConfig, EmailCommand, EmailIdempotencyKey,
+    EmailRecipient, EmailRequestContext, EmailTemplate,
+};
+use serde::Serialize;
+
+const RECIPIENT_ENV: &str = "NVBES_EMAIL_SYNTHETIC_RECIPIENT";
+const RUN_ID_ENV: &str = "NVBES_EMAIL_SYNTHETIC_RUN_ID";
+
+#[derive(Serialize)]
+struct SyntheticSmokeReceipt {
+    message_id: String,
+    accepted_at: chrono::DateTime<Utc>,
+    deliver_before: chrono::DateTime<Utc>,
+    duplicate: bool,
+}
+
+pub async fn run() -> anyhow::Result<()> {
+    let recipient = required_env(RECIPIENT_ENV)?;
+    let run_id = required_env(RUN_ID_ENV)?;
+    let command = command(&recipient, &run_id, Utc::now())?;
+    let client = EmailClient::connect(EmailClientConfig::from_env("production")?).await?;
+    let receipt = client.send(command).await?;
+
+    println!(
+        "{}",
+        serde_json::to_string(&SyntheticSmokeReceipt {
+            message_id: receipt.message_id,
+            accepted_at: receipt.accepted_at,
+            deliver_before: receipt.deliver_before,
+            duplicate: receipt.duplicate,
+        })?
+    );
+    Ok(())
+}
+
+fn command(
+    recipient: &str,
+    run_id: &str,
+    now: chrono::DateTime<Utc>,
+) -> anyhow::Result<EmailCommand> {
+    let idempotency_key = EmailIdempotencyKey::new(format!("readiness:{run_id}"))?;
+    let deliver_before = now + Duration::minutes(30);
+    let command = EmailCommand {
+        context: EmailRequestContext {
+            request_id: format!("readiness-{run_id}"),
+            correlation_id: format!("readiness-{run_id}"),
+            actor_principal_id: "operator:email-readiness".to_string(),
+        },
+        producer: "readiness".to_string(),
+        idempotency_key,
+        recipient: EmailRecipient {
+            email: recipient.to_string(),
+            name: Some("nvbes operator".to_string()),
+        },
+        category: EmailCategory::Operational,
+        template: EmailTemplate::OperationalReadinessV1 {
+            check_id: run_id.to_string(),
+            environment: "production".to_string(),
+        },
+        deliver_before,
+    };
+    command.validate(now)?;
+    Ok(command)
+}
+
+fn required_env(name: &str) -> anyhow::Result<String> {
+    std::env::var(name)
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| anyhow::anyhow!("{name} is required"))
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::TimeZone;
+
+    use super::*;
+
+    #[test]
+    fn builds_an_explicit_bounded_operational_message() {
+        let now = Utc.with_ymd_and_hms(2026, 8, 25, 20, 0, 0).unwrap();
+        let command = command("operator@example.com", "deploy-123", now).unwrap();
+
+        assert_eq!(command.category, EmailCategory::Operational);
+        assert_eq!(command.deliver_before, now + Duration::minutes(30));
+        let rendered = command.template.render();
+        assert!(rendered.subject.contains("no action required"));
+        assert!(rendered.text_body.contains("deploy-123"));
+        assert!(!rendered.text_body.contains("operator@example.com"));
+    }
+
+    #[test]
+    fn rejects_an_unbounded_or_unsafe_run_identifier() {
+        let now = Utc.with_ymd_and_hms(2026, 8, 25, 20, 0, 0).unwrap();
+
+        assert!(command("operator@example.com", "contains spaces", now).is_err());
+    }
+}

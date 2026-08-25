@@ -44,6 +44,8 @@ mod queue_trigger;
 mod retention;
 #[path = "email.worker.state.rs"]
 mod state;
+#[path = "email.worker.synthetic_smoke.rs"]
+mod synthetic_smoke;
 #[path = "email.worker.webhook.rs"]
 mod webhook;
 #[path = "email.worker.webhook.db.rs"]
@@ -67,6 +69,10 @@ async fn main() -> anyhow::Result<()> {
         database::migrate(&db).await?;
         tracing::info!("email database migrations applied");
         return Ok(());
+    }
+
+    if matches!(command.as_slice(), [action] if action == "synthetic-smoke") {
+        return synthetic_smoke::run().await;
     }
 
     let config = config::EmailWorkerConfig::from_env()?;
@@ -104,7 +110,7 @@ async fn main() -> anyhow::Result<()> {
             return Ok(());
         }
         _ => anyhow::bail!(
-            "usage: nvbes-email-worker [migrate|validate-runtime|error-reporting-smoke|release-suppression <message-id> <actor> <reason>]"
+            "usage: nvbes-email-worker [migrate|validate-runtime|error-reporting-smoke|synthetic-smoke|release-suppression <message-id> <actor> <reason>]"
         ),
     }
 
