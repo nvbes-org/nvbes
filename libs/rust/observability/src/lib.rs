@@ -29,8 +29,8 @@ pub use trace_context::{
     extract_tracestate, inject_traceparent_into, new_traceparent, parse_traceparent,
 };
 pub use tracing::{
-    OtlpProtocol, TracingConfig, init_tracing, init_tracing_for_service,
-    init_tracing_with_config, otlp_http_signal_endpoint,
+    OtlpProtocol, TracingConfig, init_tracing, init_tracing_for_service, init_tracing_with_config,
+    otlp_http_signal_endpoint,
 };
 pub use worker_error_reporting::{
     ErrorReportingSmokeResult, WorkerJobContext, WorkerMonitorSchedule, WorkerOperationContext,
