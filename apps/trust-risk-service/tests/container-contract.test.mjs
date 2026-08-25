@@ -27,6 +27,8 @@ test("image builds and runs the Trust/Risk service as non-root", () => {
 		dockerfile.match(/^ARG DEBIAN_FRONTEND=noninteractive$/gm)?.length,
 		2,
 	);
+	assert.ok(dockerfile.includes("CARGO_BUILD_JOBS=1"));
+	assert.ok(dockerfile.includes("CMAKE_BUILD_PARALLEL_LEVEL=1"));
 	assert.ok(dockerfile.includes("USER 10001:10001"));
 	assert.ok(dockerfile.includes("EXPOSE 8080"));
 	assert.ok(dockerfile.includes('NVBES_TRUST_RISK_BIND_ADDR="0.0.0.0:8080"'));
