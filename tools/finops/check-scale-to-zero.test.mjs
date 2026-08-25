@@ -54,3 +54,30 @@ resource "scaleway_sdb_sql_database" "worker" {
   assert.match(result.stderr, /scaleway_container must declare max_scale as an integer <= 1/);
   assert.match(result.stderr, /scaleway_sdb_sql_database must declare max_cpu as an integer <= 1/);
 });
+
+test('rejects nonliteral and commented scale bounds', async (t) => {
+  const result = await runChecker(`
+resource "scaleway_container" "expression" {
+  min_scale = 0 + var.minimum
+  max_scale = 1 + var.burst
+}
+resource "scaleway_container" "commented" {
+  # min_scale = 0
+  // max_scale = 1
+}
+resource "scaleway_sdb_sql_database" "expression" {
+  min_cpu = var.minimum
+  max_cpu = 1 + var.burst
+}
+resource "scaleway_sdb_sql_database" "commented" {
+  # min_cpu = 0
+  // max_cpu = 1
+}
+`, t);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /scaleway_container must declare min_scale = 0/);
+  assert.match(result.stderr, /scaleway_container must declare max_scale as an integer <= 1/);
+  assert.match(result.stderr, /scaleway_sdb_sql_database must declare min_cpu = 0/);
+  assert.match(result.stderr, /scaleway_sdb_sql_database must declare max_cpu as an integer <= 1/);
+});

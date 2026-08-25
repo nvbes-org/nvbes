@@ -52,7 +52,10 @@ function resourceBlocks(source, resourceType) {
 }
 
 function literalInteger(block, attribute) {
-  const pattern = new RegExp(`\\b${attribute}\\s*=\\s*([+-]?\\d+)(?![\\w.])`);
+  const pattern = new RegExp(
+    `^[\\t ]*${attribute}[\\t ]*=[\\t ]*([+-]?\\d+)[\\t ]*(?:(?:#|//).*)?(?:\\r)?$`,
+    'm',
+  );
   const match = block.match(pattern);
   return match === null ? undefined : Number(match[1]);
 }
