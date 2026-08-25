@@ -257,6 +257,8 @@ jobs:
         run: >-
           terraform -chdir="$STACK_ROOT" plan -lock-timeout=5m
           -target=scaleway_job_definition.trust_risk_database_migration
+          -target=scaleway_iam_api_key.trust_risk_database_runtime
+          -target=scaleway_iam_policy.trust_risk_database_runtime
           -out=trust-risk-migration.tfplan
       - name: Apply reviewed migration foundation plan
         env:
