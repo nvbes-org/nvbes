@@ -32,7 +32,6 @@ resource "grafana_rule_group" "trust_risk" {
   name             = each.value.name
   folder_uid       = grafana_folder.trust_risk.uid
   interval_seconds = 60
-  org_id           = each.value.orgId
 
   dynamic "rule" {
     for_each = each.value.rules

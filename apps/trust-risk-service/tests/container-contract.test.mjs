@@ -169,6 +169,7 @@ test("deployment provisions Trust/Risk Grafana and injects observability secrets
 	assert.ok(observabilityTerraform.includes('resource "grafana_folder"'));
 	assert.ok(observabilityTerraform.includes('resource "grafana_dashboard"'));
 	assert.ok(observabilityTerraform.includes('resource "grafana_rule_group"'));
+	assert.equal(observabilityTerraform.includes("org_id"), false);
 	assert.ok(deploymentWorkflow.includes("TRUST_RISK_SENTRY_DSN"));
 	assert.ok(deploymentWorkflow.includes("GRAFANA_SERVICE_ACCOUNT_TOKEN"));
 	assert.ok(deploymentWorkflow.includes("GRAFANA_OTLP_AUTHORIZATION_HEADER"));
