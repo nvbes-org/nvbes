@@ -3,7 +3,14 @@ use std::{
     time::Duration,
 };
 
-use axum::{Router, extract::State, middleware, response::IntoResponse, routing::get};
+use axum::{
+    Router,
+    extract::State,
+    http::StatusCode,
+    middleware,
+    response::{IntoResponse, Response},
+    routing::get,
+};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 
 use crate::state::EmailWorkerState;
@@ -22,8 +29,25 @@ pub fn router(state: EmailWorkerState) -> Router {
         .with_state(state)
 }
 
-async fn render(State(state): State<EmailWorkerState>) -> impl IntoResponse {
-    state.metrics.render()
+async fn render(State(state): State<EmailWorkerState>) -> Response {
+    match crate::metrics_db::queue_observability_snapshot(&state.db).await {
+        Ok(snapshot) => queue(snapshot.depth, snapshot.oldest_age_seconds),
+        Err(error) => {
+            crate::error_reporting::capture_operation(
+                &state.config,
+                "metrics_queue_snapshot",
+                &error,
+            );
+            tracing::error!(error = ?error, "email queue metrics snapshot failed");
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Email metrics are temporarily unavailable",
+            )
+                .into_response();
+        }
+    }
+
+    state.metrics.render().into_response()
 }
 
 pub fn install() -> Arc<PrometheusHandle> {
@@ -68,6 +92,11 @@ pub fn suppressed(count: u64) {
     metrics::counter!("email_suppressed_total").increment(count);
 }
 
+pub fn queue(depth: i64, oldest_age_seconds: f64) {
+    metrics::gauge!("email_queue_depth").set(depth.max(0) as f64);
+    metrics::gauge!("email_queue_oldest_age_seconds").set(oldest_age_seconds.max(0.0));
+}
+
 pub fn webhook(event_type: &str, outcome: &str, duration: Duration) {
     let labels = [
         ("provider", "scaleway".to_string()),
@@ -99,7 +128,7 @@ mod tests {
     use std::time::Duration;
 
     use super::{
-        accepted, dispatch, expired, install, retention, suppressed, webhook,
+        accepted, dispatch, expired, install, queue, retention, suppressed, webhook,
         webhook_signature_failure,
     };
 
@@ -127,6 +156,7 @@ mod tests {
         suppressed(1);
         webhook("email_delivered", "state_applied", Duration::from_millis(5));
         webhook_signature_failure();
+        queue(3, 42.5);
         retention(1, 2, 3, 4);
 
         let rendered = handle.render();
@@ -136,6 +166,8 @@ mod tests {
             "email_suppressed_total",
             "email_provider_webhooks_total",
             "email_webhook_signature_failures_total",
+            "email_queue_depth",
+            "email_queue_oldest_age_seconds",
             "email_retention_rows_total",
         ] {
             assert!(rendered.contains(metric), "missing {metric}");
@@ -165,5 +197,11 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let rendered = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let rendered = String::from_utf8(rendered.to_vec()).unwrap();
+        assert!(rendered.contains("email_queue_depth 0"));
+        assert!(rendered.contains("email_queue_oldest_age_seconds 0"));
     }
 }

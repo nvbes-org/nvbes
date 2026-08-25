@@ -3,6 +3,10 @@ private_network_id        = "00000000-0000-0000-0000-000000000000"
 cloudflare_zone_id        = "00000000000000000000000000000000"
 base_domain               = "nvbes.eu"
 accept_scaleway_tem_terms = false
+grafana_url                       = "https://nvbes.grafana.net"
+grafana_prometheus_datasource_uid = "grafanacloud-prom"
+grafana_email_contact_point        = "nvbes-email-on-call"
+email_sentry_traces_sample_rate    = 0.1
 
 # Production accepts only the verified digest mirrored into the private registry.
 email_worker_image = "rg.fr-par.scw.cloud/nvbes-prod-email-worker/nvbes-email-worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
@@ -13,3 +17,5 @@ email_data_encryption_key = "replace-with-base64-encoded-32-byte-key"
 email_recipient_hmac_key  = "replace-with-base64-encoded-32-byte-key"
 scaleway_email_secret_key = "replace-with-tem-secret-key"
 email_sns_ca_bundle_pem   = "replace-with-pem-ca-bundle"
+email_sentry_dsn          = "https://public@example.invalid/1"
+# grafana_service_account_token is ephemeral and must only be supplied through TF_VAR_*.
