@@ -112,6 +112,7 @@
     "verify": "pnpm format:check && pnpm check:structure && pnpm check:nx-boundaries && pnpm lint && pnpm check && pnpm test"
   },
   "devDependencies": {
+    "@cdktn/hcl2json": "0.24.0",
     "@grafana/faro-cli": "^0.11.0",
     "@grafana/faro-rollup-plugin": "^0.11.0",
     "@posthog/cli": "^0.9.4",
