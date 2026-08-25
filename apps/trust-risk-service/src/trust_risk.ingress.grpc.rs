@@ -56,7 +56,7 @@ impl TrustRiskSignalService for SignalService {
                 self.state.config.retention.signals_days,
             )
             .await
-            .map_err(map_persistence)?;
+            .map_err(|error| map_persistence(&self.state, error))?;
             crate::risk_metrics::signal(
                 signal.producer(),
                 signal.kind().split('.').next().unwrap_or("unknown"),
@@ -79,7 +79,10 @@ impl TrustRiskSignalService for SignalService {
     }
 }
 
-fn map_persistence(error: PersistSignalError) -> Status {
+fn map_persistence(state: &TrustRiskState, error: PersistSignalError) -> Status {
+    if matches!(&error, PersistSignalError::Database(_)) {
+        crate::error_reporting::capture_operation(&state.config, "signal.persist", &error);
+    }
     match error {
         PersistSignalError::Conflict => Status::already_exists("signal identifier conflicts"),
         PersistSignalError::PayloadTooLarge => {

@@ -28,3 +28,13 @@ output "trust_risk_database_migration_job_id" {
   description = "Job definition that applies Trust/Risk SQLx migrations."
   value       = scaleway_job_definition.trust_risk_database_migration.id
 }
+
+output "trust_risk_grafana_folder_uid" {
+  description = "Grafana folder containing the production Trust/Risk dashboard and alerts."
+  value       = grafana_folder.trust_risk.uid
+}
+
+output "trust_risk_grafana_dashboard_uid" {
+  description = "Stable UID of the production Trust/Risk Grafana dashboard."
+  value       = grafana_dashboard.trust_risk.uid
+}

@@ -77,3 +77,86 @@ variable "trust_risk_metrics_token" {
     error_message = "trust_risk_metrics_token must contain at least 32 non-placeholder characters."
   }
 }
+
+variable "trust_risk_sentry_dsn" {
+  description = "Production Trust/Risk Sentry DSN supplied only by the protected deployment environment."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition = (
+      var.trust_risk_sentry_dsn == trimspace(var.trust_risk_sentry_dsn) &&
+      startswith(var.trust_risk_sentry_dsn, "https://") &&
+      strcontains(var.trust_risk_sentry_dsn, "@")
+    )
+    error_message = "trust_risk_sentry_dsn must be a non-empty HTTPS Sentry DSN."
+  }
+}
+
+variable "trust_risk_sentry_traces_sample_rate" {
+  description = "Sentry transaction sampling rate for the production Trust/Risk runtime."
+  type        = number
+  default     = 0.1
+
+  validation {
+    condition     = var.trust_risk_sentry_traces_sample_rate >= 0 && var.trust_risk_sentry_traces_sample_rate <= 1
+    error_message = "trust_risk_sentry_traces_sample_rate must be between 0 and 1."
+  }
+}
+
+variable "grafana_url" {
+  description = "Grafana Cloud stack URL used for Trust/Risk dashboard and alert provisioning."
+  type        = string
+
+  validation {
+    condition     = startswith(var.grafana_url, "https://")
+    error_message = "grafana_url must be HTTPS."
+  }
+}
+
+variable "grafana_service_account_token" {
+  description = "Grafana service account token limited to dashboard and alert provisioning."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}
+
+variable "grafana_prometheus_datasource_uid" {
+  description = "UID of the Grafana Cloud Prometheus datasource containing Tempo span metrics."
+  type        = string
+}
+
+variable "grafana_tempo_datasource_uid" {
+  description = "UID of the Grafana Cloud Tempo datasource containing Trust/Risk traces."
+  type        = string
+}
+
+variable "grafana_trust_risk_contact_point" {
+  description = "Existing Grafana Alerting contact point for Trust/Risk incidents."
+  type        = string
+}
+
+variable "grafana_otlp_endpoint" {
+  description = "Grafana Cloud OTLP/gRPC endpoint used directly by the scale-to-zero runtime."
+  type        = string
+
+  validation {
+    condition     = startswith(var.grafana_otlp_endpoint, "https://")
+    error_message = "grafana_otlp_endpoint must be HTTPS."
+  }
+}
+
+variable "grafana_otlp_authorization_header" {
+  description = "Precomputed Basic authorization header for the Grafana Cloud OTLP gateway."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition = (
+      startswith(var.grafana_otlp_authorization_header, "Basic ") &&
+      !strcontains(var.grafana_otlp_authorization_header, "\n") &&
+      !strcontains(var.grafana_otlp_authorization_header, "\r")
+    )
+    error_message = "grafana_otlp_authorization_header must be a single-line Basic authorization header."
+  }
+}

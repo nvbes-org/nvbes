@@ -16,6 +16,20 @@ const deploymentWorkflow = readFileSync(
 	join(workspaceRoot, ".github/workflows/deploy-trust-risk.yml"),
 	"utf8",
 );
+const runtimeTerraform = readFileSync(
+	join(
+		workspaceRoot,
+		"infrastructure/environments/trust-risk-production/runtime.tf",
+	),
+	"utf8",
+);
+const observabilityTerraform = readFileSync(
+	join(
+		workspaceRoot,
+		"infrastructure/environments/trust-risk-production/observability.tf",
+	),
+	"utf8",
+);
 
 test("image builds and runs the Trust/Risk service as non-root", () => {
 	assert.match(manifest, /^name = "nvbes-trust-risk-service"$/m);
@@ -102,4 +116,27 @@ test("artifact reuse keeps the CI gate lightweight after source equivalence", ()
 			"if: vars.TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST == ''",
 		),
 	);
+});
+
+test("runtime initializes Sentry and authenticated Grafana OTLP", () => {
+	assert.ok(mainSource.includes("init_error_reporting_with_config"));
+	assert.ok(mainSource.includes("otlp_endpoint: config.otlp_endpoint.as_deref()"));
+	assert.ok(
+		mainSource.includes(
+			"otlp_authorization_header: config.otlp_authorization_header.as_deref()",
+		),
+	);
+	assert.ok(runtimeTerraform.includes("SENTRY_RELEASE"));
+	assert.ok(runtimeTerraform.includes("SENTRY_TRACES_SAMPLE_RATE"));
+	assert.ok(runtimeTerraform.includes("NVBES_OTLP_ENDPOINT"));
+	assert.ok(runtimeTerraform.includes("NVBES_OTLP_AUTHORIZATION_HEADER"));
+});
+
+test("deployment provisions Trust/Risk Grafana and injects observability secrets", () => {
+	assert.ok(observabilityTerraform.includes('resource "grafana_folder"'));
+	assert.ok(observabilityTerraform.includes('resource "grafana_dashboard"'));
+	assert.ok(observabilityTerraform.includes('resource "grafana_rule_group"'));
+	assert.ok(deploymentWorkflow.includes("TRUST_RISK_SENTRY_DSN"));
+	assert.ok(deploymentWorkflow.includes("GRAFANA_SERVICE_ACCOUNT_TOKEN"));
+	assert.ok(deploymentWorkflow.includes("GRAFANA_OTLP_AUTHORIZATION_HEADER"));
 });

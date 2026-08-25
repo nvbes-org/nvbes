@@ -10,6 +10,10 @@ const TOKEN: &str = "producer-token-with-at-least-32-characters";
 fn config() -> TrustRiskConfig {
     TrustRiskConfig {
         environment: "test".to_string(),
+        sentry_dsn: None,
+        sentry_traces_sample_rate: 0.0,
+        otlp_endpoint: None,
+        otlp_authorization_header: None,
         database_url: "postgres://localhost/trust_risk_test".to_string(),
         bind_addr: "127.0.0.1:3050".parse::<SocketAddr>().unwrap(),
         producers: BTreeMap::from([(

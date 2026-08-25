@@ -2,6 +2,9 @@ use std::{collections::BTreeMap, net::SocketAddr, time::Duration};
 
 use serde::Deserialize;
 
+#[path = "trust_risk.config.observability.rs"]
+mod observability;
+
 const DEVELOPMENT_TOKEN: &str = "development-trust-risk-token-32-value";
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -50,6 +53,10 @@ pub struct RetentionConfig {
 #[derive(Debug, Clone)]
 pub struct TrustRiskConfig {
     pub environment: String,
+    pub sentry_dsn: Option<String>,
+    pub sentry_traces_sample_rate: f32,
+    pub otlp_endpoint: Option<String>,
+    pub otlp_authorization_header: Option<String>,
     pub database_url: String,
     pub bind_addr: SocketAddr,
     pub producers: BTreeMap<String, ProducerPolicy>,
@@ -63,6 +70,7 @@ impl TrustRiskConfig {
     pub fn from_env() -> Result<Self, ConfigError> {
         let environment = env_or("NVBES_ENVIRONMENT", "development");
         let development = matches!(environment.as_str(), "development" | "test");
+        let observability = observability::from_environment(&environment)?;
         let database_url = database_url(&environment)?;
         let bind_addr = env_or("NVBES_TRUST_RISK_BIND_ADDR", "127.0.0.1:3050")
             .parse()
@@ -101,6 +109,10 @@ impl TrustRiskConfig {
 
         Ok(Self {
             environment,
+            sentry_dsn: observability.sentry_dsn,
+            sentry_traces_sample_rate: observability.sentry_traces_sample_rate,
+            otlp_endpoint: observability.otlp_endpoint,
+            otlp_authorization_header: observability.otlp_authorization_header,
             database_url,
             bind_addr,
             producers,

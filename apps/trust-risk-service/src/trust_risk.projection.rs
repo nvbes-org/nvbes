@@ -107,6 +107,11 @@ pub async fn run(state: TrustRiskState, mut shutdown: watch::Receiver<bool>) {
             }
             Err(error) => {
                 crate::risk_metrics::projection("failed", 1);
+                crate::error_reporting::capture_operation(
+                    &state.config,
+                    "projection.process_batch",
+                    &error,
+                );
                 tracing::warn!(error = %error, "trust/risk projection cycle failed");
             }
         }
