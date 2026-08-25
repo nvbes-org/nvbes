@@ -64,7 +64,7 @@ jobs:
 
   build-scan-sign:
     needs: [ci-test-gate]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST != '' && fromJSON('["self-hosted","macOS","ARM64"]') || 'ubuntu-24.04' }}
     timeout-minutes: 60
     permissions:
       actions: read
@@ -75,6 +75,8 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: nvbes-org/nvbes-trust-risk-service
+      REUSED_SOURCE_IMAGE_DIGEST: ${{ vars.TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST }}
+      SOURCE_COMMIT_SHA: ${{ vars.TRUST_RISK_REUSE_SOURCE_COMMIT_SHA }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -85,6 +87,7 @@ jobs:
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/deploy-trust-risk.yml
       - name: Set deterministic build metadata
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
         run: |
           echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
           echo "LC_ALL=C" >> "$GITHUB_ENV"
@@ -96,8 +99,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
       - name: Set up Buildx
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Build and push immutable image
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
         id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
@@ -114,6 +119,7 @@ jobs:
             org.opencontainers.image.version=${{ github.ref_name }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
       - name: Block vulnerable release images
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
@@ -124,12 +130,22 @@ jobs:
           format: table
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Sign container image
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
         run: cosign sign --yes "${REGISTRY}/${IMAGE_NAME}@${{ steps.build.outputs.digest }}"
+      - name: Verify reusable signed image
+        if: env.REUSED_SOURCE_IMAGE_DIGEST != ''
+        run: |
+          [[ "$REUSED_SOURCE_IMAGE_DIGEST" =~ ^ghcr\.io/nvbes-org/nvbes-trust-risk-service@sha256:[0-9a-f]{64}$ ]]
+          [[ "$SOURCE_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/deploy-trust-risk.yml@refs/heads/main"
+          cosign verify "$REUSED_SOURCE_IMAGE_DIGEST" \
+            --certificate-identity "$identity" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
   deploy-trust-risk:
     needs: [ci-test-gate, build-scan-sign]
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 90
     environment:
       name: production-trust-risk
@@ -155,10 +171,13 @@ jobs:
       TRUST_RISK_TERRAFORM_STATE_KEY: production/trust-risk/terraform.tfstate
       TRUST_RISK_REGISTRY_ENDPOINT: rg.fr-par.scw.cloud/nvbes-prod-trust-risk
       STACK_ROOT: infrastructure/environments/trust-risk-production
+      REUSED_SOURCE_IMAGE_DIGEST: ${{ vars.TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST }}
+      SOURCE_COMMIT_SHA: ${{ vars.TRUST_RISK_REUSE_SOURCE_COMMIT_SHA }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - name: CI/CD security gate
         run: >-
@@ -171,6 +190,19 @@ jobs:
           [[ "$SCW_DEFAULT_ORGANIZATION_ID" == "0b726673-849d-4d03-b014-fd39c41942b9" ]]
           [[ "$SCW_DEFAULT_PROJECT_ID" == "e5e54340-62c8-4bd5-af4d-d3d5ea2c8706" ]]
           [[ -n "$TERRAFORM_STATE_BUCKET" ]]
+          if [[ -n "$REUSED_SOURCE_IMAGE_DIGEST" || -n "$SOURCE_COMMIT_SHA" ]]; then
+            [[ "$REUSED_SOURCE_IMAGE_DIGEST" =~ ^ghcr\.io/nvbes-org/nvbes-trust-risk-service@sha256:[0-9a-f]{64}$ ]]
+            [[ "$SOURCE_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "${SOURCE_COMMIT_SHA}^{commit}"
+            git diff --quiet "$SOURCE_COMMIT_SHA" "$GITHUB_SHA" -- \
+              Cargo.toml Cargo.lock \
+              apps/trust-risk-service/Cargo.toml \
+              apps/trust-risk-service/Dockerfile \
+              apps/trust-risk-service/migrations \
+              apps/trust-risk-service/src \
+              contracts/protobuf/nvbes/trust_risk \
+              libs/rust
+          fi
       - name: Authenticate to GHCR
         env:
           GHCR_TOKEN: ${{ github.token }}
@@ -182,9 +214,15 @@ jobs:
         env:
           IMAGE_TAG: ghcr.io/nvbes-org/nvbes-trust-risk-service:${{ github.sha }}
         run: |
-          digest="$(docker buildx imagetools inspect "$IMAGE_TAG" --format '{{.Manifest.Digest}}')"
+          if [[ -n "$REUSED_SOURCE_IMAGE_DIGEST" ]]; then
+            source_image="$REUSED_SOURCE_IMAGE_DIGEST"
+            digest="${source_image##*@}"
+          else
+            digest="$(docker buildx imagetools inspect "$IMAGE_TAG" --format '{{.Manifest.Digest}}')"
+            source_image="ghcr.io/nvbes-org/nvbes-trust-risk-service@${digest}"
+          fi
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-          echo "SOURCE_TRUST_RISK_IMAGE_DIGEST=ghcr.io/nvbes-org/nvbes-trust-risk-service@${digest}" >> "$GITHUB_ENV"
+          echo "SOURCE_TRUST_RISK_IMAGE_DIGEST=${source_image}" >> "$GITHUB_ENV"
           echo "TF_VAR_trust_risk_image=${TRUST_RISK_REGISTRY_ENDPOINT}/nvbes-trust-risk-service@${digest}" >> "$GITHUB_ENV"
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Verify signed release identity
