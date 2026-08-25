@@ -28,6 +28,8 @@ mod grpc_operations;
 mod grpc_service;
 #[path = "email.worker.health.rs"]
 mod health;
+#[path = "email.worker.metrics.db.rs"]
+mod metrics_db;
 #[path = "email.worker.operations.actions.rs"]
 mod operations_actions;
 #[path = "email.worker.operations.privacy.rs"]
@@ -138,7 +140,9 @@ async fn main() -> anyhow::Result<()> {
             .merge(webhook::router(state.clone()))
             .merge(queue_trigger::router(state.clone()))
             .merge(retention::router(state.clone())),
-        config::RuntimeRole::Ingress => http_router.merge(webhook::router(state.clone())),
+        config::RuntimeRole::Ingress => http_router
+            .merge(email_metrics::router(state.clone()))
+            .merge(webhook::router(state.clone())),
         config::RuntimeRole::Dispatch => http_router
             .merge(email_metrics::router(state.clone()))
             .merge(queue_trigger::router(state.clone()))

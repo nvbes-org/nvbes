@@ -1,6 +1,6 @@
 use axum::{Router, extract::State, http::StatusCode, routing::post};
 
-use crate::{database, dispatch_db, email_metrics, state::EmailWorkerState};
+use crate::{database, dispatch_db, email_metrics, error_reporting, state::EmailWorkerState};
 
 pub fn router(state: EmailWorkerState) -> Router {
     Router::new()
@@ -10,6 +10,7 @@ pub fn router(state: EmailWorkerState) -> Router {
 
 async fn run(State(state): State<EmailWorkerState>) -> StatusCode {
     if let Err(error) = retain(&state).await {
+        error_reporting::capture_operation(&state.config, "retention", error.as_ref());
         tracing::error!(error = ?error, "email retention trigger failed");
         return StatusCode::SERVICE_UNAVAILABLE;
     }

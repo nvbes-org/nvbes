@@ -14,6 +14,8 @@ mod auth;
 mod config;
 #[path = "trust_risk.database.rs"]
 mod database;
+#[path = "trust_risk.error_reporting.rs"]
+mod error_reporting;
 #[path = "trust_risk.health.rs"]
 mod health;
 #[path = "trust_risk.ingress.db.rs"]
@@ -91,21 +93,41 @@ async fn main() -> anyhow::Result<()> {
         println!("subject erasure accepted: {request_id}");
         return Ok(());
     }
-    if !command.is_empty() {
+    if !command.is_empty()
+        && !matches!(command.as_slice(), [action] if action == "error-reporting-smoke")
+    {
         anyhow::bail!(
-            "usage: nvbes-trust-risk-service [migrate|validate-runtime|erase-subject <kind> <namespace> <opaque-id> <actor> <reason>]"
+            "usage: nvbes-trust-risk-service [migrate|validate-runtime|error-reporting-smoke|erase-subject <kind> <namespace> <opaque-id> <actor> <reason>]"
         );
     }
 
+    let _error_reporting_guard = nvbes_observability::init_error_reporting_with_config(
+        nvbes_observability::ErrorReportingConfig {
+            app_name: error_reporting::APP_NAME,
+            service_name: error_reporting::APP_NAME,
+            environment: &config.environment,
+            dsn: config.sentry_dsn.as_deref(),
+            traces_sample_rate: config.sentry_traces_sample_rate,
+        },
+    );
     nvbes_observability::install_safe_panic_hook();
     nvbes_observability::init_tracing_with_config(
         nvbes_observability::TracingConfig {
             environment: &config.environment,
-            otlp_endpoint: None,
-            otlp_authorization_header: None,
+            otlp_endpoint: config.otlp_endpoint.as_deref(),
+            otlp_authorization_header: config.otlp_authorization_header.as_deref(),
         },
-        "nvbes-trust-risk-service",
+        error_reporting::APP_NAME,
     );
+    let _grafana_metrics_guard = risk_metrics::init_otlp(&config)?;
+    if matches!(command.as_slice(), [action] if action == "error-reporting-smoke") {
+        println!(
+            "{}",
+            serde_json::to_string(&error_reporting::smoke(&config))?
+        );
+        nvbes_observability::flush_error_reporting(std::time::Duration::from_secs(2));
+        return Ok(());
+    }
     let bind_addr = config.bind_addr;
     let db = database::connect_lazy(&config.database_url)?;
     let state = app::TrustRiskState::new(config, db);
@@ -143,16 +165,23 @@ async fn main() -> anyhow::Result<()> {
         .await;
 
     let http = health::router(state.clone()).merge(risk_metrics::router(state.clone()));
+    let http_metrics = nvbes_observability::metrics::HttpMetrics {
+        handle: state.metrics.clone(),
+    };
     let router = tonic::service::Routes::from(http)
         .add_service(health_service)
         .add_service(signals)
         .add_service(assessments)
         .add_service(labels)
         .add_service(operations)
-        .into_axum_router();
+        .into_axum_router()
+        .layer(axum::middleware::from_fn_with_state(
+            http_metrics,
+            nvbes_observability::middleware::observe_request,
+        ));
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let projection_task = tokio::spawn(projection::run(state.clone(), shutdown_rx.clone()));
-    let retention_task = tokio::spawn(retention::run(state.db.clone(), shutdown_rx.clone()));
+    let retention_task = tokio::spawn(retention::run(state.clone(), shutdown_rx.clone()));
 
     tracing::info!(%bind_addr, environment = %state.config.environment, "starting independent trust/risk service");
     let server =
@@ -164,6 +193,7 @@ async fn main() -> anyhow::Result<()> {
     let _ = shutdown_tx.send(true);
     projection_task.await?;
     retention_task.await?;
+    nvbes_observability::flush_error_reporting(std::time::Duration::from_secs(2));
     Ok(())
 }
 

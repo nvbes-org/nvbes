@@ -14,6 +14,7 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.equal(existsSync(`${stackRoot}/backend.tf`), true);
 	assert.equal(existsSync(`${stackRoot}/email-database.tf`), true);
 	assert.equal(existsSync(`${stackRoot}/email-delivery.tf`), true);
+	assert.equal(existsSync(`${stackRoot}/email-observability.tf`), true);
 	assert.equal(
 		existsSync("infrastructure/environments/production/email-database.tf"),
 		false,
@@ -68,7 +69,7 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /migration_state.*succeeded/su);
 	assert.match(
 		workflow,
-		/name: Plan email runtime foundation[\s\S]*?-target=scaleway_container\.email_runtime[\s\S]*?name: Validate production runtime configuration[\s\S]*?show -json email-runtime-foundation\.tfplan[\s\S]*?email_database_runtime_url\.value[\s\S]*?"\$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime[\s\S]*?name: Apply reviewed email runtime foundation plan[\s\S]*?email-runtime-foundation\.tfplan[\s\S]*?name: Plan isolated email runtime/u,
+		/name: Plan email runtime foundation[\s\S]*?-target=scaleway_container\.email_runtime[\s\S]*?name: Validate production runtime and Sentry reporting configuration[\s\S]*?show -json email-runtime-foundation\.tfplan[\s\S]*?email_database_runtime_url\.value[\s\S]*?"\$SOURCE_EMAIL_IMAGE_DIGEST" validate-runtime[\s\S]*?name: Apply reviewed email runtime foundation plan[\s\S]*?email-runtime-foundation\.tfplan[\s\S]*?name: Plan isolated email runtime/u,
 	);
 	assert.match(
 		workflow,
@@ -78,6 +79,19 @@ test("email production deploy is isolated and uses an immutable signed image", (
 		workflow,
 		/NVBES_OBSERVABILITY_INTERNAL_TOKEN: \$\{\{ secrets\.EMAIL_OBSERVABILITY_INTERNAL_TOKEN \}\}/u,
 	);
+	assert.match(
+		workflow,
+		/TF_VAR_email_sentry_dsn: \$\{\{ secrets\.EMAIL_SENTRY_DSN \}\}/u,
+	);
+	assert.match(
+		workflow,
+		/TF_VAR_grafana_service_account_token: \$\{\{ secrets\.GRAFANA_SERVICE_ACCOUNT_TOKEN \}\}/u,
+	);
+	assert.match(workflow, /error-reporting-smoke/u);
+	assert.match(workflow, /\.status == "sent"[\s\S]*?\.flushed == true/u);
+	assert.match(workflow, /email_worker_metrics_endpoint/u);
+	assert.match(workflow, /Authorization: Bearer \$EMAIL_OBSERVABILITY_INTERNAL_TOKEN/u);
+	assert.match(workflow, /anonymous_status[\s\S]*?== "401"/u);
 	assert.match(
 		workflow,
 		/terraform[\s\S]*?plan[\s\S]*?-out=email-runtime\.tfplan/u,
@@ -98,6 +112,7 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	const database = read(`${stackRoot}/email-database.tf`);
 	const provider = read(`${stackRoot}/email-provider.tf`);
 	const outputs = read(`${stackRoot}/outputs.tf`);
+	const observability = read(`${stackRoot}/email-observability.tf`);
 	assert.match(
 		delivery,
 		/resource "scaleway_registry_namespace" "email_worker"/u,
@@ -112,6 +127,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 		delivery,
 		/NVBES_OBSERVABILITY_INTERNAL_TOKEN\s*=\s*var\.email_observability_internal_token/u,
 	);
+	assert.match(delivery, /SENTRY_DSN\s*=\s*var\.email_sentry_dsn/u);
+	assert.match(delivery, /SENTRY_RELEASE\s*=\s*split/u);
+	assert.match(observability, /resource "grafana_dashboard" "email_communications"/u);
+	assert.match(observability, /resource "grafana_rule_group" "email"/u);
 	assert.match(
 		delivery,
 		/private_network_id\s*=\s*[^\n]*var\.private_network_id/u,

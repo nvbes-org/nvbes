@@ -33,6 +33,16 @@ output "email_worker_endpoint" {
   value       = scaleway_container.email_runtime["ingress"].public_endpoint
 }
 
+output "email_worker_metrics_endpoint" {
+  description = "Bearer-protected Prometheus endpoint scraped by production Grafana Alloy."
+  value       = "${scaleway_container.email_runtime["ingress"].public_endpoint}/metrics"
+}
+
+output "email_grafana_dashboard_uid" {
+  description = "Stable UID of the Terraform-managed Email operations dashboard."
+  value       = grafana_dashboard.email_communications.uid
+}
+
 output "email_registry_endpoint" {
   description = "Private Scaleway Container Registry receiving verified email-worker images."
   value       = scaleway_registry_namespace.email_worker.endpoint

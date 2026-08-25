@@ -43,6 +43,11 @@ const VARIABLES: &[&str] = &[
     "NVBES_EMAIL_QUEUE_ENDPOINT",
     "NVBES_EMAIL_RUNTIME_ROLE",
     "NVBES_OBSERVABILITY_INTERNAL_TOKEN",
+    "SENTRY_DSN",
+    "NVBES_SENTRY_DSN",
+    "SENTRY_TRACES_SAMPLE_RATE",
+    "NVBES_SENTRY_TRACES_SAMPLE_RATE",
+    "SENTRY_RELEASE",
     "PORT",
 ];
 
@@ -230,6 +235,7 @@ fn environment_configuration_covers_supported_providers_and_guardrails() {
     );
 
     environment.set("NVBES_ENVIRONMENT", "production");
+    environment.set("SENTRY_DSN", "https://public@example.invalid/1");
     environment.set(
         "NVBES_OBSERVABILITY_INTERNAL_TOKEN",
         "01234567890123456789012345678901",

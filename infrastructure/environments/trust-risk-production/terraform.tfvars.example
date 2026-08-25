@@ -7,3 +7,12 @@ trust_risk_image = "rg.fr-par.scw.cloud/nvbes-prod-trust-risk/nvbes-trust-risk-s
 trust_risk_producer_policies = "replace-with-non-empty-json-array"
 trust_risk_operator_tokens   = "replace-with-non-empty-json-array"
 trust_risk_metrics_token     = "replace-with-at-least-32-safe-characters"
+trust_risk_sentry_dsn        = "https://public-key@example.ingest.sentry.io/project-id"
+
+grafana_url                       = "https://example.grafana.net"
+grafana_service_account_token     = "supply-through-TF_VAR-only"
+grafana_prometheus_datasource_uid = "grafanacloud-prom"
+grafana_tempo_datasource_uid      = "grafanacloud-traces"
+grafana_trust_risk_contact_point  = "platform-on-call"
+grafana_otlp_endpoint             = "https://otlp-gateway.example.grafana.net:443"
+grafana_otlp_authorization_header = "Basic supply-through-TF_VAR-only"

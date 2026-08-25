@@ -27,6 +27,16 @@ pub fn from_environment(environment: &str) -> anyhow::Result<ObservabilityConfig
 }
 
 fn validate(environment: &str, config: &ObservabilityConfig) -> anyhow::Result<()> {
+    match config.sentry_dsn.as_deref() {
+        None if environment == "production" => {
+            anyhow::bail!("SENTRY_DSN is required in production")
+        }
+        Some(dsn) if dsn != dsn.trim() || !dsn.starts_with("https://") || !dsn.contains('@') => {
+            anyhow::bail!("SENTRY_DSN must be a valid HTTPS Sentry DSN")
+        }
+        _ => {}
+    }
+
     if environment != "development" && config.otlp_authorization_header.is_some() {
         anyhow::bail!(
             "NVBES_OTLP_AUTHORIZATION_HEADER must stay empty outside development; export OTLP through local Grafana Alloy"
@@ -75,7 +85,7 @@ mod tests {
 
     fn config() -> ObservabilityConfig {
         ObservabilityConfig {
-            sentry_dsn: None,
+            sentry_dsn: Some("https://public@example.invalid/1".to_string()),
             sentry_traces_sample_rate: 0.0,
             otlp_endpoint: Some("http://127.0.0.1:4317".to_string()),
             otlp_authorization_header: None,
@@ -95,6 +105,14 @@ mod tests {
     #[test]
     fn production_exports_through_alloy_and_protects_metrics() {
         assert!(validate("production", &config()).is_ok());
+
+        let mut missing_sentry = config();
+        missing_sentry.sentry_dsn = None;
+        assert!(validate("production", &missing_sentry).is_err());
+
+        let mut insecure_sentry = config();
+        insecure_sentry.sentry_dsn = Some("http://public@example.invalid/1".to_string());
+        assert!(validate("production", &insecure_sentry).is_err());
 
         let mut direct_export = config();
         direct_export.otlp_authorization_header = Some("Basic secret".to_string());
