@@ -167,6 +167,7 @@ jobs:
     env:
       EMAIL_DEPLOY_APPROVED_SHA: ${{ vars.EMAIL_DEPLOY_APPROVED_SHA }}
       EMAIL_DEPLOY_CONFIRMATION: ${{ vars.EMAIL_DEPLOY_CONFIRMATION }}
+      EMAIL_SNS_SUBSCRIPTION_ID: ${{ vars.EMAIL_SNS_SUBSCRIPTION_ID }}
       EMAIL_SYNTHETIC_SMOKE_ENABLED: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED }}
       SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_PROJECT_ID }}
       SCW_DEFAULT_REGION: fr-par
@@ -207,6 +208,7 @@ jobs:
           [[ "$EMAIL_DEPLOY_CONFIRMATION" == "deploy-email-production" ]]
           [[ "$EMAIL_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EMAIL_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]
+          [[ "$EMAIL_SNS_SUBSCRIPTION_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]]
           [[ "$EMAIL_SYNTHETIC_SMOKE_ENABLED" == "true" ]]
           [[ "$SCALEWAY_TEM_TERMS_ACCEPTED" == "true" ]]
           [[ -n "$TERRAFORM_STATE_BUCKET" ]]
@@ -262,6 +264,36 @@ jobs:
           -backend-config=backend.ci.hcl
           -backend-config="bucket=$TERRAFORM_STATE_BUCKET"
           -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
+      - name: Reconcile confirmed SNS subscription state
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          TF_VAR_email_data_encryption_key: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
+          TF_VAR_email_observability_internal_token: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
+          TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
+          TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sentry_dsn: ${{ secrets.EMAIL_SENTRY_DSN }}
+          TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
+          TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
+        run: |
+          resource=scaleway_mnq_sns_topic_subscription.email_worker
+          desired_id="fr-par/${SCW_DEFAULT_PROJECT_ID}/nvbes-prod-email-events/${EMAIL_SNS_SUBSCRIPTION_ID}"
+          current_id=""
+          if terraform -chdir="$STACK_ROOT" state list | rg --fixed-strings --line-regexp "$resource"; then
+            current_id="$(
+              terraform -chdir="$STACK_ROOT" state show -no-color "$resource" |
+                awk -F' = ' '$1 ~ /^[[:space:]]*id$/ { gsub(/"/, "", $2); print $2 }'
+            )"
+          fi
+          if [[ "$current_id" != "$desired_id" ]]; then
+            if [[ -n "$current_id" ]]; then
+              terraform -chdir="$STACK_ROOT" state rm -lock-timeout=5m "$resource"
+            fi
+            terraform -chdir="$STACK_ROOT" import -lock-timeout=5m "$resource" "$desired_id"
+          fi
       - name: Capture recoverable deployment image
         env:
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
