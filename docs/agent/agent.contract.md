@@ -24,7 +24,9 @@ sources of truth.
 - Do not rename or move files outside the requested scope.
 - Use Nx to reduce context when project boundaries or affected scope matter.
 - Use `rtk` as the shell command prefix.
-- Use `rg` or `rg --files` for search.
+- Use ripgrep for local discovery: `rg` for content searches and `rg --files`
+  for file discovery. Fall back to `grep` or `find` only when `rg` is
+  unavailable or unsuitable.
 - Use `apply_patch` for manual file edits.
 - Never revert user changes unless explicitly requested.
 

@@ -7,7 +7,9 @@ the same canonical instructions as other tools.
 
 - Read `AGENTS.md`.
 - Use `rtk` for shell commands.
-- Prefer `rg` for discovery.
+- Use ripgrep for local discovery: `rg` for content searches and `rg --files`
+  for file discovery. Fall back to `grep` or `find` only when `rg` is
+  unavailable or unsuitable.
 - Use `apply_patch` for manual edits.
 - Keep changes scoped and respect dirty worktrees.
 - Do not use destructive git commands unless explicitly requested.

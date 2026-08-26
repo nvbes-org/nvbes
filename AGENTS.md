@@ -27,6 +27,9 @@ sur les anciens PRD, blueprints et plans :
 - Ne pas introduire de dette technique provisoire sur les zones touchées.
 - Ne pas renommer ou déplacer des fichiers hors scope sans raison de design claire.
 - Utiliser Nx pour explorer le graphe de projets, les cibles et le périmètre affecté quand cela aide à réduire le contexte.
+- Utiliser ripgrep pour toute recherche locale : `rg` pour rechercher du contenu et
+  `rg --files` pour découvrir des fichiers. N'utiliser `grep` ou `find` qu'en
+  solution de repli si `rg` est indisponible ou inadapté.
 
 ## Stack
 
