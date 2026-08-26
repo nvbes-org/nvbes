@@ -59,8 +59,9 @@ async fn handle_scaleway_webhook(
         Ok(message) => message,
         Err(error) => {
             email_metrics::webhook_signature_failure();
-            email_metrics::webhook("sns", "invalid_signature", started_at.elapsed());
-            tracing::warn!(error = ?error, "Scaleway webhook signature validation failed");
+            let outcome = error.outcome();
+            email_metrics::webhook("sns", outcome, started_at.elapsed());
+            tracing::warn!(verification_outcome = outcome, error = ?error, "Scaleway webhook signature validation failed");
             return response(StatusCode::UNAUTHORIZED, "invalid_signature");
         }
     };

@@ -10,6 +10,7 @@ use openssl::{
 };
 use reqwest::{Client, Url, redirect::Policy};
 use serde::Deserialize;
+use thiserror::Error;
 use tokio::sync::RwLock;
 
 use crate::config::WebhookTrustConfig;
@@ -36,6 +37,35 @@ pub struct SnsMessage {
     pub token: Option<String>,
     #[serde(rename = "SubscribeURL")]
     pub subscribe_url: Option<String>,
+}
+
+#[derive(Debug, Error)]
+pub enum SnsVerificationError {
+    #[error("SNS envelope validation failed")]
+    Envelope(#[source] anyhow::Error),
+    #[error("SNS signing certificate URL validation failed")]
+    CertificateUrl(#[source] anyhow::Error),
+    #[error("SNS signing certificate validation failed")]
+    Certificate(#[source] anyhow::Error),
+    #[error("SNS signature decoding failed")]
+    SignatureEncoding(#[source] base64::DecodeError),
+    #[error("SNS cryptographic verification failed")]
+    Cryptography(#[source] openssl::error::ErrorStack),
+    #[error("SNS signature is invalid")]
+    InvalidSignature,
+}
+
+impl SnsVerificationError {
+    pub const fn outcome(&self) -> &'static str {
+        match self {
+            Self::Envelope(_) => "invalid_envelope",
+            Self::CertificateUrl(_) => "invalid_certificate_url",
+            Self::Certificate(_) => "invalid_certificate",
+            Self::SignatureEncoding(_) => "invalid_signature_encoding",
+            Self::Cryptography(_) => "cryptography_failed",
+            Self::InvalidSignature => "invalid_signature",
+        }
+    }
 }
 
 pub struct WebhookVerifier {
@@ -69,21 +99,42 @@ impl WebhookVerifier {
         })
     }
 
-    pub async fn verify(&self, body: &[u8]) -> anyhow::Result<SnsMessage> {
-        let message: SnsMessage = serde_json::from_slice(body)?;
-        self.validate_envelope(&message)?;
+    pub async fn verify(&self, body: &[u8]) -> Result<SnsMessage, SnsVerificationError> {
+        let message: SnsMessage = serde_json::from_slice(body)
+            .map_err(anyhow::Error::from)
+            .map_err(SnsVerificationError::Envelope)?;
+        self.validate_envelope(&message)
+            .map_err(SnsVerificationError::Envelope)?;
         let certificate_url = validated_url(
             &message.signing_cert_url,
             &self.signing_certificate_host,
             "/fr-par/sns/",
-        )?;
-        let certificate = self.certificate(&certificate_url).await?;
-        let signature = STANDARD.decode(&message.signature)?;
-        let public_key = certificate.public_key()?;
-        let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key)?;
-        verifier.update(canonical_message(&message)?.as_bytes())?;
-        if !verifier.verify(&signature)? {
-            anyhow::bail!("SNS signature is invalid");
+        )
+        .map_err(SnsVerificationError::CertificateUrl)?;
+        let certificate = self
+            .certificate(&certificate_url)
+            .await
+            .map_err(SnsVerificationError::Certificate)?;
+        let signature = STANDARD
+            .decode(&message.signature)
+            .map_err(SnsVerificationError::SignatureEncoding)?;
+        let public_key = certificate
+            .public_key()
+            .map_err(SnsVerificationError::Cryptography)?;
+        let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key)
+            .map_err(SnsVerificationError::Cryptography)?;
+        verifier
+            .update(
+                canonical_message(&message)
+                    .map_err(SnsVerificationError::Envelope)?
+                    .as_bytes(),
+            )
+            .map_err(SnsVerificationError::Cryptography)?;
+        if !verifier
+            .verify(&signature)
+            .map_err(SnsVerificationError::Cryptography)?
+        {
+            return Err(SnsVerificationError::InvalidSignature);
         }
         Ok(message)
     }
