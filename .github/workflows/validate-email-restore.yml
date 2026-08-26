@@ -88,6 +88,8 @@ jobs:
           -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
       - name: Verify Grafana dashboard and active alert rules
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
           GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
           GRAFANA_URL: ${{ vars.GRAFANA_URL }}
         run: |
