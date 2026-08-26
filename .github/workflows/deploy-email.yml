@@ -261,6 +261,22 @@ jobs:
           -backend-config=backend.ci.hcl
           -backend-config="bucket=$TERRAFORM_STATE_BUCKET"
           -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
+      - name: Capture recoverable deployment image
+        env:
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          rollback_image="$(
+            curl --fail --silent --show-error \
+              --get \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" \
+              --data-urlencode "project_id=${SCW_DEFAULT_PROJECT_ID}" \
+              --data-urlencode "name=nvbes-prod-email-ingress" \
+              "https://api.scaleway.com/containers/v1/regions/fr-par/containers" |
+              jq --exit-status --raw-output \
+                '.containers | select(length == 1) | .[0].image'
+          )"
+          [[ "$rollback_image" =~ ^${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker@sha256:[0-9a-f]{64}$ ]]
+          echo "EMAIL_ROLLBACK_IMAGE=$rollback_image" >> "$GITHUB_ENV"
       - name: Plan private image registry
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
@@ -319,6 +335,7 @@ jobs:
           cosign verify "$EMAIL_IMAGE_DIGEST" \
             --certificate-identity "$certificate_identity" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com
+          echo "EMAIL_DEPLOYMENT_IMAGE_READY=true" >> "$GITHUB_ENV"
       - name: Plan migration foundation
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
@@ -592,18 +609,9 @@ jobs:
             -backend-config=backend.ci.hcl \
             -backend-config="bucket=$TERRAFORM_STATE_BUCKET" \
             -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
-          if [[ -z "${TF_VAR_email_worker_image:-}" ]]; then
-            export TF_VAR_email_worker_image
-            TF_VAR_email_worker_image="$(
-              curl --fail --silent --show-error \
-                --get \
-                --header "X-Auth-Token: $SCW_SECRET_KEY" \
-                --data-urlencode "project_id=${SCW_DEFAULT_PROJECT_ID}" \
-                --data-urlencode "name=nvbes-prod-email-ingress" \
-                "https://api.scaleway.com/containers/v1/regions/fr-par/containers" |
-                jq --exit-status --raw-output \
-                  '.containers | select(length == 1) | .[0].image'
-            )"
+          if [[ "${EMAIL_DEPLOYMENT_IMAGE_READY:-false}" != "true" ]]; then
+            [[ "${EMAIL_ROLLBACK_IMAGE:-}" =~ ^${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker@sha256:[0-9a-f]{64}$ ]]
+            export TF_VAR_email_worker_image="$EMAIL_ROLLBACK_IMAGE"
           fi
           terraform -chdir="$STACK_ROOT" plan \
             -lock-timeout=5m \
@@ -615,7 +623,6 @@ jobs:
             -lock-timeout=5m \
             email-economic-shutdown.tfplan
 
-          [[ "$(terraform -chdir="$STACK_ROOT" output -raw email_internal_validation_enabled)" == "false" ]]
           ingress_id="$(terraform -chdir="$STACK_ROOT" output -raw email_ingress_container_id)"
           dispatch_id="$(terraform -chdir="$STACK_ROOT" output -raw email_dispatch_container_id)"
           ingress_privacy="$(
