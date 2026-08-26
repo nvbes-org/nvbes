@@ -1,5 +1,9 @@
 # Webhook Replay Implementation Plan
 
+> **Historical plan.** Reuse only the minimal provider-neutral capability needed
+> by the V1 foundation; do not restore archived product or backoffice scope. See
+> the [current direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement webhook delivery inspection and replay capabilities in the Developer Console.

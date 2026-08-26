@@ -1,4 +1,16 @@
-# Runbooks Incidents - Beta
+# Runbooks incidents — socle V1
+
+## Statut et périmètre
+
+Ces runbooks s'appliquent d'abord au socle Identity, Account, Billing, Email,
+Trust/Risk et Platform Operations. Les sections Object Storage, bucket public,
+upload/download et beta Drive sont conservées pour un futur produit et ne
+constituent pas des prérequis V1 actifs.
+
+Un seul opérateur assure actuellement la réponse. Les actions sont manuelles,
+motivées et auditées ; une automatisation n'est ajoutée qu'après besoin mesuré
+et preuve de compatibilité avec le budget global. Voir la
+[direction produit](../product/nvbes-product-strategy.md).
 
 ## Cadre
 

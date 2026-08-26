@@ -6,12 +6,17 @@ Ce programme rend les standards de sécurité vérifiables dans le dépôt. Il n
 une certification, ni une attestation, ni un avis juridique. La source de vérité
 machine-readable est `standards-control-matrix.json`.
 
+Pour la V1, il s'agit uniquement d'un mapping interne de contrôles sans coût
+récurrent supplémentaire. ISO, SOC 2 et autres programmes externes restent
+futurs ; ils ne doivent pas ouvrir un chantier B2B/Enterprise ni dépasser le
+budget global. Les contrôles applicables à la sécurité B2C restent obligatoires.
+
 ## Profils obligatoires
 
 | Profil | Périmètre | Exigence |
 | --- | --- | --- |
 | `NVBES_BASELINE` | Toutes les applications exposées et toutes les API | OWASP ASVS 5.0.0 niveau 2 |
-| `NVBES_CRITICAL` | Account, Backoffice, Billing et opérations privilégiées | ASVS niveau 3, AAL2 et authentification résistante au phishing |
+| `NVBES_CRITICAL` | Identity, Account, Billing et Platform Operations | ASVS niveau 3, AAL2 et authentification résistante au phishing |
 
 Une fonctionnalité critique hérite des deux profils. Une exception doit être limitée dans
 le temps, avoir un owner, une justification, une mesure compensatoire et une date de

@@ -1,5 +1,9 @@
 # nvbes Cloud Documentation
 
+> **Statut : produit futur, hors V1 active.** Ce dossier ne constitue ni une
+> roadmap ni une autorisation de déploiement. Voir la
+> [direction produit](../product/nvbes-product-strategy.md).
+
 This directory is for nvbes Cloud customer-facing documentation.
 
 It can describe managed hosting, billing, regions, support, SLA and cloud operations visible to customers.

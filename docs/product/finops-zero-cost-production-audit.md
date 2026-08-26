@@ -2,6 +2,16 @@
 
 Date: 2026-06-06
 
+## Statut
+
+**Audit historique remplacé pour les décisions V1.** Les prix datés et
+l'architecture Drive restent utiles comme trace d'analyse, mais le contrat
+actuel est une cible globale de 20 EUR TTC et une limite dure de 30 EUR TTC. Les
+sources de vérité sont la
+[direction produit](nvbes-product-strategy.md), la
+[conception FinOps](../superpowers/specs/2026-08-25-nvbes-v1-finops-platform-operations-design.md)
+et le [contrat exécutable](../../infrastructure/finops/README.md).
+
 ## Résumé exécutif
 
 L'objectif "0 EUR de coût de production" doit être reformulé en deux objectifs distincts:

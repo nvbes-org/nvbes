@@ -4,6 +4,11 @@
 
 Conception validée section par section le 25 août 2026.
 
+Cette conception applique la
+[direction produit V1 canonique](../../product/nvbes-product-strategy.md). Elle
+est la référence détaillée pour l'architecture du socle, FinOps et Platform
+Operations.
+
 Ce document définit le socle réutilisable de nvbes V1. Il ne constitue pas un
 plan d'implémentation et n'autorise pas encore une ouverture publique.
 

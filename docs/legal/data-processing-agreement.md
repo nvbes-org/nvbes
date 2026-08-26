@@ -12,6 +12,10 @@
 > des Parties, complétion de toutes ses annexes et signature ou incorporation
 > valable dans un contrat principal conclu avec un client professionnel.
 
+> **Direction V1.** Aucun contrat B2B n'est proposé dans la V1 active. Ce modèle
+> est conservé uniquement pour une future version financée et ne constitue pas
+> un chantier de conformité actuel.
+
 Le présent accord relatif au traitement de données à caractère personnel,
 ci-après l’« **Accord** », est conclu entre :
 

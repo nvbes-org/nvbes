@@ -1,5 +1,8 @@
 # API Publique V1 - Compatibilite
 
+> **Statut : politique future pour une API produit non sélectionnée.** Elle ne
+> crée aucune obligation de compatibilité publique pendant le socle V1.
+
 ## Garantie V1
 
 `/v1` est stable apres lancement public. Un client conforme aux guides V1 doit continuer a fonctionner pendant toute la duree de support V1.

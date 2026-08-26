@@ -2,7 +2,10 @@
 
 ## Statut
 
-Accepte.
+Accepté avec périmètre V1 réduit. La décision provider-neutral et la propriété
+Billing restent actives ; la plateforme financière complète, le multi-PSP et
+les fonctions fiscales avancées sont futures. Voir la
+[direction produit V1](../product/nvbes-product-strategy.md).
 
 ## Date
 
@@ -33,7 +36,8 @@ Les providers ne decident pas:
 
 - Les nouveaux modeles metier ne portent pas de colonne `stripe_*`; les identifiants externes passent par des mappings provider-neutral.
 - Les APIs publiques exposent `provider`, `checkout_id`, `payment_id` et `status`. Les IDs provider bruts restent limites aux endpoints admin explicites.
-- Drive produit des usages et lit des entitlement snapshots projetes.
+- Les futurs produits produisent leurs usages et lisent des entitlement
+  snapshots projetés ; aucun produit Cloud/Drive n'est actif en V1.
 - Billing est le control plane billing canonique; Identity reste le control plane utilisateur, session, workspace membership et autorisation.
 - Le ledger interne est append-only. Les refunds, credit notes, write-offs et overrides produisent des ecritures explicites et des audit events.
 - Les payloads provider sensibles sont minimises: resume non sensible par defaut, retention brute chiffree ou classee selon politique.
@@ -49,7 +53,8 @@ Le calcul fiscal, l'e-invoicing, la retention des factures et la revenue recogni
 - Le schema billing canonique vit cote Billing. Tant que le schema physique reste partage en V0, seules les crates `nvbes-billing`, `billing-service` et `billing-worker` peuvent porter les nouvelles responsabilites metier billing.
 - Stripe V1 reste supporte via mappings et vues de compatibilite.
 - Mollie peut etre reference sans dupliquer le domaine financier.
-- Les exports finance et BI doivent provenir du modele nvbes, pas uniquement des pipelines provider.
+- Les exports finance et BI futurs doivent provenir du modèle nvbes, pas
+  uniquement des pipelines provider.
 
 ## Runtime cible V0
 

@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted.
+Accepted with a V1 scope amendment. Serverless SQL, scale-to-zero, separate
+credentials and domain-owned migrations remain active. Only deployed foundation
+domains may create a database; Cloud, Developer, Enterprise and Backoffice do
+not receive resources merely because they appear below. See the
+[current product direction](../product/nvbes-product-strategy.md).
 
 ## Date
 
@@ -53,19 +57,18 @@ Références :
 ## Decision
 
 Utiliser Scaleway Serverless SQL comme cible PostgreSQL par défaut pour le
-développement, le staging et les produits V0 dont l'activité reste
+les environnements éphémères et les services V1 dont l'activité reste
 intermittente.
 
-Créer une base distincte pour chacun des produits suivants :
+Lorsqu'ils sont effectivement déployés et compatibles avec le budget global,
+créer une base distincte pour les domaines suivants :
 
 - Identity ;
 - Account ;
-- Cloud ;
 - Billing ;
 - Email ;
-- Developer ;
-- Enterprise ;
-- Backoffice.
+- Trust/Risk ;
+- Platform Operations.
 
 Chaque service possède des credentials IAM propres et ne peut accéder qu'à sa
 base. Les migrations, sauvegardes, métriques de consommation et procédures de

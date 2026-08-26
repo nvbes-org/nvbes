@@ -1,5 +1,10 @@
 # Permissions
 
+> **Statut : modèle produit historique à réévaluer.** Les primitives Identity,
+> Account et équipes du socle V1 doivent rester réutilisables et sans gouvernance
+> Enterprise. Les permissions Cloud/Drive ci-dessous sont futures. Voir la
+> [direction produit](nvbes-product-strategy.md).
+
 ## Principe
 
 Les permissions produit V1 sont principalement au niveau du workspace.

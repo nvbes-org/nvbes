@@ -1,5 +1,9 @@
 # Identity Developer Console V0 Implementation Plan
 
+> **Status: inactive historical plan.** Do not restore `console-web` from this
+> plan during the foundation V1. See the
+> [active direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a dedicated `console-web` V0 for nvbes Identity developers with OAuth app governance, scope registry, service accounts, secret rotation, webhooks, logs, token debugging, sandbox status, and integration health checks.

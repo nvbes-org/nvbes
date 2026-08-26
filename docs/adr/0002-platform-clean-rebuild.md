@@ -2,8 +2,10 @@
 
 ## Status
 
-Accepted for planning. Production execution remains gated by the migration
-runbook.
+Accepted for its zero-debt and boundary principles. The former product-wide Big
+Bang roadmap is not active V1 scope and must not restore archived products. The
+[current product direction](../product/nvbes-product-strategy.md) limits work to
+the reusable foundation.
 
 ## Context
 

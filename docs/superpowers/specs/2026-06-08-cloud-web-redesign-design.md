@@ -1,5 +1,8 @@
 # Drive Web Redesign Design
 
+> **Status: future Cloud/Drive product design, outside active V1.** See the
+> [active direction](../../product/nvbes-product-strategy.md).
+
 Date: 2026-06-08
 
 ## Goal

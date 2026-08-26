@@ -1,5 +1,10 @@
 # Design, UX et Design System
 
+> **Statut : hypothèse UX Cloud/Drive future.** Le socle V1 ne livre pas de
+> produit final ni de direction « B2B dense ». Réutiliser les règles de design
+> system seulement pour une surface réellement sélectionnée. La
+> [direction produit](nvbes-product-strategy.md) prévaut.
+
 Le contrat d'execution UI detaille et minimaliste est defini dans [UI et Design System Guidelines](ui-guidelines.md).
 
 ## Decision

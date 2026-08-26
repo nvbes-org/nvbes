@@ -1,5 +1,9 @@
 # Enterprise Web Tenant Admin API Implementation Plan
 
+> **Status: inactive future plan.** Enterprise administration APIs are outside
+> the B2C foundation V1. See the
+> [active direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add tenant-first `account-service` routes required by `enterprise-web` Users V0.
@@ -197,4 +201,3 @@ git commit -m "test(account-service): cover enterprise admin guardrails"
 ```
 
 Expected: targeted tests and workspace check pass.
-

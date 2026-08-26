@@ -28,7 +28,10 @@ function walk(dir, predicate, results = []) {
 export function testCodeBlocks() {
   console.log('🧪 Running doc-testing on markdown code blocks...');
 
-  const docFiles = walk(join(REPO_ROOT, 'apps/docs/src/content/docs'), (f) => f.endsWith('.md') || f.endsWith('.mdx'));
+  const docFiles = walk(
+    join(REPO_ROOT, 'docs/generated'),
+    (f) => f.endsWith('.md') || f.endsWith('.mdx'),
+  );
   let totalBlocks = 0;
   let jsonBlocks = 0;
 
@@ -71,10 +74,14 @@ export function testCodeBlocks() {
         const doubleQuotes = (nonCommentLines.match(/"/g) || []).length;
         const singleQuotes = (nonCommentLines.match(/'/g) || []).length;
         if (doubleQuotes % 2 !== 0 && !nonCommentLines.includes('\\"')) {
-          errors.push(`${relPath} (block #${index} [${lang}]): Unbalanced double quotes in shell block`);
+          errors.push(
+            `${relPath} (block #${index} [${lang}]): Unbalanced double quotes in shell block`,
+          );
         }
         if (singleQuotes % 2 !== 0 && !nonCommentLines.includes("\\'")) {
-          errors.push(`${relPath} (block #${index} [${lang}]): Unbalanced single quotes in shell block`);
+          errors.push(
+            `${relPath} (block #${index} [${lang}]): Unbalanced single quotes in shell block`,
+          );
         }
       }
     }
@@ -88,7 +95,9 @@ export function testCodeBlocks() {
     process.exit(1);
   }
 
-  console.log(`✅ Doc-testing passed! (${totalBlocks} code blocks tested, including ${jsonBlocks} JSON schemas, 0 errors)`);
+  console.log(
+    `✅ Doc-testing passed! (${totalBlocks} code blocks tested, including ${jsonBlocks} JSON schemas, 0 errors)`,
+  );
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

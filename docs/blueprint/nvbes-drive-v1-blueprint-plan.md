@@ -1,8 +1,16 @@
 # Blueprint V1 + Plan d'Execution - nvbes Drive
 
+## Statut
+
+**Remplacé comme plan V1 actif.** Ce blueprint est conservé comme hypothèse de
+produit future. Cloud/Drive ne fait pas partie du socle V1 et ne doit pas être
+implémenté à partir de ce plan sans sélection explicite du premier produit. Voir
+la [direction produit canonique](../product/nvbes-product-strategy.md).
+
 ## Objectif
 
-Livrer une V1 vendable de nvbes Drive pour petites equipes de 2 a 10 personnes:
+Hypothèse historique : livrer une future version vendable de nvbes Drive pour
+petites équipes de 2 à 10 personnes :
 
 - hebergement EU-first;
 - partage de fichiers simple et controle;

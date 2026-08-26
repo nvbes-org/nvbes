@@ -1,5 +1,11 @@
 # Stratégie de test Account
 
+> **Statut : harness historique à réévaluer lors de la reconstruction
+> d'Account.** Account appartient au socle V1, mais les applications couvertes
+> par ce document sont archivées et ne constituent pas le runtime actif. Toute
+> réactivation suit la
+> [direction produit](../product/nvbes-product-strategy.md) et le budget global.
+
 ## Portée et statut de preuve
 
 Cette stratégie couvre `account-service`, `account-worker`, `account-web` et les
@@ -71,7 +77,7 @@ union; le validator refuse tout drift. Le manifeste est l'unique source de véri
 pour le nombre et la liste courants : `pnpm check:account-release-readiness` les
 recalcule et les affiche lorsqu'il bloque. La documentation ne duplique
 volontairement pas cette liste afin d'éviter qu'elle dérive du gate exécutable.
-Aucun waiver silencieux n'est prévu en V0.
+Aucun waiver silencieux n'est prévu pour le socle V1.
 
 ## Fiabilité et sécurité du harness
 

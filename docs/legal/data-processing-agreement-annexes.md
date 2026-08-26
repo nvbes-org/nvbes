@@ -2,6 +2,10 @@
 
 **Version rattachée à l’Accord : 2026-08-12**
 
+> **Statut : annexes B2B futures et inactives.** Elles ne s'appliquent pas à la
+> V1 B2C et ne peuvent être utilisées avant complétion, validation et signature
+> d'un futur accord professionnel.
+
 Les présentes annexes font partie intégrante de l’Accord de même version.
 
 # Annexe I — Description du traitement

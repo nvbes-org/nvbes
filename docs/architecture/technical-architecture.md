@@ -1,215 +1,179 @@
-# Architecture Technique
+# Architecture technique du socle V1
+
+## Autorité et périmètre
+
+Cette architecture applique la
+[direction produit V1](../product/nvbes-product-strategy.md). Elle décrit le
+socle Identity, Account, Billing, Email, Trust/Risk et Platform Operations.
+Cloud/Drive, le stockage de fichiers et les consoles Enterprise sont hors V1.
+
+## Principes
+
+- frontières de domaine strictes, même lorsque l'infrastructure est mutualisée ;
+- aucune dépendance vers un produit final ;
+- coût, sécurité, restauration et exploitation manuelle traités dès la
+  conception ;
+- scale-to-zero et capacité maximale bornée ;
+- contrats versionnés pour toute interaction entre domaines ;
+- automatisation ajoutée uniquement après un besoin mesuré ;
+- aucune dette structurelle connue dans le périmètre livré.
 
 ## Stack
 
-- Monorepo.
-- Backend Rust.
-- Frontend TypeScript.
-- Vite.
-- React.
-- TanStack Router pour les routes frontend.
-- TanStack Query pour l'etat serveur frontend.
-- Effect pour les workflows frontend multi-etapes.
-- Cloudflare pour l'edge et la protection.
-- Scaleway pour compute, PostgreSQL, Redis, object storage, backups et hebergement des donnees en Europe.
+- Rust, Axum, Tokio et SQLx pour les runtimes backend ;
+- PostgreSQL comme stockage transactionnel et outbox initiale ;
+- TypeScript pour SDK, clients et futures interfaces web ;
+- OpenAPI et gRPC/Protobuf pour les contrats synchrones ;
+- Cloudflare pour DNS, TLS, edge et accès interne ;
+- Scaleway serverless pour compute, PostgreSQL et email ;
+- OpenTelemetry, Grafana Cloud et Sentry dans les paliers gratuits disponibles.
 
-## Modele de Deploiement Initial
+Redis, Kafka, ClickHouse, Kubernetes, moteur de workflow et stockage produit ne
+sont pas des dépendances V1. Ils exigent un besoin et un budget démontrés.
 
-La V1 doit demarrer avec un backend modulaire unique, pas un systeme microservices distribue.
+## Bounded contexts
 
-Le backend doit etre structure par domaines pour permettre une extraction future quand un module le justifie.
+### Identity
 
-## Infrastructure
+Possède authentification, credentials, sessions, récupération, MFA, step-up et
+décisions d'autorisation liées à l'identité. Identity ne possède ni profil
+produit ni abonnement.
 
-Les exigences detaillees de reseau, CI/CD, IaC, backups, observabilite, migrations et runbooks sont definies dans [Infrastructure, Network et DevOps](infrastructure-devops.md).
+### Account
 
-### Cloudflare
+Possède profil, préférences, cycle de vie du compte et relations d'équipe. Les
+équipes sont des primitives B2C collaboratives ; la gouvernance Enterprise est
+future.
 
-- DNS.
-- TLS.
-- WAF.
-- Rate limiting.
-- Bot protection.
-- CDN pour les assets frontend statiques.
-- Zero Trust pour les acces internes/admin des la V1.
+### Billing
 
-### Scaleway
+Possède catalogue, prix, abonnements, paiements, entitlements, webhooks et
+réconciliation. Le fournisseur de paiement reste derrière un port explicite.
 
-- Compute pour l'API Rust et les workers.
-- PostgreSQL manage pour les metadonnees.
-- Object Storage compatible S3 pour les fichiers utilisateurs.
-- Backups.
-- Logs et metriques.
+### Email
 
-## Exigences Operationnelles V1
+Possède acceptation durable, rendu, livraison, retries, suppressions et
+événements fournisseur. Email est le premier adaptateur d'un contrat de
+notification réutilisable.
 
-- Topologie reseau documentee avant production.
-- Environnements `development`, `staging` et `production` separes.
-- Infrastructure critique geree en IaC.
-- CI/CD avec tests, scans, artefacts immutables, staging et approval production.
-- Migrations PostgreSQL versionnees et compatibles avec rollback.
-- Backups chiffres avec RPO/RTO et test de restauration.
-- Observabilite avec logs structures, metriques, traces ou correlation IDs, dashboards et alertes.
-- Workers monitorables, idempotents, avec retries, backoff et dead-letter.
-- Object Storage prive avec CORS limite, lifecycle rules et nettoyage des uploads incomplets.
-- Runbooks incident pour API, PostgreSQL, Object Storage, billing, jobs RGPD et bucket public.
+### Trust/Risk
 
-La couverture attendue par type de test est definie dans [Strategie de test](../testing/test-strategy.md).
+Possède signaux transversaux, corrélation, réputation et recommandations
+explicables. Le domaine appelant conserve la décision d'enforcement. La première
+production fonctionne en shadow mode.
 
-## Domaines Backend
+### Platform Operations
 
-Identity expose l'authentification, OAuth 2.1 et OpenID Connect sous `/auth`,
-`/oauth` et `/.well-known`. Account expose les domaines compte sous `/api/v1`
-et exige un access token destine a `nvbes-account-service`. Cloud expose les
-routes produit Cloud a la racine du service Cloud, plus l'API publique
-versionnee sous `/v1`.
+Possède dossiers opérateur, décisions humaines, commandes, recours, registre de
+coûts et vue consolidée des audits. Il ne modifie jamais directement les bases
+des autres services et n'usurpe pas les sessions utilisateur.
 
-- Auth.
-- Workspaces.
-- Membres.
-- Fichiers et dossiers.
-- Sessions d'upload.
-- URLs de download.
-- Liens de partage.
-- Quotas.
-- Billing.
-- Audit.
-- Privacy.
+## Topologie V1
 
-## Modele de Stockage
-
-- Les fichiers sont stockes dans Scaleway Object Storage.
-- PostgreSQL stocke uniquement les metadonnees.
-- Les noms de fichiers controles par l'utilisateur ne doivent jamais definir les chemins object storage.
-- Les object keys doivent etre opaques et generees par le backend.
-- Les buckets sont separes par environnement: development, staging, production.
-
-Exemple d'object key:
-
-```text
-workspaces/{workspace_id}/objects/{storage_object_id}/{version_id}
+```mermaid
+flowchart LR
+    U[Utilisateurs] --> CF[Cloudflare]
+    O[Opérateur solo] --> ZT[Accès interne MFA]
+    CF --> I[Identity]
+    CF --> A[Account]
+    CF --> B[Billing]
+    I --> E[Email]
+    A --> E
+    B --> E
+    I --> R[Trust/Risk]
+    A --> R
+    B --> R
+    ZT --> P[Platform Operations]
+    P --> I
+    P --> A
+    P --> B
+    P --> E
+    P --> R
 ```
 
-## Flow Upload
+- chaque runtime Scaleway a `min_scale = 0` et un maximum explicite ;
+- chaque bounded context garde sa propre base logique, ses credentials et ses
+  migrations ;
+- aucun schéma métier n'est partagé entre services ;
+- staging et previews sont éphémères ;
+- les tâches ponctuelles utilisent des jobs serverless ;
+- la région, le registry et l'observabilité sont mutualisés lorsque cela réduit
+  le coût sans mélanger les responsabilités.
 
-1. Le frontend demande une session d'upload a l'API.
-2. L'API verifie l'auth, les permissions, les limites du plan et le quota.
-3. L'API cree un storage object en etat pending.
-4. L'API retourne une signed upload URL courte duree.
-5. Le frontend upload directement vers l'object storage.
-6. Le frontend confirme la fin avec taille et checksum.
-7. L'API verifie l'objet directement cote Object Storage via metadata ou requete HEAD.
-8. L'API marque l'objet comme active.
-9. L'API met a jour le quota et cree les audit events.
+## Capacités partagées
 
-Contraintes:
+Restent des bibliothèques, modules ou contrats tant qu'une extraction n'est pas
+justifiée :
 
-- La session d'upload expire rapidement.
-- Une session d'upload est usage unique.
-- La taille attendue est enregistree avant generation de la signed URL.
-- Le checksum attendu est verifie quand le client le fournit.
-- L'objet final doit correspondre a la taille attendue, au workspace et a la session active.
-- Les uploads incomplets ou expires sont purges par worker.
-- Les quotas sont reserves ou revalides avant activation pour eviter les contournements par concurrence.
-- Les fichiers partages publiquement passent par la politique anti-malware avant exposition.
+- audit append-only ;
+- idempotence, outbox, jobs, retries et dead-letter ;
+- auth interservices ;
+- propagation des identifiants de corrélation ;
+- erreurs, traces et métriques ;
+- quotas, unités de coût et budget FinOps ;
+- feature flags et kill switches ;
+- rate limiting ;
+- contrats de notification ;
+- SDK générés depuis les contrats.
 
-Scenarios a couvrir au minimum:
+Une capacité devient un service seulement si des mesures démontrent un cycle de
+vie de données autonome, un déploiement ou une disponibilité indépendants,
+plusieurs consommateurs réseau stables ou une contention réelle.
 
-- activation d'objet apres upload valide;
-- refus d'activation si taille ou checksum invalide;
-- purge des uploads expires;
-- comportement concurrent sur revalidation quota.
+## Communications
 
-## Flow Download
+Les appels synchrones utilisent HTTP ou gRPC versionné avec timeout, politique
+de retry et mode dégradé explicites. Un timeout ne vaut jamais succès.
 
-1. Le frontend demande une URL de download a l'API.
-2. L'API verifie l'auth et les permissions.
-3. L'API retourne une signed download URL courte duree.
-4. Le frontend telecharge depuis l'object storage.
-5. L'API enregistre les evenements d'audit et d'usage.
+Les événements V1 utilisent une outbox PostgreSQL durable, idempotente et
+rejouable. Aucun broker permanent n'est ajouté sans volume ou isolation mesuré.
 
-## Flow Partage Public
+## Administration et sécurité
 
-1. Le visiteur ouvre `/public/shares/{token}`.
-2. L'API hash le token et resout le lien de partage.
-3. L'API verifie expiration, revocation et limites de download.
-4. L'API retourne les metadonnees publiques.
-5. Le visiteur demande une URL de download.
-6. L'API retourne une signed download URL courte duree.
+- le premier opérateur reçoit `platform_owner`, jamais une permission codée sur
+  un email ;
+- lecture et action sont séparées ;
+- MFA et step-up protègent les commandes sensibles ;
+- les données personnelles sont masquées par défaut ;
+- chaque commande sensible exige motif et clé d'idempotence ;
+- une action destructive est différée et annulable lorsqu'elle peut l'être ;
+- les demandes rares sont traitées manuellement et auditées.
 
-Contraintes:
+Les rôles futurs de support, risque, billing et sécurité restent distincts dans
+le modèle, même s'ils ne sont pas attribués en V1.
 
-- Aucun lien public sans expiration en V1.
-- Une duree maximale de lien est definie par plan.
-- Les routes publiques de partage ont un rate limiting dedie.
-- Chaque acces a un lien public cree un audit event ou un usage event.
-- Les liens publics peuvent etre revoques immediatement.
-- La protection par mot de passe ou code d'acces est hors scope V1.
+## FinOps et modes dégradés
 
-Scenarios a couvrir au minimum:
+Le contrat versionné fixe une cible à 20 EUR TTC et une limite absolue à 30 EUR
+TTC par mois. Chaque domaine déclare coût fixe, unité marginale, quotas,
+prévision à 30 jours, traitements essentiels et mode économique dégradé.
 
-- acces lien valide;
-- acces lien expire;
-- acces lien revoque;
-- limitation download si activee;
-- absence d'exposition de donnees sensibles dans la route publique.
+- 25 EUR : désactiver les traitements non essentiels ;
+- 28 EUR : geler la création de nouvelles charges ;
+- 30 EUR : conserver uniquement les parcours essentiels à l'intégrité des
+  comptes et paiements existants.
 
-## Workers
+Les factures et estimations TTC vérifiées manuellement sont l'autorité jusqu'à
+la livraison d'une collecte automatique réellement fiable et gratuite.
 
-Les workers gerent:
+## Résilience et données
 
-- Purge de corbeille.
-- Nettoyage des uploads expires.
-- Recalcul des quotas.
-- Webhooks billing.
-- Snapshots d'usage.
-- Exports RGPD.
-- Suppression de compte ou workspace.
-- Nettoyage des liens expires.
-- Emails transactionnels.
+- migrations versionnées et protégées ;
+- sauvegardes chiffrées et restauration démontrée ;
+- RPO initial inférieur ou égal à 24 heures ;
+- RTO initial inférieur ou égal à 8 heures ;
+- logs, audits et analytics séparés ;
+- secrets limités au service concerné ;
+- aucune télémétrie ne bloque un parcours utilisateur.
 
-Les jobs produits utilisent leurs queues dédiées. Le runtime email global est
-l’exception explicite : PostgreSQL y porte la commande durable, les leases et
-les retries, tandis que les produits ne font que soumettre en gRPC.
+Ces objectifs supposent une intervention manuelle et ne constituent pas un SLA.
 
-Garanties requises:
+## Gate d'extraction d'un produit
 
-- Jobs idempotents.
-- Retries limites avec backoff.
-- Timeout par type de job.
-- Locking pour eviter les executions concurrentes non voulues.
-- Statuts `pending`, `running`, `succeeded`, `failed`, `dead-letter`.
-- Monitoring de la queue, des echecs et des jobs bloques.
-- Alertes sur jobs critiques: billing, RGPD, quotas et purge.
+Le socle est validé lorsqu'un compte synthétique traverse Identity et Account,
+qu'Email livre et trace ses messages, que Billing réconcilie un parcours de test,
+que Trust/Risk produit une recommandation shadow, que Platform Operations traite
+un dossier sûr, que la restauration est démontrée et que les coûts restent sous
+les deux gates.
 
-Scenarios a couvrir au minimum:
-
-- retries et backoff;
-- idempotence d'un job relance;
-- non double execution concurrente;
-- reprise apres crash;
-- dead-letter sur echec definitif.
-
-### Validation RGPD sur staging
-
-Avant de considerer les procedures export/suppression RGPD comme valides, elles doivent etre verifiees sur `staging` avec le chemin complet API -> worker -> email.
-
-Checklist minimale:
-
-1. Creer ou reutiliser un compte de test avec une boite de reception accessible.
-1. Appeler `POST /api/v1/privacy/exports` sur Account avec le scope `account:export`.
-1. Suivre `GET /api/v1/privacy/exports/latest` et verifier les checkpoints `cloud`, `billing`, `identity`, puis `account`.
-1. Verifier que chaque participant utilise `POST /internal/v1/account-exports` avec son token interne dedie.
-1. Verifier que le worker reprend au checkpoint exact apres un arret et applique le backoff borne.
-1. Telecharger `GET /api/v1/privacy/exports/{exportId}/document` une fois le statut `completed`.
-1. Verifier la presence des quatre produits et l'absence de mots de passe, secrets MFA, tokens, hashes de session et cles d'acces.
-1. Rejouer la demande pendant son execution pour confirmer qu'une seule saga active existe par principal.
-1. Appeler `POST /api/v1/closure` sur Account avec le scope `account:delete`.
-1. Suivre `GET /api/v1/closure` et vérifier les checkpoints `cloud`, `billing`, `identity`, puis `account`.
-1. Vérifier que Cloud retire les memberships et tombstone sa projection utilisateur.
-1. Vérifier que Billing retire sa projection utilisateur sans supprimer les écritures financières à conserver.
-1. Vérifier qu'Identity révoque sessions, credentials et autorisations Developer/Enterprise.
-1. Vérifier qu'Account purge finalement ses données et termine la saga.
-1. Tester les garde-fous: refus si le compte possède encore des workspaces, rejeu idempotent et reprise après crash entre deux checkpoints.
-
-Cette validation doit etre documentee dans le runbook d'exploitation si un comportement change dans la chaine RGPD.
+La connexion du premier produit nécessite ensuite une conception séparée.

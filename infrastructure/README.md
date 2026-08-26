@@ -1,63 +1,68 @@
 # Infrastructure
 
-Ce dossier contient l'infrastructure as code V1, les conventions d'environnements et les modules partages.
+Ce dossier contient l'IaC du socle V1, les environnements, les états Terraform
+et le contrat FinOps. La [direction produit](../docs/product/nvbes-product-strategy.md)
+est la source de vérité : aucune infrastructure Cloud/Drive ou Enterprise n'est
+active par défaut.
 
-## Structure
+## Cible V1
 
-- `environments/development`: overlay OpenTofu/Terraform pour l'environnement development.
-- `environments/staging`: overlay OpenTofu/Terraform pour l'environnement staging.
-- `bootstrap/production`: bucket de state, chiffrement et identités Terraform.
-- `environments/production`: infrastructure générale et observabilité production.
-- `stacks/email/production`: stack produit email et état indépendant.
-- `modules/terraform-state-backend`: bucket et accès de state réutilisables.
-- `modules/scaleway-v1`: socle Scaleway reutilisable.
+- Cloudflare Free pour DNS, TLS, edge et accès interne ;
+- Scaleway Serverless Containers avec `min_scale = 0` et maximum explicite ;
+- Scaleway Serverless SQL avec capacité minimale nulle par domaine déployé ;
+- Email transactionnel derrière le service Email ;
+- staging et previews éphémères ;
+- région, registry et observabilité mutualisés quand les frontières restent
+  intactes ;
+- aucun Kubernetes, load balancer permanent, Redis, queue dédiée ou Object
+  Storage produit sans besoin et budget démontrés.
 
-## Cible V1 minimale
+Le coût récurrent total, domaines et fournisseurs compris, vise 20 EUR TTC et
+ne doit jamais dépasser 30 EUR TTC.
 
-- Cloudflare pour DNS, proxy TLS, WAF minimal et challenge des routes API publiques.
-- Scaleway Instances pour API et workers.
-- Scaleway Private Network dedie par environnement.
-- Scaleway Managed PostgreSQL avec endpoint prive, chiffrement au repos et backups automatiques.
-- Scaleway Object Storage prive avec versioning, CORS limite et lifecycle rules.
-- IAM runtime par environnement.
-- Inventaire des secrets a provisionner dans Secret Manager sans inscrire les valeurs dans Git.
+## Structure active
 
-## FinOps gate
+- `finops/` : contrat budgétaire exécutable et procédure opérateur ;
+- `environments/email-production/` : environnement Email actif ;
+- `environments/trust-risk-production/` : environnement Trust/Risk actif ;
+- `bootstrap/production/` : état distant et identités Terraform ;
+- `environments/production/` : primitives générales réellement partagées ;
+- `local/` : développement local non permanent ;
+- `modules/` et `stacks/` : modules réutilisables ou historiques, à évaluer
+  avant usage.
 
-The executable V1 production budget and its operating procedure live in
-[`finops/`](finops/README.md). Run `pnpm check:finops` before applying any
-production infrastructure change.
+Les overlays historiques `development`, `staging` ou les modules produit ne
+constituent pas une cible de déploiement permanente.
 
-## Roadmap production Scaleway
+## Gate FinOps
 
-La trajectoire cible est documentee dans
-[Plan Scaleway - Fondation production](../docs/blueprint/scaleway-production-foundation.plan.md).
+Le budget et sa procédure vivent dans [`finops/`](finops/README.md).
 
-Ordre de priorite:
-
-1. Load Balancer + Public Gateway.
-2. Secret Manager + Key Manager.
-3. Container Registry.
-4. Serverless Jobs.
-5. Queues / RabbitMQ.
-6. Edge Services.
-
-Chaque produit ajoute doit supprimer une responsabilite operationnelle existante:
-exposition reseau directe, gestion de secrets statiques, build artisanal, worker batch permanent, queue fragile ou diffusion statique lente.
-
-## Commandes
+Avant toute modification de production :
 
 ```bash
-cd infrastructure/environments/development
-cp terraform.tfvars.example terraform.tfvars
-tofu init
-tofu plan
+pnpm check:finops
 ```
 
-Remplacer `development` par `staging` pour valider l'overlay staging. La
-production utilise Terraform et un backend distant obligatoire; suivre son
-README plutôt que ces commandes locales.
+Toute ressource payante doit avoir un propriétaire, un plafond, une estimation
+TTC et une justification mesurée. Les factures et estimations fournisseur
+vérifiées manuellement restent l'autorité tant qu'une collecte automatique sûre
+et gratuite n'existe pas.
+
+## Déploiement
+
+- appliquer les changements progressivement par environnement protégé ;
+- utiliser des artefacts immuables et une approval explicite ;
+- ne jamais maintenir un runtime éveillé par une probe ou un cron ;
+- désactiver les smoke tests à effet externe sauf activation explicite ;
+- vérifier restauration, coûts et modes dégradés avant élargissement du trafic ;
+- rétroporter tout changement manuel durable dans l'IaC.
 
 ## Secrets
 
-Les overlays creent l'identite runtime et exposent un inventaire des secrets attendus. Les valeurs reelles doivent etre injectees par le secret store ou la CI, pas committees dans `*.tfvars`.
+Les secrets sont injectés par l'environnement protégé ou le secret store, jamais
+commités dans Git ou dans `*.tfvars`. Chaque service utilise une identité et des
+credentials limités à ses propres ressources.
+
+Les plans d'infrastructure antérieurs sont conservés comme historique. Ils ne
+peuvent pas contourner le contrat FinOps ou élargir le périmètre V1.

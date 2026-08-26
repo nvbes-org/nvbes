@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractWorkspaceIR } from './extract-workspace-ir.mjs';
@@ -8,14 +8,37 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, '../..');
 
-const OUT_DOCS_DIR = join(REPO_ROOT, 'apps/docs/src/content/docs/generated');
-const OUT_ADR_DIR = join(REPO_ROOT, 'apps/docs/src/content/docs/adr');
-const OUT_API_DIR = join(REPO_ROOT, 'apps/docs/src/content/docs/api');
+const OUT_SITE_DIR = join(REPO_ROOT, 'docs/generated');
+const OUT_DOCS_DIR = join(OUT_SITE_DIR, 'catalogs');
+const OUT_ADR_DIR = join(OUT_SITE_DIR, 'adr');
+const OUT_API_DIR = join(OUT_SITE_DIR, 'api');
+const OUT_PRODUCT_DIR = join(OUT_SITE_DIR, 'product');
+
+export function isArchivedPath(path) {
+  return path === 'archive' || path.startsWith('archive/');
+}
+
+export function isActiveRuntimePath(path) {
+  return path.startsWith('apps/') && !path.startsWith('apps/docs/') && !isArchivedPath(path);
+}
 
 function ensureDir(dir) {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
+}
+
+function resetGeneratedMarkdownDirectory(dir) {
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isFile() && entry.name.endsWith('.md')) {
+      rmSync(join(dir, entry.name));
+    }
+  }
+}
+
+function writeMarkdown(path, content) {
+  writeFileSync(path, `${content.trimEnd()}\n`, 'utf8');
 }
 
 export function generateDeterministicDocs() {
@@ -27,9 +50,13 @@ export function generateDeterministicDocs() {
     ir = extractWorkspaceIR();
   }
 
+  resetGeneratedMarkdownDirectory(OUT_DOCS_DIR);
+  resetGeneratedMarkdownDirectory(OUT_ADR_DIR);
+  resetGeneratedMarkdownDirectory(OUT_API_DIR);
   ensureDir(OUT_DOCS_DIR);
   ensureDir(OUT_ADR_DIR);
   ensureDir(OUT_API_DIR);
+  ensureDir(OUT_PRODUCT_DIR);
 
   console.log('⚡ Generating deterministic documentation files...');
 
@@ -52,15 +79,22 @@ export function generateDeterministicDocs() {
   // 6. API Documentation Pages
   generateApiPages(ir);
 
-  console.log('✅ Deterministic documentation generated successfully in apps/docs/src/content/docs/');
+  // 7. Canonical V1 direction
+  syncCanonicalDirection();
+
+  console.log('✅ Deterministic documentation generated successfully in docs/generated/');
 }
 
 function generateServicesCatalog(ir) {
-  const apps = ir.projects.filter((p) => p.tags.includes('type:app') || p.root.startsWith('apps/'));
+  const catalogApps = ir.projects.filter(
+    (p) => p.tags.includes('type:app') || p.root.startsWith('apps/'),
+  );
+  const apps = catalogApps.filter((p) => !isArchivedPath(p.root));
+  const archivedApps = catalogApps.filter((p) => isArchivedPath(p.root));
 
   let content = `---
 title: Catalogue des Services & Applications
-description: Inventaire auto-généré de toutes les applications et microservices du monorepo nvbes.
+description: Inventaire auto-généré des runtimes actifs et des applications archivées du monorepo nvbes.
 ---
 
 > Ce document est généré automatiquement de manière déterministe à partir de l'état réel du monorepo.
@@ -68,19 +102,28 @@ description: Inventaire auto-généré de toutes les applications et microservic
 
 ## Vue d'ensemble
 
-Le monorepo contient **${apps.length} applications et services** (backends Axum, frontends React/Vite, workers asynchrones).
+Le runtime actif contient **${apps.length} applications et services**. Les projets sous \`archive/\` sont exclus de ce total et ne constituent pas une roadmap produit.
 
 | Application / Service | Domaine | Scope | Type | Emplacement |
 | :--- | :--- | :--- | :--- | :--- |
 `;
 
   for (const app of apps) {
-    const domain = app.tags.find((t) => t.startsWith('domain:'))?.replace('domain:', '') || 'général';
+    const domain =
+      app.tags.find((t) => t.startsWith('domain:'))?.replace('domain:', '') || 'général';
     const scope = app.tags.find((t) => t.startsWith('scope:'))?.replace('scope:', '') || 'internal';
     const isService = app.name.includes('-service') || app.name.includes('-worker');
     const typeLabel = isService ? '⚙️ Backend (Rust/Axum)' : '💻 Frontend (React/Vite)';
 
     content += `| **\`${app.name}\`** | \`${domain}\` | \`${scope}\` | ${typeLabel} | \`${app.root}\` |\n`;
+  }
+
+  content += `\n## Inventaire archivé\n\nLes **${archivedApps.length} projets** ci-dessous sont conservés comme historique. Ils ne sont ni déployables ni actifs sans une nouvelle décision produit et FinOps.\n\n| Projet archivé | Domaine | Emplacement |\n| :--- | :--- | :--- |\n`;
+
+  for (const app of archivedApps) {
+    const domain =
+      app.tags.find((t) => t.startsWith('domain:'))?.replace('domain:', '') || 'général';
+    content += `| \`${app.name}\` | \`${domain}\` | \`${app.root}\` |\n`;
   }
 
   content += `\n## Détail des Services Backend
@@ -97,7 +140,7 @@ Le monorepo contient **${apps.length} applications et services** (backends Axum,
 `;
   }
 
-  writeFileSync(join(OUT_DOCS_DIR, 'services-catalog.md'), content, 'utf8');
+  writeMarkdown(join(OUT_DOCS_DIR, 'services-catalog.md'), content);
 }
 
 function generateSharedLibraries(ir) {
@@ -120,7 +163,10 @@ Total : **${rustLibs.length} crates partagées**
 `;
 
   for (const rLib of rustLibs) {
-    const deps = rLib.internalDependencies.length > 0 ? rLib.internalDependencies.map((d) => `\`${d}\``).join(', ') : '-';
+    const deps =
+      rLib.internalDependencies.length > 0
+        ? rLib.internalDependencies.map((d) => `\`${d}\``).join(', ')
+        : '-';
     content += `| **\`${rLib.name}\`** | \`${rLib.path}\` | \`${rLib.version}\` | ${deps} |\n`;
   }
 
@@ -136,7 +182,7 @@ Total : **${tsLibs.length} packages partagés**
     content += `| **\`${tLib.name}\`** | \`${tLib.path}\` | \`${tLib.version}\` | ${tLib.description || '-'} |\n`;
   }
 
-  writeFileSync(join(OUT_DOCS_DIR, 'shared-libraries.md'), content, 'utf8');
+  writeMarkdown(join(OUT_DOCS_DIR, 'shared-libraries.md'), content);
 }
 
 function generateArchitectureMatrix(ir) {
@@ -187,10 +233,14 @@ flowchart TD
 - **Libs Core** : \`libs/rust/core\` et \`libs/ts/web-runtime\` doivent rester neutres et sans logique métier spécifique.
 `;
 
-  writeFileSync(join(OUT_DOCS_DIR, 'architecture-matrix.md'), content, 'utf8');
+  writeMarkdown(join(OUT_DOCS_DIR, 'architecture-matrix.md'), content);
 }
 
 function generateApiInventory(ir) {
+  const activeOpenApiServices = ir.openapiServices.filter((service) =>
+    isActiveRuntimePath(service.filePath),
+  );
+  const archivedOpenApiCount = ir.openapiServices.length - activeOpenApiServices.length;
   let content = `---
 title: Inventaire des APIs & Endpoints
 description: Liste exhaustive des endpoints OpenAPI extraits des spécifications du projet.
@@ -198,11 +248,13 @@ description: Liste exhaustive des endpoints OpenAPI extraits des spécifications
 
 > Ce catalogue est extrait directement des fichiers de spécification OpenAPI générés par les services Axum.
 
-Total de services documentés : **${ir.openapiServices.length}**
+Total de services actifs documentés : **${activeOpenApiServices.length}**
+
+Les **${archivedOpenApiCount} spécifications hors runtimes actifs** trouvées dans les archives, la documentation ou les SDK sont exclues : elles ne représentent pas des APIs V1 actives.
 
 `;
 
-  for (const svc of ir.openapiServices) {
+  for (const svc of activeOpenApiServices) {
     content += `## ${svc.title} (\`${svc.version}\`)
 - **Fichier source** : \`${svc.filePath}\`
 - **Nombre d'endpoints** : **${svc.endpointsCount}**
@@ -219,7 +271,7 @@ Total de services documentés : **${ir.openapiServices.length}**
     content += '\n';
   }
 
-  writeFileSync(join(OUT_DOCS_DIR, 'api-inventory.md'), content, 'utf8');
+  writeMarkdown(join(OUT_DOCS_DIR, 'api-inventory.md'), content);
 }
 
 function generateAdrCatalog(ir) {
@@ -235,7 +287,8 @@ Total : **${ir.adrs.length} décisions enregistrées**
 `;
 
   for (const adr of ir.adrs) {
-    const statusBadge = adr.status === 'accepted' || adr.status === 'accepte' ? '✅ Accepté' : `⚠️ ${adr.status}`;
+    const statusBadge =
+      adr.status === 'accepted' || adr.status === 'accepte' ? '✅ Accepté' : `⚠️ ${adr.status}`;
     const cleanSlug = adr.filename.replace(/\.md$/, '');
     content += `| [\`${adr.filename}\`](/adr/${cleanSlug}/) | **${adr.title}** | ${statusBadge} |\n`;
   }
@@ -244,7 +297,7 @@ Total : **${ir.adrs.length} décisions enregistrées**
 Les ADRs formalisent les choix structurants (changement de base de données, intégration d'un PSP, refonte de l'authentification). Tout changement architectural majeur doit faire l'objet d'un nouvel ADR avant implémentation.
 `;
 
-  writeFileSync(join(OUT_DOCS_DIR, 'adr-catalog.md'), content, 'utf8');
+  writeMarkdown(join(OUT_DOCS_DIR, 'adr-catalog.md'), content);
 }
 
 function syncAdrs() {
@@ -274,7 +327,7 @@ description: Architecture Decision Record - nvbes platform
 
 ${cleanedBody}`;
 
-    writeFileSync(join(OUT_ADR_DIR, file), formatted, 'utf8');
+    writeMarkdown(join(OUT_ADR_DIR, file), formatted);
   }
 }
 
@@ -309,11 +362,12 @@ Les erreurs d'API suivent la structure normalisée suivante :
 \`\`\`
 `;
 
-  writeFileSync(join(OUT_API_DIR, 'overview.md'), overviewContent, 'utf8');
+  writeMarkdown(join(OUT_API_DIR, 'overview.md'), overviewContent);
 
   // 2. Individual API pages per OpenAPI service
-  for (const svc of ir.openapiServices) {
-    const serviceSlug = svc.filePath.split('/')[1] || svc.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  for (const svc of ir.openapiServices.filter((service) => isActiveRuntimePath(service.filePath))) {
+    const serviceSlug =
+      svc.filePath.split('/')[1] || svc.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     let svcContent = `---
 title: API ${svc.title}
 description: Contrats OpenAPI, routes, paramètres et schémas pour ${svc.title} (${svc.version}).
@@ -337,8 +391,30 @@ description: Contrats OpenAPI, routes, paramètres et schémas pour ${svc.title}
 `;
     }
 
-    writeFileSync(join(OUT_API_DIR, `${serviceSlug}.md`), svcContent, 'utf8');
+    writeMarkdown(join(OUT_API_DIR, `${serviceSlug}.md`), svcContent);
   }
+}
+
+function syncCanonicalDirection() {
+  const strategySource = join(REPO_ROOT, 'docs/product/nvbes-product-strategy.md');
+  const roadmapSource = join(REPO_ROOT, 'docs/roadmap.md');
+
+  const strategyBody = readFileSync(strategySource, 'utf8')
+    .replace(/^#\s+[^\n]+\n+/, '')
+    .replace(
+      /\]\(\.\.\/([^)]+)\)/g,
+      '](' + 'https://github.com/nvbes-org/nvbes/blob/main/docs/$1)',
+    );
+  const roadmapBody = readFileSync(roadmapSource, 'utf8').replace(/^#\s+[^\n]+\n+/, '');
+
+  writeMarkdown(
+    join(OUT_PRODUCT_DIR, 'nvbes-product-strategy.md'),
+    `---\ntitle: Direction produit nvbes V1\ndescription: Source de vérité du périmètre produit et opérationnel V1.\n---\n\n${strategyBody}`,
+  );
+  writeMarkdown(
+    join(OUT_SITE_DIR, 'roadmap.md'),
+    `---\ntitle: Roadmap nvbes\ndescription: Ordre de livraison et NO-GO du socle V1.\n---\n\n${roadmapBody}`,
+  );
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

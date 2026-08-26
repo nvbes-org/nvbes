@@ -1,175 +1,114 @@
 # nvbes
 
-**nvbes** est une factory de micro-SaaS souverains, sécurisés et européens (EU-first).
+nvbes construit d'abord un socle de services réutilisables pour ses futurs
+produits numériques. La V1 actuelle n'est ni une release Cloud/Drive, ni une
+offre B2B : elle valide la plateforme commune avant de sélectionner le premier
+produit final.
 
-L'écosystème comprend des produits autonomes et modulaires bâtis sur un socle multi-tenant unifié :
-- **nvbes Drive / Cloud** : Stockage cloud d'équipe sécurisé, souverain et chiffré.
-- **nvbes Identity / Account** : Fournisseur d'identité (IdP) et serveur d'autorisation OAuth2 / OIDC / FAPI, WebAuthn & Passkeys.
-- **nvbes Developer / Console** : Portail développeurs pour la gestion d'applications, API keys et webhooks.
-- **nvbes Billing** : Moteur de facturation unifié avec gestion d'abonnements et routage de paiements.
-- **nvbes Enterprise & Backoffice** : Gestion multi-organisations, conformité RGPD, audit append-only et console d'administration.
+## Direction V1
 
----
+- public cible B2C, tout public, avec collaboration en équipe de toute taille ;
+- services mutualisés : Identity, Account, Billing, Email et Trust/Risk ;
+- Platform Operations minimal pour l'administration, le support, les abus, la
+  modération et FinOps ;
+- un seul opérateur, avec traitement manuel par défaut ;
+- coût récurrent total limité à 30 EUR TTC par mois, cible à 20 EUR ;
+- aucune dette technique ou structurelle connue dans le périmètre livré ;
+- mise en production progressive, mesurée, réversible et restaurable ;
+- B2B, Enterprise et conformité avancée préparés dans les frontières, mais
+  reportés à une version financée ultérieurement.
 
-## Architecture & Structure du Monorepo
+Cloud/Drive et les autres concepts présents dans les anciens plans restent des
+hypothèses de produits futurs. Leur présence dans le dépôt ne les rend pas
+prioritaires.
 
-Le monorepo est orchestré via **pnpm workspaces**, **Cargo workspace** et **Nx** :
+La [direction produit V1](docs/product/nvbes-product-strategy.md) est la source
+de vérité. La [roadmap](docs/roadmap.md) définit l'ordre de livraison et les
+NO-GO.
+
+## État du monorepo
+
+Le dépôt est orchestré avec pnpm workspaces, Cargo workspace et Nx.
 
 ```text
 nvbes/
 ├── apps/
-│   ├── cloud-web/            # Frontend Cloud / Drive (React 19 + Vite + Tailwind + shadcn)
-│   ├── account-web/          # Frontend Account (React + Vite + shadcn)
-│   ├── identity-web/         # Frontend Identity / Authentification (React + Vite)
-│   ├── console-web/          # Frontend Developer Console (React + Vite)
-│   ├── enterprise-web/       # Frontend Enterprise Portal (React + Vite)
-│   ├── backoffice-web/       # Frontend Administration & Backoffice (React + Vite)
-│   ├── cloud-service/        # API Rust Cloud / Drive (Axum + SQLx)
-│   ├── account-service-next/ # API Rust Account (Axum + SQLx)
-│   ├── identity-service/     # API Rust Identity / OIDC (Axum + SQLx)
-│   ├── billing-service/      # API Rust Billing (Axum + SQLx)
-│   ├── developer-service/    # API Rust Developer (Axum + SQLx)
-│   ├── enterprise-service/   # API Rust Enterprise (Axum + SQLx)
-│   ├── backoffice-service/   # API Rust Backoffice (Axum + SQLx)
-│   ├── gateway-cloud/        # Gateway Cloud & Proxy Edge
-│   └── *-worker/             # Workers asynchrones Rust (cloud, account, identity, billing, email)
+│   ├── email-worker/         # Runtime Email actif
+│   └── trust-risk-service/   # Runtime Trust/Risk actif
 ├── libs/
-│   ├── rust/                 # Primitives partagées (core, platform, ports, observability, dpop, storage...)
-│   └── ts/                   # SDKs TS, clients HTTP typés, web-runtime, web-ui, design-system
-├── contracts/                # Contrats d'interfaces OpenAPI, Protobuf, GraphQL, Events
-├── infrastructure/           # IaC OpenTofu/Terraform, Docker Compose local & observabilité Grafana
-└── docs/                     # Documentation architecture, produit, conformité, sécurité et ADRs
+│   ├── rust/                 # Domaines, ports, adaptateurs et primitives partagés
+│   └── ts/                   # SDK, clients et runtime web réutilisables
+├── contracts/                # OpenAPI, Protobuf, événements et GraphQL
+├── infrastructure/           # IaC et contrat FinOps
+├── deploy/                   # Manifestes de déploiement
+├── docs/                     # Sources produit, architecture et opérations
+└── archive/                  # Produits et prototypes retirés du runtime actif
 ```
 
----
+Les applications Account, Cloud, Developer, Enterprise et Backoffice archivées
+servent d'inventaire et de preuve historique. Toute réintroduction doit respecter
+la direction V1 et faire l'objet d'une conception propre ; l'archive n'est pas
+une base de production implicite.
 
-## Stack Technique
+## Stack
 
 | Domaine | Technologies |
-|---|---|
-| **Backend** | Rust (Axum 0.8, SQLx 0.8, Tokio, PostgreSQL, Redis, Utoipa OpenAPI) |
-| **Frontend** | TypeScript, React 19, Vite, TanStack Router / Query, Effect, Tailwind CSS, shadcn/ui |
-| **Monorepo** | pnpm workspaces, Cargo workspace, Nx |
-| **Sécurité & Auth** | OAuth2 / OIDC, FAPI 2.0, DPoP (RFC 9449), WebAuthn / Passkeys, PKCE |
-| **Billing** | Stripe, Stripe Webhooks, routage de paiements multi-prestataires |
-| **Infra & Observabilité** | Scaleway (EU), Docker Compose, OpenTofu, Grafana, Alloy, Beyla, Prometheus, Sentry |
+| --- | --- |
+| Backend | Rust, Axum, SQLx, Tokio, PostgreSQL |
+| Frontend et SDK | TypeScript, React, Vite, TanStack, Effect |
+| Monorepo | pnpm workspaces, Cargo workspace, Nx |
+| Identity | OAuth2/OIDC, DPoP, WebAuthn, PKCE |
+| Infrastructure | Scaleway serverless, Cloudflare, OpenTofu/Terraform |
+| Observabilité | OpenTelemetry, Grafana Cloud, Sentry |
 
----
+## Démarrage
 
-## Démarrage Rapide
-
-### Prérequis
-
-- **Node.js** : `>= 24.0.0` (support LTS)
-- **pnpm** : `>= 11.1.2`
-- **Rust** : stable récent (édition 2024)
-- **Docker & Docker Compose** (pour l'infrastructure locale)
-- **OpenTofu** : `>= 1.6` (pour les validations IaC)
-
-### Initialisation
+Prérequis : Node.js 24+, pnpm 11+, Rust stable, Docker Compose et OpenTofu.
 
 ```bash
-# 1. Synchroniser et vérifier l'environnement
+pnpm install
 pnpm env:sync
 pnpm env:check
-
-# 2. Installer les dépendances frontend et outils
-pnpm install
-
-# 3. Démarrer l'infrastructure locale (Postgres, Redis, etc.)
 pnpm dev:infra
-
-# 4. Appliquer les migrations de base de données
-pnpm db:migrate
-
-# 5. Lancer l'environnement de développement
 pnpm dev
 ```
 
----
-
-## Commandes Principales
-
-### Développement local
+Commandes principales :
 
 ```bash
-pnpm dev                     # Runtimes locaux principaux (Web + APIs)
-pnpm dev:web                 # Tous les frontends
-pnpm dev:api                 # Tous les services Rust
-pnpm dev:cloud               # Stack Cloud / Drive (web + API)
-pnpm dev:account             # Stack Account / Identity (web + API)
-pnpm dev:cloud-service       # Service Cloud uniquement
-pnpm dev:identity-service    # Service Identity uniquement
-pnpm dev:infra               # PostgreSQL, Redis, MinIO via Docker Compose
-pnpm dev:infra:obs           # Stack d'observabilité locale (Grafana, Alloy, Beyla)
+pnpm check            # Gates complets, dont FinOps
+pnpm check:finops     # Budget et plafonds serverless
+pnpm lint             # Lint web et Rust
+pnpm test             # Tests du workspace
+pnpm verify           # Validation pré-commit
+pnpm doc:validate     # Validation documentaire
+pnpm agent:doctor     # Cohérence des instructions agents
 ```
 
-### Qualité, Lint & Tests
+## Règles de contribution
 
-```bash
-pnpm check                   # Suite complète de vérifications (contrats, secrets, types, cargo check)
-pnpm verify                  # Validation pré-commit complète (format, lint, check, tests)
-pnpm test                    # Tests unitaires et d'intégration
-pnpm test:unit               # Tests unitaires
-pnpm test:integration        # Tests d'intégration Rust et IaC
-pnpm test:e2e:critical       # Tests E2E critiques
-pnpm lint                    # Linter web et Rust (cargo clippy)
-pnpm format                  # Formatage automatique TS, JSON, Rust, Markdown
-pnpm format:check            # Vérification du formatage
-```
+- lire [AGENTS.md](AGENTS.md) avant toute modification ;
+- ne pas introduire de dette provisoire sur les zones touchées ;
+- mesurer le coût récurrent et vérifier le budget avant toute ressource ou
+  automatisation nouvelle ;
+- privilégier une opération manuelle sûre tant qu'aucune automatisation conforme
+  aux exigences et au budget n'existe ;
+- utiliser des contrats explicites et préserver les frontières des services ;
+- exécuter les checks ciblés du périmètre modifié.
 
-### Orchestration Nx & Génération
+## Documentation de référence
 
-```bash
-pnpm nx:show-projects        # Lister tous les projets du graphe Nx
-pnpm nx:show-project <nom>   # Inspecter la configuration d'un projet cible
-pnpm nx:affected             # Exécuter les tâches affectées par les changements en cours
-pnpm generate:openapi        # Régénérer les schémas OpenAPI et les SDKs TypeScript
-pnpm generate:email          # Compiler les composants et templates email
-```
+- [Direction produit V1](docs/product/nvbes-product-strategy.md)
+- [Roadmap et NO-GO](docs/roadmap.md)
+- [Conception FinOps et Platform Operations](docs/superpowers/specs/2026-08-25-nvbes-v1-finops-platform-operations-design.md)
+- [Registre d'exécution FinOps](docs/superpowers/plans/2026-08-25-nvbes-v1-finops-foundation.md)
+- [Architecture technique](docs/architecture/technical-architecture.md)
+- [Infrastructure et DevOps](docs/architecture/infrastructure-devops.md)
+- [Runbooks d'incidents](docs/operations/incident-runbooks.md)
+- [Runbook opérateur solo](docs/operations/platform-operations-manual-runbook.md)
+- [Catalogue généré des runtimes](docs/generated/catalogs/services-catalog.md)
+- [Décisions d'architecture](docs/adr/)
 
----
-
-## Règles et Conventions du Codebase
-
-Pour assurer une maintenabilité optimale par des agents IA et des développeurs :
-
-1. **Règle V0 (Zéro Dette)** : Aucun compromis temporaire ni rustine sur les zones modifiées. Redesign privilégié.
-2. **Conventions Rust** :
-   - Fichiers source dans `src/` avec nommage plat en dot-notation (ex: `identity.domains.billing.service.rs`).
-   - Modules déclarés explicitement via `#[path = "..."]` dans `mod.rs`.
-   - Respect strict des limites de taille : **< 300 lignes** recommandé, **500 lignes** max.
-3. **Conventions TypeScript** :
-   - Interdiction stricte de `any` (`unknown` ou typage précis obligatoire).
-4. **Hiérarchie UI Frontend** :
-   - 1. Registry interne (`libs/ts/web-ui`, `apps/*/components/ui`)
-   - 2. Registry officiel shadcn/ui (`pnpm dlx shadcn@latest add <component>`)
-   - 3. Registries externes compatibles
-   - 4. Tailwind CSS (classes utilitaires)
-   - 5. CSS pur / modules (dernier recours uniquement)
-5. **Agent OS** :
-   - Lire [AGENTS.md](AGENTS.md) avant toute contribution.
-   - Instructions et mémoire synchronisées depuis `docs/agent/*` et `.codex/instructions.md`.
-
----
-
-## Documentation de Référence
-
-- **Produit** :
-  - [PRD V1 Drive](docs/product/nvbes-drive-v1-prd.md)
-  - [Beta Readiness](docs/product/beta-readiness.md)
-  - [Roadmap](docs/roadmap.md)
-- **Architecture** :
-  - [Architecture Technique Globale](docs/architecture/technical-architecture.md)
-  - [Architecture Identity](docs/architecture/identity-product.md)
-  - [Graphe Nx & Dépendances](docs/architecture/nx-workspace.md)
-  - [Modèle de Données](docs/architecture/data-model.md)
-  - [Runtime Frontend](docs/architecture/frontend-runtime.md)
-  - [Infrastructure & DevOps](docs/architecture/infrastructure-devops.md)
-- **APIs & Contrats** :
-  - [Contrats API V1](docs/api/v1-contracts.md)
-  - [API Publique V1](docs/api/public-api-v1.md)
-- **Conformité & Opérations** :
-  - [Conformité Entreprise & RGPD](docs/compliance/enterprise-compliance-summary.md)
-  - [Runbooks d'Incidents](docs/operations/incident-runbooks.md)
-  - [Registre ADR (Architecture Decision Records)](docs/adr/)
+Les documents Drive, Cloud, Developer et Enterprise doivent afficher un statut
+« futur », « historique » ou « remplacé » avant d'être utilisés comme contexte
+d'implémentation.

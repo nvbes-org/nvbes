@@ -1,8 +1,17 @@
 # Marketing, Conversion et Product Analytics
 
+## Statut
+
+**Recherche Cloud/Drive future, hors V1 active.** La V1 ne commercialise pas de
+produit final et ne possède donc ni ICP Drive, ni funnel d'activation fichier,
+ni objectif de conversion associé. Ce document est conservé comme hypothèse à
+revalider après sélection du premier produit. La
+[direction produit V1](nvbes-product-strategy.md) prévaut.
+
 ## Objectif
 
-Ce document definit la strategie marketing V1, le funnel de conversion, les objectifs cles, les KPIs, l'observabilite produit et les contraintes analytics RGPD.
+Ce document décrit l'ancienne hypothèse marketing de nvbes Drive, son funnel,
+ses KPIs et ses contraintes analytics.
 
 ## Travaux de Recherche
 
@@ -13,9 +22,9 @@ Les travaux marketing non techniques sont suivis dans:
 
 ## ICP de Lancement
 
-Positionnement V1:
+Ancienne hypothèse de positionnement Drive :
 
-- B2B pour tous.
+- professionnel accessible en solo et en équipe ;
 - Workspace personnel dedie a la creation de chaque compte.
 - Workspaces de groupe separes pour equipes et organisations.
 - Offre personnelle comme entree de gamme, avec upsell vers plans plus rentables.
@@ -31,9 +40,9 @@ Segments secondaires:
 - Associations structurees manipulant des documents sensibles.
 - Petites equipes internes qui veulent un cloud europeen controle.
 
-Segments non prioritaires V1:
+Segments écartés par cette ancienne hypothèse :
 
-- Grand public B2C.
+- grand public B2C, désormais cible du socle mais sans produit final associé ;
 - Grandes entreprises avec besoins SSO/SAML.
 - Equipes qui cherchent une suite bureautique collaborative.
 - Business enterprise en production initiale.

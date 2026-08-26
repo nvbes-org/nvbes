@@ -1,5 +1,10 @@
 # Privacy-Preserving KYC Verification
 
+> **Status: future exploration, outside active V1.** KYC is not required for
+> the general-public foundation and must not be implemented without a funded,
+> legally reviewed product decision. See the
+> [current direction](nvbes-product-strategy.md).
+
 ## Objectif Produit
 
 Construire un produit de verification KYC reutilisable qui permet a un utilisateur de prouver son statut d'identite verifiee sur des sites tiers sans exposer ses documents personnels.

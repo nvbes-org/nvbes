@@ -1,5 +1,9 @@
 # Matrice de Regression V1
 
+> **Statut : matrice produit historique à reconstruire pour le socle.** Les
+> lignes Cloud/Drive ou Enterprise sont futures et ne doivent pas déclencher la
+> restauration des applications archivées.
+
 ## Objectif
 
 Lister les scenarios minimum a proteger avant lancement public.

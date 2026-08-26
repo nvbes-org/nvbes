@@ -13,11 +13,20 @@ sources of truth.
 ## Operating Rules
 
 - Read `AGENTS.md` before changing the repository.
+- Treat `docs/product/nvbes-product-strategy.md` as the active V1 product
+  authority. Cloud/Drive, B2B, Enterprise, and advanced compliance are not V1
+  implementation scope.
+- Keep the whole project's recurring cost at or below EUR 30 including taxes;
+  FinOps is a design and delivery gate.
+- Default to safe manual administration and moderation while there is one
+  operator. Automate only a measured need with proven security and budget fit.
 - Prefer short, flat, self-documenting files.
 - Keep Rust files in `src/` with dot-qualified names and explicit `#[path]`
   module wiring.
 - Keep TypeScript free of `any`; use precise types or `unknown`.
-- Do not introduce temporary technical debt in touched areas.
+- Do not introduce known technical or structural debt in the delivered V1
+  scope. After V1, record any accepted debt with an owner, measured impact,
+  review date, and resolution condition.
 - Do not rename or move files outside the requested scope.
 - Use Nx to reduce context when project boundaries or affected scope matter.
 - Use `rtk` as the shell command prefix.

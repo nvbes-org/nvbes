@@ -6,6 +6,10 @@ Validated in design review on 2026-08-24. This document defines the first
 implementation scope for an independent Trust/Risk bounded context. It does not
 authorize product enforcement or a production cutover.
 
+Trust/Risk is an active V1 foundation service under the
+[current product direction](../../product/nvbes-product-strategy.md). Its first
+production remains in shadow mode and does not automate irreversible decisions.
+
 ## Decision
 
 Create an autonomous Rust service that owns cross-product fraud, abuse, bot and

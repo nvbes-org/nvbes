@@ -8,11 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, '../..');
 
-const WATCH_TARGETS = [
-  join(REPO_ROOT, 'apps'),
-  join(REPO_ROOT, 'libs'),
-  join(REPO_ROOT, 'docs/adr'),
-];
+const WATCH_TARGETS = [join(REPO_ROOT, 'apps'), join(REPO_ROOT, 'libs'), join(REPO_ROOT, 'docs')];
 
 let debounceTimer = null;
 const DEBOUNCE_MS = 600;
@@ -25,6 +21,7 @@ function triggerRegeneration(eventType, filename, targetDir) {
     filename.includes('.git') ||
     filename.includes('dist') ||
     filename.includes('target') ||
+    filename.startsWith('generated/') ||
     filename.startsWith('.docgen') ||
     filename.endsWith('.tmp')
   ) {
@@ -41,7 +38,9 @@ function triggerRegeneration(eventType, filename, targetDir) {
   }
 
   debounceTimer = setTimeout(() => {
-    console.log(`\n🔄 Change detected in [${eventType}] ${filename}. Auto-regenerating documentation...`);
+    console.log(
+      `\n🔄 Change detected in [${eventType}] ${filename}. Auto-regenerating documentation...`,
+    );
     try {
       fixAllDocumentation();
     } catch (err) {
@@ -52,7 +51,7 @@ function triggerRegeneration(eventType, filename, targetDir) {
 
 export function startWatchMode() {
   console.log('👀 Documentation Watch Mode active. Monitoring codebase for changes...');
-  console.log(`📂 Watching: apps/, libs/, docs/adr/\n`);
+  console.log(`📂 Watching: apps/, libs/, docs/\n`);
 
   // Run initial sync
   fixAllDocumentation();

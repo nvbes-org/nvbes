@@ -1,155 +1,147 @@
-# Roadmap
+# Roadmap nvbes
 
-## V1
+## Autorité
 
-Objectif: livrer Identity puis nvbes Cloud comme fondation B2B pour tous: utilisable en solo via workspace personnel, pret pour workspaces de groupe, sans activer Business en production initiale.
+Cette roadmap applique la [direction produit V1](product/nvbes-product-strategy.md).
+Les anciennes roadmaps Cloud, Drive, Developer ou Enterprise sont des
+hypothèses futures et ne constituent plus des lots actifs.
 
-Fondations produit:
+## V1 finale — socle réutilisable
 
-- Auth.
-- Fondations identity enterprise: `user global`, `tenant`, `organization` optionnelle, memberships multi-scope.
-- Creation automatique d'un workspace personnel dedie pour chaque nouveau user.
-- Separation stricte entre workspace personnel et workspaces de groupe.
-- Sessions hybrides Redis: JWT courts + introspection/decision centrale.
-- MFA, step-up et scaffold WebAuthn.
-- Workspace.
-- Upload et download.
-- Dossiers.
-- Recherche simple.
-- Renommer, deplacer, corbeille, restaurer, supprimer.
-- Liens de partage.
-- Expiration et revocation des liens.
-- Membres et roles.
-- Quotas.
-- Billing personnel puis groupe, avec plans groupe prepares mais lancement progressif.
-- Audit basique.
-- Export et suppression RGPD.
-- API publique V1 limitee aux integrations fichiers.
-- API keys legacy, scopes, rate limits et OpenAPI.
-- Integrations machine via Identity `service accounts` et OAuth clients.
-- Scaffold federation/SCIM reserve des la V1 meme si non expose.
+Objectif : livrer un socle B2C tout public, compatible avec les équipes, sans
+produit final ni offre B2B, exploitable progressivement par un opérateur solo
+pour un coût récurrent total inférieur ou égal à 30 EUR TTC par mois.
 
-Fondations design/UX:
+### Gate transversal permanent
 
-- Direction artistique B2B sobre et dense.
-- nvbes Design System base sur `shadcn/ui`, `Radix UI`, `Tailwind CSS` et `lucide-react`.
-- Taxonomie UI francaise.
-- UX map V1.
-- Wireframes V1.
-- Inventaire composants.
-- Copy deck V1.
-- Checklist accessibilite WCAG AA.
-- Prototype clickable.
-- Test utilisabilite avec 3 a 5 utilisateurs cibles.
-- Strategie UI testing.
-- Protocole UX testing.
-- Ecran API pour gerer les integrations machine, scopes et documentation.
+- aucune dette technique ou structurelle connue dans le périmètre livré ;
+- cible de coût à 20 EUR TTC et limite dure à 30 EUR TTC ;
+- administration, support et modération manuels par défaut ;
+- automatisation seulement après besoin mesuré et preuve coût/sécurité ;
+- solutions maison possibles si elles sont sûres, maintenables et remplaçables ;
+- déploiements progressifs, observables et réversibles ;
+- aucune dépendance du socle envers Cloud, Drive ou un autre produit final.
 
-Fondations marketing/growth:
+### Lot 1 — FinOps et primitives communes
 
-- Positionnement V1: B2B pour tous, avec usage solo professionnel comme entree de gamme et groupes prepares.
-- ICP initial: independants professionnels, agences, studios et petites structures manipulant des fichiers clients.
-- Messaging V1 et landing page.
-- Pricing page orientee conversion.
-- Funnel de conversion documente.
-- Event taxonomy product analytics.
-- Dashboards activation, conversion, retention, revenue et FinOps.
-- Consentement analytics RGPD.
-- Experiment log.
-- Cadence de revue KPI hebdomadaire pendant beta.
-- Go-to-market checklist avant lancement payant.
+- contrat budgétaire exécutable et gate CI ;
+- plafonds serverless et scale-to-zero ;
+- contrats d'audit, idempotence, outbox, retries et dead-letter ;
+- corrélation, métriques, erreurs et modes dégradés ;
+- procédure manuelle de revue des coûts TTC.
 
-Fondations business/FinOps:
+Sortie : le coût prévisionnel reste sous 20 EUR et le pire scénario autorisé
+reste sous 30 EUR.
 
-- Plateforme billing interne canonique pour catalogue, subscriptions, invoices, payments, ledger, usage, entitlements et reconciliation.
-- Stripe comme PSP principal V1; Mollie comme PSP secondaire active par routing provider-neutral.
-- Mappings provider-neutral pour Product/Price/Customer/Subscription/Invoice/Tax, avec compatibilite Stripe pendant la transition.
-- Ledger interne append-only pour usages, invoices, paiements, refunds, credits, write-offs et adjustments.
-- Meters V1: `storage_gb_month`, `team_seat_month`, `egress_gb` en suivi.
-- TVA EU, B2B/B2C et factures conformes.
-- Dashboard marge/couts par workspace et par plan.
-- Budgets cloud par environnement.
-- Protections anti-abus sur trials.
-- Validation marge brute avant lancement payant.
-- Validation externe obligatoire avant activation multi-pays payante: TVA, e-invoicing, revenue recognition audit et retention des pieces comptables.
+### Lot 2 — Email
 
-Sequence production initiale:
+- acceptation durable des commandes ;
+- rendu, livraison, retries, suppressions et événements fournisseur ;
+- observabilité, runbook et restauration ;
+- ouverture progressive sans dépendance à un produit final.
 
-- Identity seul sur Scaleway, optimise France et cout minimal.
-- Cloud/Drive full feature sur la meme architecture minimum cost.
-- Developer Hub avec APIs publiques.
-- DevOps production elargie pour extension EU.
-- Ingestion data, transformation, vectorisation et entrainement LLM.
-- Docs, Sheets, Slides puis Forms.
-- Plans Team et Workspace.
-- Business prepare mais non active en production.
+Sortie : parcours transactionnel synthétique livré et traçable, sans envoyer de
+message réel lorsque le smoke est désactivé.
 
-Fondations infra/DevOps:
+### Lot 3 — Identity
 
-- Infrastructure as Code pour les composants critiques.
-- Environnements development, staging et production separes.
-- CI/CD avec tests, scans, staging, approval production et rollback documente.
-- Strategie de test V1 et matrice de regression.
-- Migrations PostgreSQL versionnees.
-- Backups chiffres avec RPO/RTO et test de restauration avant lancement.
-- Observabilite V1: logs structures, metriques, dashboards et alertes critiques.
-- Workers monitorables avec retries, backoff et dead-letter.
-- Object Storage prive avec policies, CORS limite et lifecycle rules.
-- Gestion des secrets par environnement.
-- Runbooks incidents minimum pour API, PostgreSQL, Object Storage, billing, jobs RGPD et bucket public.
+- authentification, credentials, sessions, récupération, MFA et step-up ;
+- autorisation interservices et contrats réutilisables ;
+- accès interne avant comptes invités.
 
-## V1.5
+Sortie : compte synthétique authentifié, récupérable et audité.
 
-Objectif: ameliorer l'usage quotidien, les workspaces personnels et le controle equipe.
+### Lot 4 — Account et équipes
 
-- Preview de fichiers.
-- Recherche amelioree.
-- Ameliorations de la vue des liens partages.
-- Notifications email.
-- Reporting d'usage plus precis.
-- Estimations billing plus claires.
-- Raffinements de permissions.
-- Caps de depense configurables.
-- Alertes cout client avancees.
-- Optimisation des marges par plan.
-- Webhooks publics signes.
-- SDK ou exemples d'integration avances.
-- Federation entrante et provisioning enterprise en increment cible si le scaffold V1 est stable.
+- profil, préférences et cycle de vie du compte ;
+- équipes et memberships comme primitives B2C collaboratives ;
+- export et suppression des données applicables ;
+- aucune console ou gouvernance Enterprise.
 
-## V2
+Sortie : un compte peut créer et rejoindre une équipe sans dépendre d'un
+produit final.
 
-Objectif: servir des workspaces plus sensibles a la securite sans lancer Business trop tot.
+### Lot 5 — Billing
 
-- Versioning.
-- Politiques de retention avancees.
-- SSO/SAML sur le scaffold federation deja pose.
-- SCIM sur le scaffold provisioning deja pose.
-- Audit logs avances.
-- Revue des sessions admin.
-- Permissions plus granulaires.
-- Preparation Business: contrats, policies, audit avance, SSO/SCIM et SLA, sans activation commerciale tant que le support et la marge ne sont pas valides.
+- catalogue, prix, abonnements, paiements et entitlements minimaux ;
+- fournisseur de paiement derrière un contrat remplaçable ;
+- webhooks, idempotence et réconciliation en mode test ;
+- opérations financières manuelles lorsque l'automatisation n'est pas justifiée.
 
-## V3
+Sortie : parcours fournisseur de test réconcilié ; aucun paiement réel avant
+validation distincte.
 
-Objectif: augmenter la valeur plateforme.
+### Lot 6 — Trust/Risk
 
-- Sync desktop.
-- Apps mobiles natives.
-- OCR.
-- Recherche IA.
-- Integrations.
-- Archivage long terme.
-- Reutilisation du module storage dans les autres produits nvbes.
-- Docs, Sheets, Slides et Forms si Cloud est stable.
-- Photo Editor et Video Editor comme produits separes apres validation cout/media.
+- signaux transversaux et recommandations explicables ;
+- jeux de référence déterministes ;
+- déploiement en shadow mode ;
+- décision d'enforcement conservée par le domaine propriétaire.
 
-## Explorations Produits
+Sortie : recommandation shadow traçable, sans blocage automatique prématuré.
 
-Ces idees ne sont pas dans le scope Drive V1/V2. Elles documentent des pistes futures a revisiter avec une decision produit separee.
+### Lot 7 — Platform Operations
 
-- Strategie produit nvbes: positionnement B2B pour tous, workspaces personnels, offres personnelles, add-ons, sequence production et politique donnees. Voir [Strategie Produit nvbes](product/nvbes-product-strategy.md).
-- Privacy-preserving KYC verification: verifier document et visage sans stocker les artefacts bruts, puis emettre un credential reutilisable avec consentement. Voir [Privacy-Preserving KYC Verification](product/privacy-preserving-kyc.md).
-- Plateforme globale zero-stack: architecture cible multi-cloud, cellulaire et hyperscale pour les futurs produits nvbes. Voir [Plan Plateforme Globale - Stack Zero](blueprint/nvbes-global-platform-zero-stack.plan.md).
-- Trajectoire low budget vers plateforme globale: plan starter economique avec chemin d'upgrade progressif vers l'architecture zero-stack. Voir [Plan Starter Low Budget vers Plateforme Globale](blueprint/nvbes-low-budget-to-global-platform.plan.md).
-- Structuration complete Big Bang zero dette: migration complete vers une plateforme nvbes reconstruite from scratch. Voir [Plan Structuration Complete Big Bang Zero Dette](blueprint/nvbes-full-restructure-big-bang-zero-debt.plan.md).
-- Plateforme billing interne multi-provider: internaliser catalogue, subscriptions, invoices, payments, ledger, tax evidence, reconciliation, routing Stripe/Mollie et reporting finance sans devenir PSP. Voir [Plan Plateforme Billing Interne Multi-Provider](blueprint/nvbes-internal-billing-platform.plan.md).
+- dossiers support, sécurité, abus, facturation et recours ;
+- contexte consolidé sans accès direct aux bases des services ;
+- commandes opérateur idempotentes, motivées et auditées ;
+- registre de coûts et vue des audits ;
+- rôle initial `platform_owner`, préparé pour une séparation future des rôles.
+
+Sortie : l'opérateur solo peut traiter manuellement un dossier de bout en bout
+sans usurpation de session ni action irréversible non protégée.
+
+### Lot 8 — validation intégrée et ouverture progressive
+
+1. exécuter le parcours Identity, Account, Billing, Email, Trust/Risk et
+   Platform Operations ;
+2. démontrer sauvegarde et restauration ;
+3. vérifier coûts, quotas, cold starts et modes dégradés ;
+4. ouvrir à un petit groupe de comptes invités ;
+5. mesurer demandes, abus, incidents et coût humain ;
+6. autoriser les inscriptions publiques uniquement après un GO explicite.
+
+## Après V1 — sélection du premier produit
+
+Le premier produit est choisi par une décision distincte selon la valeur
+utilisateur, le coût total, la charge opérateur et la réutilisation du socle.
+Cloud/Drive reste un candidat, pas une priorité implicite.
+
+Le produit sélectionné doit réutiliser les services du socle sans déplacer leur
+source de vérité. Son marketing, pricing, beta, stockage et modération propre ne
+deviennent actifs qu'après cette décision.
+
+## Futures versions
+
+### Évolution produit et équipes
+
+- capacités propres au premier produit validé ;
+- automatisations déclenchées par des volumes mesurés ;
+- ajout d'opérateurs avec séparation réelle des permissions ;
+- optimisation des coûts financée par les revenus ou une économie démontrée.
+
+### B2B et Enterprise
+
+- contrats entreprise et SLA ;
+- SSO/SAML, SCIM et gouvernance avancée ;
+- conformité, certifications et audits externes ;
+- support structuré et rôles opérateur spécialisés.
+
+Ces travaux restent hors périmètre tant que le budget, les revenus et la demande
+ne permettent pas de les opérer correctement.
+
+### Échelle globale
+
+Multi-région, multi-cloud, Kubernetes, data platforms et hyperscale sont des
+explorations long terme. Ils ne sont activés que par des seuils de charge,
+risque ou revenus mesurés.
+
+## NO-GO
+
+- lancer Cloud/Drive parce que le code ou un ancien PRD existe ;
+- traiter la V1 comme une offre B2B ou promettre une conformité Enterprise ;
+- dépasser 30 EUR TTC de coût récurrent total ;
+- automatiser une demande encore rare sans justification mesurée ;
+- ajouter une solution payante alors qu'une procédure manuelle sûre suffit ;
+- accepter une dette provisoire dans le périmètre livré ;
+- ouvrir publiquement avant les preuves de restauration, coût et exploitation.

@@ -1,5 +1,11 @@
 # Service Level Agreement (SLA)
 
+> **Statut : ancien modèle futur, sans force contractuelle et hors V1.** nvbes
+> ne propose actuellement aucun SLA, support Enterprise 24/7 ni crédit de
+> service. Les chiffres ci-dessous sont des hypothèses historiques à ne pas
+> publier, signer ou promettre. Toute offre B2B exigera une validation juridique,
+> opérationnelle et budgétaire distincte.
+
 ## 1. Engagement de Disponibilité
 
 nvbes Cloud SAS s'engage à maintenir une disponibilité mensuelle minimale pour les services nvbes Drive (API et accès Web) selon les paliers suivants :

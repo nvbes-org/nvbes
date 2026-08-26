@@ -1,5 +1,10 @@
 # Strategie de Test
 
+> **Statut : stratégie historique mixte.** Les principes de qualité restent
+> applicables, mais les scénarios Cloud/Drive ou Enterprise ne sont pas des
+> gates du socle V1. Le parcours intégré actif couvre Identity, Account,
+> Billing, Email, Trust/Risk et Platform Operations.
+
 ## Objectif
 
 Definir la strategie de qualite V1 pour nvbes Drive et aligner les tests sur les risques produit, techniques et business.

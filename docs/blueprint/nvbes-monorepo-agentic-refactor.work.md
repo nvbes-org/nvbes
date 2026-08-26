@@ -3,6 +3,11 @@
 Status: working draft
 Owner: Codex
 
+Direction scope: this workplan may improve the active reusable foundation, but
+its historical Account/Cloud target shape is not the V1 product roadmap. Do not
+restore archived products from this document. Follow
+[`docs/product/nvbes-product-strategy.md`](../product/nvbes-product-strategy.md).
+
 ## Goal
 
 Refactor nvbes into an Nx-oriented monorepo with explicit project boundaries, small files, and clear agent-friendly instructions.

@@ -1,5 +1,9 @@
 # nvbes Developer Experience and Portal Design
 
+> **Status: future product surface, outside active V1.** Developer Portal work
+> resumes only after selection of the first product and a separate FinOps gate.
+> See the [active direction](../../product/nvbes-product-strategy.md).
+
 Date: 2026-06-12
 Status: Approved for specification review
 

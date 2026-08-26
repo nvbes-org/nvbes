@@ -1,133 +1,122 @@
-# Base Securite et Confidentialite
+# Base sécurité et confidentialité — socle V1
+
+## Portée
+
+Cette base s'applique à Identity, Account, Billing, Email, Trust/Risk et Platform
+Operations. Elle protège un service B2C tout public et les équipes sans promettre
+de conformité Enterprise ou de certification. La
+[direction produit](../product/nvbes-product-strategy.md) prévaut.
+
+Les exigences propres au stockage de fichiers, aux liens publics, à Cloud/Drive,
+aux organisations Enterprise ou à une API produit sont futures.
 
 ## Principes
 
-- Hebergement EU-first.
-- RGPD by design.
-- Minimisation des donnees.
-- Securite par defaut.
-- Auditabilite claire.
-- Transparence sur les sous-traitants.
+- privacy et sécurité by design ;
+- minimisation des données et des privilèges ;
+- frontières de service et sources de vérité distinctes ;
+- défense en profondeur proportionnée au risque ;
+- audit des actions sensibles ;
+- procédures manuelles sûres avant automatisation ;
+- coûts de sécurité inclus dans le plafond global de 30 EUR TTC ;
+- aucune affirmation de certification sans preuve externe valide.
 
-## Exigences Securite V1
+## Sécurité V1
 
-- TLS partout.
-- WAF et rate limiting via Cloudflare.
-- Chiffrement au repos obligatoire pour PostgreSQL, Object Storage et backups.
-- Gestion des cles via KMS ou mecanisme equivalent, avec acces limite aux comptes de service strictement necessaires.
-- Rotation documentee des secrets, cles applicatives et tokens d'integration.
-- Secrets stockes dans un secret manager ou un coffre dedie, jamais dans le code source ni les images de build.
-- Signed URLs courtes pour upload et download.
-- Tokens de partage hashes.
-- Ne jamais exposer les object keys aux utilisateurs.
-- Verifier les permissions workspace cote serveur a chaque action.
-- Stocker les fichiers dans l'object storage, pas sur le disque serveur applicatif.
-- Separer les environnements et buckets.
-- Utiliser des object keys opaques.
-- MFA client Owner/Admin recommande; son caractere obligatoire ne fait pas partie du scope V1 tant que la fonctionnalite n'est pas livree et documentee.
-- MFA obligatoire des la V1 pour tous les comptes internes et administrateurs d'infrastructure.
-- Comptes internes nominatifs, sans compte partage.
-- Acces production au moindre privilege.
-- Aucun acces direct aux buckets production hors procedure d'incident documentee.
-- Logger les actions sensibles.
-- Suivre les liens publics actifs.
-- Supporter expiration, revocation et journalisation d'acces des liens de partage.
-- Imposer une duree maximale aux liens publics en V1.
-- Appliquer du rate limiting specifique aux routes publiques de partage.
-- Scanner ou mettre en quarantaine les fichiers partages publiquement selon une politique anti-malware documentee.
-- Bloquer ou retirer les contenus abusifs selon une procedure d'abus documentee.
+- TLS sur tous les flux ;
+- Cloudflare pour edge, WAF et rate limiting de base ;
+- bases et sauvegardes chiffrées ;
+- secrets par service, injectés hors code et images ;
+- rotation documentée des credentials ;
+- MFA obligatoire pour opérateur et accès infrastructure ;
+- step-up pour toute commande sensible ;
+- comptes nominatifs, aucun compte opérateur partagé ;
+- moindre privilège et séparation lecture/action ;
+- logs structurés sans secrets ni données personnelles inutiles ;
+- audit append-only des décisions et commandes ;
+- restauration isolée démontrée avant comptes invités ;
+- dépendances, images et artefacts vérifiés par les gates du dépôt.
 
-## Exigences API Publique V1
+## Identity et Account
 
-- API keys legacy hashees en base.
-- API keys affichees une seule fois pour la migration ou les cas historiques.
-- Creation de nouvelles API keys desactivee; les nouvelles integrations machine doivent passer par Identity `service accounts`.
-- Scopes obligatoires.
-- Rate limiting par plan.
-- Revocation immediate.
-- Rotation supportee.
-- Expiration optionnelle selon plan.
-- Aucune cle API dans les logs, analytics ou audit metadata non securisee.
-- Audit des actions API sensibles.
-- Documentation OpenAPI versionnee avant lancement public.
+- vérification email avant les usages sensibles ;
+- récupération avec jeton court, usage unique et expiration ;
+- protection contre brute force et credential stuffing ;
+- sessions expirantes, révocables et rotatives ;
+- invalidation après compromission ou changement critique ;
+- email jamais utilisé comme identifiant d'autorisation codé en dur ;
+- équipes B2C avec permissions serveur explicites ;
+- SSO/SAML, SCIM et gouvernance Enterprise hors V1.
 
-## Exigences Auth et Sessions V1
+## Billing
 
-- Verification email obligatoire avant usage complet du workspace.
-- Politique de mot de passe minimale.
-- Reset password avec token court, usage unique et expiration.
-- Protection brute force sur login, reset password et creation de compte.
-- Sessions avec expiration, rotation et invalidation serveur.
-- Invalidation des sessions apres changement de mot de passe, changement de role sensible ou suppression de membre.
-- Journalisation des login success, login failed, logout et reset password.
+- paiement délégué au PSP ;
+- aucune conservation de PAN ou CVV ;
+- webhooks signés, idempotents et durablement enregistrés ;
+- timeout de paiement traité comme `pending`, jamais comme succès ;
+- réconciliation avant activation de paiements réels ;
+- opérations ambiguës ou exceptionnelles revues manuellement.
 
-## Exigences Privacy V1
+## Email
 
-- Export des donnees utilisateur.
-- Suppression de compte utilisateur.
-- Export des donnees workspace.
-- Suppression des donnees workspace.
-- Regles de retention pour fichiers en corbeille.
-- Delai de suppression effective documente pour donnees actives et objets stockes.
-- Politique explicite pour les suppressions dans les backups.
-- Retention backup documentee avec delai maximal de purge.
-- Restauration backup interdite sans rejouer les suppressions deja demandees.
-- Documentation des sous-traitants.
-- Documentation des categories de donnees.
-- Documentation de la retention.
-- Procedure de gestion d'incident.
+- acceptation durable avant envoi ;
+- retries bornés et dead-letter ;
+- webhooks fournisseur authentifiés et idempotents ;
+- suppressions et événements de délivrabilité traçables ;
+- aucune campagne marketing ou préférence center dans le scope V1.
 
-## Exigences Analytics RGPD V1
+## Trust/Risk et abus
 
-- Consentement explicite pour analytics marketing non essentiels.
-- Product analytics limite aux evenements necessaires a l'amelioration du service.
-- Opt-out documente.
-- Minimisation stricte des proprietes collectees.
-- Pas de noms de fichiers, contenu, emails en clair, tokens ou object keys dans les analytics.
-- Retention analytics documentee.
-- Attribution marketing sans fingerprinting invasif.
-- Sous-traitants analytics documentes.
-- Export/suppression des donnees analytics rattachees a un utilisateur si applicable.
+- signaux minimisés et pseudonymisés lorsque possible ;
+- évaluations déterministes et explicables ;
+- shadow mode lors de la première production ;
+- aucun blocage irréversible automatique ;
+- décision finale conservée par le domaine propriétaire ;
+- recours et motif enregistrés dans Platform Operations.
 
-## Exigences Audit V1
+## Platform Operations
 
-- Audit logs accessibles uniquement a Owner/Admin.
-- Retention audit definie par plan.
-- Audit logs append-only au niveau applicatif.
-- Journalisation des evenements de securite: login failed, permission denied, share accessed, file downloaded.
-- Journalisation des evenements API: api_key.created, api_key.revoked, api.request.denied.
-- Export audit disponible pour le owner.
-- Toute modification ou suppression d'audit log doit etre interdite hors procedure d'incident.
+- `platform_owner` attribué à un opérateur identifié ;
+- données personnelles masquées par défaut ;
+- aucun accès direct aux bases des services ;
+- aucune usurpation complète de session utilisateur ;
+- commande sensible motivée et idempotente ;
+- suspension temporaire préférée à la suppression ;
+- suppression différée, annulable et protégée par un nouveau step-up ;
+- résultat incertain conservé comme `pending` ou `unknown`.
 
-## Documents Compliance a Maintenir
+Le [runbook opérateur solo](../operations/platform-operations-manual-runbook.md)
+définit le traitement des dossiers.
 
-- Politique de confidentialite.
-- Conditions d'utilisation.
-- Data processing agreement.
-- Liste des sous-traitants.
-- Politique de retention.
-- Runbook incident.
-- Security overview.
-- Procedure de demandes RGPD.
+## Privacy V1
 
-## Incident Response Operationnel
+- registre des traitements et sous-traitants réels ;
+- finalité et durée de conservation explicites ;
+- export, rectification et suppression des données applicables ;
+- suppression rejouée après restauration lorsque nécessaire ;
+- procédure de violation de données personnelles ;
+- analytics non essentiels désactivés sans base légale ou consentement requis ;
+- séparation entre logs techniques, audit et analytics ;
+- aucune donnée sensible dans la télémétrie non prévue pour elle.
 
-- Severites SEV1, SEV2 et SEV3 definies.
-- Canal d'alerte interne defini.
-- Owner d'incident designe pour chaque incident critique.
-- Runbooks pour API down, PostgreSQL down, Object Storage down, bucket public, billing webhook failure et job RGPD failure.
-- Criteres de rollback documentes.
-- Communication client preparee pour incidents SEV1/SEV2.
-- Preservation des logs pendant incident.
-- Postmortem obligatoire pour SEV1/SEV2.
-- Exercices d'incident planifies avant maturite SOC 2.
+## FinOps sécurité
 
-## Objectifs de Maturite Plus Tard
+Les contrôles critiques locaux et CI peuvent être automatisés lorsqu'ils ne
+créent pas de coût récurrent significatif. Les services externes payants,
+collecteurs permanents, bug bounties et audits de certification restent futurs
+jusqu'à financement.
 
-- Readiness SOC 2.
-- SSO/SAML.
-- Audit logs avances.
-- Revue des sessions admin.
-- Gestion appareils/sessions.
-- Controles de chiffrement plus forts.
-- Test d'intrusion externe.
+L'absence d'un service payant ne permet pas de supprimer un contrôle nécessaire :
+utiliser une procédure manuelle ou une solution maison sûre, ou maintenir le
+parcours fermé si le risque ne peut pas être maîtrisé.
+
+## Gate de production
+
+- checks sécurité, secrets, dépendances et FinOps verts ;
+- aucun défaut critique connu ;
+- runbooks et alertes du service présents ;
+- restauration réussie ;
+- accès opérateur et step-up testés ;
+- coût prévisionnel inférieur ou égal à 20 EUR TTC ;
+- pire scénario borné inférieur ou égal à 30 EUR TTC ;
+- aucune garantie de conformité, disponibilité ou support non démontrée.

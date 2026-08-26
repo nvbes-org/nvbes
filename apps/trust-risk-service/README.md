@@ -4,7 +4,7 @@ Independent runtime for cross-product fraud, abuse, bot and risk intelligence.
 It accepts versioned signals, derives replayable features and returns explainable
 risk recommendations. Products retain their business policy and enforcement.
 
-The V0 implementation uses its own PostgreSQL database. It does not restore an
+The first V1 foundation implementation uses its own PostgreSQL database. It does not restore an
 archived Billing application and does not depend on Backoffice for readiness.
 
 ## Runtime
@@ -23,7 +23,7 @@ explicit signal-family, assessment and label permissions through
 `NVBES_TRUST_RISK_PRODUCER_POLICIES`. Operators use a separate policy set and
 cannot activate a rule set they staged themselves.
 
-PostgreSQL is the V0 source of truth. The immutable signal journal and semantic
+PostgreSQL is the V1 foundation source of truth. The immutable signal journal and semantic
 outbox retain partition keys and event timestamps so CDC can later feed a
 Kafka/Flink projection path without changing producer contracts.
 

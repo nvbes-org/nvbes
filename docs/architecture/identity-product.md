@@ -1,8 +1,18 @@
-# nvbes Identity - Architecture Cible Enterprise Tier
+# nvbes Identity — architecture de référence historique
+
+## Statut
+
+Identity est un service actif du socle V1 pour authentification, credentials,
+sessions, récupération, MFA, step-up et autorisation liée à l'identité. Les
+éléments Enterprise de ce document — organisations, fédération, SCIM,
+gouvernance avancée et consoles — sont futurs et ne sont pas des exigences V1.
+Voir la [direction produit](../product/nvbes-product-strategy.md) et
+l'[architecture du socle](technical-architecture.md).
 
 ## Objectif
 
-nvbes Identity devient le composant central d'identite, d'authentification, d'autorisation et de gouvernance securite pour tous les produits nvbes.
+nvbes Identity fournit les primitives d'identité, d'authentification et
+d'autorisation réutilisables par les futurs produits nvbes.
 
 Identity est deploye comme `identity-service`, distinct de `account-service`.
 Identity est l'Authorization Server OAuth 2.1 et l'OpenID Provider. Account,

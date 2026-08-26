@@ -1,5 +1,9 @@
 # Enterprise Web Tenant Admin Implementation Plan
 
+> **Status: inactive future plan.** Enterprise administration is outside the
+> B2C foundation V1 and this plan must not be executed without a new funded
+> decision. See the [active direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build `apps/enterprise-web` as the dedicated tenant administration console, with Users V0 complete and route shells for the other enterprise modules.

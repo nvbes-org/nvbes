@@ -1,5 +1,9 @@
 # Runtime Frontend
 
+> **Statut : conventions réutilisables pour de futures surfaces web.** Les
+> applications `account-web` et `cloud-web` citées ci-dessous sont archivées ;
+> leur présence ne crée aucun lot frontend V1 actif.
+
 `account-web` et `cloud-web` utilisent le meme modele runtime:
 
 - TanStack Router porte les routes client.

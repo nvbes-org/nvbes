@@ -1,5 +1,7 @@
 # API Publique V1 - Upload et Download
 
+> **Statut : capacité Cloud/Drive future, hors socle V1 actif.**
+
 ## Upload
 
 Le flux V1 cree une session d'upload cote Drive, retourne une URL courte, puis active l'objet apres completion.

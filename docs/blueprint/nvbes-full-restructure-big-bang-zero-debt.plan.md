@@ -1,5 +1,12 @@
 # Plan Structuration Complete Big Bang Zero Dette
 
+## Statut
+
+**Plan architectural historique, non roadmap produit active.** L'exigence zéro
+dette reste applicable au périmètre V1 livré, mais les produits, stacks et
+phases Cloud de ce document ne doivent pas élargir le socle actuel. La
+[direction produit V1](../product/nvbes-product-strategy.md) prévaut.
+
 ## Objectif
 
 Documenter une reconstruction complete de nvbes depuis zero, sans prendre la

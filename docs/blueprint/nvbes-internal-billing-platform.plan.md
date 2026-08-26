@@ -1,5 +1,14 @@
 # Plateforme Billing Interne Multi-Provider Implementation Plan
 
+## Statut
+
+**Cible Billing future, non roadmap V1 intégrale.** La V1 active retient
+uniquement le Billing minimal nécessaire au socle : contrats provider-neutral,
+catalogue, paiements, webhooks, entitlements et réconciliation en mode test. Les
+capacités multi-PSP, finance avancée, fiscalité multi-pays, KYC et automatisation
+restent différées jusqu'à un besoin produit financé. La
+[direction produit V1](../product/nvbes-product-strategy.md) prévaut.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** internaliser la logique billing produit de nvbes tout en utilisant Stripe comme PSP principal et Mollie comme PSP secondaire.

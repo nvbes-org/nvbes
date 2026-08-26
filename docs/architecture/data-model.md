@@ -1,5 +1,14 @@
 # Modele de Donnees de Reference
 
+## Statut
+
+**Modèle historique à réévaluer, non schéma V1 exécutable.** La V1 doit couvrir
+Identity, Account et les équipes B2C sans implémenter prématurément
+`organization`, gouvernance Enterprise ou espaces propres à Cloud/Drive. Les
+frontières futures peuvent être préparées dans les contrats, mais toute table et
+relation exige un besoin du socle. La
+[direction produit](../product/nvbes-product-strategy.md) prévaut.
+
 ## Principe Central
 
 Le modele de reference ne prend plus `workspace` comme unite unique d'isolation identity.

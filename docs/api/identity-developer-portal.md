@@ -1,5 +1,9 @@
 # Developer Portal API
 
+> **Status: historical future surface, outside active V1.** The referenced
+> Developer runtimes are archived; Identity foundation work does not restore
+> this portal without a separate product and FinOps decision.
+
 The developer portal and Developer Console APIs are served by `developer-service` under
 `/developer`. The service validates user access tokens through Account introspection and delegates
 Identity-owned OAuth primitives to `account-service`; Developer RBAC, metadata, webhooks, sandbox,

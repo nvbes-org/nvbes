@@ -1,5 +1,10 @@
 # Analyse Concurrentielle - nvbes Drive
 
+> **Statut : recherche produit future.** Cloud/Drive n'est pas le premier
+> produit présumé et cette analyse ne fixe aucune priorité V1. Elle devra être
+> actualisée après sélection du produit. Voir la
+> [direction produit](nvbes-product-strategy.md).
+
 Etat initial au 2026-06-06.
 
 ## Objectif

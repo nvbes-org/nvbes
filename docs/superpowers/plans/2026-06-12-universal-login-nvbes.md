@@ -1,5 +1,9 @@
 # Socle Identity vendable v1 Implementation Plan
 
+> **Historical Identity plan, constrained to the reusable V1 foundation.** It
+> does not authorize a standalone commercial or Enterprise launch. See the
+> [current direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build nvbes Identity into a sellable foundation for nvbes products, starting with Universal Login and hardening the OAuth/OIDC, client, session, password lifecycle, and SDK surfaces products depend on.

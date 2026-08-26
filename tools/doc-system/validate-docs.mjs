@@ -65,20 +65,26 @@ function validateMermaidInFile(filePath) {
 
     const hasValidType = validDiagramTypes.some((t) => firstLine.startsWith(t));
     if (!hasValidType) {
-      errors.push(`${relPath} (block #${blockIndex}): invalid mermaid diagram type on line 1: "${firstLine}"`);
+      errors.push(
+        `${relPath} (block #${blockIndex}): invalid mermaid diagram type on line 1: "${firstLine}"`,
+      );
     }
 
     // Check for unbalanced braces or quotes
     const openBraces = (code.match(/\{/g) || []).length;
     const closeBraces = (code.match(/\}/g) || []).length;
     if (openBraces !== closeBraces) {
-      errors.push(`${relPath} (block #${blockIndex}): unbalanced curly braces in mermaid block ({: ${openBraces}, }: ${closeBraces})`);
+      errors.push(
+        `${relPath} (block #${blockIndex}): unbalanced curly braces in mermaid block ({: ${openBraces}, }: ${closeBraces})`,
+      );
     }
 
     const openSubgraphs = (code.match(/\bsubgraph\b/g) || []).length;
     const endSubgraphs = (code.match(/\bend\b/g) || []).length;
     if (openSubgraphs > 0 && openSubgraphs !== endSubgraphs) {
-      errors.push(`${relPath} (block #${blockIndex}): unbalanced subgraphs in mermaid block (subgraph: ${openSubgraphs}, end: ${endSubgraphs})`);
+      errors.push(
+        `${relPath} (block #${blockIndex}): unbalanced subgraphs in mermaid block (subgraph: ${openSubgraphs}, end: ${endSubgraphs})`,
+      );
     }
 
     // Sequence diagram specific rules
@@ -90,8 +96,13 @@ function validateMermaidInFile(filePath) {
         const aliasMatch = line.match(/^(?:participant|actor)\s+([A-Za-z0-9_-]+)\s+as\s+(.+)$/);
         if (aliasMatch) {
           const label = aliasMatch[2].trim();
-          if ((label.includes(' ') || label.includes('(') || label.includes('/')) && !label.startsWith('"')) {
-            errors.push(`${relPath} (block #${blockIndex}, line ${i + 1}): participant/actor label with spaces or parentheses must be double-quoted: "${line}"`);
+          if (
+            (label.includes(' ') || label.includes('(') || label.includes('/')) &&
+            !label.startsWith('"')
+          ) {
+            errors.push(
+              `${relPath} (block #${blockIndex}, line ${i + 1}): participant/actor label with spaces or parentheses must be double-quoted: "${line}"`,
+            );
           }
         }
       }
@@ -130,13 +141,18 @@ function validateLinksInFile(filePath) {
   const content = readFileSync(filePath, 'utf8');
   const relPath = relative(REPO_ROOT, filePath);
   const dir = dirname(filePath);
-  const docsRoot = join(REPO_ROOT, 'apps/docs/src/content/docs');
+  const docsRoot = join(REPO_ROOT, 'docs/generated');
 
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   let match;
   while ((match = linkRegex.exec(content)) !== null) {
     const rawTarget = match[2].trim();
-    if (rawTarget.startsWith('http://') || rawTarget.startsWith('https://') || rawTarget.startsWith('#') || rawTarget.startsWith('mailto:')) {
+    if (
+      rawTarget.startsWith('http://') ||
+      rawTarget.startsWith('https://') ||
+      rawTarget.startsWith('#') ||
+      rawTarget.startsWith('mailto:')
+    ) {
       continue;
     }
 
@@ -169,11 +185,11 @@ export function validateDocumentation() {
   console.log('🛡️ Running documentation quality gates & guardrails...');
 
   const docFiles = [
-    ...walk(join(REPO_ROOT, 'apps/docs/src/content/docs'), (f) => f.endsWith('.md') || f.endsWith('.mdx')),
+    ...walk(join(REPO_ROOT, 'docs/generated'), (f) => f.endsWith('.md') || f.endsWith('.mdx')),
   ];
 
   if (docFiles.length === 0) {
-    warnings.push('No documentation files found in apps/docs/src/content/docs yet.');
+    warnings.push('No generated documentation files found in docs/generated yet.');
   }
 
   for (const file of docFiles) {

@@ -34,8 +34,15 @@ It is responsible for:
 ## Domain Tags
 
 - `domain:identity`
-- `domain:drive`
+- `domain:account`
+- `domain:billing`
+- `domain:email`
+- `domain:trust-risk`
+- `domain:platform-operations`
 - `domain:shared`
+
+Product-specific tags such as `domain:drive` may remain on archived or future
+projects but do not make them active V1 scope.
 
 ## Dependency Rules
 

@@ -1,5 +1,9 @@
 # Note de marché — Base de données serverless européenne
 
+> **Statut : recherche de marché, sans autorité d'achat ou de roadmap.** Toute
+> décision fournisseur reste soumise au contrat FinOps global 20/30 EUR TTC et à
+> la [direction produit V1](nvbes-product-strategy.md).
+
 Date de l'analyse : 2026-08-02.
 
 Statut : exploration produit. Ce document consigne une hypothèse de marché ; il ne constitue ni une ADR, ni une décision de construire ou de commercialiser le produit.
@@ -90,4 +94,3 @@ Avant toute conception détaillée :
 5. Valider les conditions techniques et commerciales avec Scaleway avant toute promesse publique.
 
 L'hypothèse sera considérée comme infirmée si les prospects valorisent la souveraineté mais refusent de payer au-delà du prix de l'infrastructure brute, ou s'ils préfèrent administrer directement leur compte Scaleway.
-

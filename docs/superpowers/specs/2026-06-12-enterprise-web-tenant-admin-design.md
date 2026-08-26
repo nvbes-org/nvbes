@@ -1,5 +1,9 @@
 # Enterprise Web Tenant Admin Console Design
 
+> **Status: future B2B/Enterprise design, outside active V1.** Do not implement
+> this console before a separately funded Enterprise decision. The active
+> direction is [`nvbes-product-strategy.md`](../../product/nvbes-product-strategy.md).
+
 ## Goal
 
 Build a dedicated `apps/enterprise-web` site for customer organizations to manage the whole enterprise account.

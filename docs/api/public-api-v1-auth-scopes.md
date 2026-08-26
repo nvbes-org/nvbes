@@ -1,5 +1,8 @@
 # API Publique V1 - Authentification et Scopes
 
+> **Statut : annexe d'une future API produit.** Les primitives Identity restent
+> actives, mais ces scopes Cloud/Drive ne sont pas une surface V1 ouverte.
+
 ## Objectif
 
 Ce guide fige le contrat d'acces public de nvbes Drive V1 pour les integrations fichiers.

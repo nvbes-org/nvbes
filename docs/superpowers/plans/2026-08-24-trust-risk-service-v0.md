@@ -1,5 +1,10 @@
 # Trust/Risk Service V0 Implementation Plan
 
+> **Historical first-increment plan for an active V1 foundation service.** The
+> `V0` label records implementation history; current scope and rollout follow
+> the [V1 direction](../../product/nvbes-product-strategy.md), including shadow
+> mode, manual enforcement and the EUR 30 global budget.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build an independent Rust Trust/Risk runtime with versioned gRPC contracts, PostgreSQL-backed signal ingestion, replayable feature projection, deterministic scoring, labels, review cases, rule operations, retention, audit and Billing checkout acceptance fixtures.

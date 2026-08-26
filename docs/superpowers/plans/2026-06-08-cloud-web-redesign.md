@@ -1,5 +1,9 @@
 # Drive Web Redesign Implementation Plan
 
+> **Status: inactive future plan.** Do not restore archived Cloud web code from
+> this plan. See the
+> [active direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rebuild `apps/cloud-web` into a credible full Drive V1 frontend with Identity-aligned theme, two-level navigation, a polished Files workspace, secondary V1 views, and realistic local interactions where APIs are missing.

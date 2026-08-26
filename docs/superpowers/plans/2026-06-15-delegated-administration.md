@@ -1,5 +1,9 @@
 # Delegated Administration Implementation Plan
 
+> **Status: inactive future plan.** Delegated organization administration is
+> outside active V1. See the
+> [active direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Allow organization-scoped administrators to manage only their organization's workspaces, users, invitations, and audit logs while blocking tenant-wide views.

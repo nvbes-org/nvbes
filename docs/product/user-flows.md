@@ -1,5 +1,9 @@
 # Parcours Utilisateur
 
+> **Statut : parcours Cloud/Drive futurs.** Les seuls parcours actifs de la V1
+> sont ceux du socle Identity, Account, Billing, Email, Trust/Risk et Platform
+> Operations. Voir la [direction produit](nvbes-product-strategy.md).
+
 Les details d'interface, d'etats critiques, de taxonomie UI et de copywriting sont definis dans [Design, UX et Design System](design-ux.md).
 
 ## Flow d'Activation Critique

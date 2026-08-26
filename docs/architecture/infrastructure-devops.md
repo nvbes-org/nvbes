@@ -2,9 +2,11 @@
 
 ## Objectif
 
-Ce document definit les exigences minimales d'exploitation pour nvbes Drive V1.
+Ce document definit les exigences minimales d'exploitation du socle nvbes V1.
 
-Il couvre le reseau, les environnements, CI/CD, migrations, backups, observabilite, workers, object storage, incident response et runbooks.
+Il applique la [direction produit V1](../product/nvbes-product-strategy.md) et la
+[conception FinOps et Platform Operations](../superpowers/specs/2026-08-25-nvbes-v1-finops-platform-operations-design.md).
+Cloud/Drive et l'Object Storage produit sont hors périmètre actif.
 
 ## Topologie Reseau V1
 
@@ -16,10 +18,9 @@ Principe:
 
 Composants publics:
 
-- Frontend web via Cloudflare/CDN.
-- API publique via Cloudflare.
-- Routes publiques de partage via Cloudflare avec rate limiting dedie.
-- Signed URLs Object Storage limitees, courtes et scopees.
+- Routes publiques strictement nécessaires d'Identity, Account, Billing, Email
+  et Trust/Risk via Cloudflare.
+- Assets statiques éventuels via Cloudflare/CDN.
 
 Composants prives:
 
@@ -34,8 +35,6 @@ Regles reseau:
 - PostgreSQL n'est jamais expose publiquement.
 - L'API accede a PostgreSQL via reseau prive ou allowlist stricte.
 - Les workers accedent a PostgreSQL via reseau prive ou allowlist stricte.
-- Les buckets Object Storage restent prives.
-- Aucun bucket public en production.
 - Les flux sortants vers providers externes sont documentes: billing, email, monitoring, anti-malware.
 - Les security groups/firewalls autorisent seulement les ports necessaires.
 - L'acces admin passe par Cloudflare Zero Trust ou mecanisme equivalent.
@@ -43,31 +42,23 @@ Regles reseau:
 
 ## Environnements
 
-Environnements minimaux:
+Environnements V1:
 
-- `development`
-- `staging`
-- `production`
+- `development` local et non permanent;
+- staging ou preview éphémère uniquement pendant une validation;
+- `production` serverless capable de descendre à zéro.
 
-Chaque environnement a:
-
-- Base PostgreSQL dediee.
-- Redis dedie pour les sessions, refresh tokens et autres etats techniques hot-path.
-- Buckets Object Storage dedies.
-- Secrets dedies.
-- Webhooks billing dedies.
-- Domaine ou sous-domaine dedie.
-- Logs separes.
-- Configuration Cloudflare separee ou clairement isolee.
-- Comptes de service separes quand possible.
+Chaque environnement exécuté possède des bases logiques, secrets, domaines,
+logs et comptes de service isolés. Redis, Object Storage et toute ressource
+payante supplémentaire ne sont ajoutés qu'après preuve du besoin et du budget.
 
 Regles:
 
 - Aucune donnee production en development.
 - Les donnees production utilisees en debug doivent etre anonymisees ou synthetiques.
 - Les secrets production ne sont jamais accessibles aux environnements non-production.
-- Les migrations passent d'abord en staging.
-- Les tests d'integration critiques tournent en staging avant promotion production.
+- Les migrations passent d'abord dans un environnement éphémère représentatif.
+- Aucun staging permanent n'est conservé sans justification FinOps.
 
 ## Infrastructure as Code
 
@@ -76,13 +67,10 @@ Toute infrastructure critique doit etre decrite en IaC avant production.
 Perimetre IaC V1:
 
 - DNS et regles Cloudflare critiques.
-- Buckets Object Storage.
-- PostgreSQL.
-- Compute API.
-- Compute workers.
+- PostgreSQL serverless par bounded context actif.
+- Compute serverless avec `min_scale = 0` et maximum explicite.
 - Security groups/firewalls.
 - Variables d'environnement non secretes.
-- Policies bucket.
 - Backups et retention.
 - Monitoring/alerting critique si le provider le permet.
 
@@ -100,16 +88,14 @@ Pipeline minimal:
 1. Lint et format.
 2. Tests unitaires.
 3. Tests d'integration critiques.
-4. Build frontend.
-5. Build backend.
-6. Scan dependances.
-7. Scan secrets.
-8. Build artefacts immutables.
-9. Migration check.
-10. Deploiement staging.
-11. Smoke tests staging.
-12. Promotion production avec approval.
-13. Smoke tests production.
+4. Gate FinOps et plafonds serverless avant tout job payant ou privilégié.
+5. Build des artefacts concernés.
+6. Scan dépendances et secrets.
+7. Migration check.
+8. Déploiement éphémère si nécessaire.
+9. Smoke tests sans effet externe non autorisé.
+10. Promotion production avec approval.
+11. Smoke tests production explicitement activés.
 
 La strategie globale de test et la matrice de regression sont definies dans:
 
@@ -118,7 +104,7 @@ La strategie globale de test et la matrice de regression sont definies dans:
 
 Contraintes:
 
-- Les artefacts deployes en production sont ceux valides en staging.
+- Les artefacts deployes en production sont immuables et déjà validés.
 - Les secrets sont injectes par environnement, jamais construits dans l'artefact.
 - Le rollback doit etre documente avant la premiere mise en production.
 - Chaque deploiement production genere un changelog operationnel.
@@ -145,22 +131,24 @@ Regles:
 Objectifs V1:
 
 - RPO PostgreSQL cible: 24h maximum au lancement.
-- RTO PostgreSQL cible: 4h maximum au lancement.
-- RPO Object Storage: selon versioning/lifecycle du bucket.
-- RTO Object Storage: procedure documentee par type d'incident.
+- RTO PostgreSQL cible: 8h maximum au lancement.
 
 Exigences:
 
 - Backups PostgreSQL automatiques et chiffres.
 - Retention backup par environnement documentee.
 - Backups production separes des environnements non-production.
-- Tests de restauration planifies au minimum mensuellement avant maturite SOC 2.
+- Tests de restauration planifiés selon le risque et avant toute ouverture
+  progressive à de nouveaux utilisateurs.
 - Test de restore obligatoire avant lancement public.
-- Validation post-restore: integrite DB, presence fichiers, quotas coherents, auth fonctionnelle.
-- Procedure de restauration partielle documentee pour workspace ou objet critique.
+- Validation post-restore: intégrité DB, audits, comptes et parcours critiques.
 - Les restaurations doivent rejouer ou respecter les demandes de suppression RGPD deja traitees.
 
 ## Object Storage
+
+Statut: **future capacité produit, hors socle V1 actif**. Les règles suivantes
+ne s'appliquent que si le premier produit sélectionné exige du stockage objet et
+qu'une décision budgétaire séparée l'autorise.
 
 Regles V1:
 
@@ -289,6 +277,10 @@ Alertes critiques minimum:
 
 ## Observabilite Produit
 
+Statut: **future capacité du premier produit**. La V1 du socle collecte
+uniquement la télémétrie technique, les audits nécessaires et les unités de coût
+minimales ; aucun funnel produit n'est actif avant la sélection du produit.
+
 Exigences:
 
 - Event taxonomy documentee avant implementation.
@@ -304,22 +296,30 @@ Exigences:
 
 Exigences:
 
-- Budgets cloud definis par environnement.
+- Budget récurrent total cible de 20 EUR TTC et limite dure de 30 EUR TTC,
+  domaines et fournisseurs compris.
+- Factures et estimations TTC vérifiées manuellement comme autorité jusqu'à une
+  collecte automatique sûre et gratuite.
+- Alertes à 15, 20, 25, 28 et 30 EUR ; dégradation automatique pour les
+  propriétés budgétaires critiques seulement.
 - Tags ou labels de cout sur ressources critiques quand le provider le permet.
 - Cout compute API suivi.
 - Cout workers suivi.
 - Cout PostgreSQL suivi.
-- Cout Object Storage suivi.
-- Cout egress suivi.
+- Coût Object Storage et egress suivis seulement si une capacité future les
+  introduit.
 - Cout backups suivi.
 - Cout logs/monitoring suivi.
 - Cout anti-malware suivi.
-- Revue mensuelle des couts avant maturite.
-- Alerte sur toute derive de cout variable liee aux trials.
+- Revue manuelle des coûts avant chaque mise en production et au minimum chaque
+  mois.
+- Aucune nouvelle ressource payante sans propriétaire, plafond et justification.
 
 ## Workers et Jobs
 
-Les jobs V1 sont portes par une queue dediee, pas par des tables PostgreSQL de polling:
+Les jobs V1 utilisent une outbox PostgreSQL versionnée, idempotente et rejouable.
+Une queue dédiée reste hors périmètre tant qu'un volume ou un besoin
+d'isolation mesuré ne la justifie pas.
 
 - Jobs idempotents.
 - Retries limites.
@@ -327,7 +327,7 @@ Les jobs V1 sont portes par une queue dediee, pas par des tables PostgreSQL de p
 - Timeout par type de job.
 - Locking pour eviter double execution concurrente.
 - Statuts clairs: pending, running, succeeded, failed, dead-letter.
-- Dead-letter queue dediee.
+- Dead-letter persistante et inspectable.
 - Reprise apres crash.
 - Priorites pour jobs critiques: billing, RGPD, quotas.
 - Monitoring queue depth et taux d'echec.

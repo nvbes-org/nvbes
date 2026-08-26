@@ -1,5 +1,9 @@
 # Account Service RLS: reference contract and production gaps
 
+> **Status: archived-runtime evidence.** Account is a V1 foundation boundary,
+> but the referenced service is not an active runtime. Reassess this contract
+> during the clean Account reconstruction.
+
 ## Production status
 
 The Account Service does **not** currently enforce the hardened RLS reference

@@ -1,5 +1,10 @@
 # Webhook Replay Design
 
+> **Reusable foundation capability only.** Automated replay must remain bounded,
+> idempotent and justified by a measured need within the EUR 30 total budget.
+> Manual review is the default. See the
+> [current direction](../../product/nvbes-product-strategy.md).
+
 Allow developers to inspect webhook delivery attempts and replay failed or pending deliveries directly from the Developer Console.
 
 ## User Review Required

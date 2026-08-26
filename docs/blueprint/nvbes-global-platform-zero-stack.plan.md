@@ -1,5 +1,12 @@
 # Plan Plateforme Globale - Stack Zero
 
+## Statut
+
+**Architecture exploratoire long terme, hors V1.** Elle n'autorise aucun travail
+multi-cloud, multi-région, Kubernetes ou hyperscale. La V1 reste un socle
+serverless borné à 30 EUR TTC par mois. Voir la
+[direction produit](../product/nvbes-product-strategy.md).
+
 ## Objectif
 
 Documenter une architecture cible construite depuis zero pour les futurs produits nvbes, sans tenir compte de la stack actuelle.

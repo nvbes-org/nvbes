@@ -1,8 +1,17 @@
 # FinOps et Billing
 
+## Statut
+
+La partie active de ce document concerne le service Billing réutilisable du
+socle. Les plans, quotas, meters, trials, TVA multi-pays et objectifs commerciaux
+liés à Drive sont des hypothèses futures. Ils ne doivent pas être implémentés ou
+commercialisés avant la sélection du premier produit et un gate distinct. La
+[direction produit V1](nvbes-product-strategy.md) prévaut.
+
 ## Objectif
 
-Ce document definit les exigences economiques, FinOps, Stripe et fiscales minimales pour nvbes Drive V1.
+Ce document conserve les exigences économiques et Billing étudiées pour un
+futur produit, tout en cadrant le service Billing minimal réutilisable du socle.
 
 Le produit ne doit pas seulement etre techniquement fiable: il doit rester rentable a mesure que le stockage, l'egress, les logs, les backups et le support augmentent.
 
@@ -88,7 +97,7 @@ En cas de depassement:
 - Downloads existants maintenus sauf abus ou incident.
 - Upgrade propose dans le produit.
 
-## Pay-As-You-Use V1
+## Pay-As-You-Use d'un futur produit
 
 Meters V1:
 
@@ -157,7 +166,7 @@ Regle:
 - Aucun lancement payant EU sans validation fiscale/comptable minimale.
 - Les calculs TVA, l'e-invoicing, la revenue recognition auditee et la retention des pieces comptables restent sous validation expert-comptable/fiscaliste avant activation multi-pays.
 
-## Objectifs Business V1
+## Objectifs Business futurs
 
 Targets initiales a valider:
 

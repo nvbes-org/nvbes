@@ -1,5 +1,13 @@
 # Plan Starter Low Budget vers Plateforme Globale
 
+## Statut
+
+**Exploration long terme, non roadmap V1.** Pour la V1, le contrat exécutable
+20/30 EUR TTC, le scale-to-zero et le traitement manuel prévalent sur toutes les
+phases d'upgrade décrites ici. Aucun composant payant ou permanent de ce plan ne
+peut être ajouté sans seuil mesuré et décision FinOps. Voir la
+[direction produit](../product/nvbes-product-strategy.md).
+
 ## Objectif
 
 Demarrer nvbes avec une architecture peu couteuse, exploitable par une petite equipe, mais concue pour evoluer progressivement vers le [Plan Plateforme Globale - Stack Zero](nvbes-global-platform-zero-stack.plan.md).

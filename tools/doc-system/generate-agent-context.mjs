@@ -28,24 +28,33 @@ export function generateAgentContext() {
 > Fiche de contexte ultra-synthétique auto-générée pour agents IA (Cursor, Antigravity, Claude Code).
 > Générée le : \`${ir.extractedAt}\`
 
-## 1. Stack Technique
-- **Backend** : Rust stable (Cargo workspace), Axum, SQLx, PostgreSQL, Redis.
+## 1. Direction V1
+- Livrer uniquement le socle Identity, Account, Billing, Email, Trust/Risk et Platform Operations.
+- Cible B2C tout public avec équipes ; B2B, Enterprise, conformité avancée et Cloud/Drive sont futurs.
+- Coût récurrent total : cible 20 EUR TTC, limite dure 30 EUR TTC.
+- Un opérateur solo traite administration, support, abus et modération manuellement par défaut.
+- Aucune dette technique ou structurelle connue dans le périmètre V1 livré.
+
+## 2. Stack Technique
+- **Backend** : Rust stable (Cargo workspace), Axum, SQLx, PostgreSQL serverless. Redis n'est pas une dépendance V1 active.
 - **Frontend** : React 19, TypeScript, Vite, TanStack Router & Query, Tailwind CSS, shadcn/ui.
 - **Monorepo Tooling** : pnpm workspaces, Nx, Biome/vp fmt, Lefthook git hooks.
 - **Auth & Sécurité** : DPoP JWT (RFC 9449), WebAuthn/FIDO2, Cookies HTTP-only.
 
-## 2. Services Backend (Axum / Rust)
+## 3. Services Backend actifs (Axum / Rust)
 | Service | Chemin | Endpoints OpenAPI |
 | :--- | :--- | :--- |
 `;
 
   for (const svc of backendApps) {
-    const openapi = ir.openapiServices.find((o) => o.filePath.includes(svc.name) || o.filePath.includes(svc.path.split('/')[1]));
+    const openapi = ir.openapiServices.find(
+      (o) => o.filePath.includes(svc.name) || o.filePath.includes(svc.path.split('/')[1]),
+    );
     const count = openapi ? openapi.endpointsCount : '-';
     doc += `| \`${svc.name}\` | \`${svc.path}\` | ${count} endpoints |\n`;
   }
 
-  doc += `\n## 3. Applications Frontend (React / Vite)
+  doc += `\n## 4. Applications Frontend actives (React / Vite)
 | Application | Chemin | Rôle |
 | :--- | :--- | :--- |
 `;
@@ -54,22 +63,29 @@ export function generateAgentContext() {
     doc += `| \`${app.name}\` | \`${app.path}\` | ${app.description || 'Interface utilisateur'} |\n`;
   }
 
-  doc += `\n## 4. Bibliothèques Partagées Clés
-- **Rust (\`libs/rust/\`)** : ${rustLibs.slice(0, 10).map((l) => `\`${l.name}\``).join(', ')} (+${Math.max(0, rustLibs.length - 10)} autres).
+  doc += `\n## 5. Bibliothèques disponibles
+- **Rust (\`libs/rust/\`)** : ${rustLibs
+    .slice(0, 10)
+    .map((l) => `\`${l.name}\``)
+    .join(', ')} (+${Math.max(0, rustLibs.length - 10)} autres).
 - **TypeScript (\`libs/ts/\`)** : ${tsLibs.map((l) => `\`${l.name}\``).join(', ')}.
 
-## 5. Règles Impératives du Codebase
+La présence d'une bibliothèque Cloud, Drive, Backoffice, Developer ou Enterprise ne la rend pas active. Vérifier la direction produit avant usage.
+
+## 6. Règles Impératives du Codebase
 1. **Fichiers < 300 lignes** : Tout fichier dépassant 300 lignes doit être découpé. Limite stricte à 500 lignes.
 2. **Flat Dot-Notation (Rust)** : Tous les fichiers \`.rs\` sont à la racine de \`src/\` (ex: \`identity.domains.auth.service.rs\`).
 3. **Zéro Dette Technique** : Pas de types \`any\` en TypeScript, pas de \`#[allow(unused)]\` sans justification en Rust.
 4. **Pas de Service Locator** : Passer explicitement les dépendances (\`&PgPool\`, \`&Config\`) plutôt que l'objet global AppState.
+5. **FinOps central** : Toute ressource ou automatisation doit tenir sous la limite globale de 30 EUR TTC.
+6. **Opérations manuelles par défaut** : Automatiser uniquement un besoin mesuré, sûr, observable et réversible.
 
-## 6. Commandes Rapides de Vérification
+## 7. Commandes Rapides de Vérification
 \`\`\`bash
 pnpm check            # Suite complète de vérification monorepo
 pnpm doc:validate     # Validation de la documentation (Mermaid, liens, snippets)
 pnpm doc:check-drift  # Détection de désynchronisation code vs doc
-pnpm dev:docs         # Lancer le portail de documentation
+pnpm dev:docs         # Surveiller et régénérer la documentation
 \`\`\`
 `;
 

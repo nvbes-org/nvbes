@@ -1,17 +1,41 @@
 {
-  "extractedAt": "2026-08-19T22:51:12.120Z",
+  "extractedAt": "2026-08-26T09:36:01.861Z",
   "monorepo": {
     "totalProjects": 45,
     "totalTsPackages": 18,
-    "totalRustCrates": 37,
+    "totalRustCrates": 39,
     "totalOpenApiServices": 9,
     "totalAdrs": 11
   },
   "projects": [
     {
+      "name": "email-worker",
+      "projectType": "application",
+      "root": "apps/email-worker",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:email",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/email-worker/src"
+    },
+    {
+      "name": "trust-risk-service",
+      "projectType": "application",
+      "root": "apps/trust-risk-service",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:trust-risk",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/trust-risk-service/src"
+    },
+    {
       "name": "account-service",
       "projectType": "application",
-      "root": "apps/account-service-next",
+      "root": "archive/apps/account-service-next",
       "tags": [
         "scope:oss",
         "type:app",
@@ -23,7 +47,7 @@
     {
       "name": "account-web",
       "projectType": "application",
-      "root": "apps/account-web",
+      "root": "archive/apps/account-web",
       "tags": [
         "scope:oss",
         "type:app",
@@ -35,7 +59,7 @@
     {
       "name": "account-worker",
       "projectType": "application",
-      "root": "apps/account-worker",
+      "root": "archive/apps/account-worker",
       "tags": [
         "scope:oss",
         "type:app",
@@ -47,7 +71,7 @@
     {
       "name": "backoffice-service",
       "projectType": "application",
-      "root": "apps/backoffice-service",
+      "root": "archive/apps/backoffice-service",
       "tags": [
         "scope:internal",
         "type:app",
@@ -59,7 +83,7 @@
     {
       "name": "backoffice-web",
       "projectType": "application",
-      "root": "apps/backoffice-web",
+      "root": "archive/apps/backoffice-web",
       "tags": [
         "scope:internal",
         "type:app",
@@ -71,7 +95,7 @@
     {
       "name": "billing-service",
       "projectType": "application",
-      "root": "apps/billing-service",
+      "root": "archive/apps/billing-service",
       "tags": [
         "scope:cloud",
         "type:app",
@@ -83,7 +107,7 @@
     {
       "name": "billing-worker",
       "projectType": "application",
-      "root": "apps/billing-worker",
+      "root": "archive/apps/billing-worker",
       "tags": [
         "scope:cloud",
         "type:app",
@@ -95,7 +119,7 @@
     {
       "name": "cloud-service",
       "projectType": "application",
-      "root": "apps/cloud-service",
+      "root": "archive/apps/cloud-service",
       "tags": [
         "scope:oss",
         "type:app",
@@ -107,7 +131,7 @@
     {
       "name": "cloud-web",
       "projectType": "application",
-      "root": "apps/cloud-web",
+      "root": "archive/apps/cloud-web",
       "tags": [
         "scope:oss",
         "type:app",
@@ -119,7 +143,7 @@
     {
       "name": "cloud-worker",
       "projectType": "application",
-      "root": "apps/cloud-worker",
+      "root": "archive/apps/cloud-worker",
       "tags": [
         "scope:oss",
         "type:app",
@@ -131,7 +155,7 @@
     {
       "name": "console-web",
       "projectType": "application",
-      "root": "apps/console-web",
+      "root": "archive/apps/console-web",
       "tags": [
         "scope:oss",
         "type:app",
@@ -143,7 +167,7 @@
     {
       "name": "developer-service",
       "projectType": "application",
-      "root": "apps/developer-service",
+      "root": "archive/apps/developer-service",
       "tags": [
         "scope:oss",
         "type:app",
@@ -155,7 +179,7 @@
     {
       "name": "docs",
       "projectType": "application",
-      "root": "apps/docs",
+      "root": "archive/apps/docs",
       "tags": [
         "scope:internal",
         "type:app",
@@ -165,21 +189,9 @@
       "sourceRoot": "apps/docs/src"
     },
     {
-      "name": "email-worker",
-      "projectType": "application",
-      "root": "apps/email-worker",
-      "tags": [
-        "scope:cloud",
-        "type:app",
-        "domain:email",
-        "layer:app"
-      ],
-      "sourceRoot": "apps/email-worker/src"
-    },
-    {
       "name": "enterprise-service",
       "projectType": "application",
-      "root": "apps/enterprise-service",
+      "root": "archive/apps/enterprise-service",
       "tags": [
         "scope:oss",
         "type:app",
@@ -191,7 +203,7 @@
     {
       "name": "enterprise-web",
       "projectType": "application",
-      "root": "apps/enterprise-web",
+      "root": "archive/apps/enterprise-web",
       "tags": [
         "scope:oss",
         "type:app",
@@ -203,7 +215,7 @@
     {
       "name": "gateway-cloud",
       "projectType": "application",
-      "root": "apps/gateway-cloud",
+      "root": "archive/apps/gateway-cloud",
       "tags": [
         "scope:oss",
         "type:app",
@@ -215,7 +227,7 @@
     {
       "name": "identity-service",
       "projectType": "application",
-      "root": "apps/identity-service",
+      "root": "archive/apps/identity-service",
       "tags": [
         "scope:cloud",
         "type:app",
@@ -227,7 +239,7 @@
     {
       "name": "identity-web",
       "projectType": "application",
-      "root": "apps/identity-web",
+      "root": "archive/apps/identity-web",
       "tags": [
         "scope:oss",
         "type:app",
@@ -239,7 +251,7 @@
     {
       "name": "identity-worker",
       "projectType": "application",
-      "root": "apps/identity-worker",
+      "root": "archive/apps/identity-worker",
       "tags": [
         "scope:oss",
         "type:app",
@@ -251,26 +263,26 @@
     {
       "name": "analytics-posthog",
       "projectType": "library",
-      "root": "libs/rust/adapters-cloud/analytics-posthog",
+      "root": "libs/rust/adapters/analytics-posthog",
       "tags": [
         "scope:cloud",
         "type:lib",
         "domain:shared",
         "layer:adapter"
       ],
-      "sourceRoot": "libs/rust/adapters-cloud/analytics-posthog"
+      "sourceRoot": "libs/rust/adapters/analytics-posthog"
     },
     {
       "name": "email-scaleway",
       "projectType": "library",
-      "root": "libs/rust/adapters-cloud/email-scaleway",
+      "root": "libs/rust/adapters/email-scaleway",
       "tags": [
         "scope:cloud",
         "type:lib",
         "domain:shared",
         "layer:adapter"
       ],
-      "sourceRoot": "libs/rust/adapters-cloud/email-scaleway"
+      "sourceRoot": "libs/rust/adapters/email-scaleway"
     },
     {
       "name": "audit",
@@ -367,6 +379,18 @@
         "layer:core"
       ],
       "sourceRoot": "libs/rust/tenancy/src"
+    },
+    {
+      "name": "trust-risk",
+      "projectType": "library",
+      "root": "libs/rust/trust-risk",
+      "tags": [
+        "scope:oss",
+        "type:lib",
+        "domain:trust-risk",
+        "layer:sdk"
+      ],
+      "sourceRoot": "libs/rust/trust-risk/src"
     },
     {
       "name": "account-client",
@@ -513,30 +537,6 @@
       "sourceRoot": "tools/account-quality"
     },
     {
-      "name": "go-workspace",
-      "projectType": "library",
-      "root": "tools/go-workspace",
-      "tags": [
-        "scope:oss",
-        "type:workspace",
-        "domain:shared",
-        "layer:tooling"
-      ],
-      "sourceRoot": "libs/go"
-    },
-    {
-      "name": "python-workspace",
-      "projectType": "library",
-      "root": "tools/python-workspace",
-      "tags": [
-        "scope:oss",
-        "type:workspace",
-        "domain:shared",
-        "layer:tooling"
-      ],
-      "sourceRoot": "libs/python"
-    },
-    {
       "name": "rust-workspace",
       "projectType": "library",
       "root": "tools/rust-workspace",
@@ -553,8 +553,8 @@
     {
       "name": "nvbes-account-web",
       "version": "0.1.0",
-      "path": "apps/account-web",
-      "isApp": true,
+      "path": "archive/apps/account-web",
+      "isApp": false,
       "isLib": false,
       "dependencies": [
         "@fontsource-variable/geist",
@@ -609,8 +609,8 @@
     {
       "name": "nvbes-backoffice-web",
       "version": "0.1.0",
-      "path": "apps/backoffice-web",
-      "isApp": true,
+      "path": "archive/apps/backoffice-web",
+      "isApp": false,
       "isLib": false,
       "dependencies": [
         "@fontsource-variable/geist",
@@ -657,8 +657,8 @@
     {
       "name": "nvbes-cloud-web",
       "version": "0.1.0",
-      "path": "apps/cloud-web",
-      "isApp": true,
+      "path": "archive/apps/cloud-web",
+      "isApp": false,
       "isLib": false,
       "dependencies": [
         "@base-ui/react",
@@ -718,8 +718,8 @@
     {
       "name": "nvbes-console-web",
       "version": "0.1.0",
-      "path": "apps/console-web",
-      "isApp": true,
+      "path": "archive/apps/console-web",
+      "isApp": false,
       "isLib": false,
       "dependencies": [
         "@base-ui/react",
@@ -772,8 +772,8 @@
     {
       "name": "@nvbes/docs",
       "version": "0.1.0",
-      "path": "apps/docs",
-      "isApp": true,
+      "path": "archive/apps/docs",
+      "isApp": false,
       "isLib": false,
       "dependencies": [
         "@astrojs/react",
@@ -803,8 +803,8 @@
     {
       "name": "nvbes-enterprise-web",
       "version": "0.1.0",
-      "path": "apps/enterprise-web",
-      "isApp": true,
+      "path": "archive/apps/enterprise-web",
+      "isApp": false,
       "isLib": false,
       "dependencies": [
         "@fontsource-variable/geist",
@@ -857,8 +857,8 @@
     {
       "name": "nvbes-identity-web",
       "version": "0.1.0",
-      "path": "apps/identity-web",
-      "isApp": true,
+      "path": "archive/apps/identity-web",
+      "isApp": false,
       "isLib": false,
       "dependencies": [
         "@base-ui/react",
@@ -1122,7 +1122,6 @@
         "check",
         "generate:ts",
         "generate:rust",
-        "generate:go",
         "test"
       ],
       "description": "OpenAPI specification for nvbes Identity - cross-language SDK generation"
@@ -1217,10 +1216,36 @@
   ],
   "rustCrates": [
     {
+      "name": "nvbes-email-worker",
+      "version": "=1.90.0",
+      "path": "apps/email-worker",
+      "isApp": true,
+      "isLib": false,
+      "internalDependencies": [
+        "nvbes-core",
+        "nvbes-email",
+        "nvbes-email-scaleway",
+        "nvbes-observability"
+      ]
+    },
+    {
+      "name": "nvbes-trust-risk-service",
+      "version": "0.1.0",
+      "path": "apps/trust-risk-service",
+      "isApp": true,
+      "isLib": false,
+      "internalDependencies": [
+        "nvbes-core",
+        "nvbes-observability",
+        "nvbes-trust-risk",
+        "opentelemetry-otlp"
+      ]
+    },
+    {
       "name": "nvbes-account-service",
       "version": "0.1.0",
-      "path": "apps/account-service-next",
-      "isApp": true,
+      "path": "archive/apps/account-service-next",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-identity-sdk",
@@ -1234,8 +1259,8 @@
     {
       "name": "nvbes-account-worker",
       "version": "0.1.0",
-      "path": "apps/account-worker",
-      "isApp": true,
+      "path": "archive/apps/account-worker",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-account-service",
@@ -1248,8 +1273,8 @@
     {
       "name": "nvbes-backoffice-service",
       "version": "0.1.0",
-      "path": "apps/backoffice-service",
-      "isApp": true,
+      "path": "archive/apps/backoffice-service",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-billing",
@@ -1263,8 +1288,8 @@
     {
       "name": "nvbes-billing-service",
       "version": "0.1.0",
-      "path": "apps/billing-service",
-      "isApp": true,
+      "path": "archive/apps/billing-service",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-billing",
@@ -1280,8 +1305,8 @@
     {
       "name": "nvbes-billing-worker",
       "version": "0.1.0",
-      "path": "apps/billing-worker",
-      "isApp": true,
+      "path": "archive/apps/billing-worker",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-billing",
@@ -1297,8 +1322,8 @@
     {
       "name": "nvbes-cloud-service",
       "version": "10.3.0",
-      "path": "apps/cloud-service",
-      "isApp": true,
+      "path": "archive/apps/cloud-service",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-core",
@@ -1323,8 +1348,8 @@
     {
       "name": "nvbes-cloud-worker",
       "version": "0.29",
-      "path": "apps/cloud-worker",
-      "isApp": true,
+      "path": "archive/apps/cloud-worker",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-core",
@@ -1338,8 +1363,8 @@
     {
       "name": "nvbes-developer-service",
       "version": "10.3.0",
-      "path": "apps/developer-service",
-      "isApp": true,
+      "path": "archive/apps/developer-service",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-core",
@@ -1350,23 +1375,10 @@
       ]
     },
     {
-      "name": "nvbes-email-worker",
-      "version": "=1.90.0",
-      "path": "apps/email-worker",
-      "isApp": true,
-      "isLib": false,
-      "internalDependencies": [
-        "nvbes-core",
-        "nvbes-email",
-        "nvbes-email-scaleway",
-        "nvbes-observability"
-      ]
-    },
-    {
       "name": "nvbes-enterprise-service",
       "version": "0.1.0",
-      "path": "apps/enterprise-service",
-      "isApp": true,
+      "path": "archive/apps/enterprise-service",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-core",
@@ -1377,8 +1389,8 @@
     {
       "name": "nvbes-gateway-cloud",
       "version": "0.1.0",
-      "path": "apps/gateway-cloud",
-      "isApp": true,
+      "path": "archive/apps/gateway-cloud",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-core",
@@ -1389,8 +1401,8 @@
     {
       "name": "nvbes-identity-service",
       "version": "10.3.0",
-      "path": "apps/identity-service",
-      "isApp": true,
+      "path": "archive/apps/identity-service",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-core",
@@ -1418,8 +1430,8 @@
     {
       "name": "nvbes-identity-worker",
       "version": "0.29",
-      "path": "apps/identity-worker",
-      "isApp": true,
+      "path": "archive/apps/identity-worker",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-email",
@@ -1449,7 +1461,7 @@
     {
       "name": "nvbes-analytics-posthog",
       "version": "0.1.0",
-      "path": "libs/rust/adapters-cloud/analytics-posthog",
+      "path": "libs/rust/adapters/analytics-posthog",
       "isApp": false,
       "isLib": true,
       "internalDependencies": [
@@ -1459,7 +1471,7 @@
     {
       "name": "nvbes-email-scaleway",
       "version": "0.1.0",
-      "path": "libs/rust/adapters-cloud/email-scaleway",
+      "path": "libs/rust/adapters/email-scaleway",
       "isApp": false,
       "isLib": true,
       "internalDependencies": [
@@ -1659,7 +1671,7 @@
     },
     {
       "name": "nvbes-storage",
-      "version": "1.8.16",
+      "version": "=1.8.16",
       "path": "libs/rust/storage",
       "isApp": false,
       "isLib": true,
@@ -1678,6 +1690,16 @@
       ]
     },
     {
+      "name": "nvbes-trust-risk",
+      "version": "0.23.41",
+      "path": "libs/rust/trust-risk",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "tonic"
+      ]
+    },
+    {
       "name": "xmlsec",
       "version": "0.3.0",
       "path": "vendor/xmlsec",
@@ -1688,7 +1710,7 @@
   ],
   "openapiServices": [
     {
-      "filePath": "apps/account-service-next/openapi.json",
+      "filePath": "archive/apps/account-service-next/openapi.json",
       "title": "nvbes Account Service",
       "version": "0.1.0",
       "description": "Independent OAuth 2.0 Resource Server for Account-owned data",
@@ -2125,7 +2147,7 @@
       ]
     },
     {
-      "filePath": "apps/backoffice-service/openapi.json",
+      "filePath": "archive/apps/backoffice-service/openapi.json",
       "title": "nvbes Backoffice API",
       "version": "0.1.0",
       "description": "Private back-office API for enterprise operations. All private routes require internal authentication and operator context headers.",
@@ -3119,7 +3141,7 @@
       ]
     },
     {
-      "filePath": "apps/cloud-service/openapi.json",
+      "filePath": "archive/apps/cloud-service/openapi.json",
       "title": "nvbes Cloud Service",
       "version": "0.1.0",
       "description": "File storage, sharing, and collaboration API",
@@ -3401,7 +3423,7 @@
       ]
     },
     {
-      "filePath": "apps/developer-service/openapi.json",
+      "filePath": "archive/apps/developer-service/openapi.json",
       "title": "nvbes Developer Service",
       "version": "0.1.0",
       "description": "Developer Console, applications, webhooks, credentials, and integration tooling",
@@ -3904,7 +3926,7 @@
       ]
     },
     {
-      "filePath": "apps/identity-service/openapi.json",
+      "filePath": "archive/apps/identity-service/openapi.json",
       "title": "nvbes Identity Service",
       "version": "0.1.0",
       "description": "OAuth 2.1, OpenID Connect, authentication, and authorization server",
@@ -8113,7 +8135,7 @@
       "filePath": "docs/adr/0008-adopt-multi-shell-super-app.md",
       "filename": "0008-adopt-multi-shell-super-app.md",
       "title": "ADR 0008 - Adopt a Multi-Shell Architecture for the Cloud and Account Super App",
-      "status": "accepted"
+      "status": "superseded"
     },
     {
       "filePath": "docs/adr/0011-workspace-end-to-end-encryption.md",
@@ -8131,7 +8153,7 @@
       "filePath": "docs/adr/2026-07-05-account-cloud-service-taxonomy.md",
       "filename": "2026-07-05-account-cloud-service-taxonomy.md",
       "title": "ADR 2026-07-05 - Account Cloud Service Taxonomy",
-      "status": "accepted"
+      "status": "superseded"
     }
   ]
 }

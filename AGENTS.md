@@ -2,6 +2,24 @@
 
 Monorepo full-stack avec Rust (Axum), TypeScript/React, orchestré par pnpm workspaces + Cargo workspace.
 
+## Direction V1 active
+
+La [direction produit canonique](docs/product/nvbes-product-strategy.md) prévaut
+sur les anciens PRD, blueprints et plans :
+
+- la V1 livre uniquement le socle réutilisable Identity, Account, Billing,
+  Email, Trust/Risk et Platform Operations ;
+- la cible est B2C tout public, avec équipes, sans offre B2B/Enterprise ni
+  conformité avancée dans la V1 ;
+- Cloud/Drive n'est pas le premier produit implicite et reste hors périmètre ;
+- le coût récurrent total du projet ne doit pas dépasser 30 EUR TTC par mois ;
+- FinOps est une propriété de conception et un gate de livraison ;
+- un opérateur solo traite les demandes manuellement tant qu'une automatisation
+  sûre, conforme aux exigences et compatible avec le budget n'est pas démontrée ;
+- une solution maison optimisée est recevable si elle est moins coûteuse, sûre,
+  maintenable et remplaçable ;
+- la production est progressive, mesurée et réversible.
+
 ## Agent contract
 
 - Lire ce fichier avant de modifier le codebase.
@@ -26,21 +44,8 @@ Monorepo full-stack avec Rust (Axum), TypeScript/React, orchestré par pnpm work
 ```
 nvbes/
 ├── apps/
-│   ├── account-service/    # Service Account / identité (Axum)
-│   ├── account-web/        # Frontend Account (React)
-│   ├── account-worker/     # Worker asynchrone Account
-│   ├── billing-service/    # Service Billing (Axum)
-│   ├── billing-worker/     # Worker asynchrone Billing
-│   ├── cloud-service/      # API stockage/fichiers Cloud (Axum)
-│   ├── cloud-web/          # Frontend Cloud/Drive (React + shadcn/ui)
-│   ├── cloud-worker/       # Worker asynchrone Cloud
-│   ├── console-web/        # Frontend Developer Console
-│   ├── developer-service/  # Service Developer (Axum)
-│   ├── enterprise-service/ # Service Enterprise (Axum)
-│   ├── enterprise-web/     # Frontend Enterprise
-│   ├── gateway-cloud/      # Gateway Cloud
-│   ├── backoffice-service/ # Service Backoffice (Axum)
-│   └── backoffice-web/     # Frontend Backoffice
+│   ├── email-worker/       # Runtime Email actif
+│   └── trust-risk-service/ # Runtime Trust/Risk actif
 ├── libs/
 │   ├── rust/
 │   │   ├── core/           # Primitives partagées (config, auth, mfa)
@@ -65,8 +70,13 @@ nvbes/
 │       ├── identity-client/    # Client Identity TS typé
 │       ├── web-runtime/        # Runtime React Query/Effect partagé
 │       └── web-ui/             # Composants UI transverses
-└── infrastructure/         # Terraform/Ansible
+├── infrastructure/         # Terraform/OpenTofu et contrat FinOps
+└── archive/                # Produits et prototypes hors runtime actif
 ```
+
+Les applications archivées Account, Cloud, Developer, Enterprise et Backoffice
+ne sont pas des bases d'implémentation actives. Leur réintroduction exige une
+conception conforme à la direction V1 ; ne pas copier le code archivé par défaut.
 
 ## Repository instructions for agents
 
@@ -158,12 +168,19 @@ pnpm nx:affected
 
 ## Règles de développement
 
-### Contexte V0
+### Contexte V1 finale
 
-- Ce produit est en **V0**.
-- À ce stade, **0 dette technique** n'est acceptable.
-- Si une partie du design ou de l'implémentation est bancale, le **redesign complet** est hautement préféré et encouragé.
-- Éviter les rustines, les compromis temporaires et les extensions incrémentales sur une base faible.
+- Le travail actif vise le **socle V1**, pas un produit final.
+- Aucune dette technique ou structurelle connue n'est acceptable dans le
+  périmètre livré.
+- Si une partie du design ou de l'implémentation est bancale, le **redesign
+  complet** est hautement préféré et encouragé.
+- Éviter les rustines, les compromis temporaires et les extensions
+  incrémentales sur une base faible.
+- Après V1, toute dette acceptée doit avoir un propriétaire, une cause, un
+  impact mesuré, une date de revue et une condition de résolution.
+- Toute ressource ou automatisation nouvelle doit démontrer sa compatibilité
+  avec le plafond global de 30 EUR TTC par mois.
 
 # Hiérarchie DE SÉLECTION DE COMPOSANTS (OBLIGATOIRE — TOUS LLM)
 
@@ -219,10 +236,15 @@ Le codebase est conçu pour être navigable par des LLMs (Claude Code, Cursor) :
 
 ### Règles de conception
 
-- `apps/account-service` est le produit Account final, pas un copié de `apps/cloud-service`
-- Réécrire le code si nécessaire plutôt que de copier/coller
-- Les services doivent être complets ou non-existants (pas de moitié implémenté)
-- Pas de duplication de code entre `apps/cloud-service` et `apps/account-service`
+- Identity, Account, Billing, Email, Trust/Risk et Platform Operations gardent
+  des sources de vérité et des contrats distincts.
+- Réécrire le code si nécessaire plutôt que de copier le code produit archivé.
+- Les capacités livrées doivent être complètes ou absentes, jamais à moitié
+  implémentées.
+- Le socle ne dépend pas de Cloud, Drive ni d'un autre produit final.
+- Mutualiser une capacité ne signifie pas créer automatiquement un microservice.
+- Le traitement opérateur reste manuel par défaut ; automatiser uniquement un
+  besoin mesuré, critique ou protecteur du budget.
 
 ### Architecture des Services
 

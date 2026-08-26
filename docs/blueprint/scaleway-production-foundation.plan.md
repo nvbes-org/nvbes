@@ -1,5 +1,13 @@
 # Plan Scaleway - Fondation production
 
+## Statut
+
+**Plan d'infrastructure historique partiellement remplacé.** Les VM, load
+balancers, queues et ressources permanentes décrites ici ne constituent plus la
+cible V1. Le socle actif utilise le serverless borné, le scale-to-zero et le
+budget global 20/30 EUR TTC. Réutiliser une étape uniquement après une décision
+FinOps mesurée. Voir la [direction produit](../product/nvbes-product-strategy.md).
+
 ## Objectif
 
 Passer d'une infrastructure "VM + services applicatifs" a une base production plus robuste, sans introduire Kubernetes ni generaliser le serverless trop tot.

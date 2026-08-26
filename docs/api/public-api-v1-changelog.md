@@ -1,5 +1,7 @@
 # API Publique V1 - Changelog
 
+> **Statut : changelog historique d'une API produit inactive.**
+
 ## Regles
 
 - Toute release publique modifiant `/v1` ajoute une entree ici.

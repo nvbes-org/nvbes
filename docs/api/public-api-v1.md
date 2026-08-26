@@ -1,5 +1,9 @@
 # API Publique V1
 
+> **Statut : contrat produit Cloud/Drive futur, hors V1 active.** Aucune API
+> publique de fichiers n'est lancée avec le socle. Voir la
+> [direction produit](../product/nvbes-product-strategy.md).
+
 ## Statut de Verrouillage
 
 Statut: contract freeze documentaire, non publie public.

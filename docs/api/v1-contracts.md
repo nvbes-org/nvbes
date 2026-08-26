@@ -1,5 +1,10 @@
 # Contrats API V1
 
+> **Statut : inventaire historique mixte.** Seuls les contrats des services du
+> socle effectivement actifs sont normatifs. Les contrats Cloud/Drive,
+> Developer, Enterprise ou Backoffice restent futurs et n'élargissent pas la
+> [direction V1](../product/nvbes-product-strategy.md).
+
 ## Principes
 
 - Le systeme identity de reference suit `principal global -> tenant -> organization optionnelle -> workspace`.

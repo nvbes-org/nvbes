@@ -1,5 +1,9 @@
 # Charters d'acceptation Account
 
+> **Statut : charters historiques à réévaluer.** Conserver uniquement les
+> scénarios compatibles avec Account et les équipes B2C du socle ; les parcours
+> Cloud, Backoffice ou Enterprise sont hors V1.
+
 ## Regles communes
 
 Ces validations ne sont pas remplacees par un test automatise. Chaque session produit :

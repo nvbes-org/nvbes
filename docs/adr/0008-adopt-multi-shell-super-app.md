@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted.
+Superseded for active scope. No Cloud/Account super app or client shell is part
+of the V1 foundation. This ADR is retained as a future product exploration and
+must be reconsidered after selection of the first product. See the
+[current product direction](../product/nvbes-product-strategy.md).
 
 ## Context
 

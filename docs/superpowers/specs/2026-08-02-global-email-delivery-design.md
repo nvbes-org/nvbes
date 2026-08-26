@@ -1,5 +1,10 @@
 # Global Email Delivery Design
 
+> **V1 foundation scope.** This design remains active only for the reusable
+> Email service and is governed by the
+> [current product direction](../../product/nvbes-product-strategy.md) and the
+> EUR 30 total recurring budget.
+
 Centralize every transactional email behind one typed Rust client and one global email runtime. Product services only submit durable email commands; the global runtime owns rendering, provider dispatch, retries, delivery state, webhooks, suppressions, and observability.
 
 ## Decision
@@ -42,7 +47,7 @@ flowchart LR
     E -->|"normalized lifecycle event"| O["Metrics and audit"]
 ```
 
-The gRPC ingress, public HTTP webhook ingress, and dispatch loop live in the same deployable initially, but remain separate Rust modules with separate dependency boundaries. This keeps V0 operations simple without coupling their implementations. They can be deployed independently later without changing the client contract or database model.
+The gRPC ingress, public HTTP webhook ingress, and dispatch loop live in the same deployable initially, but remain separate Rust modules with separate dependency boundaries. This keeps the first V1 foundation operations simple without coupling their implementations. They can be deployed independently later without changing the client contract or database model.
 
 All nvbes inter-service communication in this email architecture uses gRPC, including product outbox relays. HTTP remains only where imposed by an external integration: Scaleway's REST provider API, Topics and Events webhook delivery, and Load Balancer/container health probes.
 

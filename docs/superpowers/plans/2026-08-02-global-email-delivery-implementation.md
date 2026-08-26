@@ -1,5 +1,9 @@
 # Global Email Delivery Implementation Plan
 
+> **Executed V1 foundation plan.** Its reusable Email boundary remains active;
+> product-specific assumptions do not expand the current scope. See the
+> [current direction](../../product/nvbes-product-strategy.md).
+
 Implement the approved global email delivery design in dependency order, preserving existing product behavior until each producer is cut over.
 
 ## Phase 1 — Contract and shared package

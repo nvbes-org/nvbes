@@ -1,5 +1,7 @@
 # API Publique V1 - Erreurs et Rate Limits
 
+> **Statut : annexe d'une future API produit Cloud/Drive, hors V1 active.**
+
 ## Format d'Erreur
 
 Toutes les erreurs publiques V1 utilisent le meme wrapper.

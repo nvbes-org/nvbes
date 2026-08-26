@@ -1,5 +1,9 @@
 # nvbes Developer Portal Implementation Plan
 
+> **Status: inactive future plan.** It must not be executed as part of the
+> foundation V1. See the
+> [active direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a production-connected developer site and portal for nvbes Identity with OAuth app management, fine-grained developer RBAC, token tools, logs, webhooks, OpenAPI, SDK links, and quickstarts.

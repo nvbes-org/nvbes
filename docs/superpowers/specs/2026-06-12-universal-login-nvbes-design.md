@@ -1,5 +1,9 @@
 # Socle Identity vendable v1 Design
 
+> **Active only as reusable Identity foundation design.** Commercial product,
+> B2B and Enterprise assumptions are inactive. See the
+> [current direction](../../product/nvbes-product-strategy.md).
+
 ## Goal
 
 Build nvbes Identity as a sellable identity foundation for every nvbes product, starting with Universal Login as the hosted authentication entrypoint.

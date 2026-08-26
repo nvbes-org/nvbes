@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, '../..');
 
-const OUT_DIR = join(REPO_ROOT, 'apps/docs/src/content/docs/architecture');
+const OUT_DIR = join(REPO_ROOT, 'docs/generated/architecture');
 
 function ensureDir(dir) {
   if (!existsSync(dir)) {
@@ -23,7 +23,8 @@ const SERVICE_DOMAIN_KNOWLEDGE = {
   'identity-service': {
     domain: 'identity',
     title: 'Service Identity & Authentification',
-    description: 'Architecture du service d identité, gestion des sessions, flux OAuth2/OIDC, PKCE et WebAuthn.',
+    description:
+      'Architecture du service d identité, gestion des sessions, flux OAuth2/OIDC, PKCE et WebAuthn.',
     role: 'Fournisseur central d identité, émetteur de jetons DPoP JWT et gestionnaire de credentials pour l ensemble de l écosystème nvbes.',
     invariants: [
       'Les mots de passe ne sont jamais stockés en clair (hachage Argon2id obligatoire).',
@@ -52,15 +53,30 @@ const SERVICE_DOMAIN_KNOWLEDGE = {
     ID-->>GW: Set-Cookie (Session HTTP-only) + DPoP Token
     GW-->>User: 200 OK (Authentifie)`,
     errors: [
-      { errorType: 'InvalidCredentials', httpCode: 401, recoveryStrategy: 'Incrémenter le compteur d échecs, inviter à réinitialiser le mot de passe.' },
-      { errorType: 'SessionExpired', httpCode: 401, recoveryStrategy: 'Rediriger vers le flux de ré-authentification ou rafraîchir via Refresh Token.' },
-      { errorType: 'MfaRequired', httpCode: 403, recoveryStrategy: 'Déclencher le challenge WebAuthn ou TOTP.' },
+      {
+        errorType: 'InvalidCredentials',
+        httpCode: 401,
+        recoveryStrategy:
+          'Incrémenter le compteur d échecs, inviter à réinitialiser le mot de passe.',
+      },
+      {
+        errorType: 'SessionExpired',
+        httpCode: 401,
+        recoveryStrategy:
+          'Rediriger vers le flux de ré-authentification ou rafraîchir via Refresh Token.',
+      },
+      {
+        errorType: 'MfaRequired',
+        httpCode: 403,
+        recoveryStrategy: 'Déclencher le challenge WebAuthn ou TOTP.',
+      },
     ],
   },
   'cloud-service': {
     domain: 'cloud',
     title: 'Service Cloud & Gestion des Fichiers',
-    description: 'Architecture du service Cloud/Drive, quotas de stockage, chiffrement et upload/download multipart.',
+    description:
+      'Architecture du service Cloud/Drive, quotas de stockage, chiffrement et upload/download multipart.',
     role: 'API de stockage objet, gestion des espaces partagés, métadonnées de fichiers et contrôle d accès fin.',
     invariants: [
       'Tout upload direct vers le stockage objet nécessite une URL pré-signée validée par cloud-service.',
@@ -89,15 +105,28 @@ const SERVICE_DOMAIN_KNOWLEDGE = {
     User->>Cloud: POST /api/v1/files/confirm-upload
     Cloud->>DB: Enregistre les metadonnees du fichier`,
     errors: [
-      { errorType: 'QuotaExceeded', httpCode: 402, recoveryStrategy: 'Inviter l utilisateur à mettre à niveau son abonnement de stockage.' },
-      { errorType: 'UnauthorizedAccess', httpCode: 403, recoveryStrategy: 'Refuser l accès, journaliser l événement dans l audit append-only.' },
-      { errorType: 'FileNotFound', httpCode: 404, recoveryStrategy: 'Vérifier la validité de l identifiant ou si le fichier a été purgé.' },
+      {
+        errorType: 'QuotaExceeded',
+        httpCode: 402,
+        recoveryStrategy: 'Inviter l utilisateur à mettre à niveau son abonnement de stockage.',
+      },
+      {
+        errorType: 'UnauthorizedAccess',
+        httpCode: 403,
+        recoveryStrategy: 'Refuser l accès, journaliser l événement dans l audit append-only.',
+      },
+      {
+        errorType: 'FileNotFound',
+        httpCode: 404,
+        recoveryStrategy: 'Vérifier la validité de l identifiant ou si le fichier a été purgé.',
+      },
     ],
   },
   'billing-service': {
     domain: 'billing',
     title: 'Service Billing & Abonnements',
-    description: 'Architecture du moteur de facturation, gestion multi-PSP (Stripe), webhooks idempotents et gestion des droits.',
+    description:
+      'Architecture du moteur de facturation, gestion multi-PSP (Stripe), webhooks idempotents et gestion des droits.',
     role: 'Gestionnaire des souscriptions, du calcul d usage et de la synchronisation des états de facturation.',
     invariants: [
       'Tous les webhooks PSP (Stripe) doivent être traités avec une idempotence stricte.',
@@ -124,9 +153,21 @@ const SERVICE_DOMAIN_KNOWLEDGE = {
     Billing-->>Stripe: 200 OK (Recu)
     Worker->>DB: Met a jour les entitlements du compte client`,
     errors: [
-      { errorType: 'InvalidWebhookSignature', httpCode: 400, recoveryStrategy: 'Rejeter immédiatement la requête et alerter la sécurité.' },
-      { errorType: 'DuplicateEventIgnored', httpCode: 200, recoveryStrategy: 'Renvoyer 200 OK sans retraiter l événement (Idempotence).' },
-      { errorType: 'PaymentFailed', httpCode: 402, recoveryStrategy: 'Notifier le client par email et entrer en période de grâce.' },
+      {
+        errorType: 'InvalidWebhookSignature',
+        httpCode: 400,
+        recoveryStrategy: 'Rejeter immédiatement la requête et alerter la sécurité.',
+      },
+      {
+        errorType: 'DuplicateEventIgnored',
+        httpCode: 200,
+        recoveryStrategy: 'Renvoyer 200 OK sans retraiter l événement (Idempotence).',
+      },
+      {
+        errorType: 'PaymentFailed',
+        httpCode: 402,
+        recoveryStrategy: 'Notifier le client par email et entrer en période de grâce.',
+      },
     ],
   },
 };
@@ -183,7 +224,9 @@ ${knowledge.sequenceMermaid}
 
   const outFilePath = join(OUT_DIR, `${serviceKey}.md`);
   writeFileSync(outFilePath, doc, 'utf8');
-  console.log(`✅ Generated rich domain architecture doc: apps/docs/src/content/docs/architecture/${serviceKey}.md`);
+  console.log(
+    `✅ Generated rich domain architecture doc: docs/generated/architecture/${serviceKey}.md`,
+  );
 }
 
 export function generateAllDomainDocs() {

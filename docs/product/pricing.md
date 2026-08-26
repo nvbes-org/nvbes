@@ -1,8 +1,17 @@
 # Pricing
 
+## Statut
+
+**Hypothèses commerciales futures, hors V1 active.** Aucun plan Cloud/Drive,
+Team, Workspace ou Business n'est autorisé au lancement du socle. Les prix,
+quotas et offres ci-dessous devront être recalculés si ce produit est
+sélectionné. Voir la [direction produit V1](nvbes-product-strategy.md).
+
 ## Strategie
 
-nvbes vise un positionnement B2B pour tous: utilisable seul, achetable par une petite structure, extensible vers equipe et workspace gouverne.
+Cette stratégie explorait un positionnement Cloud/Drive professionnel. Elle ne
+définit plus le positionnement de la V1 active, désormais B2C tout public avec
+équipes et sans offre B2B.
 
 La strategie produit globale est definie dans [Strategie Produit nvbes](nvbes-product-strategy.md).
 
@@ -246,7 +255,8 @@ La page facturation doit afficher:
 ## TVA et Facturation EU
 
 - Les prix publics doivent preciser HT ou TTC.
-- Le billing doit distinguer B2B et B2C, meme si le positionnement marketing est B2B pour tous.
+- Le Billing futur doit distinguer B2B et B2C ; l'ancienne hypothèse marketing
+  professionnelle n'est plus la direction V1 active.
 - Le numero de TVA intracommunautaire doit etre collecte pour les clients B2B EU.
 - Le reverse charge doit etre supporte quand applicable.
 - Stripe Tax ou mecanisme equivalent doit etre configure avant lancement payant.

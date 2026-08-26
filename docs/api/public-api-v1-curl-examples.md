@@ -1,5 +1,8 @@
 # API Publique V1 - Exemples curl
 
+> **Statut : exemples futurs Cloud/Drive, non exécutables contre une V1 publique
+> active.**
+
 ## Variables
 
 ```bash

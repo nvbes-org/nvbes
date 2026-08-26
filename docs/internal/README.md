@@ -6,13 +6,14 @@ It can contain internal runbooks, incident procedures, internal architecture not
 
 ## Runtime Taxonomy
 
-Internal documentation uses `backoffice-service` and `backoffice-web` for
-internal operations, support tooling, fraud/risk operations and internal admin
-workflows.
+Active V1 internal operations use the Platform Operations boundary. One
+`platform_owner` handles support, security, abuse, billing, appeals and FinOps
+manually through audited commands.
 
-Backoffice may compose internal views over Account, Cloud, Billing, Developer
-and Enterprise through internal contracts or read models. It must not become the
-source of truth for customer domains.
+Platform Operations may compose internal views over Identity, Account, Billing,
+Email and Trust/Risk through authenticated contracts. It must not become the
+source of truth for those domains or access their databases directly.
 
-The old `backoffice-service` and `backoffice-web` names are allowed only in
-migration evidence until the old-name deletion gate.
+The archived `backoffice-service` and `backoffice-web` are historical inventory,
+not an active implementation base. See the
+[V1 product direction](../product/nvbes-product-strategy.md).

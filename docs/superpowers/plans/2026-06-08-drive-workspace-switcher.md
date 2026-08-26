@@ -1,5 +1,9 @@
 # Drive Workspace Switcher Implementation Plan
 
+> **Status: inactive future plan.** Cloud/Drive has not been selected as the
+> first product. See the
+> [active direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a workspace switcher dropdown in the Drive header allowing users to switch between workspaces (and implicitly tenants) without logging out.

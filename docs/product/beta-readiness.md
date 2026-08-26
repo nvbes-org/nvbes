@@ -1,5 +1,13 @@
 # Beta Readiness - nvbes Drive
 
+## Statut
+
+**Checklist future et inactive.** Aucune beta Drive n'est planifiée dans la V1
+du socle. Réutiliser cette checklist uniquement si Cloud/Drive est sélectionné
+ultérieurement comme produit, après une nouvelle revue produit, FinOps et
+opérationnelle. Voir la
+[direction V1 canonique](nvbes-product-strategy.md).
+
 ## Objectif
 
 Preparer une beta fermee sur staging pour valider les parcours critiques avant ouverture payante.

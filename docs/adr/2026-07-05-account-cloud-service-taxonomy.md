@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted for the Account/Cloud Big Bang refactor.
+Superseded for active product scope by the
+[V1 product direction](../product/nvbes-product-strategy.md). The taxonomy below
+remains historical migration evidence; it does not authorize restoring archived
+Account/Cloud products. Active V1 boundaries are Identity, Account, Billing,
+Email, Trust/Risk, and Platform Operations.
 
 ## Context
 

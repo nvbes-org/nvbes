@@ -1,5 +1,8 @@
 # Protocole UX Testing
 
+> **Statut : protocole d'un futur produit utilisateur.** Le socle V1 ne possède
+> pas encore de produit final à tester en UX ; réactiver après sa sélection.
+
 ## Objectif
 
 Transformer l'intention "tester avec 3 a 5 utilisateurs" en protocole exploitable.

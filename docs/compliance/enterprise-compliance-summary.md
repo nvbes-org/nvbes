@@ -1,88 +1,81 @@
-# nvbes : Conformité Enterprise & Secteurs Sensibles
+# Conformité Enterprise — trajectoire future
 
-Ce document synthétise l'état de préparation de nvbes pour l'onboarding de clients "Enterprise" (secteurs régulés, OIV, grandes entreprises), en gardant à l'esprit que le premier incrément ne couvre pas encore une suite enterprise complète.
+## Statut
 
-## 1. Structure Légale et Gouvernance
-- **Entité Légale** : nvbes Cloud SAS (Paris, France).
-- **DPA (Data Processing Agreement)** : Finalisé et prêt pour signature. Définit nvbes comme sous-traitant (Data Processor).
-- **Liste des Sous-traitants** : Nettoyée pour ne refléter que la stack réelle.
-    - *Hébergement* : Scaleway (France).
-    - *Paiement* : Stripe.
-    - *Analytics/Product* : PostHog, Sentry.
-    - *Réseau/Sécurité* : Cloudflare.
+**Hors périmètre V1 et non commercialisable.** nvbes ne propose pas actuellement
+d'offre B2B/Enterprise, de SLA Enterprise, de certification ni d'attestation de
+conformité avancée. Ce document inventorie uniquement des capacités futures.
 
-## 2. Engagements de Service (SLA)
-Un document d'engagement de service a été créé pour garantir la transparence sur :
-- **Disponibilité** : 99.9% pour le plan Enterprise.
-- **Temps de Réponse Support** : < 2h pour les incidents critiques (P1).
-- **Crédits de Service** : Mécanisme de compensation en cas de downtime.
+La [direction produit V1](../product/nvbes-product-strategy.md) prévaut : la V1
+est B2C tout public, compatible avec les équipes, avec un budget total inférieur
+ou égal à 30 EUR TTC par mois. Aucun chantier Enterprise ne doit consommer ce
+budget sans décision ultérieure financée.
 
-## 3. Posture de Sécurité
-- **VDP (Vulnerability Disclosure Policy)** : Politique publique pour l'accueil des signalements de chercheurs en sécurité.
-- **Audit Logs** : Spécification technique pour une traçabilité complète des actions administratives (immuabilité, rétention 1 an).
-- **Chiffrement** :
-    - *Transit* : TLS 1.3 forcé via Cloudflare/API.
-    - *Repos* : Chiffrement AES-256 (Scaleway Block Storage) et hachage Argon2id pour les mots de passe.
+## Distinction obligatoire
 
-## 4. Conformité Privacy (RGPD)
-- **Cookies** : Spécification conforme CNIL (Refus au premier niveau, traceurs essentiels uniquement par défaut).
-- **Localisation des données** : Priorité au stockage souverain (Scaleway FR) pour les fichiers et la base de données.
-- **Suppression des données** : Support du droit à l'oubli via les scripts de purge automatisés.
+Toute communication interne ou publique doit distinguer :
 
-## 5. Cibles de conformité futures
+- une obligation légale applicable au service B2C réellement exploité ;
+- un contrôle technique implémenté et vérifié ;
+- une préparation interne non auditée ;
+- un audit externe en cours ;
+- une certification, attestation ou qualification effectivement obtenue.
 
-Ces éléments sont des objectifs de maturité, pas des certifications ou attestations acquises. Toute communication publique devra distinguer clairement :
+La présence d'un modèle de DPA, d'une politique, d'un contrôle ou d'un ADR dans
+le dépôt ne prouve ni conformité globale ni disponibilité commerciale.
 
-- les exigences déjà implémentées;
-- la readiness interne;
-- l'audit externe en cours;
-- la certification, attestation ou autorisation obtenue.
+## Socle légal et sécurité V1
 
-### Socle prioritaire
+Restent obligatoires lorsqu'ils sont applicables au service B2C ouvert :
 
-- **GDPR / RGPD** : conformité privacy de base, DPA, registre des traitements, droits des personnes, DPIA si nécessaire, gestion des violations et gouvernance CNIL.
-- **CNIL** : application des recommandations françaises pertinentes, notamment cookies, sécurité, durées de conservation, violations de données et AIPD.
-- **SOC 2 Type I puis Type II** : contrôles sécurité, disponibilité, confidentialité et privacy pour clients enterprise.
-- **ISO/IEC 27001** : SMSI cible, avec Statement of Applicability (SoA) maintenu comme livrable de gouvernance.
-- **ISO 22301** : continuité d'activité, PRA/PCA, exercices de restauration et gestion de crise.
-- **PCI DSS** : scope minimal via Stripe; nvbes ne doit jamais stocker de PAN ou données carte complètes.
-- **NIS 2** : veille et readiness si nvbes entre dans un périmètre applicable ou sert des clients soumis.
-- **DORA** : readiness contractuelle et opérationnelle pour clients financiers soumis.
-- **EU Cyber Resilience Act** : exigences produit logiciel, vulnérabilités, mises à jour et documentation.
-- **EU AI Act** : applicable uniquement aux fonctionnalités IA; classification de risque obligatoire avant livraison.
+- privacy by design et respect des droits RGPD ;
+- registre des traitements, durées de conservation et sous-traitants réels ;
+- procédure de violation de données personnelles ;
+- consentement cookies et analytics lorsque nécessaire ;
+- sécurité proportionnée, moindre privilège, MFA opérateur et audit ;
+- paiement délégué au PSP sans stockage de données carte complètes ;
+- mentions légales et conditions adaptées au service réellement proposé.
 
-### Cibles sectorielles ou marchés spécifiques
+Ces éléments sont maintenus avec des procédures manuelles lorsque
+l'automatisation sûre ne rentre pas dans le budget.
 
-- **CSA STAR** : cible cloud security utile pour grands comptes.
-- **TISAX** : cible uniquement pour clients automotive ou supply chain industrielle.
-- **HDS** : cible uniquement si nvbes héberge ou traite des données de santé françaises.
-- **SecNumCloud** : cible souveraineté/sécurité élevée, à traiter comme programme long terme.
-- **PDIS** : cible uniquement si nvbes fournit un service qualifié de détection d'incidents, pas pour le drive V1 standard.
-- **FedRAMP** : cible uniquement pour le marché public fédéral US; choisir le niveau FedRAMP applicable (Low, Moderate ou High) au lieu d'un libellé générique.
-- **TX-RAMP Level 2** : cible uniquement pour clients publics du Texas; le libellé `TX-RAMP` seul est redondant.
-- **eIDAS 2.0** : cible uniquement si nvbes fournit des services d'identité, signature, wallet ou confiance numérique régulés.
-- **Microsoft SSPA** : cible uniquement si nvbes devient fournisseur Microsoft ou traite des données pour Microsoft.
-- **EU-US Data Privacy Framework, UK Extension et Swiss-US DPF** : pertinents uniquement pour les transferts transatlantiques impliquant des sous-traitants ou entités US certifiés. Le libellé `UL Extension to EU-US DPF` est corrigé en `UK Extension to EU-US DPF`.
+## Capacités Enterprise futures
 
-### Retirés comme objectifs autonomes
+Avant toute offre B2B ou Enterprise, une décision financée devra cadrer au
+minimum :
 
-- **ISO/IEC 27001 SoA** : conservé comme livrable du programme ISO/IEC 27001, pas comme conformité séparée.
-- **ISO/EIC 27001** : libellé invalide, remplacé par `ISO/IEC 27001`.
-- **FedRAMP Certified Class D** : libellé non retenu; FedRAMP doit être cadré par niveau reconnu.
-- **TX-RAMP** : remplacé par `TX-RAMP Level 2` quand le marché Texas est visé.
+- entité contractante et pack légal B2B vérifiés ;
+- SLA, support, astreinte et crédits de service réellement opérables ;
+- SSO/SAML, SCIM et gouvernance d'organisation ;
+- audit avancé, exports et rétention contractuelle ;
+- isolation, résidence des données et gestion des sous-traitants ;
+- gestion des incidents clients et communication contractuelle ;
+- coûts de support, audits externes et marge suffisante.
 
-## Prochaines étapes suggérées (Maturité +)
-1. **SSO / SAML** : Implémentation du support pour les IdP clients (Okta, Azure AD).
-2. **Programme conformité** : Prioriser RGPD/CNIL, SOC 2, ISO/IEC 27001 et ISO 22301 avant les cadres sectoriels.
-3. **Bring Your Own Key (BYOK)** : Permettre aux clients sensibles de gérer leurs propres clés de chiffrement pour leurs fichiers.
+## Programmes de conformité possibles
 
-## Périmètre non encore finalisé
+Ces programmes ne sont ni engagés ni acquis. Ils sont évalués seulement après
+validation du marché, de l'applicabilité et du financement :
 
-- federation enterprise complète;
-- SCIM enterprise complet;
-- attestation device enterprise complète;
-- policy engine final.
+- SOC 2 Type I puis Type II ;
+- ISO/IEC 27001 et son Statement of Applicability ;
+- ISO 22301 pour la continuité ;
+- NIS 2, DORA ou Cyber Resilience Act selon applicabilité ;
+- HDS, SecNumCloud, TISAX, CSA STAR ou cadres publics selon le marché visé ;
+- cadres IA uniquement si une fonctionnalité soumise est réellement livrée.
 
----
-*Dernière mise à jour : 2026-06-05*
-*Documents de référence dans `docs/legal` et `docs/compliance`.*
+PCI DSS reste réduit par l'utilisation d'un PSP ; le périmètre exact devra être
+validé avant paiements réels.
+
+## Gate d'activation Enterprise
+
+Aucune offre Enterprise n'est activée tant que :
+
+1. la demande et le revenu potentiel sont mesurés ;
+2. le budget du programme est séparé et financé ;
+3. les capacités techniques et humaines existent réellement ;
+4. les affirmations contractuelles ont été vérifiées par les experts requis ;
+5. support, incidents, restauration et facturation sont testés ;
+6. la décision produit autorise explicitement le B2B.
+
+Dernière mise à jour : 26 août 2026.

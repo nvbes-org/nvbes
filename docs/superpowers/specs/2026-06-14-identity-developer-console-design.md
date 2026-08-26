@@ -1,5 +1,9 @@
 # Identity Developer Console Design
 
+> **Status: future product surface, outside active V1.** Identity remains a V1
+> foundation service, but the dedicated developer console is not an active lot.
+> See the [active direction](../../product/nvbes-product-strategy.md).
+
 ## Goal
 
 Build a dedicated `apps/console-web` product for nvbes Identity developers.

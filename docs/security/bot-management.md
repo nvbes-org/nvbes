@@ -2,6 +2,10 @@
 
 This repository tracks bot-management and anti-automation controls against the OWASP Bot Management and Anti-Automation Cheat Sheet. The source of truth is `docs/security/bot-management-controls.json`.
 
+These controls protect critical properties but do not authorize autonomous
+irreversible moderation. Trust/Risk starts in shadow mode, and the solo operator
+reviews ambiguous abuse decisions manually under the global EUR 30 budget.
+
 The registry maps OWASP guidance to concrete controls and evidence strings in code. It covers threat modeling by sensitive flow, layered defenses, multi-key rate limiting, privacy-aware device and behavior signals, PoW as a CAPTCHA alternative, honeypots, public API anti-automation, graduated responses, monitoring, and credential-stuffing defenses.
 
 ## Check

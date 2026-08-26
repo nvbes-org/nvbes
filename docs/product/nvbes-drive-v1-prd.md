@@ -1,8 +1,17 @@
 # PRD V1 - nvbes Drive
 
+## Statut
+
+**Hypothèse de produit future — hors V1 active.** Ce PRD est conservé pour une
+éventuelle sélection de Cloud/Drive après validation du socle. Il ne doit pas
+déclencher de travaux, beta, pricing ou infrastructure sans décision produit
+séparée conforme à la
+[direction V1 canonique](nvbes-product-strategy.md).
+
 ## Resume
 
-nvbes Drive, renomme fonctionnellement nvbes Cloud dans le positionnement produit, est un cloud europeen securise B2B pour tous.
+Ce document explorait nvbes Drive, renommé fonctionnellement nvbes Cloud, comme
+un cloud européen sécurisé. Ce positionnement n'est pas celui de la V1 du socle.
 
 Le produit permet a une personne seule ou a un groupe de stocker, organiser, partager et controler ses fichiers dans un environnement EU-first, simple et fiable.
 
@@ -20,9 +29,10 @@ Les decisions de direction artistique, UI, UX, design system, accessibilite et c
 
 ## Cibles
 
-Positionnement V1:
+Ancienne hypothèse de positionnement Drive :
 
-- B2B pour tous, avec workspace personnel cree automatiquement pour chaque utilisateur.
+- professionnel accessible en solo, avec espace personnel créé automatiquement
+  pour chaque utilisateur ;
 - Workspaces de groupe separes pour equipes, organisations et futurs plans Workspace.
 
 Segments prioritaires:

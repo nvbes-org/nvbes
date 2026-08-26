@@ -1,5 +1,10 @@
 # Design Spec: Delegated Administration for Organization Admins
 
+> **Status: future Enterprise capability, outside active V1.** V1 has one
+> platform operator and manual operations; organization administration requires
+> a later B2B decision. See the
+> [active direction](../../product/nvbes-product-strategy.md).
+
 Allow organization-scoped administrators (members of `organization_memberships` with roles `owner`, `admin`, or `security_admin`) to manage only their organization's workspaces, users, invitations, and audit logs.
 
 ## Architectural Changes

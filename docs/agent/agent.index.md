@@ -2,6 +2,11 @@
 
 Start here when working on agent behavior for nvbes.
 
+Product and implementation scope comes from
+[`docs/product/nvbes-product-strategy.md`](../product/nvbes-product-strategy.md).
+Agent instructions must not infer Cloud/Drive, B2B, Enterprise or advanced
+compliance work from older plans.
+
 | Topic | File |
 |---|---|
 | Contract | `docs/agent/agent.contract.md` |

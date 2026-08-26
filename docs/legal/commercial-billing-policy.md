@@ -1,5 +1,11 @@
 # Politique Commerciale et de Facturation
 
+> **Statut : modèle commercial futur, hors V1 active.** Aucun abonnement,
+> renouvellement, plan Cloud/Drive ou paiement réel n'est autorisé par ce
+> document. Les règles ci-dessous devront être recalculées et validées pour le
+> premier produit effectivement sélectionné, avec distinction B2C/B2B et revue
+> juridique/fiscale applicable.
+
 ## 1. Abonnements et Renouvellements
 
 ### 1.1 Cycle de facturation

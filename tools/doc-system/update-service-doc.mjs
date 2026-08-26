@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, '../..');
 const IR_PATH = join(REPO_ROOT, '.docgen/workspace-ir.json');
-const OUT_DIR = join(REPO_ROOT, 'apps/docs/src/content/docs/architecture');
+const OUT_DIR = join(REPO_ROOT, 'docs/generated/architecture');
 
 function ensureDir(dir) {
   if (!existsSync(dir)) {
@@ -23,7 +23,9 @@ function ensureDir(dir) {
  */
 export function updateServiceDoc(serviceName) {
   if (!serviceName) {
-    console.error('❌ Error: Service name required. Example: node tools/doc-system/update-service-doc.mjs identity-service');
+    console.error(
+      '❌ Error: Service name required. Example: node tools/doc-system/update-service-doc.mjs identity-service',
+    );
     process.exit(1);
   }
 
@@ -33,14 +35,24 @@ export function updateServiceDoc(serviceName) {
   }
 
   const ir = JSON.parse(readFileSync(IR_PATH, 'utf8'));
-  const project = ir.projects.find((p) => p.name === serviceName || p.name === `@nvbes/${serviceName}`);
+  const project = ir.projects.find(
+    (p) => p.name === serviceName || p.name === `@nvbes/${serviceName}`,
+  );
 
   if (!project) {
-    console.error(`❌ Project "${serviceName}" not found in workspace IR. Available projects:`, ir.projects.map((p) => p.name).join(', '));
+    console.error(
+      `❌ Project "${serviceName}" not found in workspace IR. Available projects:`,
+      ir.projects.map((p) => p.name).join(', '),
+    );
     process.exit(1);
   }
 
-  const openapi = (ir.openapiServices || []).find((o) => o.service === serviceName || o.service === `@nvbes/${serviceName}` || o.filePath?.includes(serviceName));
+  const openapi = (ir.openapiServices || []).find(
+    (o) =>
+      o.service === serviceName ||
+      o.service === `@nvbes/${serviceName}` ||
+      o.filePath?.includes(serviceName),
+  );
   const endpoints = openapi ? openapi.endpoints : [];
   const cargoDeps = (ir.rustCrates || []).find((c) => c.name === serviceName)?.dependencies || [];
 
@@ -67,7 +79,12 @@ Le service **${serviceName}** est un microservice backend écrit en **Rust (Axum
 
 - **Répertoire source** : \`${project.root}\`
 - **Cible de build** : \`cargo build -p ${serviceName}\`
-- **Dépendances majeures** : ${cargoDeps.slice(0, 8).map((d) => `\`${d}\``).join(', ') || 'Primitives standards'}
+- **Dépendances majeures** : ${
+    cargoDeps
+      .slice(0, 8)
+      .map((d) => `\`${d}\``)
+      .join(', ') || 'Primitives standards'
+  }
 
 ---
 
@@ -105,7 +122,10 @@ ${
   endpoints.length > 0
     ? `| Méthode | Route | Description |
 | :--- | :--- | :--- |
-${endpoints.slice(0, 10).map((ep) => `| \`${ep.method}\` | \`${ep.path}\` | ${ep.summary.replace(/\|/g, '-')} |`).join('\n')}`
+${endpoints
+  .slice(0, 10)
+  .map((ep) => `| \`${ep.method}\` | \`${ep.path}\` | ${ep.summary.replace(/\|/g, '-')} |`)
+  .join('\n')}`
     : `*Ce service ne publie pas de routes HTTP publiques directes (gRPC ou worker asynchrone).*`
 }
 

@@ -1,5 +1,9 @@
 # Plan de Travail Marketing - nvbes Drive
 
+> **Statut : plan inactif.** Aucun marketing Cloud/Drive n'est prévu pendant la
+> construction du socle V1. Reprendre uniquement après sélection du premier
+> produit. Voir la [direction produit](nvbes-product-strategy.md).
+
 ## Objectif
 
 Valider le marche de nvbes Drive avant d'elargir l'effort produit et acquisition.

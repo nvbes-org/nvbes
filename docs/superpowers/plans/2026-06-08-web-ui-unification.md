@@ -1,5 +1,9 @@
 # Web UI Unification Implementation Plan
 
+> **Status: future product UI plan, outside active V1.** Shared UI work is only
+> justified by an active consumer after product selection. See the
+> [active direction](../../product/nvbes-product-strategy.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Create a shared Radix-based web UI package aligned with the Identity visual system, then migrate `account-web` and `cloud-web` to consume shared primitives and a reusable multi-account switcher.
