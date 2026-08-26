@@ -637,6 +637,9 @@ jobs:
               --get \
               --header "X-Auth-Token: $SCW_SECRET_KEY" \
               --data-urlencode "container_id=${dispatch_id}" \
+              --data-urlencode "order_by=created_at_asc" \
+              --data-urlencode "page=1" \
+              --data-urlencode "trigger_type=unknown_source_type" \
               "https://api.scaleway.com/containers/v1/regions/fr-par/triggers" |
               jq --exit-status '.total_count'
           )"

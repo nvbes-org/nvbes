@@ -9,6 +9,16 @@ function read(path) {
 	return readFileSync(path, "utf8");
 }
 
+test("the production ledger accepts bounded operational validation messages", () => {
+	const migration = read(
+		"apps/email-worker/migrations/0004_email_operational_category.sql",
+	);
+	assert.match(
+		migration,
+		/ALTER TYPE email_category ADD VALUE IF NOT EXISTS 'operational';/u,
+	);
+});
+
 test("email production deploy is isolated and uses an immutable signed image", () => {
 	assert.equal(existsSync(workflowPath), true);
 	assert.equal(existsSync(`${stackRoot}/backend.tf`), true);
