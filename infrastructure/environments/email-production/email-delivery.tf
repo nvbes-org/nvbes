@@ -88,7 +88,7 @@ resource "scaleway_container_namespace" "email_worker" {
 locals {
   email_runtime_roles = {
     ingress = {
-      privacy     = "public"
+      privacy     = var.email_internal_validation_enabled ? "public" : "private"
       description = "Authenticated gRPC acceptance and signed TEM webhooks."
     }
     dispatch = {
@@ -178,6 +178,8 @@ resource "scaleway_container" "email_runtime" {
 }
 
 resource "scaleway_container_trigger" "email_dispatch" {
+  count = var.email_internal_validation_enabled ? 1 : 0
+
   container_id = scaleway_container.email_runtime["dispatch"].id
   name         = "${local.name_prefix}-email-dispatch"
 
@@ -197,6 +199,8 @@ resource "scaleway_container_trigger" "email_dispatch" {
 }
 
 resource "scaleway_container_trigger" "email_retention" {
+  count = var.email_internal_validation_enabled ? 1 : 0
+
   container_id = scaleway_container.email_runtime["dispatch"].id
   name         = "${local.name_prefix}-email-retention"
 

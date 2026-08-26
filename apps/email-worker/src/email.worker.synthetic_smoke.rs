@@ -4,11 +4,14 @@ use nvbes_email::{
     EmailIdempotencyKey, EmailReceipt, EmailRecipient, EmailRequestContext, EmailTemplate,
 };
 use serde::Serialize;
+use sqlx::postgres::PgPoolOptions;
 
 const RECIPIENT_ENV: &str = "NVBES_EMAIL_SYNTHETIC_RECIPIENT";
 const RUN_ID_ENV: &str = "NVBES_EMAIL_SYNTHETIC_RUN_ID";
 const MAX_COLD_START_ATTEMPTS: u8 = 5;
 const COLD_START_RETRY_SECONDS: [u64; 4] = [1, 2, 4, 8];
+const DELIVERY_POLL_ATTEMPTS: u8 = 60;
+const DELIVERY_POLL_SECONDS: u64 = 5;
 
 #[derive(Serialize)]
 struct SyntheticSmokeReceipt {
@@ -17,6 +20,8 @@ struct SyntheticSmokeReceipt {
     deliver_before: chrono::DateTime<Utc>,
     duplicate: bool,
     attempts: u8,
+    delivery_state: String,
+    processed_provider_events: i64,
 }
 
 pub async fn run() -> anyhow::Result<()> {
@@ -25,6 +30,8 @@ pub async fn run() -> anyhow::Result<()> {
     let command = command(&recipient, &run_id, Utc::now())?;
     let config = EmailClientConfig::from_env("production")?;
     let (receipt, attempts) = submit_after_cold_start(&config, &command).await?;
+    let (delivery_state, processed_provider_events) =
+        wait_for_signed_delivery(&receipt.message_id).await?;
 
     println!(
         "{}",
@@ -34,9 +41,59 @@ pub async fn run() -> anyhow::Result<()> {
             deliver_before: receipt.deliver_before,
             duplicate: receipt.duplicate,
             attempts,
+            delivery_state,
+            processed_provider_events,
         })?
     );
     Ok(())
+}
+
+async fn wait_for_signed_delivery(message_id: &str) -> anyhow::Result<(String, i64)> {
+    let database_url = required_env("NVBES_EMAIL_DATABASE_URL")?;
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .acquire_timeout(std::time::Duration::from_secs(10))
+        .connect(&database_url)
+        .await?;
+
+    for _attempt in 1..=DELIVERY_POLL_ATTEMPTS {
+        let delivery = sqlx::query_as::<_, (String, i64)>(
+            r#"
+            SELECT message.state::text,
+                   COUNT(event.id) FILTER (
+                       WHERE event.processed_at IS NOT NULL
+                         AND event.processing_result = 'state_applied'
+                   )
+            FROM email_messages AS message
+            LEFT JOIN email_provider_events AS event
+              ON event.provider_message_id = message.provider_message_id
+            WHERE message.message_id = $1
+            GROUP BY message.id
+            "#,
+        )
+        .bind(message_id)
+        .fetch_optional(&pool)
+        .await?;
+
+        if let Some((state, processed_provider_events)) = delivery {
+            if state == "delivered" && processed_provider_events > 0 {
+                pool.close().await;
+                return Ok((state, processed_provider_events));
+            }
+            if is_terminal_failure(&state) {
+                anyhow::bail!("synthetic email reached terminal state {state}");
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(DELIVERY_POLL_SECONDS)).await;
+    }
+    anyhow::bail!("synthetic email was not delivered through a signed provider event in time")
+}
+
+fn is_terminal_failure(state: &str) -> bool {
+    matches!(
+        state,
+        "hard_bounced" | "complained" | "suppressed" | "expired" | "dropped" | "failed"
+    )
 }
 
 async fn submit_after_cold_start(
@@ -131,5 +188,15 @@ mod tests {
         assert_eq!(MAX_COLD_START_ATTEMPTS, 5);
         assert_eq!(COLD_START_RETRY_SECONDS, [1, 2, 4, 8]);
         assert_eq!(COLD_START_RETRY_SECONDS.iter().sum::<u64>(), 15);
+    }
+
+    #[test]
+    fn delivery_poll_is_bounded_and_rejects_terminal_failures() {
+        assert_eq!(DELIVERY_POLL_ATTEMPTS, 60);
+        assert_eq!(DELIVERY_POLL_SECONDS, 5);
+        assert!(is_terminal_failure("failed"));
+        assert!(is_terminal_failure("hard_bounced"));
+        assert!(!is_terminal_failure("provider_accepted"));
+        assert!(!is_terminal_failure("delivered"));
     }
 }

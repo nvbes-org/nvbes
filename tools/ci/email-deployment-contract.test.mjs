@@ -110,6 +110,14 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	);
 	assert.match(
 		workflow,
+		/TF_VAR_email_internal_validation_enabled: \$\{\{ vars\.EMAIL_SYNTHETIC_SMOKE_ENABLED \}\}/u,
+	);
+	assert.match(
+		workflow,
+		/\[\[ "\$EMAIL_SYNTHETIC_SMOKE_ENABLED" == "true" \]\]/u,
+	);
+	assert.match(
+		workflow,
 		/TF_VAR_grafana_service_account_token: \$\{\{ secrets\.GRAFANA_SERVICE_ACCOUNT_TOKEN \}\}/u,
 	);
 	assert.match(workflow, /error-reporting-smoke/u);
@@ -132,8 +140,21 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /synthetic-smoke/u);
 	assert.match(
 		workflow,
-		/\n {10}jq --exit-status \\\n {12}'\.message_id != "" and \.attempts >= 1 and \.attempts <= 5' \\/u,
+		/\.delivery_state == "delivered" and \.processed_provider_events > 0/u,
 	);
+	assert.match(workflow, /output -raw email_database_runtime_url/u);
+	assert.match(workflow, /--env NVBES_EMAIL_DATABASE_URL/u);
+	assert.match(
+		workflow,
+		/name: 'Post-deploy: Close the bounded Email validation window'[\s\S]*?if: \$\{\{ always\(\) \}\}[\s\S]*?TF_VAR_email_internal_validation_enabled=false/u,
+	);
+	assert.match(
+		workflow,
+		/-target=scaleway_container\.email_runtime[\s\S]*?-target=scaleway_container_trigger\.email_dispatch[\s\S]*?-target=scaleway_container_trigger\.email_retention/u,
+	);
+	assert.match(workflow, /email-economic-shutdown\.tfplan/u);
+	assert.match(workflow, /ingress_privacy[\s\S]*?== "private"/u);
+	assert.match(workflow, /trigger_count[\s\S]*?== "0"/u);
 	assert.match(
 		workflow,
 		/terraform[\s\S]*?plan[\s\S]*?-out=email-runtime\.tfplan/u,
@@ -161,6 +182,18 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	);
 	assert.match(delivery, /is_public\s*=\s*false/u);
 	assert.match(delivery, /resource "scaleway_container" "email_runtime"/u);
+	assert.match(
+		delivery,
+		/privacy\s*=\s*var\.email_internal_validation_enabled \? "public" : "private"/u,
+	);
+	assert.match(
+		delivery,
+		/resource "scaleway_container_trigger" "email_dispatch" \{[\s\S]*?count\s*=\s*var\.email_internal_validation_enabled \? 1 : 0/u,
+	);
+	assert.match(
+		delivery,
+		/resource "scaleway_container_trigger" "email_retention" \{[\s\S]*?count\s*=\s*var\.email_internal_validation_enabled \? 1 : 0/u,
+	);
 	assert.match(
 		delivery,
 		/startup_probe\s*\{[\s\S]*?interval\s*=\s*"(?:[5-9]|[1-9]\d+)s"[\s\S]*?\}/u,

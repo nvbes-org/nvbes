@@ -166,6 +166,7 @@ jobs:
     env:
       EMAIL_DEPLOY_APPROVED_SHA: ${{ vars.EMAIL_DEPLOY_APPROVED_SHA }}
       EMAIL_DEPLOY_CONFIRMATION: ${{ vars.EMAIL_DEPLOY_CONFIRMATION }}
+      EMAIL_SYNTHETIC_SMOKE_ENABLED: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED }}
       SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_PROJECT_ID }}
       SCW_DEFAULT_REGION: fr-par
       SCW_DEFAULT_ZONE: fr-par-1
@@ -175,6 +176,7 @@ jobs:
       TF_VAR_base_domain: ${{ vars.BASE_DOMAIN }}
       TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
       TF_VAR_email_database_runtime_credential_generation: ${{ vars.EMAIL_DATABASE_RUNTIME_CREDENTIAL_GENERATION }}
+      TF_VAR_email_internal_validation_enabled: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED }}
       TF_VAR_email_sentry_traces_sample_rate: ${{ vars.EMAIL_SENTRY_TRACES_SAMPLE_RATE }}
       TF_VAR_grafana_email_contact_point: ${{ vars.GRAFANA_EMAIL_CONTACT_POINT }}
       TF_VAR_grafana_prometheus_datasource_uid: ${{ vars.GRAFANA_PROMETHEUS_DATASOURCE_UID }}
@@ -204,6 +206,7 @@ jobs:
           [[ "$EMAIL_DEPLOY_CONFIRMATION" == "deploy-email-production" ]]
           [[ "$EMAIL_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EMAIL_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]
+          [[ "$EMAIL_SYNTHETIC_SMOKE_ENABLED" == "true" ]]
           [[ "$SCALEWAY_TEM_TERMS_ACCEPTED" == "true" ]]
           [[ -n "$TERRAFORM_STATE_BUCKET" ]]
       - name: Authenticate to GHCR
@@ -547,18 +550,87 @@ jobs:
           NVBES_EMAIL_SYNTHETIC_RECIPIENT: ${{ secrets.EMAIL_SYNTHETIC_RECIPIENT }}
           NVBES_EMAIL_SYNTHETIC_RUN_ID: deploy-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          export NVBES_EMAIL_GRPC_ENDPOINT
+          export NVBES_EMAIL_DATABASE_URL NVBES_EMAIL_GRPC_ENDPOINT
+          NVBES_EMAIL_DATABASE_URL="$(
+            terraform -chdir="$STACK_ROOT" output -raw email_database_runtime_url
+          )"
           NVBES_EMAIL_GRPC_ENDPOINT="$(
             terraform -chdir="$STACK_ROOT" output -raw email_worker_endpoint
           )"
           smoke_result="$(
             docker run --rm --platform linux/amd64 \
               --env NVBES_EMAIL_GRPC_AUTH_TOKEN \
+              --env NVBES_EMAIL_DATABASE_URL \
               --env NVBES_EMAIL_GRPC_ENDPOINT \
               --env NVBES_EMAIL_SYNTHETIC_RECIPIENT \
               --env NVBES_EMAIL_SYNTHETIC_RUN_ID \
               "$SOURCE_EMAIL_IMAGE_DIGEST" synthetic-smoke
           )"
           jq --exit-status \
-            '.message_id != "" and .attempts >= 1 and .attempts <= 5' \
+            '.message_id != "" and .attempts >= 1 and .attempts <= 5 and
+             .delivery_state == "delivered" and .processed_provider_events > 0' \
             <<<"$smoke_result" >/dev/null
+      - name: 'Post-deploy: Close the bounded Email validation window'
+        if: ${{ always() }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          TF_VAR_email_data_encryption_key: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
+          TF_VAR_email_observability_internal_token: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
+          TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
+          TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sentry_dsn: ${{ secrets.EMAIL_SENTRY_DSN }}
+          TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
+          TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
+        run: |
+          export TF_VAR_email_internal_validation_enabled=false
+          terraform -chdir="$STACK_ROOT" init \
+            -reconfigure \
+            -backend-config=backend.ci.hcl \
+            -backend-config="bucket=$TERRAFORM_STATE_BUCKET" \
+            -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
+          if [[ -z "${TF_VAR_email_worker_image:-}" ]]; then
+            export TF_VAR_email_worker_image
+            TF_VAR_email_worker_image="$(
+              curl --fail --silent --show-error \
+                --get \
+                --header "X-Auth-Token: $SCW_SECRET_KEY" \
+                --data-urlencode "project_id=${SCW_DEFAULT_PROJECT_ID}" \
+                --data-urlencode "name=nvbes-prod-email-ingress" \
+                "https://api.scaleway.com/containers/v1/regions/fr-par/containers" |
+                jq --exit-status --raw-output \
+                  '.containers | select(length == 1) | .[0].image'
+            )"
+          fi
+          terraform -chdir="$STACK_ROOT" plan \
+            -lock-timeout=5m \
+            -target=scaleway_container.email_runtime \
+            -target=scaleway_container_trigger.email_dispatch \
+            -target=scaleway_container_trigger.email_retention \
+            -out=email-economic-shutdown.tfplan
+          terraform -chdir="$STACK_ROOT" apply \
+            -lock-timeout=5m \
+            email-economic-shutdown.tfplan
+
+          [[ "$(terraform -chdir="$STACK_ROOT" output -raw email_internal_validation_enabled)" == "false" ]]
+          ingress_id="$(terraform -chdir="$STACK_ROOT" output -raw email_ingress_container_id)"
+          dispatch_id="$(terraform -chdir="$STACK_ROOT" output -raw email_dispatch_container_id)"
+          ingress_privacy="$(
+            curl --fail --silent --show-error \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" \
+              "https://api.scaleway.com/containers/v1/regions/fr-par/containers/${ingress_id}" |
+              jq --exit-status --raw-output '.privacy'
+          )"
+          [[ "$ingress_privacy" == "private" ]]
+          trigger_count="$(
+            curl --fail --silent --show-error \
+              --get \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" \
+              --data-urlencode "container_id=${dispatch_id}" \
+              "https://api.scaleway.com/containers/v1/regions/fr-par/triggers" |
+              jq --exit-status '.total_count'
+          )"
+          [[ "$trigger_count" == "0" ]]

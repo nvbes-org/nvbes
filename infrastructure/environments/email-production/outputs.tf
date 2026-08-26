@@ -38,6 +38,21 @@ output "email_worker_metrics_endpoint" {
   value       = "${scaleway_container.email_runtime["ingress"].public_endpoint}/metrics"
 }
 
+output "email_ingress_container_id" {
+  description = "Terraform-owned production Email ingress container ID."
+  value       = scaleway_container.email_runtime["ingress"].id
+}
+
+output "email_dispatch_container_id" {
+  description = "Terraform-owned production Email dispatch container ID."
+  value       = scaleway_container.email_runtime["dispatch"].id
+}
+
+output "email_internal_validation_enabled" {
+  description = "Whether the bounded internal Email validation window is open."
+  value       = var.email_internal_validation_enabled
+}
+
 output "email_grafana_dashboard_uid" {
   description = "Stable UID of the Terraform-managed Email operations dashboard."
   value       = grafana_dashboard.email_communications.uid

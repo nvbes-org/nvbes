@@ -78,6 +78,12 @@ variable "email_database_runtime_credential_generation" {
   }
 }
 
+variable "email_internal_validation_enabled" {
+  description = "Temporarily exposes Email ingress and dispatch triggers during a bounded internal validation window."
+  type        = bool
+  default     = false
+}
+
 variable "email_producer_tokens" {
   description = "Comma-separated producer-to-token bindings accepted by the email gRPC API."
   type        = string

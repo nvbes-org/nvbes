@@ -7,6 +7,7 @@ grafana_url                       = "https://nvbes.grafana.net"
 grafana_prometheus_datasource_uid = "grafanacloud-prom"
 grafana_email_contact_point        = "nvbes-email-on-call"
 email_sentry_traces_sample_rate    = 0.1
+email_internal_validation_enabled  = false
 
 # Production accepts only the verified digest mirrored into the private registry.
 email_worker_image = "rg.fr-par.scw.cloud/nvbes-prod-email-worker/nvbes-email-worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
