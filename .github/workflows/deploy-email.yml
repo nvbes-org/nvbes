@@ -78,7 +78,7 @@ jobs:
     needs: [ci-test-gate]
     if: ${{ success() }}
     runs-on: [self-hosted, macOS, ARM64]
-    timeout-minutes: 45
+    timeout-minutes: 75
     permissions:
       actions: read
       contents: read
