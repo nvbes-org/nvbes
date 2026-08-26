@@ -143,12 +143,13 @@ jobs:
               WHERE message.idempotency_key = 'readiness:${DIAGNOSTIC_RUN_ID}';"
           )"
           jq --exit-status '.messages <= 1' <<<"$diagnostic" >/dev/null
+          printf 'Synthetic ledger diagnostic: %s\n' "$diagnostic"
           printf '### Synthetic ledger diagnostic\n\n```json\n%s\n```\n' \
             "$diagnostic" >> "$GITHUB_STEP_SUMMARY"
           restore_endpoint="$(
             curl --fail --silent --show-error \
               --header "X-Auth-Token: $SCW_SECRET_KEY" \
-              "https://api.scaleway.com/serverless-sql/v1alpha1/regions/${SCW_DEFAULT_REGION}/databases/${RESTORE_DATABASE_ID}" |
+              "https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/${SCW_DEFAULT_REGION}/databases/${RESTORE_DATABASE_ID}" |
               jq --exit-status --raw-output \
                 'select(.status == "ready") | .endpoint'
           )"
