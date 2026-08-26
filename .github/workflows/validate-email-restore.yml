@@ -127,6 +127,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          EMAIL_OBSERVABILITY_INTERNAL_TOKEN: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
           RESEND_SNS_CONFIRMATION: ${{ inputs.resend_sns_confirmation }}
         run: |
           state_json="$(mktemp)"
@@ -200,6 +201,10 @@ jobs:
               fi
             done
           fi
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $EMAIL_OBSERVABILITY_INTERNAL_TOKEN" \
+            "${worker_endpoint}/metrics" |
+            awk '/^email_(provider_webhooks|webhook_signature_failures)/'
           jq --exit-status --arg endpoint "$expected_endpoint" '
             .Subscriptions | length == 1 and
             .[0].Protocol == "https" and
