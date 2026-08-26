@@ -625,6 +625,8 @@ jobs:
 
           ingress_id="$(terraform -chdir="$STACK_ROOT" output -raw email_ingress_container_id)"
           dispatch_id="$(terraform -chdir="$STACK_ROOT" output -raw email_dispatch_container_id)"
+          ingress_id="${ingress_id#*/}"
+          dispatch_id="${dispatch_id#*/}"
           ingress_privacy="$(
             curl --fail --silent --show-error \
               --header "X-Auth-Token: $SCW_SECRET_KEY" \

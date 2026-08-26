@@ -118,6 +118,56 @@ jobs:
           ' <<<"$rules" >/dev/null
           printf '### Grafana Email observability\n\nDashboard `%s` and three active alert rules verified.\n' \
             "$dashboard_uid" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify confirmed Email SNS subscription
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+        run: |
+          state_json="$(mktemp)"
+          trap 'rm -f "$state_json"' EXIT
+          chmod 600 "$state_json"
+          terraform -chdir="$STACK_ROOT" show -json > "$state_json"
+          sns_access_key="$(jq --exit-status --raw-output '
+            .values.root_module.resources[] |
+            select(.address == "scaleway_mnq_sns_credentials.email_events_terraform") |
+            .values.access_key
+          ' "$state_json")"
+          sns_secret_key="$(jq --exit-status --raw-output '
+            .values.root_module.resources[] |
+            select(.address == "scaleway_mnq_sns_credentials.email_events_terraform") |
+            .values.secret_key
+          ' "$state_json")"
+          sns_endpoint="$(jq --exit-status --raw-output '
+            .values.root_module.resources[] |
+            select(.address == "scaleway_mnq_sns.email_events") |
+            .values.endpoint
+          ' "$state_json")"
+          topic_arn="$(jq --exit-status --raw-output '
+            .values.root_module.resources[] |
+            select(.address == "scaleway_mnq_sns_topic.email_events") |
+            .values.arn
+          ' "$state_json")"
+          worker_endpoint="$(terraform -chdir="$STACK_ROOT" output -raw email_worker_endpoint)"
+          subscriptions="$(
+            docker run --rm --platform linux/amd64 \
+              --env "AWS_ACCESS_KEY_ID=$sns_access_key" \
+              --env "AWS_SECRET_ACCESS_KEY=$sns_secret_key" \
+              --env AWS_DEFAULT_REGION=fr-par \
+              amazon/aws-cli@sha256:e14216fb361cce909ce199616711ad103182d5937f851cda9bebf25867d7180a \
+              --endpoint-url "$sns_endpoint" \
+              sns list-subscriptions-by-topic \
+              --topic-arn "$topic_arn" \
+              --output json
+          )"
+          expected_endpoint="${worker_endpoint}/webhooks/scaleway/topics-and-events"
+          jq --exit-status --arg endpoint "$expected_endpoint" '
+            .Subscriptions | length == 1 and
+            .[0].Protocol == "https" and
+            .[0].Endpoint == $endpoint and
+            .[0].SubscriptionArn != "PendingConfirmation"
+          ' <<<"$subscriptions" >/dev/null
+          jq '{subscriptions: [.Subscriptions[] | {Protocol, Endpoint, SubscriptionArn}]}' \
+            <<<"$subscriptions"
       - name: Verify restored schema and data integrity
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
