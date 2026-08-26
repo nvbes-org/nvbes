@@ -47,7 +47,7 @@ async fn handle_scaleway_webhook(
     body: Bytes,
 ) -> impl IntoResponse {
     let started_at = Instant::now();
-    if !is_json(&headers) {
+    if !is_sns_content_type(&headers) {
         email_metrics::webhook("sns", "invalid_content_type", started_at.elapsed());
         return response(StatusCode::UNSUPPORTED_MEDIA_TYPE, "invalid_content_type");
     }
@@ -141,12 +141,17 @@ fn webhook_event_type(message: &SnsMessage) -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
-fn is_json(headers: &HeaderMap) -> bool {
+fn is_sns_content_type(headers: &HeaderMap) -> bool {
     headers
         .get(header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.split(';').next())
-        .is_some_and(|value| value.trim().eq_ignore_ascii_case("application/json"))
+        .is_some_and(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "application/json" | "text/plain"
+            )
+        })
 }
 
 fn response(status: StatusCode, label: &'static str) -> (StatusCode, Json<WebhookResponse>) {
@@ -157,17 +162,27 @@ fn response(status: StatusCode, label: &'static str) -> (StatusCode, Json<Webhoo
 mod tests {
     use axum::http::{HeaderMap, HeaderValue, header};
 
-    use super::{SnsMessage, is_json, response, webhook_event_type};
+    use super::{SnsMessage, is_sns_content_type, response, webhook_event_type};
 
     #[test]
-    fn webhook_requires_json_content_type() {
+    fn webhook_accepts_only_sns_envelope_content_types() {
         let mut headers = HeaderMap::new();
-        assert!(!is_json(&headers));
+        assert!(!is_sns_content_type(&headers));
         headers.insert(
             header::CONTENT_TYPE,
             HeaderValue::from_static("application/json; charset=utf-8"),
         );
-        assert!(is_json(&headers));
+        assert!(is_sns_content_type(&headers));
+        headers.insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("text/plain; charset=utf-8"),
+        );
+        assert!(is_sns_content_type(&headers));
+        headers.insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/octet-stream"),
+        );
+        assert!(!is_sns_content_type(&headers));
     }
 
     #[test]
