@@ -15,6 +15,11 @@ on:
         description: Synthetic run ID whose non-sensitive ledger state must be inspected
         required: true
         type: string
+      resend_sns_confirmation:
+        description: Resend and verify SNS confirmation while Email ingress is public
+        required: true
+        default: false
+        type: boolean
       confirmation:
         description: Enter validate-email-production-restore
         required: true
@@ -122,6 +127,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          RESEND_SNS_CONFIRMATION: ${{ inputs.resend_sns_confirmation }}
         run: |
           state_json="$(mktemp)"
           trap 'rm -f "$state_json"' EXIT
@@ -160,11 +166,45 @@ jobs:
               --output json
           )"
           expected_endpoint="${worker_endpoint}/webhooks/scaleway/topics-and-events"
+          if [[ "$RESEND_SNS_CONFIRMATION" == "true" ]]; then
+            [[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "${worker_endpoint}/health/live")" == "200" ]]
+            docker run --rm --platform linux/amd64 \
+              --env "AWS_ACCESS_KEY_ID=$sns_access_key" \
+              --env "AWS_SECRET_ACCESS_KEY=$sns_secret_key" \
+              --env AWS_DEFAULT_REGION=fr-par \
+              amazon/aws-cli@sha256:e14216fb361cce909ce199616711ad103182d5937f851cda9bebf25867d7180a \
+              --endpoint-url "$sns_endpoint" \
+              sns subscribe \
+              --topic-arn "$topic_arn" \
+              --protocol https \
+              --notification-endpoint "$expected_endpoint" \
+              --output json >/dev/null
+            for _attempt in {1..12}; do
+              sleep 5
+              subscriptions="$(
+                docker run --rm --platform linux/amd64 \
+                  --env "AWS_ACCESS_KEY_ID=$sns_access_key" \
+                  --env "AWS_SECRET_ACCESS_KEY=$sns_secret_key" \
+                  --env AWS_DEFAULT_REGION=fr-par \
+                  amazon/aws-cli@sha256:e14216fb361cce909ce199616711ad103182d5937f851cda9bebf25867d7180a \
+                  --endpoint-url "$sns_endpoint" \
+                  sns list-subscriptions-by-topic \
+                  --topic-arn "$topic_arn" \
+                  --output json
+              )"
+              if jq --exit-status '
+                .Subscriptions | length == 1 and
+                (.[0].SubscriptionArn | ascii_downcase | contains("pending") | not)
+              ' <<<"$subscriptions" >/dev/null; then
+                break
+              fi
+            done
+          fi
           jq --exit-status --arg endpoint "$expected_endpoint" '
             .Subscriptions | length == 1 and
             .[0].Protocol == "https" and
             .[0].Endpoint == $endpoint and
-            .[0].SubscriptionArn != "PendingConfirmation"
+            (.[0].SubscriptionArn | ascii_downcase | contains("pending") | not)
           ' <<<"$subscriptions" >/dev/null
           jq '{subscriptions: [.Subscriptions[] | {Protocol, Endpoint, SubscriptionArn}]}' \
             <<<"$subscriptions"
