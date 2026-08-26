@@ -1,0 +1,149 @@
+name: validate email restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      approved_sha:
+        description: Exact published commit SHA reviewed for recovery validation
+        required: true
+        type: string
+      restore_database_id:
+        description: Isolated restored Serverless SQL database UUID
+        required: true
+        type: string
+      confirmation:
+        description: Enter validate-email-production-restore
+        required: true
+        type: string
+
+concurrency:
+  group: validate-email-production-restore
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  validate-restore:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 20
+    environment:
+      name: production-email
+    permissions:
+      actions: read
+      contents: read
+    env:
+      SCW_DEFAULT_REGION: fr-par
+      STACK_ROOT: infrastructure/environments/email-production
+      TERRAFORM_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
+      EMAIL_TERRAFORM_STATE_KEY: production/email/terraform.tfstate
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ inputs.approved_sha }}
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/validate-email-restore.yml
+      - name: Enforce recovery approval contract
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
+        run: |
+          uuid_pattern='^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$CONFIRMATION" == "validate-email-production-restore" ]]
+          [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]
+          [[ "$RESTORE_DATABASE_ID" =~ $uuid_pattern ]]
+          [[ -n "$TERRAFORM_STATE_BUCKET" ]]
+          [[ "$EMAIL_TERRAFORM_STATE_KEY" == "production/email/terraform.tfstate" ]]
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Initialize isolated email state
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+        run: >-
+          terraform -chdir="$STACK_ROOT" init
+          -reconfigure
+          -backend-config=backend.ci.hcl
+          -backend-config="bucket=$TERRAFORM_STATE_BUCKET"
+          -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
+      - name: Verify Grafana dashboard and active alert rules
+        env:
+          GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
+          GRAFANA_URL: ${{ vars.GRAFANA_URL }}
+        run: |
+          dashboard_uid="$(terraform -chdir="$STACK_ROOT" output -raw email_grafana_dashboard_uid)"
+          [[ "$dashboard_uid" == "nvbes-email-production-v1" ]]
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $GRAFANA_SERVICE_ACCOUNT_TOKEN" \
+            "$GRAFANA_URL/api/dashboards/uid/$dashboard_uid" |
+            jq --exit-status \
+              '.dashboard.uid == "nvbes-email-production-v1" and .meta.isFolder == false' \
+              >/dev/null
+          rules="$(
+            curl --fail --silent --show-error \
+              --header "Authorization: Bearer $GRAFANA_SERVICE_ACCOUNT_TOKEN" \
+              "$GRAFANA_URL/api/v1/provisioning/alert-rules"
+          )"
+          jq --exit-status '
+            map(select(.uid | startswith("nvbes-email-"))) as $email |
+            ($email | length) == 3 and
+            ($email | all(.isPaused == false)) and
+            ($email | map(.uid) | sort) == [
+              "nvbes-email-complaint-rate",
+              "nvbes-email-provider-error-rate",
+              "nvbes-email-queue-stale"
+            ]
+          ' <<<"$rules" >/dev/null
+          printf '### Grafana Email observability\n\nDashboard `%s` and three active alert rules verified.\n' \
+            "$dashboard_uid" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify restored schema and data integrity
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          runtime_url="$(terraform -chdir="$STACK_ROOT" output -raw email_database_runtime_url)"
+          restore_endpoint="$(
+            curl --fail --silent --show-error \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" \
+              "https://api.scaleway.com/serverless-sql/v1alpha1/regions/${SCW_DEFAULT_REGION}/databases/${RESTORE_DATABASE_ID}" |
+              jq --exit-status --raw-output \
+                'select(.status == "ready") | .endpoint'
+          )"
+          [[ "$restore_endpoint" == postgres://*?sslmode=require ]]
+          restore_url="${runtime_url%@*}@${restore_endpoint#postgres://}"
+
+          integrity="$(
+            docker run --rm --platform linux/amd64 postgres:16-alpine \
+              psql "$restore_url" --no-psqlrc --tuples-only --no-align \
+              --set ON_ERROR_STOP=1 \
+              --command "SELECT json_build_object(
+                'migrations', (SELECT count(*) FROM _sqlx_migrations WHERE success),
+                'tables', (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('email_messages', 'email_delivery_attempts', 'email_provider_events', 'email_suppressions', 'email_operator_actions')),
+                'messages', (SELECT count(*) FROM email_messages),
+                'attempts', (SELECT count(*) FROM email_delivery_attempts),
+                'provider_events', (SELECT count(*) FROM email_provider_events),
+                'constraints_valid', (SELECT bool_and(convalidated) FROM pg_constraint WHERE connamespace = 'public'::regnamespace)
+              );"
+          )"
+          jq --exit-status \
+            '.migrations == 3 and .tables == 5 and .constraints_valid == true' \
+            <<<"$integrity" >/dev/null
+          safe_integrity="$(jq 'del(.messages, .attempts, .provider_events)' <<<"$integrity")"
+          printf '### Email restore integrity\n\n```json\n%s\n```\n' \
+            "$safe_integrity" >> "$GITHUB_STEP_SUMMARY"

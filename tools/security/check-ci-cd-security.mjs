@@ -312,6 +312,22 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes("ghcr.io/nvbes-org/nvbes-email-worker") &&
 			text.includes("cosign verify") &&
 			text.includes("email-runtime.tfplan");
+		const isValidatedEmailRestoreWorkflow =
+			path === ".github/workflows/validate-email-restore.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			text.includes("name: production-email") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes(
+				'[[ "$CONFIRMATION" == "validate-email-production-restore" ]]',
+			) &&
+			text.includes('[[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
+			text.includes(
+				'[[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]',
+			) &&
+			text.includes(`ref: ${githubExpression("inputs.approved_sha")}`) &&
+			text.includes("production/email/terraform.tfstate") &&
+			text.includes("restore_database_id");
 		const isValidatedTrustRiskDeploymentWorkflow =
 			path === ".github/workflows/deploy-trust-risk.yml" &&
 			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
@@ -333,6 +349,7 @@ function assertSecrets(path, text, allowedSecrets) {
 			!isValidatedAccountReleaseWorkflow &&
 			!isValidatedAcceptanceIngestWorkflow &&
 			!isValidatedEmailDeploymentWorkflow &&
+			!isValidatedEmailRestoreWorkflow &&
 			!isValidatedTrustRiskDeploymentWorkflow
 		) {
 			errors.push(
