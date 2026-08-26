@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-email-production
+  group: deploy-email-production-v2
   cancel-in-progress: false
 
 permissions:
