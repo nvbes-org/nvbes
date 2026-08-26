@@ -131,7 +131,6 @@ jobs:
             docker run --rm --platform linux/amd64 postgres:16-alpine \
               psql "$runtime_url" --no-psqlrc --tuples-only --no-align \
               --set ON_ERROR_STOP=1 \
-              --set "run_id=$DIAGNOSTIC_RUN_ID" \
               --command "SELECT json_build_object(
                 'messages', count(DISTINCT message.id),
                 'state', max(message.state::text),
@@ -141,7 +140,7 @@ jobs:
               FROM email_messages AS message
               LEFT JOIN email_delivery_attempts AS attempt ON attempt.message_id = message.id
               LEFT JOIN email_provider_events AS event ON event.provider_message_id = message.provider_message_id
-              WHERE message.idempotency_key = 'readiness:' || :'run_id';"
+              WHERE message.idempotency_key = 'readiness:${DIAGNOSTIC_RUN_ID}';"
           )"
           jq --exit-status '.messages <= 1' <<<"$diagnostic" >/dev/null
           printf '### Synthetic ledger diagnostic\n\n```json\n%s\n```\n' \
