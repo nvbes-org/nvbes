@@ -11,6 +11,10 @@ on:
         description: Isolated restored Serverless SQL database UUID
         required: true
         type: string
+      diagnostic_run_id:
+        description: Synthetic run ID whose non-sensitive ledger state must be inspected
+        required: true
+        type: string
       confirmation:
         description: Enter validate-email-production-restore
         required: true
@@ -56,6 +60,7 @@ jobs:
         env:
           APPROVED_SHA: ${{ inputs.approved_sha }}
           CONFIRMATION: ${{ inputs.confirmation }}
+          DIAGNOSTIC_RUN_ID: ${{ inputs.diagnostic_run_id }}
           RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
         run: |
           uuid_pattern='^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
@@ -64,6 +69,7 @@ jobs:
           [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]
           [[ "$RESTORE_DATABASE_ID" =~ $uuid_pattern ]]
+          [[ "$DIAGNOSTIC_RUN_ID" =~ ^[a-zA-Z0-9-]{1,100}$ ]]
           [[ -n "$TERRAFORM_STATE_BUCKET" ]]
           [[ "$EMAIL_TERRAFORM_STATE_KEY" == "production/email/terraform.tfstate" ]]
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -114,10 +120,30 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          DIAGNOSTIC_RUN_ID: ${{ inputs.diagnostic_run_id }}
           RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
         run: |
           runtime_url="$(terraform -chdir="$STACK_ROOT" output -raw email_database_runtime_url)"
+          diagnostic="$(
+            docker run --rm --platform linux/amd64 postgres:16-alpine \
+              psql "$runtime_url" --no-psqlrc --tuples-only --no-align \
+              --set ON_ERROR_STOP=1 \
+              --set "run_id=$DIAGNOSTIC_RUN_ID" \
+              --command "SELECT json_build_object(
+                'messages', count(DISTINCT message.id),
+                'state', max(message.state::text),
+                'attempts', count(DISTINCT attempt.id),
+                'provider_events', count(DISTINCT event.id)
+              )
+              FROM email_messages AS message
+              LEFT JOIN email_delivery_attempts AS attempt ON attempt.message_id = message.id
+              LEFT JOIN email_provider_events AS event ON event.provider_message_id = message.provider_message_id
+              WHERE message.idempotency_key = 'readiness:' || :'run_id';"
+          )"
+          jq --exit-status '.messages <= 1' <<<"$diagnostic" >/dev/null
+          printf '### Synthetic ledger diagnostic\n\n```json\n%s\n```\n' \
+            "$diagnostic" >> "$GITHUB_STEP_SUMMARY"
           restore_endpoint="$(
             curl --fail --silent --show-error \
               --header "X-Auth-Token: $SCW_SECRET_KEY" \
