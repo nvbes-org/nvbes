@@ -282,8 +282,14 @@ jobs:
           resource=scaleway_mnq_sns_topic_subscription.email_worker
           desired_id="fr-par/${SCW_DEFAULT_PROJECT_ID}/nvbes-prod-email-events/${EMAIL_SNS_SUBSCRIPTION_ID}"
           current_id=""
-          state_addresses="$(terraform -chdir="$STACK_ROOT" state list)"
-          if [[ $'\n'"$state_addresses"$'\n' == *$'\n'"$resource"$'\n'* ]]; then
+          resource_managed=false
+          while IFS= read -r address; do
+            if [[ "$address" == "$resource" ]]; then
+              resource_managed=true
+              break
+            fi
+          done < <(terraform -chdir="$STACK_ROOT" state list)
+          if [[ "$resource_managed" == "true" ]]; then
             current_id="$(
               terraform -chdir="$STACK_ROOT" state show -no-color "$resource" |
                 awk -F' = ' '$1 ~ /^[[:space:]]*id$/ { gsub(/"/, "", $2); print $2 }'
