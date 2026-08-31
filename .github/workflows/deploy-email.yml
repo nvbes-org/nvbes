@@ -283,20 +283,15 @@ jobs:
           desired_id="fr-par/${SCW_DEFAULT_PROJECT_ID}/nvbes-prod-email-events/${EMAIL_SNS_SUBSCRIPTION_ID}"
           current_id=""
           resource_managed=false
-          while IFS= read -r address; do
-            if [[ "$address" == "$resource" ]]; then
-              resource_managed=true
-              break
-            fi
-          done < <(terraform -chdir="$STACK_ROOT" state list)
-          if [[ "$resource_managed" == "true" ]]; then
+          if state_snapshot="$(terraform -chdir="$STACK_ROOT" state show -no-color "$resource" 2>/dev/null)"; then
+            resource_managed=true
             current_id="$(
-              terraform -chdir="$STACK_ROOT" state show -no-color "$resource" |
+              printf '%s\n' "$state_snapshot" |
                 awk -F' = ' '$1 ~ /^[[:space:]]*id$/ { gsub(/"/, "", $2); print $2 }'
             )"
           fi
           if [[ "$current_id" != "$desired_id" ]]; then
-            if [[ -n "$current_id" ]]; then
+            if [[ "$resource_managed" == "true" ]]; then
               terraform -chdir="$STACK_ROOT" state rm -lock-timeout=5m "$resource"
             fi
             terraform -chdir="$STACK_ROOT" import -lock-timeout=5m "$resource" "$desired_id"
