@@ -78,6 +78,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /docker login ghcr\.io/u);
 	assert.match(
 		workflow,
+		/name: Block vulnerable release images[\s\S]*?TRIVY_USERNAME: \$\{\{ github\.actor \}\}[\s\S]*?TRIVY_PASSWORD: \$\{\{ github\.token \}\}[\s\S]*?name: Generate CycloneDX SBOM[\s\S]*?TRIVY_USERNAME: \$\{\{ github\.actor \}\}[\s\S]*?TRIVY_PASSWORD: \$\{\{ github\.token \}\}/u,
+	);
+	assert.match(
+		workflow,
 		/https:\/\/api\.scaleway\.com\/account\/v3\/projects\/\$SCW_DEFAULT_PROJECT_ID/u,
 	);
 	assert.match(workflow, /X-Auth-Token: \$SCW_SECRET_KEY/u);
