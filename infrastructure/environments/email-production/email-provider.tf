@@ -91,7 +91,7 @@ resource "scaleway_mnq_sns_credentials" "email_events_terraform" {
 
   permissions {
     can_manage  = true
-    can_publish = false
+    can_publish = true
     can_receive = true
   }
 }
@@ -129,6 +129,11 @@ resource "scaleway_mnq_sns_topic_subscription" "email_worker" {
     var.email_sns_management_secret_key_override,
     scaleway_mnq_sns_credentials.email_events_terraform.secret_key,
   )
+}
+
+import {
+  to = scaleway_mnq_sns_topic_subscription.email_worker
+  id = "${var.scaleway_region}/${var.scaleway_project_id}/${local.name_prefix}-email-events/${var.email_sns_subscription_id}"
 }
 
 resource "scaleway_tem_webhook" "email_events" {

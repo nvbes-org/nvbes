@@ -186,6 +186,7 @@ jobs:
       TF_VAR_email_database_runtime_credential_generation: ${{ vars.EMAIL_DATABASE_RUNTIME_CREDENTIAL_GENERATION }}
       TF_VAR_email_internal_validation_enabled: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED }}
       TF_VAR_email_sentry_traces_sample_rate: ${{ vars.EMAIL_SENTRY_TRACES_SAMPLE_RATE }}
+      TF_VAR_email_sns_subscription_id: ${{ vars.EMAIL_SNS_SUBSCRIPTION_ID }}
       TF_VAR_grafana_email_contact_point: ${{ vars.GRAFANA_EMAIL_CONTACT_POINT }}
       TF_VAR_grafana_prometheus_datasource_uid: ${{ vars.GRAFANA_PROMETHEUS_DATASOURCE_UID }}
       TF_VAR_grafana_url: ${{ vars.GRAFANA_URL }}
@@ -341,7 +342,15 @@ jobs:
             printf '::add-mask::%s\n' "$TF_VAR_email_sns_management_secret_key_override"
             unset state_snapshot_json
 
-            terraform -chdir="$STACK_ROOT" import -lock-timeout=5m "$resource" "$desired_id"
+            export TF_VAR_email_internal_validation_enabled=false
+            export TF_VAR_email_worker_image="$EMAIL_ROLLBACK_IMAGE"
+            terraform -chdir="$STACK_ROOT" plan \
+              -lock-timeout=5m \
+              -target="$resource" \
+              -out=email-sns-subscription-import.tfplan
+            terraform -chdir="$STACK_ROOT" apply \
+              -lock-timeout=5m \
+              email-sns-subscription-import.tfplan
           fi
       - name: Plan private image registry
         env:

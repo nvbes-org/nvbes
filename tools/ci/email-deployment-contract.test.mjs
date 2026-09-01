@@ -102,7 +102,7 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	);
 	assert.match(
 		workflow,
-		/-target=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?-replace=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?email-sns-management-credential\.tfplan[\s\S]*?state pull[\s\S]*?attributes\.secret_key \| select\(length > 0\)[\s\S]*?terraform -chdir="\$STACK_ROOT" import/u,
+		/-target=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?-replace=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?email-sns-management-credential\.tfplan[\s\S]*?state pull[\s\S]*?attributes\.secret_key \| select\(length > 0\)[\s\S]*?email-sns-subscription-import\.tfplan/u,
 	);
 	assert.match(
 		workflow,
@@ -229,6 +229,14 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(observability, /resource "grafana_dashboard" "email_communications"/u);
 	assert.match(observability, /resource "grafana_rule_group" "email"/u);
 	assert.match(observability, /nvbes-email-production-v1/u);
+	assert.match(
+		provider,
+		/resource "scaleway_mnq_sns_credentials" "email_events_terraform"[\s\S]*?can_manage\s*=\s*true[\s\S]*?can_publish\s*=\s*true[\s\S]*?can_receive\s*=\s*true/u,
+	);
+	assert.match(
+		provider,
+		/import \{[\s\S]*?to = scaleway_mnq_sns_topic_subscription\.email_worker[\s\S]*?var\.email_sns_subscription_id[\s\S]*?\}/u,
+	);
 	assert.doesNotMatch(observability, /^\s*org_id\s*=/mu);
 	const reusableObservability = read(
 		"infrastructure/stacks/email/production/email-observability.tf",
