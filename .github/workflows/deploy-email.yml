@@ -270,6 +270,22 @@ jobs:
           -backend-config=backend.ci.hcl
           -backend-config="bucket=$TERRAFORM_STATE_BUCKET"
           -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
+      - name: Capture recoverable deployment image
+        env:
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          rollback_image="$(
+            curl --fail --silent --show-error \
+              --get \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" \
+              --data-urlencode "project_id=${SCW_DEFAULT_PROJECT_ID}" \
+              --data-urlencode "name=nvbes-prod-email-ingress" \
+              "https://api.scaleway.com/containers/v1/regions/fr-par/containers" |
+              jq --exit-status --raw-output \
+                '.containers | select(length == 1) | .[0].image'
+          )"
+          [[ "$rollback_image" =~ ^${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker@sha256:[0-9a-f]{64}$ ]]
+          echo "EMAIL_ROLLBACK_IMAGE=$rollback_image" >> "$GITHUB_ENV"
       - name: Reconcile confirmed SNS subscription state
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
@@ -287,18 +303,6 @@ jobs:
         run: |
           resource=scaleway_mnq_sns_topic_subscription.email_worker
           desired_id="fr-par/${SCW_DEFAULT_PROJECT_ID}/nvbes-prod-email-events/${EMAIL_SNS_SUBSCRIPTION_ID}"
-          state_snapshot_json="$(terraform -chdir="$STACK_ROOT" state pull)"
-          export TF_VAR_email_sns_management_access_key_override="$(
-            jq --exit-status --raw-output \
-              '.resources[] | select(.type == "scaleway_mnq_sns_credentials" and .name == "email_events_terraform") | .instances[0].attributes.access_key' \
-              <<<"$state_snapshot_json"
-          )"
-          export TF_VAR_email_sns_management_secret_key_override="$(
-            jq --exit-status --raw-output \
-              '.resources[] | select(.type == "scaleway_mnq_sns_credentials" and .name == "email_events_terraform") | .instances[0].attributes.secret_key' \
-              <<<"$state_snapshot_json"
-          )"
-          unset state_snapshot_json
           current_id=""
           resource_managed=false
           if state_snapshot="$(terraform -chdir="$STACK_ROOT" state show -no-color "$resource" 2>/dev/null)"; then
@@ -312,24 +316,33 @@ jobs:
             if [[ "$resource_managed" == "true" ]]; then
               terraform -chdir="$STACK_ROOT" state rm -lock-timeout=5m "$resource"
             fi
+
+            terraform -chdir="$STACK_ROOT" plan \
+              -lock-timeout=5m \
+              -target=scaleway_mnq_sns_credentials.email_events_terraform \
+              -replace=scaleway_mnq_sns_credentials.email_events_terraform \
+              -out=email-sns-management-credential.tfplan
+            terraform -chdir="$STACK_ROOT" apply \
+              -lock-timeout=5m \
+              email-sns-management-credential.tfplan
+
+            state_snapshot_json="$(terraform -chdir="$STACK_ROOT" state pull)"
+            export TF_VAR_email_sns_management_access_key_override="$(
+              jq --exit-status --raw-output \
+                '.resources[] | select(.type == "scaleway_mnq_sns_credentials" and .name == "email_events_terraform") | .instances[0].attributes.access_key | select(length > 0)' \
+                <<<"$state_snapshot_json"
+            )"
+            export TF_VAR_email_sns_management_secret_key_override="$(
+              jq --exit-status --raw-output \
+                '.resources[] | select(.type == "scaleway_mnq_sns_credentials" and .name == "email_events_terraform") | .instances[0].attributes.secret_key | select(length > 0)' \
+                <<<"$state_snapshot_json"
+            )"
+            printf '::add-mask::%s\n' "$TF_VAR_email_sns_management_access_key_override"
+            printf '::add-mask::%s\n' "$TF_VAR_email_sns_management_secret_key_override"
+            unset state_snapshot_json
+
             terraform -chdir="$STACK_ROOT" import -lock-timeout=5m "$resource" "$desired_id"
           fi
-      - name: Capture recoverable deployment image
-        env:
-          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
-        run: |
-          rollback_image="$(
-            curl --fail --silent --show-error \
-              --get \
-              --header "X-Auth-Token: $SCW_SECRET_KEY" \
-              --data-urlencode "project_id=${SCW_DEFAULT_PROJECT_ID}" \
-              --data-urlencode "name=nvbes-prod-email-ingress" \
-              "https://api.scaleway.com/containers/v1/regions/fr-par/containers" |
-              jq --exit-status --raw-output \
-                '.containers | select(length == 1) | .[0].image'
-          )"
-          [[ "$rollback_image" =~ ^${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker@sha256:[0-9a-f]{64}$ ]]
-          echo "EMAIL_ROLLBACK_IMAGE=$rollback_image" >> "$GITHUB_ENV"
       - name: Plan private image registry
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}

@@ -98,6 +98,14 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /production\/email\/terraform\.tfstate/u);
 	assert.match(
 		workflow,
+		/name: Capture recoverable deployment image[\s\S]*?name: Reconcile confirmed SNS subscription state/u,
+	);
+	assert.match(
+		workflow,
+		/-target=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?-replace=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?email-sns-management-credential\.tfplan[\s\S]*?state pull[\s\S]*?attributes\.secret_key \| select\(length > 0\)[\s\S]*?terraform -chdir="\$STACK_ROOT" import/u,
+	);
+	assert.match(
+		workflow,
 		/-target=scaleway_job_definition\.email_database_migration/u,
 	);
 	assert.match(workflow, /\/job-definitions\/\$\{job_definition_id\}\/start/u);
