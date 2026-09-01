@@ -101,8 +101,14 @@ resource "scaleway_mnq_sns_topic" "email_events" {
   region       = var.scaleway_region
   name         = "${local.name_prefix}-email-events"
   sns_endpoint = scaleway_mnq_sns.email_events.endpoint
-  access_key   = scaleway_mnq_sns_credentials.email_events_terraform.access_key
-  secret_key   = scaleway_mnq_sns_credentials.email_events_terraform.secret_key
+  access_key = coalesce(
+    var.email_sns_management_access_key_override,
+    scaleway_mnq_sns_credentials.email_events_terraform.access_key,
+  )
+  secret_key = coalesce(
+    var.email_sns_management_secret_key_override,
+    scaleway_mnq_sns_credentials.email_events_terraform.secret_key,
+  )
 }
 
 resource "scaleway_mnq_sns_topic_subscription" "email_worker" {
@@ -115,8 +121,14 @@ resource "scaleway_mnq_sns_topic_subscription" "email_worker" {
     "${scaleway_container.email_runtime["ingress"].public_endpoint}/webhooks/scaleway/topics-and-events",
   )
   sns_endpoint = scaleway_mnq_sns.email_events.endpoint
-  access_key   = scaleway_mnq_sns_credentials.email_events_terraform.access_key
-  secret_key   = scaleway_mnq_sns_credentials.email_events_terraform.secret_key
+  access_key = coalesce(
+    var.email_sns_management_access_key_override,
+    scaleway_mnq_sns_credentials.email_events_terraform.access_key,
+  )
+  secret_key = coalesce(
+    var.email_sns_management_secret_key_override,
+    scaleway_mnq_sns_credentials.email_events_terraform.secret_key,
+  )
 }
 
 resource "scaleway_tem_webhook" "email_events" {

@@ -281,6 +281,18 @@ jobs:
         run: |
           resource=scaleway_mnq_sns_topic_subscription.email_worker
           desired_id="fr-par/${SCW_DEFAULT_PROJECT_ID}/nvbes-prod-email-events/${EMAIL_SNS_SUBSCRIPTION_ID}"
+          state_snapshot_json="$(terraform -chdir="$STACK_ROOT" state pull)"
+          export TF_VAR_email_sns_management_access_key_override="$(
+            jq --exit-status --raw-output \
+              '.resources[] | select(.type == "scaleway_mnq_sns_credentials" and .name == "email_events_terraform") | .instances[0].attributes.access_key' \
+              <<<"$state_snapshot_json"
+          )"
+          export TF_VAR_email_sns_management_secret_key_override="$(
+            jq --exit-status --raw-output \
+              '.resources[] | select(.type == "scaleway_mnq_sns_credentials" and .name == "email_events_terraform") | .instances[0].attributes.secret_key' \
+              <<<"$state_snapshot_json"
+          )"
+          unset state_snapshot_json
           current_id=""
           resource_managed=false
           if state_snapshot="$(terraform -chdir="$STACK_ROOT" state show -no-color "$resource" 2>/dev/null)"; then

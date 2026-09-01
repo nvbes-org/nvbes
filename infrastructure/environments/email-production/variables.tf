@@ -185,3 +185,19 @@ variable "email_sns_ca_bundle_pem" {
   type        = string
   sensitive   = true
 }
+
+variable "email_sns_management_access_key_override" {
+  description = "Optional SNS management access key used only to recover or import subscription state."
+  type        = string
+  default     = null
+  nullable    = true
+  sensitive   = true
+}
+
+variable "email_sns_management_secret_key_override" {
+  description = "Optional SNS management secret key used only to recover or import subscription state."
+  type        = string
+  default     = null
+  nullable    = true
+  sensitive   = true
+}
