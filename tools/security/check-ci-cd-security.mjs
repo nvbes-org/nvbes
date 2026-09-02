@@ -234,11 +234,19 @@ function assertSecrets(path, text, allowedSecrets) {
 			"IDENTITY_MFA_ENCRYPTION_KEY",
 			"IDENTITY_METRICS_TOKEN",
 			"IDENTITY_SENTRY_DSN",
+		].map((secret) => [
+			secret,
+			new Set([".github/workflows/deploy-identity.yml"]),
+		]),
+		...[
 			"IDENTITY_TERRAFORM_STATE_ACCESS_KEY",
 			"IDENTITY_TERRAFORM_STATE_SECRET_KEY",
 		].map((secret) => [
 			secret,
-			new Set([".github/workflows/deploy-identity.yml"]),
+			new Set([
+				".github/workflows/deploy-identity.yml",
+				".github/workflows/validate-identity-restore.yml",
+			]),
 		]),
 	]);
 	for (const secret of referencedSecrets) {
@@ -371,6 +379,21 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes("ghcr.io/nvbes-org/nvbes-identity-service") &&
 			text.includes("cosign verify") &&
 			text.includes("identity-runtime.tfplan");
+		const isValidatedIdentityRestoreWorkflow =
+			path === ".github/workflows/validate-identity-restore.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			text.includes("name: production-identity") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes(
+				'[[ "$CONFIRMATION" == "validate-identity-production-restore" ]]',
+			) &&
+			text.includes('[[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
+			text.includes('[[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]') &&
+			text.includes(`ref: ${githubExpression("inputs.approved_sha")}`) &&
+			text.includes("production/identity/terraform.tfstate") &&
+			text.includes("expected_principal_id") &&
+			text.includes("DELETE_RESTORE_DATABASE=true");
 		const isValidatedCiCacheRotationWorkflow =
 			path === ".github/workflows/rotate-ci-cache-credentials.yml" &&
 			/^\s+schedule:\s*$/mu.test(text) &&
@@ -394,6 +417,7 @@ function assertSecrets(path, text, allowedSecrets) {
 			!isValidatedEmailRestoreWorkflow &&
 			!isValidatedTrustRiskDeploymentWorkflow &&
 			!isValidatedIdentityDeploymentWorkflow &&
+			!isValidatedIdentityRestoreWorkflow &&
 			!isValidatedCiCacheRotationWorkflow
 		) {
 			errors.push(
