@@ -27,6 +27,12 @@ La bucket policy empêche l'identité de branche de lire ou d'écrire dans
 reçoivent aucun credential Scaleway, notamment lorsqu'elles proviennent d'un
 fork ou de Dependabot.
 
+Les lectures de configuration du bucket nécessaires au refresh Terraform sont
+autorisées pour les principals qui disposent déjà des permissions IAM
+correspondantes. Avec la policy Object Storage `2023-04-17`, cette déclaration
+n'accorde aucun accès autonome et ne couvre aucun objet `trusted/*` ou
+`branches/*`.
+
 Pendant le tout premier bootstrap, un push peut précéder la synchronisation des
 secrets du nouvel environnement. Le job utilise alors le backend GitHub Actions
 pour cette exécution seulement, sans dupliquer les tests, puis sélectionne
