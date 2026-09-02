@@ -37,6 +37,10 @@ const syntheticProof = readFileSync(
 	),
 	"utf8",
 );
+const publicRuntimeProof = readFileSync(
+	join(workspaceRoot, "tools/deployment/prove-identity-public-runtime.sh"),
+	"utf8",
+);
 
 test("image is reproducible and runs Identity as non-root", () => {
 	assert.match(
@@ -105,9 +109,19 @@ test("deployment migrates before apply and proves public auth stays absent", () 
 	assert.ok(migration >= 0);
 	assert.ok(apply > migration);
 	assert.ok(
-		deploymentWorkflow.includes('--request POST "${endpoint}/auth/register"'),
+		deploymentWorkflow.includes(
+			"tools/deployment/prove-identity-public-runtime.sh",
+		),
 	);
-	assert.ok(deploymentWorkflow.includes('[[ "$status" == "404" ]]'));
+	assert.ok(publicRuntimeProof.includes('/auth/register"'));
+	assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "404" ]]'));
+});
+
+test("deployment records bounded activation and access-control evidence", () => {
+	assert.ok(publicRuntimeProof.includes("--max-time 60"));
+	assert.ok(publicRuntimeProof.includes('activation_seconds="$SECONDS"'));
+	assert.ok(publicRuntimeProof.includes('[[ "$anonymous_metrics_status" == "401" ]]'));
+	assert.ok(publicRuntimeProof.includes("Identity public runtime"));
 });
 
 test("deployment proves a private synthetic account lifecycle", () => {
