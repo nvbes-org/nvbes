@@ -39,3 +39,7 @@ output "ci_cache_active_credential_slot" {
 output "ci_cache_next_rotation_at" {
   value = module.ci_cache.next_rotation_at
 }
+
+output "branch_ci_cache_application_id" {
+  value = module.ci_cache.branch_cache_application_id
+}

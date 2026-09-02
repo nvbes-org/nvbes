@@ -2,7 +2,7 @@ name: continuous integration
 
 on:
   push:
-    branches: ['main', 'staging', 'dev']
+    branches: ['**']
   pull_request:
     branches: ['main', 'staging', 'dev']
   workflow_dispatch:
@@ -122,7 +122,7 @@ jobs:
           PATH="$PWD/infrastructure/stacks/email/production/tests/bin:$PATH"
           terraform -chdir=infrastructure/stacks/email/production test
       - name: Test email contract and runtime
-        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        if: github.event_name != 'push'
         run: pnpm test
       - name: Test email database invariants
         run: bash scripts/test-email-worker-database.sh
@@ -134,9 +134,9 @@ jobs:
         run: node --test tools/ci/identity-restore-contract.test.mjs
 
   rust-tests-scaleway-cache:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     environment:
-      name: production-ci-cache
+      name: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/')) && 'production-ci-cache' || 'branch-ci-cache' }}
       deployment: false
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 90
@@ -153,9 +153,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Verify trusted main revision
+      - name: Verify pushed branch revision
         run: |
-          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$GITHUB_EVENT_NAME" == "push" ]]
+          [[ "$GITHUB_REF" == refs/heads/* ]]
           [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
       - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
         with:
@@ -163,12 +164,32 @@ jobs:
       - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
         with:
           version: v0.17.0
+      - name: Detect Scaleway cache credentials
+        id: scaleway-cache
+        env:
+          SCW_CACHE_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          SCW_CACHE_SECRET_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+          SCW_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
+        run: |
+          if [[ -n "$SCW_CACHE_ACCESS_KEY" && -n "$SCW_CACHE_SECRET_KEY" && -n "$SCW_CACHE_BUCKET" ]]; then
+            printf '%s\n' 'available=true' >> "$GITHUB_OUTPUT"
+          else
+            printf '%s\n' 'available=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Run Rust tests with Scaleway cache
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && steps.scaleway-cache.outputs.available == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
-          SCCACHE_S3_KEY_PREFIX: rust/${{ runner.os }}-${{ runner.arch }}/rust-1.91.1
+          SCCACHE_S3_KEY_PREFIX: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/')) && 'trusted' || format('branches/{0}', github.ref_name) }}/rust/${{ runner.os }}-${{ runner.arch }}/rust-1.91.1
+        run: |
+          sccache --zero-stats
+          cargo test --workspace --locked
+          sccache --show-stats
+      - name: Run Rust tests with bootstrap cache fallback
+        if: github.event_name == 'push' && steps.scaleway-cache.outputs.available != 'true'
+        env:
+          SCCACHE_GHA_ENABLED: 'true'
         run: |
           sccache --zero-stats
           cargo test --workspace --locked

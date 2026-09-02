@@ -5,7 +5,11 @@ import test from "node:test";
 const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
 
 test("continuous CI runs on every active delivery branch", () => {
-	assert.match(workflow, /branches: \['main', 'staging', 'dev'\]/u);
+	assert.match(workflow, /push:\n {4}branches: \['\*\*'\]/u);
+	assert.match(
+		workflow,
+		/pull_request:\n {4}branches: \['main', 'staging', 'dev'\]/u,
+	);
 	assert.match(workflow, /workflow_dispatch:/u);
 	assert.match(workflow, /email-quality:/u);
 	assert.match(
@@ -48,17 +52,34 @@ test("continuous CI avoids remote dependency caches on self-hosted runners", () 
 	);
 });
 
-test("continuous CI uses sccache without exposing Scaleway credentials to pull requests", () => {
+test("continuous CI uses isolated Scaleway caches only for branch pushes", () => {
 	assert.match(workflow, /RUSTC_WRAPPER: sccache/u);
 	assert.match(workflow, /SCCACHE_GHA_ENABLED: 'true'/u);
 	assert.match(
 		workflow,
-		/rust-tests-scaleway-cache:\n {4}if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/u,
+		/rust-tests-scaleway-cache:\n {4}if: github\.event_name == 'push'/u,
 	);
-	assert.match(workflow, /name: production-ci-cache\n {6}deployment: false/u);
-	assert.match(workflow, /cargo test --workspace --locked/u);
 	assert.match(
 		workflow,
-		/name: Test email contract and runtime\n {8}if: github\.event_name != 'push' \|\| github\.ref != 'refs\/heads\/main'\n {8}run: pnpm test/u,
+		/name: \$\{\{[\s\S]*?'production-ci-cache' \|\| 'branch-ci-cache' \}\}\n {6}deployment: false/u,
+	);
+	assert.match(
+		workflow,
+		/startsWith\(github\.ref, 'refs\/heads\/release\/'\)/u,
+	);
+	assert.match(workflow, /format\('branches\/\{0\}', github\.ref_name\)/u);
+	assert.match(workflow, /cargo test --workspace --locked/u);
+	assert.match(workflow, /id: scaleway-cache/u);
+	assert.match(
+		workflow,
+		/steps\.scaleway-cache\.outputs\.available == 'true'/u,
+	);
+	assert.match(
+		workflow,
+		/steps\.scaleway-cache\.outputs\.available != 'true'/u,
+	);
+	assert.match(
+		workflow,
+		/name: Test email contract and runtime\n {8}if: github\.event_name != 'push'\n {8}run: pnpm test/u,
 	);
 });

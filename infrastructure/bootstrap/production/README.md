@@ -79,7 +79,9 @@ contrôlées sur sa clé et confirmer que la seconde échoue sur le `.tflock`.
 Le module `scaleway-ci-cache` est ajouté à la racine bootstrap existante. Il ne
 réutilise ni ne remplace les registries Email/Trust-Risk ou les buckets produit :
 il crée un projet `nvbes-ci-cache` isolé, un registry BuildKit, un bucket S3 et
-une identité CI propres.
+deux identités CI propres. L'identité existante conserve le registry BuildKit
+et le préfixe compiler-cache partagé par les branches trusted. La seconde
+identité ne peut accéder qu'aux préfixes compiler-cache des autres branches.
 
 Compléter les variables suivantes dans le `terraform.tfvars` bootstrap :
 
@@ -118,6 +120,10 @@ L'environnement `production-bootstrap` doit contenir les secrets
 `SCW_PROJECT_ID`, `SCW_CI_CACHE_BUCKET_NAME` et `TERRAFORM_STATE_BUCKET`.
 
 Le workflow hebdomadaire alterne deux clés de 60 jours décalées de 30 jours.
-GitHub reçoit toujours le slot dont l'échéance est la plus lointaine. Le bucket
-supprime automatiquement les objets reproductibles après 30 jours ; le registry
-utilise un tag `buildcache` stable par image.
+Chaque environnement GitHub reçoit, pour son identité dédiée, le slot dont
+l'échéance est la plus lointaine. `production-ci-cache` autorise `main`, `dev`,
+`staging` et `release/*`; `branch-ci-cache` n'est utilisé que par les jobs de
+push et reste isolé du préfixe trusted. Les pull requests restent sur le cache
+GitHub Actions sans secret Scaleway. Le bucket supprime automatiquement les
+objets reproductibles après 30 jours ; le registry utilise un tag `buildcache`
+stable par image.

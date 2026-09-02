@@ -456,13 +456,4 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.IDENTITY_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.IDENTITY_TERRAFORM_STATE_SECRET_KEY }}
           IDENTITY_METRICS_TOKEN: ${{ secrets.IDENTITY_METRICS_TOKEN }}
-        run: |
-          endpoint="$(terraform -chdir="$STACK_ROOT" output -raw identity_endpoint)"
-          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 "${endpoint}/health/live"
-          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 "${endpoint}/health/ready"
-          curl --fail --silent --show-error \
-            --header "Authorization: Bearer ${IDENTITY_METRICS_TOKEN}" \
-            "${endpoint}/metrics" | grep -q 'http_requests_total'
-          status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            --request POST "${endpoint}/auth/register")"
-          [[ "$status" == "404" ]]
+        run: tools/deployment/prove-identity-public-runtime.sh
