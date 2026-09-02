@@ -90,3 +90,21 @@ resource "scaleway_secret_version" "identity_database_migration_url" {
 
   depends_on = [scaleway_iam_policy.identity_database_migrator]
 }
+
+resource "scaleway_secret" "identity_database_runtime_url" {
+  name        = "${local.name_prefix}-identity-database-runtime-url"
+  description = "Data-only database URL used by Identity runtime jobs."
+  project_id  = var.scaleway_project_id
+  region      = var.scaleway_region
+  protected   = true
+  tags        = local.tags
+}
+
+resource "scaleway_secret_version" "identity_database_runtime_url" {
+  secret_id   = scaleway_secret.identity_database_runtime_url.id
+  region      = var.scaleway_region
+  data        = local.identity_database_runtime_url
+  description = "Terraform-managed Identity data-only database credential."
+
+  depends_on = [scaleway_iam_policy.identity_database_runtime]
+}

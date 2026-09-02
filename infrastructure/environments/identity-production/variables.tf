@@ -73,6 +73,28 @@ variable "identity_metrics_token" {
   }
 }
 
+variable "identity_synthetic_password" {
+  description = "Strong password used only by the production Identity synthetic job."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.identity_synthetic_password) >= 32
+    error_message = "identity_synthetic_password must contain at least 32 characters."
+  }
+}
+
+variable "identity_synthetic_recovered_password" {
+  description = "Distinct strong recovery password used only by the synthetic job."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.identity_synthetic_recovered_password) >= 32 && var.identity_synthetic_recovered_password != var.identity_synthetic_password
+    error_message = "identity_synthetic_recovered_password must be distinct and contain at least 32 characters."
+  }
+}
+
 variable "identity_sentry_dsn" {
   description = "Production Identity Sentry DSN."
   type        = string

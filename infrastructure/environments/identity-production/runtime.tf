@@ -103,3 +103,69 @@ resource "scaleway_job_definition" "identity_database_migration" {
     scaleway_secret_version.identity_database_migration_url,
   ]
 }
+
+resource "scaleway_secret" "identity_synthetic_password" {
+  name        = "${local.name_prefix}-identity-synthetic-password"
+  description = "Initial password used only by the explicit Identity synthetic job."
+  project_id  = var.scaleway_project_id
+  region      = var.scaleway_region
+  protected   = true
+  tags        = local.tags
+}
+
+resource "scaleway_secret_version" "identity_synthetic_password" {
+  secret_id   = scaleway_secret.identity_synthetic_password.id
+  region      = var.scaleway_region
+  data        = var.identity_synthetic_password
+  description = "Terraform-managed Identity synthetic password."
+}
+
+resource "scaleway_secret" "identity_synthetic_recovered_password" {
+  name        = "${local.name_prefix}-identity-synthetic-recovered-password"
+  description = "Recovery password used only by the explicit Identity synthetic job."
+  project_id  = var.scaleway_project_id
+  region      = var.scaleway_region
+  protected   = true
+  tags        = local.tags
+}
+
+resource "scaleway_secret_version" "identity_synthetic_recovered_password" {
+  secret_id   = scaleway_secret.identity_synthetic_recovered_password.id
+  region      = var.scaleway_region
+  data        = var.identity_synthetic_recovered_password
+  description = "Terraform-managed Identity synthetic recovery password."
+}
+
+resource "scaleway_job_definition" "identity_synthetic_auth" {
+  name                   = "${local.name_prefix}-identity-synthetic-auth"
+  description            = "Explicit non-delivering authentication and recovery production proof."
+  project_id             = var.scaleway_project_id
+  region                 = var.scaleway_region
+  cpu_limit              = 560
+  memory_limit           = 1024
+  local_storage_capacity = 1024
+  image_uri              = var.identity_image
+  args                   = ["synthetic-auth-smoke"]
+
+  secret_reference {
+    secret_id   = scaleway_secret.identity_database_runtime_url.id
+    environment = "NVBES_IDENTITY_DATABASE_URL"
+  }
+
+  secret_reference {
+    secret_id   = scaleway_secret.identity_synthetic_password.id
+    environment = "NVBES_IDENTITY_SYNTHETIC_PASSWORD"
+  }
+
+  secret_reference {
+    secret_id   = scaleway_secret.identity_synthetic_recovered_password.id
+    environment = "NVBES_IDENTITY_SYNTHETIC_RECOVERED_PASSWORD"
+  }
+
+  depends_on = [
+    scaleway_registry_namespace.identity,
+    scaleway_secret_version.identity_database_runtime_url,
+    scaleway_secret_version.identity_synthetic_password,
+    scaleway_secret_version.identity_synthetic_recovered_password,
+  ]
+}

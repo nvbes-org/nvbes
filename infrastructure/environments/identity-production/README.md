@@ -25,7 +25,8 @@ and provide distinct least-privilege credentials:
 - secrets: `SCW_ACCESS_KEY`, `SCW_SECRET_KEY`,
   `IDENTITY_TERRAFORM_STATE_ACCESS_KEY`,
   `IDENTITY_TERRAFORM_STATE_SECRET_KEY`, `IDENTITY_MFA_ENCRYPTION_KEY`,
-  `IDENTITY_METRICS_TOKEN`, `IDENTITY_SENTRY_DSN`,
+  `IDENTITY_METRICS_TOKEN`, `IDENTITY_SYNTHETIC_PASSWORD`,
+  `IDENTITY_SYNTHETIC_RECOVERED_PASSWORD`, `IDENTITY_SENTRY_DSN`,
   `GRAFANA_OTLP_AUTHORIZATION_HEADER`;
 - variables: `SCW_PROJECT_ID`, `SCW_ORGANIZATION_ID`, `SCW_REGION`, `SCW_ZONE`,
   `TERRAFORM_STATE_BUCKET`, `GRAFANA_OTLP_ENDPOINT`,
@@ -36,5 +37,7 @@ and provide distinct least-privilege credentials:
 
 The deployment workflow must build and scan the image, verify its signature,
 materialize database identities, execute the migration job, apply the runtime
-plan and probe liveness/readiness. Rollback uses the previously captured image
+plan, run the non-delivering synthetic authentication/recovery job and probe
+liveness/readiness. Each run uses a unique `.invalid` address and emits only its
+principal UUID and bounded audit counts. Rollback uses the previously captured image
 digest; migrations are additive and remain compatible with that image.
