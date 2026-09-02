@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "apps/email-worker",
+  "apps/identity-service",
   "apps/trust-risk-service",
   "libs/rust/audit",
   "libs/rust/billing",
