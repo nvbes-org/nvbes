@@ -151,6 +151,15 @@ test("cross-project bucket resources keep their explicit project scope", () => {
 		cacheModule,
 		/resource "scaleway_object_bucket_server_side_encryption_configuration" "ci_cache" \{[\s\S]*?project_id = scaleway_account_project\.ci_cache\.id/u,
 	);
+	for (const application of ["ci_cache", "branch_cache"]) {
+		assert.match(
+			cacheModule,
+			new RegExp(
+				`resource "scaleway_iam_application" "${application}" \\{[\\s\\S]*?organization_id = var\\.organization_id`,
+				"u",
+			),
+		);
+	}
 	assert.ok(bootstrapReadme.includes("fr-par/<bucket-name>@<project-id>"));
 });
 

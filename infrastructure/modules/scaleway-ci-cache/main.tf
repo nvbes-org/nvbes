@@ -72,8 +72,9 @@ resource "scaleway_object_bucket_server_side_encryption_configuration" "ci_cache
 }
 
 resource "scaleway_iam_application" "ci_cache" {
-  name        = "nvbes-production-ci-cache"
-  description = "GitHub Actions identity restricted to the isolated CI cache project."
+  name            = "nvbes-production-ci-cache"
+  description     = "GitHub Actions identity restricted to the isolated CI cache project."
+  organization_id = var.organization_id
 
   lifecycle {
     prevent_destroy = true
@@ -98,8 +99,9 @@ resource "scaleway_iam_policy" "ci_cache" {
 }
 
 resource "scaleway_iam_application" "branch_cache" {
-  name        = "nvbes-branch-ci-cache"
-  description = "GitHub Actions identity restricted to isolated branch compiler caches."
+  name            = "nvbes-branch-ci-cache"
+  description     = "GitHub Actions identity restricted to isolated branch compiler caches."
+  organization_id = var.organization_id
 
   lifecycle {
     prevent_destroy = true
