@@ -8,7 +8,16 @@ on:
         required: true
         type: string
       restore_database_id:
-        description: Isolated restored Serverless SQL database UUID
+        description: Optional existing isolated restore UUID; empty creates and deletes a fresh restore
+        required: false
+        default: ''
+        type: string
+      rollback_image:
+        description: Previous immutable private image used for the reversible rollback test
+        required: true
+        type: string
+      current_image:
+        description: Canonical immutable private image restored after the rollback test
         required: true
         type: string
       diagnostic_run_id:
@@ -49,6 +58,8 @@ jobs:
       contents: read
     env:
       SCW_DEFAULT_REGION: fr-par
+      SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_PROJECT_ID }}
+      SCW_DEFAULT_ZONE: fr-par-1
       STACK_ROOT: infrastructure/environments/email-production
       TERRAFORM_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
       EMAIL_TERRAFORM_STATE_KEY: production/email/terraform.tfstate
@@ -67,13 +78,19 @@ jobs:
           CONFIRMATION: ${{ inputs.confirmation }}
           DIAGNOSTIC_RUN_ID: ${{ inputs.diagnostic_run_id }}
           RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
+          ROLLBACK_IMAGE: ${{ inputs.rollback_image }}
+          CURRENT_IMAGE: ${{ inputs.current_image }}
         run: |
           uuid_pattern='^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          image_pattern='^rg\.fr-par\.scw\.cloud/nvbes-prod-email-worker/nvbes-email-worker@sha256:[0-9a-f]{64}$'
           [[ "$GITHUB_REF" == "refs/heads/main" ]]
           [[ "$CONFIRMATION" == "validate-email-production-restore" ]]
           [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]
-          [[ "$RESTORE_DATABASE_ID" =~ $uuid_pattern ]]
+          [[ -z "$RESTORE_DATABASE_ID" || "$RESTORE_DATABASE_ID" =~ $uuid_pattern ]]
+          [[ "$ROLLBACK_IMAGE" =~ $image_pattern ]]
+          [[ "$CURRENT_IMAGE" =~ $image_pattern ]]
+          [[ "$ROLLBACK_IMAGE" != "$CURRENT_IMAGE" ]]
           [[ "$DIAGNOSTIC_RUN_ID" =~ ^[a-zA-Z0-9-]{1,100}$ ]]
           [[ -n "$TERRAFORM_STATE_BUCKET" ]]
           [[ "$EMAIL_TERRAFORM_STATE_KEY" == "production/email/terraform.tfstate" ]]
@@ -91,6 +108,73 @@ jobs:
           -backend-config=backend.ci.hcl
           -backend-config="bucket=$TERRAFORM_STATE_BUCKET"
           -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
+      - name: Provision a fresh isolated restore when none was supplied
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          INPUT_RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          if [[ -n "$INPUT_RESTORE_DATABASE_ID" ]]; then
+            printf 'RESTORE_DATABASE_ID=%s\n' "$INPUT_RESTORE_DATABASE_ID" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          source_database_id="$(terraform -chdir="$STACK_ROOT" output -raw email_database_id)"
+          source_database_id="${source_database_id#*/}"
+          backups="$(
+            curl --fail --silent --show-error \
+              --get \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" \
+              --data-urlencode "database_id=$source_database_id" \
+              --data-urlencode "order_by=created_at_desc" \
+              "https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/${SCW_DEFAULT_REGION}/backups"
+          )"
+          backup_id="$(
+            jq --exit-status --raw-output \
+              '.backups | map(select(.status == "ready")) | first | .id' \
+              <<<"$backups"
+          )"
+          backup_created_at="$(
+            jq --exit-status --raw-output \
+              --arg id "$backup_id" '.backups[] | select(.id == $id) | .created_at' \
+              <<<"$backups"
+          )"
+          restore_name="nvbes-email-restore-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          restore="$(
+            jq --null-input \
+              --arg project_id "$SCW_DEFAULT_PROJECT_ID" \
+              --arg name "$restore_name" \
+              --arg from_backup_id "$backup_id" \
+              '{project_id: $project_id, name: $name, cpu_min: 0, cpu_max: 1, from_backup_id: $from_backup_id}' |
+              curl --fail --silent --show-error \
+                --request POST \
+                --header "Content-Type: application/json" \
+                --header "X-Auth-Token: $SCW_SECRET_KEY" \
+                --data-binary @- \
+                "https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/${SCW_DEFAULT_REGION}/databases"
+          )"
+          restore_database_id="$(jq --exit-status --raw-output '.id' <<<"$restore")"
+          [[ "$restore_database_id" =~ ^[0-9a-f-]{36}$ ]]
+          printf 'RESTORE_DATABASE_ID=%s\n' "$restore_database_id" >> "$GITHUB_ENV"
+          printf 'DELETE_RESTORE_DATABASE=true\n' >> "$GITHUB_ENV"
+          printf 'RESTORE_STARTED_AT=%s\n' "$(date -u +%s)" >> "$GITHUB_ENV"
+          printf 'RESTORE_BACKUP_ID=%s\n' "$backup_id" >> "$GITHUB_ENV"
+          printf 'RESTORE_BACKUP_CREATED_AT=%s\n' "$backup_created_at" >> "$GITHUB_ENV"
+
+          for _attempt in {1..60}; do
+            status="$(
+              curl --fail --silent --show-error \
+                --header "X-Auth-Token: $SCW_SECRET_KEY" \
+                "https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/${SCW_DEFAULT_REGION}/databases/${restore_database_id}" |
+                jq --exit-status --raw-output '.status'
+            )"
+            [[ "$status" == "ready" ]] && exit 0
+            [[ "$status" == "error" ]] && exit 1
+            sleep 10
+          done
+          echo 'Timed out waiting for the isolated restore.' >&2
+          exit 1
       - name: Verify Grafana dashboard and active alert rules
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
@@ -218,7 +302,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
           DIAGNOSTIC_RUN_ID: ${{ inputs.diagnostic_run_id }}
-          RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
         run: |
           runtime_url="$(terraform -chdir="$STACK_ROOT" output -raw email_database_runtime_url)&sslrootcert=system"
@@ -274,3 +357,96 @@ jobs:
           safe_integrity="$(jq 'del(.messages, .attempts, .provider_events)' <<<"$integrity")"
           printf '### Email restore integrity\n\n```json\n%s\n```\n' \
             "$safe_integrity" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -n "${RESTORE_STARTED_AT:-}" ]]; then
+            restore_completed_at="$(date -u +%s)"
+            restore_rto_seconds=$((restore_completed_at - RESTORE_STARTED_AT))
+            printf '\nBackup `%s` created at `%s`; isolated restore RTO: `%ss`.\n' \
+              "$RESTORE_BACKUP_ID" "$RESTORE_BACKUP_CREATED_AT" "$restore_rto_seconds" \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Exercise private image rollback and restore the canonical image
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CURRENT_IMAGE: ${{ inputs.current_image }}
+          ROLLBACK_IMAGE: ${{ inputs.rollback_image }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          TF_VAR_accept_scaleway_tem_terms: ${{ vars.SCALEWAY_TEM_TERMS_ACCEPTED }}
+          TF_VAR_base_domain: ${{ vars.BASE_DOMAIN }}
+          TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+          TF_VAR_email_data_encryption_key: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
+          TF_VAR_email_database_runtime_credential_generation: ${{ vars.EMAIL_DATABASE_RUNTIME_CREDENTIAL_GENERATION }}
+          TF_VAR_email_observability_internal_token: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
+          TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
+          TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sentry_dsn: ${{ secrets.EMAIL_SENTRY_DSN }}
+          TF_VAR_email_sentry_traces_sample_rate: ${{ vars.EMAIL_SENTRY_TRACES_SAMPLE_RATE }}
+          TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
+          TF_VAR_grafana_email_contact_point: ${{ vars.GRAFANA_EMAIL_CONTACT_POINT }}
+          TF_VAR_grafana_prometheus_datasource_uid: ${{ vars.GRAFANA_PROMETHEUS_DATASOURCE_UID }}
+          TF_VAR_grafana_service_account_token: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
+          TF_VAR_grafana_url: ${{ vars.GRAFANA_URL }}
+          TF_VAR_private_network_id: ${{ vars.SCW_PRIVATE_NETWORK_ID }}
+          TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
+          TF_VAR_scaleway_project_id: ${{ vars.SCW_PROJECT_ID }}
+        run: |
+          export TF_VAR_email_internal_validation_enabled=false
+          apply_image() {
+            local image="$1"
+            local plan="$2"
+            export TF_VAR_email_worker_image="$image"
+            terraform -chdir="$STACK_ROOT" plan \
+              -refresh=false \
+              -lock-timeout=5m \
+              -target=scaleway_container.email_runtime \
+              -out="$plan"
+            terraform -chdir="$STACK_ROOT" apply -lock-timeout=5m "$plan"
+          }
+          verify_runtime() {
+            local expected_image="$1"
+            containers="$(
+              curl --fail --silent --show-error \
+                --get \
+                --header "X-Auth-Token: $SCW_SECRET_KEY" \
+                --data-urlencode "project_id=$SCW_DEFAULT_PROJECT_ID" \
+                "https://api.scaleway.com/containers/v1/regions/${SCW_DEFAULT_REGION}/containers"
+            )"
+            jq --exit-status \
+              --arg image "$expected_image" '
+                [.containers[] | select(.name == "nvbes-prod-email-ingress" or .name == "nvbes-prod-email-dispatch")] as $email |
+                ($email | length) == 2 and
+                ($email | all(.image == $image and .privacy == "private" and .min_scale == 0 and .max_scale == 1))
+              ' <<<"$containers" >/dev/null
+          }
+
+          verify_runtime "$CURRENT_IMAGE"
+          rollback_status=0
+          apply_image "$ROLLBACK_IMAGE" email-rollback-validation.tfplan || rollback_status=$?
+          if [[ "$rollback_status" -eq 0 ]]; then
+            verify_runtime "$ROLLBACK_IMAGE" || rollback_status=$?
+          fi
+          restore_status=0
+          apply_image "$CURRENT_IMAGE" email-rollback-restore.tfplan || restore_status=$?
+          if [[ "$restore_status" -eq 0 ]]; then
+            verify_runtime "$CURRENT_IMAGE" || restore_status=$?
+          fi
+          [[ "$rollback_status" -eq 0 && "$restore_status" -eq 0 ]]
+          printf '### Email image rollback\n\nPrevious image applied privately, then canonical image restored and verified.\n' \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Delete the automatically provisioned isolated restore
+        if: ${{ always() }}
+        env:
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          if [[ "${DELETE_RESTORE_DATABASE:-false}" != "true" ]]; then
+            exit 0
+          fi
+          [[ "${RESTORE_DATABASE_ID:-}" =~ ^[0-9a-f-]{36}$ ]]
+          curl --fail --silent --show-error \
+            --request DELETE \
+            --header "X-Auth-Token: $SCW_SECRET_KEY" \
+            "https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/${SCW_DEFAULT_REGION}/databases/${RESTORE_DATABASE_ID}"
+          printf '\nAutomatically provisioned restore `%s` deleted.\n' \
+            "$RESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
