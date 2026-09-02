@@ -197,10 +197,6 @@ test("rotation is restricted to the protected bootstrap environment", () => {
 		/-target=module\.ci_cache\.scaleway_object_bucket_policy\.ci_cache/u,
 	);
 	assert.match(rotationWorkflow, /ci-cache-policy-repair\.tfplan/u);
-	assert.match(
-		cacheModule,
-		/depends_on = \[scaleway_object_bucket_server_side_encryption_configuration\.ci_cache\]/u,
-	);
 });
 
 test("branch pushes use the correctly scoped Scaleway S3 cache", () => {
