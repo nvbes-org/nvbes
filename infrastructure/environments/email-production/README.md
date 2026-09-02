@@ -98,10 +98,12 @@ assume an empty state or recreate these resources.
 Before every later apply, refresh the remote state and review a complete plan.
 If a matching TEM, DNS, SNS, SQS, Serverless SQL, Container, IAM, Secret Manager
 or Job resource exists outside this state, stop and import it before continuing.
-The dated readiness record in
-[`docs/operations/email-production-readiness-2026-08-25.md`](../../../docs/operations/email-production-readiness-2026-08-25.md)
-is the current operational baseline; it must be superseded by a new audit after
-the listed blockers are resolved.
+The current operational baseline is the bounded internal-synthetic GO recorded
+in
+[`docs/operations/email-production-readiness-2026-09-02.md`](../../../docs/operations/email-production-readiness-2026-09-02.md).
+It supersedes the 25 August NO-GO without authorizing product, invited-account
+or public traffic. Any change to the deployed Email system requires a new
+bounded validation and dated readiness record.
 
 For local read-only planning, copy `terraform.tfvars.example` outside version
 control, export provider and S3 credentials, then initialize with:
