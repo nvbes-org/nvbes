@@ -7,6 +7,8 @@ identity_image                     = "rg.fr-par.scw.cloud/nvbes-prod-identity/nv
 identity_mfa_encryption_key        = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 identity_mfa_key_version           = 1
 identity_metrics_token             = "set-outside-version-control"
+identity_synthetic_password        = "set-a-random-32-character-value-outside-version-control"
+identity_synthetic_recovered_password = "set-a-distinct-random-32-character-value-outside-version-control"
 identity_sentry_dsn                = "https://set-outside-version-control@sentry.invalid/1"
 identity_sentry_traces_sample_rate = 0.1
 grafana_otlp_endpoint              = "https://otlp-gateway.example.invalid/otlp"
