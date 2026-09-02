@@ -346,8 +346,9 @@ jobs:
                 'constraints_valid', (SELECT bool_and(convalidated) FROM pg_constraint WHERE connamespace = 'public'::regnamespace)
               );"
           )"
+          printf 'Restored database integrity: %s\n' "$integrity"
           jq --exit-status \
-            '.migrations == 3 and .tables == 5 and .constraints_valid == true' \
+            '.migrations == 4 and .tables == 5 and .constraints_valid == true' \
             <<<"$integrity" >/dev/null
           safe_integrity="$(jq 'del(.messages, .attempts, .provider_events)' <<<"$integrity")"
           printf '### Email restore integrity\n\n```json\n%s\n```\n' \
