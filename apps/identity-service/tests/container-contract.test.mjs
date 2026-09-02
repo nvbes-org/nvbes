@@ -30,6 +30,13 @@ const runtimeTerraform = readFileSync(
 	),
 	"utf8",
 );
+const productionVariables = readFileSync(
+	join(
+		workspaceRoot,
+		"infrastructure/environments/identity-production/variables.tf",
+	),
+	"utf8",
+);
 const syntheticProof = readFileSync(
 	join(
 		workspaceRoot,
@@ -97,6 +104,18 @@ test("deployment is main-only, approved, immutable and scale-to-zero", () => {
 	assert.ok(runtimeTerraform.includes("min_scale              = 0"));
 	assert.ok(runtimeTerraform.includes("max_scale              = 1"));
 	assert.ok(runtimeTerraform.includes('privacy                = "public"'));
+});
+
+test("production accepts canonical 32-byte MFA keys without UTF-8 assumptions", () => {
+	assert.ok(
+		productionVariables.includes(
+			'regex("^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$", var.identity_mfa_encryption_key)',
+		),
+	);
+	assert.equal(productionVariables.includes("length(base64decode("), false);
+	const nonUtf8Key = Buffer.alloc(32, 0xff).toString("base64");
+	assert.match(nonUtf8Key, /^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$/);
+	assert.equal(Buffer.from(nonUtf8Key, "base64").byteLength, 32);
 });
 
 test("deployment migrates before apply and proves public auth stays absent", () => {
