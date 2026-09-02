@@ -85,6 +85,12 @@ variable "github_environment" {
   default     = "production-ci-cache"
 }
 
+variable "github_branch_environment" {
+  description = "GitHub environment exposing prefix-restricted credentials to branch push jobs."
+  type        = string
+  default     = "branch-ci-cache"
+}
+
 variable "tags" {
   description = "Tags applied to supported Scaleway cache resources."
   type        = list(string)

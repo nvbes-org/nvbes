@@ -25,3 +25,8 @@ output "next_rotation_at" {
     time_rotating.ci_cache["b"].rotation_rfc3339,
   ) < 0 ? time_rotating.ci_cache["a"].rotation_rfc3339 : time_rotating.ci_cache["b"].rotation_rfc3339
 }
+
+output "branch_cache_application_id" {
+  description = "Scaleway IAM application restricted to isolated branch cache prefixes."
+  value       = scaleway_iam_application.branch_cache.id
+}
