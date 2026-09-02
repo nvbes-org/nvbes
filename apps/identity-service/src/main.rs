@@ -56,7 +56,6 @@ async fn main() -> anyhow::Result<()> {
         let initial_password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
         let recovered_password = required_secret("NVBES_IDENTITY_SYNTHETIC_RECOVERED_PASSWORD")?;
         let pool = database::connect(&database_url, 2).await?;
-        database::migrate(&pool).await?;
         let result = synthetic::run(&pool, &email, &initial_password, &recovered_password).await?;
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
@@ -71,7 +70,6 @@ async fn main() -> anyhow::Result<()> {
         let email_config = nvbes_email::EmailClientConfig::from_env(&runtime.environment)?;
         let email_client = nvbes_email::EmailClient::connect(email_config).await?;
         let pool = database::connect(&runtime.database_url, 2).await?;
-        database::migrate(&pool).await?;
         let result = synthetic::run_with_delivery(
             &pool,
             &email_address,
@@ -89,7 +87,6 @@ async fn main() -> anyhow::Result<()> {
         let email = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL")?;
         let password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
         let pool = database::connect(&runtime.database_url, 2).await?;
-        database::migrate(&pool).await?;
         let crypto = mfa_crypto::MfaCrypto::with_rotation(
             runtime.mfa_key_version,
             runtime.mfa_encryption_key,
@@ -110,7 +107,6 @@ async fn main() -> anyhow::Result<()> {
         let token_config = tokens_config::TokenConfig::from_env(&runtime.environment)?;
         let token_service = tokens::TokenService::new(token_config)?;
         let pool = database::connect(&runtime.database_url, 2).await?;
-        database::migrate(&pool).await?;
         let result =
             tokens::run_synthetic_smoke(&pool, &token_service, &email, &password, &audience)
                 .await?;
