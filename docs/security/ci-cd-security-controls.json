@@ -205,6 +205,17 @@
 								"cosign verify",
 								"identity-runtime.tfplan"
 							]
+						},
+						{
+							"path": ".github/workflows/validate-identity-restore.yml",
+							"includes": [
+								"name: production-identity",
+								"if: github.ref == 'refs/heads/main'",
+								"ref: ${{ inputs.approved_sha }}",
+								"validate-identity-production-restore",
+								"expected_principal_id",
+								"DELETE_RESTORE_DATABASE=true"
+							]
 						}
 					]
 				}

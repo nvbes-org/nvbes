@@ -130,6 +130,8 @@ jobs:
         run: node --test apps/email-worker/tests/container-contract.test.mjs
       - name: Validate Identity container contract
         run: pnpm nx run identity-service:test:container
+      - name: Validate Identity restore contract
+        run: node --test tools/ci/identity-restore-contract.test.mjs
 
   rust-tests-scaleway-cache:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
