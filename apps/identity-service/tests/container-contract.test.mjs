@@ -4,7 +4,10 @@ import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const workspaceRoot = resolve(
+	dirname(fileURLToPath(import.meta.url)),
+	"../../..",
+);
 const serviceRoot = join(workspaceRoot, "apps/identity-service");
 const dockerfile = readFileSync(join(serviceRoot, "Dockerfile"), "utf8");
 const mainSource = readFileSync(join(serviceRoot, "src/main.rs"), "utf8");
@@ -80,12 +83,34 @@ test("deployment is main-only, approved, immutable and scale-to-zero", () => {
 });
 
 test("deployment migrates before apply and proves public auth stays absent", () => {
-	const migration = deploymentWorkflow.indexOf("- name: Run database migrations");
+	const migration = deploymentWorkflow.indexOf(
+		"- name: Run database migrations",
+	);
 	const apply = deploymentWorkflow.indexOf(
 		"- name: Apply reviewed Identity runtime plan",
 	);
 	assert.ok(migration >= 0);
 	assert.ok(apply > migration);
-	assert.ok(deploymentWorkflow.includes('--request POST "${endpoint}/auth/register"'));
+	assert.ok(
+		deploymentWorkflow.includes('--request POST "${endpoint}/auth/register"'),
+	);
 	assert.ok(deploymentWorkflow.includes('[[ "$status" == "404" ]]'));
+});
+
+test("deployment proves a private synthetic account lifecycle", () => {
+	assert.ok(runtimeTerraform.includes("identity_synthetic_auth"));
+	assert.ok(
+		runtimeTerraform.includes(
+			'args                   = ["synthetic-auth-smoke"]',
+		),
+	);
+	assert.ok(
+		deploymentWorkflow.includes(
+			"identity-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}@synthetic.invalid",
+		),
+	);
+	assert.ok(deploymentWorkflow.includes(".audit_events == 5"));
+	assert.ok(deploymentWorkflow.includes(".sessions == 2"));
+	assert.ok(deploymentWorkflow.includes(".recovery_consumed == true"));
+	assert.ok(deploymentWorkflow.includes(".old_sessions_revoked == true"));
 });

@@ -23,3 +23,8 @@ output "identity_database_migration_job_id" {
   description = "Job definition applying Identity SQLx migrations."
   value       = scaleway_job_definition.identity_database_migration.id
 }
+
+output "identity_synthetic_auth_job_id" {
+  description = "Job definition proving Identity authentication and recovery without public routes."
+  value       = scaleway_job_definition.identity_synthetic_auth.id
+}

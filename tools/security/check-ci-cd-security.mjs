@@ -234,6 +234,8 @@ function assertSecrets(path, text, allowedSecrets) {
 			"IDENTITY_MFA_ENCRYPTION_KEY",
 			"IDENTITY_METRICS_TOKEN",
 			"IDENTITY_SENTRY_DSN",
+			"IDENTITY_SYNTHETIC_PASSWORD",
+			"IDENTITY_SYNTHETIC_RECOVERED_PASSWORD",
 		].map((secret) => [
 			secret,
 			new Set([".github/workflows/deploy-identity.yml"]),
