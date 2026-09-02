@@ -33,6 +33,10 @@ const dangerousRunPatterns = [
 const requiredLockfileInstalls = ["pnpm install --frozen-lockfile"];
 const fullCommitShaPattern = /^[0-9a-f]{40}$/u;
 const githubExpression = (value) => `\${{ ${value} }}`;
+const trustedCacheBranchCondition =
+	"(github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/'))";
+const cacheEnvironmentSelector = `${trustedCacheBranchCondition} && 'production-ci-cache' || 'branch-ci-cache'`;
+const cachePrefixSelector = `${trustedCacheBranchCondition} && 'trusted' || format('branches/{0}', github.ref_name)`;
 const workflowScope = parseWorkflowScope(process.argv.slice(2));
 
 function parseWorkflowScope(args) {
@@ -408,6 +412,28 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes("production/bootstrap/terraform.tfstate") &&
 			text.includes("-target=module.ci_cache") &&
 			text.includes("ci-cache-rotation.tfplan");
+		const isValidatedBranchCacheWorkflow =
+			path === ".github/workflows/ci.yml" &&
+			/^ {2}push:\n {4}branches: \['\*\*'\]$/mu.test(text) &&
+			text.includes(
+				"rust-tests-scaleway-cache:\n    if: github.event_name == 'push'",
+			) &&
+			text.includes(
+				`environment:\n      name: ${githubExpression(cacheEnvironmentSelector)}\n      deployment: false`,
+			) &&
+			text.includes("if: github.event_name == 'push'") &&
+			text.includes('[[ "$GITHUB_EVENT_NAME" == "push" ]]') &&
+			text.includes('[[ "$GITHUB_REF" == refs/heads/* ]]') &&
+			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+			text.includes(
+				`SCCACHE_S3_KEY_PREFIX: ${githubExpression(cachePrefixSelector)}/rust/${githubExpression("runner.os")}-${githubExpression("runner.arch")}/rust-1.91.1`,
+			) &&
+			text.includes(
+				`AWS_ACCESS_KEY_ID: ${githubExpression("secrets.SCW_CI_CACHE_ACCESS_KEY")}`,
+			) &&
+			text.includes(
+				`AWS_SECRET_ACCESS_KEY: ${githubExpression("secrets.SCW_CI_CACHE_SECRET_KEY")}`,
+			);
 		if (
 			!preceding.includes(
 				"if: github.event_name == 'push' && github.ref == 'refs/heads/main'",
@@ -420,7 +446,8 @@ function assertSecrets(path, text, allowedSecrets) {
 			!isValidatedTrustRiskDeploymentWorkflow &&
 			!isValidatedIdentityDeploymentWorkflow &&
 			!isValidatedIdentityRestoreWorkflow &&
-			!isValidatedCiCacheRotationWorkflow
+			!isValidatedCiCacheRotationWorkflow &&
+			!isValidatedBranchCacheWorkflow
 		) {
 			errors.push(
 				`${path}: secret-bearing step must be restricted to trusted push on main or a validated protected-Environment workflow`,
