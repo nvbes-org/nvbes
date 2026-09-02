@@ -37,7 +37,8 @@ and provide distinct least-privilege credentials:
 
 The deployment workflow must build and scan the image, verify its signature,
 materialize database identities, execute the migration job, apply the runtime
-plan, run the non-delivering synthetic authentication/recovery job and probe
+plan, run the private Sentry delivery proof and the non-delivering synthetic
+authentication/recovery job, then probe
 liveness/readiness. Each run uses a unique `.invalid` address and emits only its
 principal UUID and bounded audit counts. Rollback uses the previously captured image
 digest; migrations are additive and remain compatible with that image.

@@ -28,3 +28,8 @@ output "identity_synthetic_auth_job_id" {
   description = "Job definition proving Identity authentication and recovery without public routes."
   value       = scaleway_job_definition.identity_synthetic_auth.id
 }
+
+output "identity_error_reporting_smoke_job_id" {
+  description = "Job definition proving Identity Sentry event delivery."
+  value       = scaleway_job_definition.identity_error_reporting_smoke.id
+}
