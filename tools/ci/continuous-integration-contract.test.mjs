@@ -52,4 +52,8 @@ test("continuous CI uses sccache without exposing Scaleway credentials to pull r
 	);
 	assert.match(workflow, /name: production-ci-cache\n {6}deployment: false/u);
 	assert.match(workflow, /cargo test --workspace --locked/u);
+	assert.match(
+		workflow,
+		/name: Test email contract and runtime\n {8}if: github\.event_name != 'push' \|\| github\.ref != 'refs\/heads\/main'\n {8}run: pnpm test/u,
+	);
 });

@@ -97,6 +97,41 @@ resource "scaleway_iam_policy" "ci_cache" {
   }
 }
 
+resource "scaleway_object_bucket_policy" "ci_cache" {
+  bucket     = scaleway_object_bucket.ci_cache.name
+  project_id = scaleway_account_project.ci_cache.id
+  policy = jsonencode({
+    Version = "2023-04-17"
+    Id      = "nvbes-production-ci-cache"
+    Statement = [
+      {
+        Sid       = "ListCacheObjects"
+        Effect    = "Allow"
+        Principal = { SCW = "application_id:${scaleway_iam_application.ci_cache.id}" }
+        Action    = ["s3:ListBucket"]
+        Resource  = [scaleway_object_bucket.ci_cache.name]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "true"
+          }
+        }
+      },
+      {
+        Sid       = "ReadWriteCacheObjects"
+        Effect    = "Allow"
+        Principal = { SCW = "application_id:${scaleway_iam_application.ci_cache.id}" }
+        Action    = ["s3:GetObject", "s3:PutObject"]
+        Resource  = ["${scaleway_object_bucket.ci_cache.name}/*"]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "true"
+          }
+        }
+      },
+    ]
+  })
+}
+
 resource "time_rotating" "ci_cache" {
   for_each = local.credential_slots
 

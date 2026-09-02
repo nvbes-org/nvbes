@@ -57,6 +57,20 @@ test("cache credentials rotate through two staggered slots", () => {
 	assert.match(cacheModule, /branch_pattern = "main"/u);
 });
 
+test("cache access is restricted to the CI application and dedicated bucket", () => {
+	assert.match(
+		cacheModule,
+		/resource "scaleway_object_bucket_policy" "ci_cache"/u,
+	);
+	assert.match(
+		cacheModule,
+		/Principal = \{ SCW = "application_id:\$\{scaleway_iam_application\.ci_cache\.id\}" \}/u,
+	);
+	assert.match(cacheModule, /Action {4}= \["s3:ListBucket"\]/u);
+	assert.match(cacheModule, /Action {4}= \["s3:GetObject", "s3:PutObject"\]/u);
+	assert.match(cacheModule, /"aws:SecureTransport" = "true"/u);
+});
+
 test("cross-project bucket resources keep their explicit project scope", () => {
 	assert.match(
 		cacheModule,
@@ -111,5 +125,9 @@ test("trusted main Rust tests use the protected Scaleway S3 cache", () => {
 	assert.match(
 		ciWorkflow,
 		/sccache --zero-stats\n {10}cargo test --workspace --locked\n {10}sccache --show-stats/u,
+	);
+	assert.match(
+		ciWorkflow,
+		/name: Test email contract and runtime\n {8}if: github\.event_name != 'push' \|\| github\.ref != 'refs\/heads\/main'\n {8}run: pnpm test/u,
 	);
 });

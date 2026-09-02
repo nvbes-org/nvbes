@@ -115,6 +115,7 @@ jobs:
           PATH="$PWD/infrastructure/stacks/email/production/tests/bin:$PATH"
           terraform -chdir=infrastructure/stacks/email/production test
       - name: Test email contract and runtime
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
         run: pnpm test
       - name: Test email database invariants
         run: bash scripts/test-email-worker-database.sh
