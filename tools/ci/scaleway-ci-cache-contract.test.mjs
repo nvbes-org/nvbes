@@ -78,6 +78,26 @@ test("cache access is restricted to the CI application and dedicated bucket", ()
 	assert.match(cacheModule, /Action {4}= \["s3:ListBucket"\]/u);
 	assert.match(cacheModule, /Action {4}= \["s3:GetObject", "s3:PutObject"\]/u);
 	assert.match(cacheModule, /"aws:SecureTransport" = "true"/u);
+	const bucketConfigurationStart = cacheModule.indexOf(
+		'Sid       = "ReadBucketConfigurationForAuthorizedPrincipals"',
+	);
+	const bucketConfigurationEnd = cacheModule.indexOf(
+		'Sid       = "ListCacheObjects"',
+	);
+	assert.ok(bucketConfigurationStart >= 0);
+	assert.ok(bucketConfigurationEnd > bucketConfigurationStart);
+	const bucketConfigurationStatement = cacheModule.slice(
+		bucketConfigurationStart,
+		bucketConfigurationEnd,
+	);
+	assert.match(bucketConfigurationStatement, /Principal = "\*"/u);
+	assert.match(bucketConfigurationStatement, /"s3:GetBucketCORS"/u);
+	assert.match(
+		bucketConfigurationStatement,
+		/"s3:GetBucketObjectLockConfiguration"/u,
+	);
+	assert.match(bucketConfigurationStatement, /"s3:GetLifecycleConfiguration"/u);
+	assert.doesNotMatch(bucketConfigurationStatement, /s3:GetObject/u);
 	assert.match(
 		cacheModule,
 		/resource "scaleway_iam_application" "branch_cache"/u,

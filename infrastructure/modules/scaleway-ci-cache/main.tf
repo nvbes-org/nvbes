@@ -129,6 +129,26 @@ resource "scaleway_object_bucket_policy" "ci_cache" {
     Id      = "nvbes-production-ci-cache"
     Statement = [
       {
+        Sid       = "ReadBucketConfigurationForAuthorizedPrincipals"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetBucketAcl",
+          "s3:GetBucketCORS",
+          "s3:GetBucketObjectLockConfiguration",
+          "s3:GetBucketTagging",
+          "s3:GetBucketVersioning",
+          "s3:GetLifecycleConfiguration",
+          "s3:ListBucket",
+        ]
+        Resource = [scaleway_object_bucket.ci_cache.name]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "true"
+          }
+        }
+      },
+      {
         Sid       = "ListCacheObjects"
         Effect    = "Allow"
         Principal = { SCW = "application_id:${scaleway_iam_application.ci_cache.id}" }
