@@ -186,16 +186,6 @@ variable "email_sns_ca_bundle_pem" {
   sensitive   = true
 }
 
-variable "email_sns_subscription_id" {
-  description = "Confirmed Scaleway SNS subscription UUID imported into the isolated Email state."
-  type        = string
-
-  validation {
-    condition     = can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", var.email_sns_subscription_id))
-    error_message = "email_sns_subscription_id must be a lowercase UUID."
-  }
-}
-
 variable "email_sns_management_access_key_override" {
   description = "Optional SNS management access key used only to recover or import subscription state."
   type        = string

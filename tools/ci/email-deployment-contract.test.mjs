@@ -98,11 +98,11 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /production\/email\/terraform\.tfstate/u);
 	assert.match(
 		workflow,
-		/name: Capture recoverable deployment image[\s\S]*?name: Reconcile confirmed SNS subscription state/u,
+		/name: Capture recoverable deployment image[\s\S]*?name: Prepare Terraform-owned SNS subscription/u,
 	);
 	assert.match(
 		workflow,
-		/-target=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?-replace=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?email-sns-management-credential\.tfplan[\s\S]*?state pull[\s\S]*?attributes\.secret_key \| select\(length > 0\)[\s\S]*?permissions\.can_manage == true[\s\S]*?secret_checksum[\s\S]*?-refresh=false[\s\S]*?email-sns-subscription-import\.tfplan/u,
+		/-target=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?-replace=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?email-sns-management-credential\.tfplan[\s\S]*?state pull[\s\S]*?attributes\.secret_key \| select\(length > 0\)[\s\S]*?permissions\.can_manage == true[\s\S]*?secret_checksum[\s\S]*?-refresh=false[\s\S]*?email-sns-topic-credential\.tfplan/u,
 	);
 	assert.match(
 		workflow,
@@ -233,9 +233,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 		provider,
 		/resource "scaleway_mnq_sns_credentials" "email_events_terraform"[\s\S]*?can_manage\s*=\s*true[\s\S]*?can_publish\s*=\s*true[\s\S]*?can_receive\s*=\s*true/u,
 	);
+	assert.doesNotMatch(provider, /^import \{/mu);
 	assert.match(
-		provider,
-		/import \{[\s\S]*?to = scaleway_mnq_sns_topic_subscription\.email_worker[\s\S]*?var\.email_sns_subscription_id[\s\S]*?\}/u,
+		workflow,
+		/name: Remove duplicate SNS subscriptions for the Email webhook[\s\S]*?public\.ecr\.aws\/aws-cli\/aws-cli@sha256:[0-9a-f]{64}[\s\S]*?list-subscriptions-by-topic[\s\S]*?unsubscribe[\s\S]*?length == 1/u,
 	);
 	assert.doesNotMatch(observability, /^\s*org_id\s*=/mu);
 	const reusableObservability = read(

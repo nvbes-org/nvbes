@@ -131,11 +131,6 @@ resource "scaleway_mnq_sns_topic_subscription" "email_worker" {
   )
 }
 
-import {
-  to = scaleway_mnq_sns_topic_subscription.email_worker
-  id = "${var.scaleway_region}/${var.scaleway_project_id}/${local.name_prefix}-email-events/${var.email_sns_subscription_id}"
-}
-
 resource "scaleway_tem_webhook" "email_events" {
   name        = "${local.name_prefix}-email-events"
   project_id  = var.scaleway_project_id

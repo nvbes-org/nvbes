@@ -173,7 +173,6 @@ jobs:
     env:
       EMAIL_DEPLOY_APPROVED_SHA: ${{ vars.EMAIL_DEPLOY_APPROVED_SHA }}
       EMAIL_DEPLOY_CONFIRMATION: ${{ vars.EMAIL_DEPLOY_CONFIRMATION }}
-      EMAIL_SNS_SUBSCRIPTION_ID: ${{ vars.EMAIL_SNS_SUBSCRIPTION_ID }}
       EMAIL_SYNTHETIC_SMOKE_ENABLED: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED }}
       SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_PROJECT_ID }}
       SCW_DEFAULT_REGION: fr-par
@@ -186,7 +185,6 @@ jobs:
       TF_VAR_email_database_runtime_credential_generation: ${{ vars.EMAIL_DATABASE_RUNTIME_CREDENTIAL_GENERATION }}
       TF_VAR_email_internal_validation_enabled: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED }}
       TF_VAR_email_sentry_traces_sample_rate: ${{ vars.EMAIL_SENTRY_TRACES_SAMPLE_RATE }}
-      TF_VAR_email_sns_subscription_id: ${{ vars.EMAIL_SNS_SUBSCRIPTION_ID }}
       TF_VAR_grafana_email_contact_point: ${{ vars.GRAFANA_EMAIL_CONTACT_POINT }}
       TF_VAR_grafana_prometheus_datasource_uid: ${{ vars.GRAFANA_PROMETHEUS_DATASOURCE_UID }}
       TF_VAR_grafana_url: ${{ vars.GRAFANA_URL }}
@@ -215,7 +213,6 @@ jobs:
           [[ "$EMAIL_DEPLOY_CONFIRMATION" == "deploy-email-production" ]]
           [[ "$EMAIL_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EMAIL_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]
-          [[ "$EMAIL_SNS_SUBSCRIPTION_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]]
           [[ "$EMAIL_SYNTHETIC_SMOKE_ENABLED" == "true" ]]
           [[ "$SCALEWAY_TEM_TERMS_ACCEPTED" == "true" ]]
           [[ -n "$TERRAFORM_STATE_BUCKET" ]]
@@ -287,7 +284,7 @@ jobs:
           )"
           [[ "$rollback_image" =~ ^${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker@sha256:[0-9a-f]{64}$ ]]
           echo "EMAIL_ROLLBACK_IMAGE=$rollback_image" >> "$GITHUB_ENV"
-      - name: Reconcile confirmed SNS subscription state
+      - name: Prepare Terraform-owned SNS subscription
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
@@ -303,21 +300,7 @@ jobs:
           TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
         run: |
           resource=scaleway_mnq_sns_topic_subscription.email_worker
-          desired_arn="arn:scw:sns:fr-par:project-${SCW_DEFAULT_PROJECT_ID}:nvbes-prod-email-events:${EMAIL_SNS_SUBSCRIPTION_ID}"
-          current_arn=""
-          resource_managed=false
-          if state_snapshot="$(terraform -chdir="$STACK_ROOT" state show -no-color "$resource" 2>/dev/null)"; then
-            resource_managed=true
-            current_arn="$(
-              printf '%s\n' "$state_snapshot" |
-                awk -F' = ' '$1 ~ /^[[:space:]]*arn$/ { gsub(/"/, "", $2); print $2 }'
-            )"
-          fi
-          if [[ "$current_arn" != "$desired_arn" ]]; then
-            if [[ "$resource_managed" == "true" ]]; then
-              terraform -chdir="$STACK_ROOT" state rm -lock-timeout=5m "$resource"
-            fi
-
+          if ! terraform -chdir="$STACK_ROOT" state show -no-color "$resource" >/dev/null 2>&1; then
             terraform -chdir="$STACK_ROOT" plan \
               -lock-timeout=5m \
               -target=scaleway_mnq_sns_credentials.email_events_terraform \
@@ -366,11 +349,11 @@ jobs:
             terraform -chdir="$STACK_ROOT" plan \
               -refresh=false \
               -lock-timeout=5m \
-              -target="$resource" \
-              -out=email-sns-subscription-import.tfplan
+              -target=scaleway_mnq_sns_topic.email_events \
+              -out=email-sns-topic-credential.tfplan
             terraform -chdir="$STACK_ROOT" apply \
               -lock-timeout=5m \
-              email-sns-subscription-import.tfplan
+              email-sns-topic-credential.tfplan
           fi
       - name: Plan private image registry
         env:
@@ -614,6 +597,58 @@ jobs:
           terraform -chdir="$STACK_ROOT" apply
           -lock-timeout=5m
           email-runtime.tfplan
+      - name: Remove duplicate SNS subscriptions for the Email webhook
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+        run: |
+          state_snapshot_json="$(terraform -chdir="$STACK_ROOT" state pull)"
+          export AWS_ACCESS_KEY_ID="$(
+            jq --exit-status --raw-output \
+              '.resources[] | select(.type == "scaleway_mnq_sns_credentials" and .name == "email_events_terraform") | .instances[0].attributes.access_key | select(length > 0)' \
+              <<<"$state_snapshot_json"
+          )"
+          export AWS_SECRET_ACCESS_KEY="$(
+            jq --exit-status --raw-output \
+              '.resources[] | select(.type == "scaleway_mnq_sns_credentials" and .name == "email_events_terraform") | .instances[0].attributes.secret_key | select(length > 0)' \
+              <<<"$state_snapshot_json"
+          )"
+          export AWS_DEFAULT_REGION=fr-par
+          printf '::add-mask::%s\n' "$AWS_ACCESS_KEY_ID"
+          printf '::add-mask::%s\n' "$AWS_SECRET_ACCESS_KEY"
+          unset state_snapshot_json
+
+          aws_cli_image='public.ecr.aws/aws-cli/aws-cli@sha256:d3f5b7078a71fd7cb488719571c50abd252f4320cdf375601f2d6d40caf97b55'
+          topic_arn="$(terraform -chdir="$STACK_ROOT" output -raw transactional_email_event_topic_arn)"
+          managed_arn="$(terraform -chdir="$STACK_ROOT" output -raw transactional_email_event_subscription_arn)"
+          webhook_endpoint="$(terraform -chdir="$STACK_ROOT" output -raw email_worker_endpoint)/webhooks/scaleway/topics-and-events"
+          aws_sns() {
+            docker run --rm \
+              --env AWS_ACCESS_KEY_ID \
+              --env AWS_SECRET_ACCESS_KEY \
+              --env AWS_DEFAULT_REGION \
+              "$aws_cli_image" \
+              --endpoint-url https://sns.mnq.fr-par.scaleway.com \
+              sns "$@"
+          }
+
+          subscriptions="$(aws_sns list-subscriptions-by-topic --topic-arn "$topic_arn" --output json)"
+          while IFS= read -r duplicate_arn; do
+            [[ -z "$duplicate_arn" ]] || aws_sns unsubscribe --subscription-arn "$duplicate_arn"
+          done < <(
+            jq --raw-output \
+              --arg endpoint "$webhook_endpoint" \
+              --arg managed "$managed_arn" \
+              '.Subscriptions[] | select(.Endpoint == $endpoint and .SubscriptionArn != $managed and .SubscriptionArn != "PendingConfirmation") | .SubscriptionArn' \
+              <<<"$subscriptions"
+          )
+
+          subscriptions="$(aws_sns list-subscriptions-by-topic --topic-arn "$topic_arn" --output json)"
+          jq --exit-status \
+            --arg endpoint "$webhook_endpoint" \
+            --arg managed "$managed_arn" \
+            '[.Subscriptions[] | select(.Endpoint == $endpoint and .SubscriptionArn != "PendingConfirmation")] | length == 1 and .[0].SubscriptionArn == $managed' \
+            <<<"$subscriptions" >/dev/null
       - name: 'Post-deploy: Verify public email ingress health and readiness'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
