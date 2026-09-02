@@ -80,3 +80,33 @@ fn database_pool_is_bounded() {
         std::env::remove_var("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS");
     }
 }
+
+#[test]
+fn production_requires_authenticated_observability() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var(
+            "NVBES_IDENTITY_DATABASE_URL",
+            "postgres://identity.test/identity",
+        );
+        std::env::set_var(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        );
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+        std::env::remove_var("NVBES_IDENTITY_METRICS_TOKEN");
+    }
+    let error = IdentityConfig::from_env().expect_err("production metrics must fail closed");
+    assert!(error.to_string().contains("NVBES_IDENTITY_METRICS_TOKEN"));
+    unsafe {
+        for name in [
+            "NVBES_ENVIRONMENT",
+            "NVBES_IDENTITY_DATABASE_URL",
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "NVBES_IDENTITY_MFA_KEY_VERSION",
+        ] {
+            std::env::remove_var(name);
+        }
+    }
+}

@@ -8,6 +8,9 @@ Le premier incrément fournit uniquement le socle opérationnel fermé :
 - configuration stricte hors développement ;
 - base PostgreSQL indépendante et migrations explicites ;
 - probes HTTP peu coûteuses ;
+- liveness superficielle, readiness dépendante de PostgreSQL et métriques
+  Prometheus protégées ;
+- traces OTLP authentifiées et remontée Sentry obligatoires en production ;
 - tables minimales pour principals, identifiants, credentials, audit et outbox.
 - smoke interne couvrant création synthétique, authentification, rotation de
   session et récupération de mot de passe à usage unique.
@@ -47,3 +50,10 @@ retirer la clé précédente. La rotation est transactionnelle et auditée.
 `NVBES_IDENTITY_RECOVERY_BASE_URL` en HTTPS ainsi que la configuration standard
 `NVBES_EMAIL_GRPC_ENDPOINT` et `NVBES_EMAIL_GRPC_AUTH_TOKEN`. La récupération
 n'est consommée qu'après l'acceptation durable de la commande par Email.
+
+L'image OCI reproductible s'exécute sans privilèges sous l'UID/GID `10001`.
+Hors développement, le runtime exige également
+`NVBES_IDENTITY_METRICS_TOKEN`, `SENTRY_DSN`, `NVBES_OTLP_ENDPOINT` et
+`NVBES_OTLP_AUTHORIZATION_HEADER`. `/metrics` refuse toute requête sans bearer
+token exact ; `/health/ready` refuse le trafic lorsque PostgreSQL est
+indisponible, tandis que `/health/live` reste superficielle.

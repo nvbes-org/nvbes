@@ -18,6 +18,7 @@ axum.workspace = true
 base64.workspace = true
 chrono.workspace = true
 jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
+metrics-exporter-prometheus.workspace = true
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
