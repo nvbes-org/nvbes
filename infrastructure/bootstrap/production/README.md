@@ -107,7 +107,7 @@ créés manuellement, les importer avant le plan au lieu de les recréer :
 ```bash
 terraform import module.ci_cache.scaleway_account_project.ci_cache <project-id>
 terraform import module.ci_cache.scaleway_registry_namespace.ci_cache fr-par/<namespace-id>
-terraform import module.ci_cache.scaleway_object_bucket.ci_cache fr-par/<bucket-name>
+terraform import module.ci_cache.scaleway_object_bucket.ci_cache fr-par/<bucket-name>@<project-id>
 terraform import module.ci_cache.github_repository_environment.ci_cache nvbes:production-ci-cache
 ```
 

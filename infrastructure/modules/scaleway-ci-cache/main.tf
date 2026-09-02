@@ -60,8 +60,9 @@ resource "scaleway_object_bucket" "ci_cache" {
 }
 
 resource "scaleway_object_bucket_server_side_encryption_configuration" "ci_cache" {
-  bucket = scaleway_object_bucket.ci_cache.name
-  region = var.region
+  bucket     = scaleway_object_bucket.ci_cache.name
+  project_id = scaleway_account_project.ci_cache.id
+  region     = var.region
 
   rule {
     apply_server_side_encryption_by_default {
