@@ -23,6 +23,18 @@ output "transactional_email_event_subscription_arn" {
   value       = scaleway_mnq_sns_topic_subscription.email_worker.arn
 }
 
+output "transactional_email_event_management_access_key" {
+  description = "Sensitive access key used only for Terraform-managed SNS lifecycle operations."
+  value       = scaleway_mnq_sns_credentials.email_events_terraform.access_key
+  sensitive   = true
+}
+
+output "transactional_email_event_management_secret_key" {
+  description = "Sensitive secret key used only for Terraform-managed SNS lifecycle operations."
+  value       = scaleway_mnq_sns_credentials.email_events_terraform.secret_key
+  sensitive   = true
+}
+
 output "transactional_email_webhook_id" {
   description = "Scaleway TEM webhook bound to the transactional sender domain."
   value       = scaleway_tem_webhook.email_events.id
