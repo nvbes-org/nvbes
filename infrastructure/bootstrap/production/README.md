@@ -127,3 +127,10 @@ push et reste isolé du préfixe trusted. Les pull requests restent sur le cache
 GitHub Actions sans secret Scaleway. Le bucket supprime automatiquement les
 objets reproductibles après 30 jours ; le registry utilise un tag `buildcache`
 stable par image.
+
+Un bucket créé avant l'ajout de SSE-ONE peut nécessiter une migration unique :
+déclencher manuellement le workflow avec `migrate_bucket_encryption=true`. Le
+workflow sauvegarde un plan borné qui retire temporairement uniquement la
+bucket policy, puis le plan normal active AES-256 avant de recréer la policy.
+Le bucket reste privé sous IAM pendant cette fenêtre ; aucun bucket ni objet
+n'est supprimé. Ne pas utiliser cette option pour les rotations ordinaires.
