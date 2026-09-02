@@ -581,10 +581,22 @@ jobs:
           TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
           TF_VAR_grafana_service_account_token: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
           TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
-        run: >-
-          terraform -chdir="$STACK_ROOT" plan
-          -lock-timeout=5m
-          -out=email-runtime.tfplan
+        run: |
+          for attempt in 1 2 3; do
+            rm -f "$STACK_ROOT/email-runtime.tfplan"
+            if terraform -chdir="$STACK_ROOT" plan \
+              -lock-timeout=5m \
+              -out=email-runtime.tfplan; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "Email runtime plan failed after ${attempt} attempts." >&2
+              exit 1
+            fi
+            retry_delay_seconds=$((attempt * 15))
+            echo "Email runtime plan attempt ${attempt} failed; retrying in ${retry_delay_seconds}s." >&2
+            sleep "$retry_delay_seconds"
+          done
       - name: Apply reviewed email runtime plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
