@@ -71,6 +71,13 @@ jobs:
           -input=false
       - name: Validate isolated email Terraform stack
         run: terraform -chdir=infrastructure/environments/email-production validate
+      - name: Initialize CI cache bootstrap providers
+        run: >-
+          terraform -chdir=infrastructure/bootstrap/production/initial init
+          -backend=false
+          -input=false
+      - name: Validate CI cache bootstrap
+        run: terraform -chdir=infrastructure/bootstrap/production/initial validate
       - name: Validate CI workflow contract
         run: node --test tools/ci/continuous-integration-contract.test.mjs
       - name: Export email test database URL

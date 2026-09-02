@@ -73,3 +73,51 @@ reviewers obligatoires et sans bypass administrateur.
 
 Avant le premier apply d'une stack produit, lancer deux opérations concurrentes
 contrôlées sur sa clé et confirmer que la seconde échoue sur le `.tflock`.
+
+## Cache CI Scaleway additif
+
+Le module `scaleway-ci-cache` est ajouté à la racine bootstrap existante. Il ne
+réutilise ni ne remplace les registries Email/Trust-Risk ou les buckets produit :
+il crée un projet `nvbes-ci-cache` isolé, un registry BuildKit, un bucket S3 et
+une identité CI propres.
+
+Compléter les variables suivantes dans le `terraform.tfvars` bootstrap :
+
+```hcl
+scaleway_organization_id = "<organization UUID>"
+ci_cache_bucket_name     = "<globally unique bucket name>"
+```
+
+Fournir également `GITHUB_TOKEN` avec les droits d'administration des
+Environments et Actions secrets du dépôt. Le token sert uniquement au provider
+GitHub et ne doit pas être écrit dans un fichier Terraform.
+
+Pour le premier déploiement, limiter explicitement le plan aux nouvelles
+ressources puis appliquer exactement ce plan :
+
+```bash
+terraform init -reconfigure -backend-config=backend.hcl
+terraform plan -target=module.ci_cache -out=ci-cache-bootstrap.tfplan
+terraform apply ci-cache-bootstrap.tfplan
+```
+
+Si le projet, le registry, le bucket ou l'environnement GitHub ont déjà été
+créés manuellement, les importer avant le plan au lieu de les recréer :
+
+```bash
+terraform import module.ci_cache.scaleway_account_project.ci_cache <project-id>
+terraform import module.ci_cache.scaleway_registry_namespace.ci_cache fr-par/<namespace-id>
+terraform import module.ci_cache.scaleway_object_bucket.ci_cache fr-par/<bucket-name>
+terraform import module.ci_cache.github_repository_environment.ci_cache nvbes:production-ci-cache
+```
+
+L'environnement `production-bootstrap` doit contenir les secrets
+`BOOTSTRAP_TERRAFORM_STATE_ACCESS_KEY`,
+`BOOTSTRAP_TERRAFORM_STATE_SECRET_KEY`, `SCW_ACCESS_KEY`, `SCW_SECRET_KEY` et
+`CI_CACHE_GITHUB_TOKEN`, ainsi que les variables `SCW_ORGANIZATION_ID`,
+`SCW_PROJECT_ID`, `SCW_CI_CACHE_BUCKET_NAME` et `TERRAFORM_STATE_BUCKET`.
+
+Le workflow hebdomadaire alterne deux clés de 60 jours décalées de 30 jours.
+GitHub reçoit toujours le slot dont l'échéance est la plus lointaine. Le bucket
+supprime automatiquement les objets reproductibles après 30 jours ; le registry
+utilise un tag `buildcache` stable par image.

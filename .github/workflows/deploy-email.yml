@@ -76,9 +76,11 @@ jobs:
 
   build-scan-sign:
     needs: [ci-test-gate]
-    if: ${{ success() }}
     runs-on: [self-hosted, macOS, ARM64]
+    if: ${{ success() }}
     timeout-minutes: 75
+    environment:
+      name: production-ci-cache
     permissions:
       actions: read
       contents: read
@@ -86,6 +88,7 @@ jobs:
       packages: write
       security-events: write
     env:
+      CI_CACHE_REGISTRY: ${{ vars.SCW_CI_CACHE_REGISTRY_ENDPOINT }}
       REGISTRY: ghcr.io
       IMAGE_NAME: nvbes-org/nvbes-email-worker
       TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2
@@ -109,6 +112,12 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ github.token }}
+      - name: Authenticate to Scaleway CI cache
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.CI_CACHE_REGISTRY }}
+          username: nologin
+          password: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
       - name: Set up Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Build and push immutable image
@@ -132,6 +141,8 @@ jobs:
             org.opencontainers.image.version=${{ github.ref_name }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/email-worker:buildcache
+          cache-to: type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/email-worker:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
       - name: Block vulnerable release images
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
