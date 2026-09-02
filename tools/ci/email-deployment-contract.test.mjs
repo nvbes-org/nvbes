@@ -102,7 +102,7 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	);
 	assert.match(
 		workflow,
-		/-target=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?-replace=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?email-sns-management-credential\.tfplan[\s\S]*?state pull[\s\S]*?attributes\.secret_key \| select\(length > 0\)[\s\S]*?email-sns-subscription-import\.tfplan/u,
+		/-target=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?-replace=scaleway_mnq_sns_credentials\.email_events_terraform[\s\S]*?email-sns-management-credential\.tfplan[\s\S]*?state pull[\s\S]*?attributes\.secret_key \| select\(length > 0\)[\s\S]*?terraform-plan-with-sns-propagation-retry\.sh[\s\S]*?email-sns-subscription-import\.tfplan/u,
 	);
 	assert.match(
 		workflow,
@@ -168,7 +168,7 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /--env NVBES_EMAIL_DATABASE_URL/u);
 	assert.match(
 		workflow,
-		/name: 'Post-deploy: Close the bounded Email validation window'[\s\S]*?if: \$\{\{ always\(\) \}\}[\s\S]*?TF_VAR_email_internal_validation_enabled=false/u,
+		/name: 'Post-deploy: Close the bounded Email validation window'[\s\S]*?if: \$\{\{ always\(\) \}\}[\s\S]*?TF_VAR_email_internal_validation_enabled=false[\s\S]*?terraform-plan-with-sns-propagation-retry\.sh/u,
 	);
 	assert.match(
 		workflow,

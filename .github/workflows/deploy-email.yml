@@ -344,7 +344,8 @@ jobs:
 
             export TF_VAR_email_internal_validation_enabled=false
             export TF_VAR_email_worker_image="$EMAIL_ROLLBACK_IMAGE"
-            terraform -chdir="$STACK_ROOT" plan \
+            tools/ci/terraform-plan-with-sns-propagation-retry.sh \
+              terraform -chdir="$STACK_ROOT" plan \
               -lock-timeout=5m \
               -target="$resource" \
               -out=email-sns-subscription-import.tfplan
@@ -688,7 +689,8 @@ jobs:
             [[ "${EMAIL_ROLLBACK_IMAGE:-}" =~ ^${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker@sha256:[0-9a-f]{64}$ ]]
             export TF_VAR_email_worker_image="$EMAIL_ROLLBACK_IMAGE"
           fi
-          terraform -chdir="$STACK_ROOT" plan \
+          tools/ci/terraform-plan-with-sns-propagation-retry.sh \
+            terraform -chdir="$STACK_ROOT" plan \
             -lock-timeout=5m \
             -target=scaleway_container.email_runtime \
             -target=scaleway_container_trigger.email_dispatch \
