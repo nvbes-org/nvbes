@@ -11,6 +11,10 @@ const workspaceRoot = resolve(
 const serviceRoot = join(workspaceRoot, "apps/identity-service");
 const dockerfile = readFileSync(join(serviceRoot, "Dockerfile"), "utf8");
 const mainSource = readFileSync(join(serviceRoot, "src/main.rs"), "utf8");
+const errorReportingSource = readFileSync(
+	join(serviceRoot, "src/identity.error_reporting.rs"),
+	"utf8",
+);
 const healthSource = readFileSync(
 	join(serviceRoot, "src/identity.health.rs"),
 	"utf8",
@@ -23,6 +27,13 @@ const runtimeTerraform = readFileSync(
 	join(
 		workspaceRoot,
 		"infrastructure/environments/identity-production/runtime.tf",
+	),
+	"utf8",
+);
+const syntheticProof = readFileSync(
+	join(
+		workspaceRoot,
+		"tools/deployment/prove-identity-synthetic-auth.sh",
 	),
 	"utf8",
 );
@@ -60,8 +71,10 @@ test("container has shallow liveness and graceful shutdown", () => {
 test("runtime stays closed to public authentication", () => {
 	assert.equal(mainSource.includes('route("/auth/register"'), false);
 	assert.equal(mainSource.includes('route("/auth/login"'), false);
-	assert.ok(mainSource.includes("init_error_reporting_with_config"));
+	assert.ok(errorReportingSource.includes("init_error_reporting_with_config"));
 	assert.ok(mainSource.includes("otlp_authorization_header"));
+	assert.ok(mainSource.includes('action == "error-reporting-smoke"'));
+	assert.ok(errorReportingSource.includes("capture_error_reporting_smoke"));
 });
 
 test("deployment is main-only, approved, immutable and scale-to-zero", () => {
@@ -106,11 +119,30 @@ test("deployment proves a private synthetic account lifecycle", () => {
 	);
 	assert.ok(
 		deploymentWorkflow.includes(
-			"identity-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}@synthetic.invalid",
+			"tools/deployment/prove-identity-synthetic-auth.sh",
 		),
 	);
-	assert.ok(deploymentWorkflow.includes(".audit_events == 5"));
-	assert.ok(deploymentWorkflow.includes(".sessions == 2"));
-	assert.ok(deploymentWorkflow.includes(".recovery_consumed == true"));
-	assert.ok(deploymentWorkflow.includes(".old_sessions_revoked == true"));
+	assert.ok(
+		syntheticProof.includes(
+			"identity-${GITHUB_RUN_ID:?}-${GITHUB_RUN_ATTEMPT:?}@synthetic.invalid",
+		),
+	);
+	assert.ok(syntheticProof.includes(".audit_events == 5"));
+	assert.ok(syntheticProof.includes(".sessions == 2"));
+	assert.ok(syntheticProof.includes(".recovery_consumed == true"));
+	assert.ok(syntheticProof.includes(".old_sessions_revoked == true"));
+});
+
+test("deployment proves Sentry delivery from a private production job", () => {
+	assert.ok(runtimeTerraform.includes("identity_error_reporting_smoke"));
+	assert.ok(
+		runtimeTerraform.includes(
+			'args                   = ["error-reporting-smoke"]',
+		),
+	);
+	assert.ok(deploymentWorkflow.includes("Prove Identity Sentry delivery"));
+	assert.ok(
+		deploymentWorkflow.includes("identity_error_reporting_smoke_job_id"),
+	);
+	assert.ok(mainSource.includes("result.configured && result.flushed"));
 });
