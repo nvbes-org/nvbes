@@ -151,7 +151,12 @@ function jobNeeds(job) {
 }
 
 function assertJobInventory(workflow, contract) {
-	const expectedJobs = [contract.job, contract.buildJob, contract.deployJob]
+	const expectedJobs = [
+		contract.job,
+		contract.buildJob,
+		contract.deployJob,
+		...(contract.additionalJobs ?? []),
+	]
 		.filter((jobName) => jobName !== undefined)
 		.sort();
 	const actualJobs = Object.keys(workflow.jobs).sort();
