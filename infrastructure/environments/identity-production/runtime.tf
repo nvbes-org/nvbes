@@ -136,6 +136,44 @@ resource "scaleway_secret_version" "identity_synthetic_recovered_password" {
   description = "Terraform-managed Identity synthetic recovery password."
 }
 
+resource "scaleway_secret" "identity_sentry_dsn" {
+  name        = "${local.name_prefix}-identity-sentry-dsn"
+  description = "Sentry DSN used by the Identity runtime and explicit observability proof."
+  project_id  = var.scaleway_project_id
+  region      = var.scaleway_region
+  protected   = true
+  tags        = local.tags
+}
+
+resource "scaleway_secret_version" "identity_sentry_dsn" {
+  secret_id   = scaleway_secret.identity_sentry_dsn.id
+  region      = var.scaleway_region
+  data        = var.identity_sentry_dsn
+  description = "Terraform-managed Identity Sentry DSN."
+}
+
+resource "scaleway_job_definition" "identity_error_reporting_smoke" {
+  name                   = "${local.name_prefix}-identity-error-reporting-smoke"
+  description            = "Explicit production Sentry delivery proof for Identity."
+  project_id             = var.scaleway_project_id
+  region                 = var.scaleway_region
+  cpu_limit              = 560
+  memory_limit           = 1024
+  local_storage_capacity = 1024
+  image_uri              = var.identity_image
+  args                   = ["error-reporting-smoke"]
+
+  secret_reference {
+    secret_id   = scaleway_secret.identity_sentry_dsn.id
+    environment = "SENTRY_DSN"
+  }
+
+  depends_on = [
+    scaleway_registry_namespace.identity,
+    scaleway_secret_version.identity_sentry_dsn,
+  ]
+}
+
 resource "scaleway_job_definition" "identity_synthetic_auth" {
   name                   = "${local.name_prefix}-identity-synthetic-auth"
   description            = "Explicit non-delivering authentication and recovery production proof."

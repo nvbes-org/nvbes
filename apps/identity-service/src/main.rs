@@ -8,6 +8,8 @@ mod config;
 mod database;
 #[path = "identity.email.rs"]
 mod email;
+#[path = "identity.error_reporting.rs"]
+mod error_reporting;
 #[path = "identity.health.rs"]
 mod health;
 #[path = "identity.metrics.rs"]
@@ -28,6 +30,18 @@ mod tokens_config;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let command: Vec<String> = std::env::args().skip(1).collect();
+    if matches!(command.as_slice(), [action] if action == "error-reporting-smoke") {
+        let config = error_reporting::ErrorReportingRuntimeConfig::from_env()?;
+        nvbes_observability::install_safe_panic_hook();
+        let _error_reporting_guard = error_reporting::init(&config);
+        let result = error_reporting::smoke(&config);
+        println!("{}", serde_json::to_string(&result)?);
+        anyhow::ensure!(
+            result.configured && result.flushed && result.status == "sent",
+            "Identity error-reporting smoke was not delivered"
+        );
+        return Ok(());
+    }
     if matches!(command.as_slice(), [action] if action == "migrate") {
         let database_url = config::database_url_from_env()?;
         let pool = database::connect(&database_url, 2).await?;
@@ -127,15 +141,15 @@ async fn main() -> anyhow::Result<()> {
     }
     if !command.is_empty() {
         anyhow::bail!(
-            "usage: nvbes-identity-service [migrate|validate-runtime|synthetic-auth-smoke|synthetic-auth-email-smoke|synthetic-mfa-smoke|synthetic-token-smoke|rotate-mfa-key]"
+            "usage: nvbes-identity-service [migrate|validate-runtime|error-reporting-smoke|synthetic-auth-smoke|synthetic-auth-email-smoke|synthetic-mfa-smoke|synthetic-token-smoke|rotate-mfa-key]"
         );
     }
 
     nvbes_observability::install_safe_panic_hook();
     let _error_reporting_guard = nvbes_observability::init_error_reporting_with_config(
         nvbes_observability::ErrorReportingConfig {
-            app_name: "nvbes-identity-service",
-            service_name: "nvbes-identity-service",
+            app_name: error_reporting::APP_NAME,
+            service_name: error_reporting::APP_NAME,
             environment: &config.environment,
             dsn: config.sentry_dsn.as_deref(),
             traces_sample_rate: config.sentry_traces_sample_rate,
