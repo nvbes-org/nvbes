@@ -46,7 +46,7 @@ variable "identity_mfa_encryption_key" {
   sensitive   = true
 
   validation {
-    condition     = can(base64decode(var.identity_mfa_encryption_key)) && length(base64decode(var.identity_mfa_encryption_key)) == 32
+    condition     = can(regex("^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$", var.identity_mfa_encryption_key))
     error_message = "identity_mfa_encryption_key must encode exactly 32 bytes."
   }
 }
