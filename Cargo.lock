@@ -3220,6 +3220,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvbes-identity-service"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "anyhow",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "jsonwebtoken",
+ "nvbes-core",
+ "nvbes-email",
+ "nvbes-observability",
+ "prost-types",
+ "rand 0.9.5",
+ "reqwest 0.12.28",
+ "rsa",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "thiserror 2.0.20",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "nvbes-observability"
 version = "0.1.0"
 dependencies = [
