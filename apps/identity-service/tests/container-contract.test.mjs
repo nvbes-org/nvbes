@@ -144,6 +144,11 @@ test("deployment records bounded activation and access-control evidence", () => 
 });
 
 test("deployment proves a private synthetic account lifecycle", () => {
+	assert.equal(
+		mainSource.match(/database::migrate\(&pool\)\.await\?/g)?.length,
+		1,
+		"only the dedicated migrate command may change the production schema",
+	);
 	assert.ok(runtimeTerraform.includes("identity_synthetic_auth"));
 	assert.ok(
 		runtimeTerraform.includes(
