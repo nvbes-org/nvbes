@@ -1,0 +1,13 @@
+scaleway_project_id      = "00000000-0000-0000-0000-000000000000"
+scaleway_organization_id = "00000000-0000-0000-0000-000000000000"
+scaleway_region          = "fr-par"
+scaleway_zone            = "fr-par-1"
+
+identity_image                     = "rg.fr-par.scw.cloud/nvbes-prod-identity/nvbes-identity-service@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+identity_mfa_encryption_key        = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+identity_mfa_key_version           = 1
+identity_metrics_token             = "set-outside-version-control"
+identity_sentry_dsn                = "https://set-outside-version-control@sentry.invalid/1"
+identity_sentry_traces_sample_rate = 0.1
+grafana_otlp_endpoint              = "https://otlp-gateway.example.invalid/otlp"
+grafana_otlp_authorization_header  = "Basic set-outside-version-control"

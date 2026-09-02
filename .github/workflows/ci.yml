@@ -73,6 +73,13 @@ jobs:
           -input=false
       - name: Validate isolated email Terraform stack
         run: terraform -chdir=infrastructure/environments/email-production validate
+      - name: Initialize isolated Identity Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/environments/identity-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated Identity Terraform stack
+        run: terraform -chdir=infrastructure/environments/identity-production validate
       - name: Initialize CI cache bootstrap providers
         run: >-
           terraform -chdir=infrastructure/bootstrap/production/initial init
@@ -121,6 +128,8 @@ jobs:
         run: bash scripts/test-email-worker-database.sh
       - name: Validate email container contract
         run: node --test apps/email-worker/tests/container-contract.test.mjs
+      - name: Validate Identity container contract
+        run: pnpm nx run identity-service:test:container
 
   rust-tests-scaleway-cache:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -12,6 +12,17 @@ const healthSource = readFileSync(
 	join(serviceRoot, "src/identity.health.rs"),
 	"utf8",
 );
+const deploymentWorkflow = readFileSync(
+	join(workspaceRoot, ".github/workflows/deploy-identity.yml"),
+	"utf8",
+);
+const runtimeTerraform = readFileSync(
+	join(
+		workspaceRoot,
+		"infrastructure/environments/identity-production/runtime.tf",
+	),
+	"utf8",
+);
 
 test("image is reproducible and runs Identity as non-root", () => {
 	assert.match(
@@ -48,4 +59,33 @@ test("runtime stays closed to public authentication", () => {
 	assert.equal(mainSource.includes('route("/auth/login"'), false);
 	assert.ok(mainSource.includes("init_error_reporting_with_config"));
 	assert.ok(mainSource.includes("otlp_authorization_header"));
+});
+
+test("deployment is main-only, approved, immutable and scale-to-zero", () => {
+	assert.ok(
+		deploymentWorkflow.includes(
+			"if: ${{ success() && github.ref == 'refs/heads/main' }}",
+		),
+	);
+	assert.ok(
+		deploymentWorkflow.includes(
+			'[[ "$IDENTITY_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]',
+		),
+	);
+	assert.ok(deploymentWorkflow.includes("cosign verify"));
+	assert.ok(deploymentWorkflow.includes("IDENTITY_IMAGE_DIGEST"));
+	assert.ok(runtimeTerraform.includes("min_scale              = 0"));
+	assert.ok(runtimeTerraform.includes("max_scale              = 1"));
+	assert.ok(runtimeTerraform.includes('privacy                = "public"'));
+});
+
+test("deployment migrates before apply and proves public auth stays absent", () => {
+	const migration = deploymentWorkflow.indexOf("- name: Run database migrations");
+	const apply = deploymentWorkflow.indexOf(
+		"- name: Apply reviewed Identity runtime plan",
+	);
+	assert.ok(migration >= 0);
+	assert.ok(apply > migration);
+	assert.ok(deploymentWorkflow.includes('--request POST "${endpoint}/auth/register"'));
+	assert.ok(deploymentWorkflow.includes('[[ "$status" == "404" ]]'));
 });
