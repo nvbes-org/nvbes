@@ -341,6 +341,18 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes("ghcr.io/nvbes-org/nvbes-trust-risk-service") &&
 			text.includes("cosign verify") &&
 			text.includes("trust-risk-runtime.tfplan");
+		const isValidatedCiCacheRotationWorkflow =
+			path === ".github/workflows/rotate-ci-cache-credentials.yml" &&
+			/^\s+schedule:\s*$/mu.test(text) &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			text.includes("name: production-bootstrap") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+			text.includes(`ref: ${githubExpression("github.sha")}`) &&
+			text.includes("production/bootstrap/terraform.tfstate") &&
+			text.includes("-target=module.ci_cache") &&
+			text.includes("ci-cache-rotation.tfplan");
 		if (
 			!preceding.includes(
 				"if: github.event_name == 'push' && github.ref == 'refs/heads/main'",
@@ -350,7 +362,8 @@ function assertSecrets(path, text, allowedSecrets) {
 			!isValidatedAcceptanceIngestWorkflow &&
 			!isValidatedEmailDeploymentWorkflow &&
 			!isValidatedEmailRestoreWorkflow &&
-			!isValidatedTrustRiskDeploymentWorkflow
+			!isValidatedTrustRiskDeploymentWorkflow &&
+			!isValidatedCiCacheRotationWorkflow
 		) {
 			errors.push(
 				`${path}: secret-bearing step must be restricted to trusted push on main or a validated protected-Environment workflow`,

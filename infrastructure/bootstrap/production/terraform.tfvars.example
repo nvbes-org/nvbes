@@ -1,5 +1,7 @@
-scaleway_project_id   = "00000000-0000-0000-0000-000000000000"
+scaleway_organization_id = "00000000-0000-0000-0000-000000000000"
+scaleway_project_id      = "00000000-0000-0000-0000-000000000000"
 terraform_state_bucket = "nvbes-terraform-state-production-example"
+ci_cache_bucket_name   = "nvbes-ci-cache-production-example"
 
 # Local bootstrap operators may select a dedicated profile. CI uses SCW_* env.
 # scaleway_bootstrap_profile = "nvbes-production-bootstrap"

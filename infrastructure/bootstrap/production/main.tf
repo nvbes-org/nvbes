@@ -15,6 +15,10 @@ provider "scaleway" {
   zone       = var.scaleway_zone
 }
 
+provider "github" {
+  owner = var.github_owner
+}
+
 module "terraform_state" {
   source = "../../modules/terraform-state-backend"
 
@@ -27,4 +31,22 @@ module "terraform_state" {
     trust-risk = "4baaab67-b29e-4ba7-aed8-f8efce064a02"
   }
   tags = local.tags
+}
+
+module "ci_cache" {
+  source = "../../modules/scaleway-ci-cache"
+
+  organization_id              = var.scaleway_organization_id
+  region                       = var.scaleway_region
+  bucket_name                  = var.ci_cache_bucket_name
+  credential_rotation_epoch    = var.ci_cache_credential_rotation_epoch
+  credential_rotation_days     = var.ci_cache_credential_rotation_days
+  credential_expiry_grace_days = var.ci_cache_credential_expiry_grace_days
+  github_repository            = var.github_repository
+  tags = [
+    "nvbes",
+    "environment:production",
+    "managed-by:terraform",
+    "purpose:ci-cache",
+  ]
 }
