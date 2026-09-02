@@ -14,7 +14,7 @@ test("continuous CI runs on every active delivery branch", () => {
 	);
 });
 
-test("continuous CI validates only the active email runtime", () => {
+test("continuous CI validates the active Email and closed Identity runtimes", () => {
 	assert.match(workflow, /POSTGRES_DB: nvbes_email_test/u);
 	assert.match(workflow, /job\.services\.postgres\.ports\[5432\]/u);
 	assert.match(workflow, /host\.docker\.internal/u);
@@ -29,6 +29,11 @@ test("continuous CI validates only the active email runtime", () => {
 		workflow,
 		/node --test apps\/email-worker\/tests\/container-contract\.test\.mjs/u,
 	);
+	assert.match(
+		workflow,
+		/terraform -chdir=infrastructure\/environments\/identity-production validate/u,
+	);
+	assert.match(workflow, /pnpm nx run identity-service:test:container/u);
 	assert.doesNotMatch(workflow, /identity-migration-checks/u);
 	assert.doesNotMatch(workflow, /test-identity-service-migrations/u);
 	assert.doesNotMatch(workflow, /pnpm test:unit/u);

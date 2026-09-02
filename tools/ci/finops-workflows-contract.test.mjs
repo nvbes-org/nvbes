@@ -59,6 +59,15 @@ const workflowContracts = [
 		terraformValidationStepName: "Validate isolated Trust/Risk Terraform stack",
 		workflowPath: ".github/workflows/deploy-trust-risk.yml",
 	},
+	{
+		...deployContract,
+		path: ".github/workflows/deploy-identity.yml",
+		deployJob: "deploy-identity",
+		terraformEnvironmentPath: "infrastructure/environments/identity-production",
+		terraformInitStepName: "Initialize Identity Terraform providers",
+		terraformValidationStepName: "Validate isolated Identity Terraform stack",
+		workflowPath: ".github/workflows/deploy-identity.yml",
+	},
 ];
 
 const validPrefix = `

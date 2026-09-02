@@ -230,6 +230,16 @@ function assertSecrets(path, text, allowedSecrets) {
 			"NVBES_STAGING_ACCOUNT_PASSWORD",
 			new Set([".github/workflows/account-release.yml"]),
 		],
+		...[
+			"IDENTITY_MFA_ENCRYPTION_KEY",
+			"IDENTITY_METRICS_TOKEN",
+			"IDENTITY_SENTRY_DSN",
+			"IDENTITY_TERRAFORM_STATE_ACCESS_KEY",
+			"IDENTITY_TERRAFORM_STATE_SECRET_KEY",
+		].map((secret) => [
+			secret,
+			new Set([".github/workflows/deploy-identity.yml"]),
+		]),
 	]);
 	for (const secret of referencedSecrets) {
 		if (!allowedSecrets.includes(secret)) {
@@ -301,12 +311,8 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes(
 				'[[ "$EMAIL_DEPLOY_CONFIRMATION" == "deploy-email-production" ]]',
 			) &&
-			text.includes(
-				'[[ "$EMAIL_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]',
-			) &&
-			text.includes(
-				'[[ "$EMAIL_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]',
-			) &&
+			text.includes('[[ "$EMAIL_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
+			text.includes('[[ "$EMAIL_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]') &&
 			text.includes(`ref: ${githubExpression("github.sha")}`) &&
 			text.includes("production/email/terraform.tfstate") &&
 			text.includes("ghcr.io/nvbes-org/nvbes-email-worker") &&
@@ -322,9 +328,7 @@ function assertSecrets(path, text, allowedSecrets) {
 				'[[ "$CONFIRMATION" == "validate-email-production-restore" ]]',
 			) &&
 			text.includes('[[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
-			text.includes(
-				'[[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]',
-			) &&
+			text.includes('[[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]') &&
 			text.includes(`ref: ${githubExpression("inputs.approved_sha")}`) &&
 			text.includes("production/email/terraform.tfstate") &&
 			text.includes("restore_database_id");
@@ -341,6 +345,32 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes("ghcr.io/nvbes-org/nvbes-trust-risk-service") &&
 			text.includes("cosign verify") &&
 			text.includes("trust-risk-runtime.tfplan");
+		const isValidatedIdentityDeploymentWorkflow =
+			path === ".github/workflows/deploy-identity.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			!/^\s+inputs:\s*$/mu.test(text) &&
+			text.includes("name: production-identity") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+			text.includes(
+				`IDENTITY_DEPLOY_CONFIRMATION: ${githubExpression("vars.IDENTITY_DEPLOY_CONFIRMATION")}`,
+			) &&
+			text.includes(
+				`IDENTITY_DEPLOY_APPROVED_SHA: ${githubExpression("vars.IDENTITY_DEPLOY_APPROVED_SHA")}`,
+			) &&
+			text.includes(
+				'[[ "$IDENTITY_DEPLOY_CONFIRMATION" == "deploy-identity-production" ]]',
+			) &&
+			text.includes(
+				'[[ "$IDENTITY_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]',
+			) &&
+			text.includes('[[ "$IDENTITY_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]') &&
+			text.includes(`ref: ${githubExpression("github.sha")}`) &&
+			text.includes("production/identity/terraform.tfstate") &&
+			text.includes("ghcr.io/nvbes-org/nvbes-identity-service") &&
+			text.includes("cosign verify") &&
+			text.includes("identity-runtime.tfplan");
 		const isValidatedCiCacheRotationWorkflow =
 			path === ".github/workflows/rotate-ci-cache-credentials.yml" &&
 			/^\s+schedule:\s*$/mu.test(text) &&
@@ -363,6 +393,7 @@ function assertSecrets(path, text, allowedSecrets) {
 			!isValidatedEmailDeploymentWorkflow &&
 			!isValidatedEmailRestoreWorkflow &&
 			!isValidatedTrustRiskDeploymentWorkflow &&
+			!isValidatedIdentityDeploymentWorkflow &&
 			!isValidatedCiCacheRotationWorkflow
 		) {
 			errors.push(
