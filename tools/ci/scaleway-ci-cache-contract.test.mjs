@@ -71,6 +71,10 @@ test("cross-project bucket resources keep their explicit project scope", () => {
 test("rotation is restricted to the protected bootstrap environment", () => {
 	assert.match(rotationWorkflow, /if: github\.ref == 'refs\/heads\/main'/u);
 	assert.match(rotationWorkflow, /name: production-bootstrap/u);
+	assert.match(
+		rotationWorkflow,
+		/TF_VAR_terraform_state_bucket: \$\{\{ vars\.TERRAFORM_STATE_BUCKET \}\}/u,
+	);
 	assert.match(rotationWorkflow, /-target=module\.ci_cache/u);
 	assert.match(rotationWorkflow, /ci-cache-rotation\.tfplan/u);
 });
