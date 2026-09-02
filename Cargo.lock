@@ -3229,6 +3229,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "jsonwebtoken",
+ "metrics-exporter-prometheus",
  "nvbes-core",
  "nvbes-email",
  "nvbes-observability",

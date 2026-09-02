@@ -3,9 +3,14 @@ use std::net::SocketAddr;
 
 const DEVELOPMENT_MFA_KEY: &str = "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IdentityConfig {
     pub environment: String,
+    pub sentry_dsn: Option<String>,
+    pub sentry_traces_sample_rate: f32,
+    pub otlp_endpoint: Option<String>,
+    pub otlp_authorization_header: Option<String>,
+    pub metrics_token: String,
     pub database_url: String,
     pub database_max_connections: u32,
     pub bind_addr: SocketAddr,
@@ -18,6 +23,7 @@ pub struct IdentityConfig {
 impl IdentityConfig {
     pub fn from_env() -> Result<Self, ConfigError> {
         let environment = optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into());
+        let development = matches!(environment.as_str(), "development" | "test");
         let database_url = database_url(&environment)?;
         let database_max_connections = optional("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS")
             .unwrap_or_else(|| "5".into())
@@ -60,9 +66,33 @@ impl IdentityConfig {
                 }
                 _ => return Err(ConfigError::Invalid("MFA previous key pair")),
             };
+        let sentry_dsn = optional("SENTRY_DSN");
+        let sentry_traces_sample_rate = optional("SENTRY_TRACES_SAMPLE_RATE")
+            .unwrap_or_else(|| "0.1".into())
+            .parse::<f32>()
+            .ok()
+            .filter(|value| (0.0..=1.0).contains(value))
+            .ok_or(ConfigError::Invalid("SENTRY_TRACES_SAMPLE_RATE"))?;
+        let otlp_endpoint = optional("NVBES_OTLP_ENDPOINT");
+        let otlp_authorization_header = optional("NVBES_OTLP_AUTHORIZATION_HEADER");
+        let metrics_token = optional("NVBES_IDENTITY_METRICS_TOKEN")
+            .or_else(|| development.then(|| "development-identity-metrics-token-value".into()))
+            .ok_or(ConfigError::Missing("NVBES_IDENTITY_METRICS_TOKEN"))?;
+        validate_observability(
+            development,
+            sentry_dsn.as_deref(),
+            otlp_endpoint.as_deref(),
+            otlp_authorization_header.as_deref(),
+            &metrics_token,
+        )?;
 
         Ok(Self {
             environment,
+            sentry_dsn,
+            sentry_traces_sample_rate,
+            otlp_endpoint,
+            otlp_authorization_header,
+            metrics_token,
             database_url,
             database_max_connections,
             bind_addr,
@@ -72,6 +102,34 @@ impl IdentityConfig {
             mfa_previous_key_version,
         })
     }
+}
+
+fn validate_observability(
+    development: bool,
+    sentry_dsn: Option<&str>,
+    otlp_endpoint: Option<&str>,
+    otlp_authorization_header: Option<&str>,
+    metrics_token: &str,
+) -> Result<(), ConfigError> {
+    if metrics_token.len() < 32 || metrics_token.contains(['\r', '\n']) {
+        return Err(ConfigError::Invalid("NVBES_IDENTITY_METRICS_TOKEN"));
+    }
+    if !development {
+        let sentry = sentry_dsn.ok_or(ConfigError::Missing("SENTRY_DSN"))?;
+        let otlp = otlp_endpoint.ok_or(ConfigError::Missing("NVBES_OTLP_ENDPOINT"))?;
+        let authorization = otlp_authorization_header
+            .ok_or(ConfigError::Missing("NVBES_OTLP_AUTHORIZATION_HEADER"))?;
+        if !sentry.starts_with("https://") || !sentry.contains('@') {
+            return Err(ConfigError::Invalid("SENTRY_DSN"));
+        }
+        if !otlp.starts_with("https://") {
+            return Err(ConfigError::Invalid("NVBES_OTLP_ENDPOINT"));
+        }
+        if !authorization.starts_with("Basic ") || authorization.contains(['\r', '\n']) {
+            return Err(ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER"));
+        }
+    }
+    Ok(())
 }
 
 fn decode_key(value: &str) -> Result<[u8; 32], ConfigError> {
