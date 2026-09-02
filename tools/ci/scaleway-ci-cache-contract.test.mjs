@@ -18,6 +18,10 @@ const cacheModule = readFileSync(
 	"infrastructure/modules/scaleway-ci-cache/main.tf",
 	"utf8",
 );
+const bootstrapReadme = readFileSync(
+	"infrastructure/bootstrap/production/README.md",
+	"utf8",
+);
 
 test("deployment builds use isolated Scaleway registry cache scopes", () => {
 	for (const [workflow, scope] of [
@@ -50,6 +54,18 @@ test("cache credentials rotate through two staggered slots", () => {
 	assert.match(cacheModule, /create_before_destroy = true/u);
 	assert.match(cacheModule, /scaleway_account_project\.ci_cache\.id/u);
 	assert.match(cacheModule, /branch_pattern = "main"/u);
+});
+
+test("cross-project bucket resources keep their explicit project scope", () => {
+	assert.match(
+		cacheModule,
+		/resource "scaleway_object_bucket_server_side_encryption_configuration" "ci_cache" \{[\s\S]*?project_id = scaleway_account_project\.ci_cache\.id/u,
+	);
+	assert.ok(
+		bootstrapReadme.includes(
+			"fr-par/<bucket-name>@<project-id>",
+		),
+	);
 });
 
 test("rotation is restricted to the protected bootstrap environment", () => {
