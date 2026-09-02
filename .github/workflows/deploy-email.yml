@@ -614,13 +614,19 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
         run: |
+          plan_json="$(mktemp)"
+          trap 'rm -f "$plan_json"' EXIT
+          chmod 600 "$plan_json"
+          terraform -chdir="$STACK_ROOT" show -json email-runtime.tfplan > "$plan_json"
           export AWS_ACCESS_KEY_ID="$(
-            terraform -chdir="$STACK_ROOT" output -raw \
-              transactional_email_event_management_access_key
+            jq --exit-status --raw-output \
+              '.planned_values.outputs.transactional_email_event_management_access_key.value | select(length > 0)' \
+              "$plan_json"
           )"
           export AWS_SECRET_ACCESS_KEY="$(
-            terraform -chdir="$STACK_ROOT" output -raw \
-              transactional_email_event_management_secret_key
+            jq --exit-status --raw-output \
+              '.planned_values.outputs.transactional_email_event_management_secret_key.value | select(length > 0)' \
+              "$plan_json"
           )"
           [[ -n "$AWS_ACCESS_KEY_ID" ]]
           [[ -n "$AWS_SECRET_ACCESS_KEY" ]]
@@ -629,9 +635,21 @@ jobs:
           printf '::add-mask::%s\n' "$AWS_SECRET_ACCESS_KEY"
 
           aws_cli_image='public.ecr.aws/aws-cli/aws-cli@sha256:d3f5b7078a71fd7cb488719571c50abd252f4320cdf375601f2d6d40caf97b55'
-          topic_arn="$(terraform -chdir="$STACK_ROOT" output -raw transactional_email_event_topic_arn)"
-          managed_arn="$(terraform -chdir="$STACK_ROOT" output -raw transactional_email_event_subscription_arn)"
-          webhook_endpoint="$(terraform -chdir="$STACK_ROOT" output -raw email_worker_endpoint)/webhooks/scaleway/topics-and-events"
+          topic_arn="$(
+            jq --exit-status --raw-output \
+              '.planned_values.outputs.transactional_email_event_topic_arn.value' \
+              "$plan_json"
+          )"
+          managed_arn="$(
+            jq --exit-status --raw-output \
+              '.planned_values.outputs.transactional_email_event_subscription_arn.value' \
+              "$plan_json"
+          )"
+          webhook_endpoint="$(
+            jq --exit-status --raw-output \
+              '.planned_values.outputs.email_worker_endpoint.value' \
+              "$plan_json"
+          )/webhooks/scaleway/topics-and-events"
           aws_sns() {
             docker run --rm \
               --env AWS_ACCESS_KEY_ID \
