@@ -82,9 +82,10 @@ resource "scaleway_iam_application" "ci_cache" {
 }
 
 resource "scaleway_iam_policy" "ci_cache" {
-  name           = "nvbes-production-ci-cache"
-  description    = "BuildKit registry and reproducible object-cache access only."
-  application_id = scaleway_iam_application.ci_cache.id
+  name            = "nvbes-production-ci-cache"
+  description     = "BuildKit registry and reproducible object-cache access only."
+  application_id  = scaleway_iam_application.ci_cache.id
+  organization_id = var.organization_id
 
   rule {
     project_ids = [scaleway_account_project.ci_cache.id]
@@ -109,9 +110,10 @@ resource "scaleway_iam_application" "branch_cache" {
 }
 
 resource "scaleway_iam_policy" "branch_cache" {
-  name           = "nvbes-branch-ci-cache"
-  description    = "Read and write access to isolated branch compiler-cache prefixes only."
-  application_id = scaleway_iam_application.branch_cache.id
+  name            = "nvbes-branch-ci-cache"
+  description     = "Read and write access to isolated branch compiler-cache prefixes only."
+  application_id  = scaleway_iam_application.branch_cache.id
+  organization_id = var.organization_id
 
   rule {
     project_ids = [scaleway_account_project.ci_cache.id]
@@ -137,11 +139,13 @@ resource "scaleway_object_bucket_policy" "ci_cache" {
         Action = [
           "s3:GetBucketAcl",
           "s3:GetBucketCORS",
+          "s3:GetBucketEncryption",
           "s3:GetBucketObjectLockConfiguration",
           "s3:GetBucketTagging",
           "s3:GetBucketVersioning",
           "s3:GetLifecycleConfiguration",
           "s3:ListBucket",
+          "s3:PutBucketEncryption",
         ]
         Resource = [scaleway_object_bucket.ci_cache.name]
         Condition = {

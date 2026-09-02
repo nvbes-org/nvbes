@@ -92,11 +92,13 @@ test("cache access is restricted to the CI application and dedicated bucket", ()
 	);
 	assert.match(bucketConfigurationStatement, /Principal = "\*"/u);
 	assert.match(bucketConfigurationStatement, /"s3:GetBucketCORS"/u);
+	assert.match(bucketConfigurationStatement, /"s3:GetBucketEncryption"/u);
 	assert.match(
 		bucketConfigurationStatement,
 		/"s3:GetBucketObjectLockConfiguration"/u,
 	);
 	assert.match(bucketConfigurationStatement, /"s3:GetLifecycleConfiguration"/u);
+	assert.match(bucketConfigurationStatement, /"s3:PutBucketEncryption"/u);
 	assert.doesNotMatch(bucketConfigurationStatement, /s3:GetObject/u);
 	assert.match(
 		cacheModule,
@@ -156,6 +158,15 @@ test("cross-project bucket resources keep their explicit project scope", () => {
 			cacheModule,
 			new RegExp(
 				`resource "scaleway_iam_application" "${application}" \\{[\\s\\S]*?organization_id = var\\.organization_id`,
+				"u",
+			),
+		);
+	}
+	for (const policy of ["ci_cache", "branch_cache"]) {
+		assert.match(
+			cacheModule,
+			new RegExp(
+				`resource "scaleway_iam_policy" "${policy}" \\{[\\s\\S]*?organization_id = var\\.organization_id`,
 				"u",
 			),
 		);
