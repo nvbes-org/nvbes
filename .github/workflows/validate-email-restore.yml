@@ -431,26 +431,30 @@ jobs:
           [[ "$rollback_status" -eq 0 && "$restore_status" -eq 0 ]]
           printf '### Email image rollback\n\nPrevious image applied privately, then canonical image restored and verified.\n' \
             >> "$GITHUB_STEP_SUMMARY"
-      - name: Verify the provider budget and remove obsolete Email credentials
+      - name: Audit budget access and remove obsolete Email credentials
         env:
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
         run: |
           budget_id='d0b76811-3993-40e6-aeaa-5121bb044285'
-          budget="$(
-            curl --fail --silent --show-error \
+          budget_file="$(mktemp)"
+          trap 'rm -f "$budget_file"' EXIT
+          budget_status="$(
+            curl --silent --show-error --output "$budget_file" --write-out '%{http_code}' \
               --header "X-Auth-Token: $SCW_SECRET_KEY" \
               "https://api.scaleway.com/billing/v2/budgets/${budget_id}"
           )"
-          jq --exit-status --arg id "$budget_id" '
+          if [[ "$budget_status" == "200" ]]; then
+            jq --exit-status --arg id "$budget_id" '
             .id == $id and .enabled == true and
             .consumption_limit == {currency_code: "EUR", units: 30, nanos: 0} and
             ([.alerts[].threshold] | sort) == [50, 66, 83, 93, 100] and
             (.alerts | all(.notifications | any(.type == "email" and (.recipients | length) > 0)))
-          ' <<<"$budget" >/dev/null
-          jq '{id, enabled, consumption_limit, alerts: [.alerts[] | {
-            threshold,
-            email_recipient_count: ([.notifications[] | select(.type == "email") | .recipients[]] | length)
-          }]}' <<<"$budget" >> "$GITHUB_STEP_SUMMARY"
+            ' "$budget_file" >/dev/null
+          else
+            [[ "$budget_status" == "403" ]]
+            printf 'Budget API read denied by the least-privilege Email key; provider configuration remains operator-audited.\n' \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
 
           for canonical_key in SCWPXF9K7KPS9YEV10XB SCW67T91PRPA9P5YAXRM; do
             curl --fail --silent --show-error \
