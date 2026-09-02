@@ -1,3 +1,5 @@
+#[path = "identity.app.rs"]
+mod app;
 #[path = "identity.auth.rs"]
 mod auth;
 #[path = "identity.config.rs"]
@@ -8,6 +10,8 @@ mod database;
 mod email;
 #[path = "identity.health.rs"]
 mod health;
+#[path = "identity.metrics.rs"]
+mod metrics;
 #[path = "identity.mfa.rs"]
 mod mfa;
 #[path = "identity.mfa.crypto.rs"]
@@ -128,23 +132,42 @@ async fn main() -> anyhow::Result<()> {
     }
 
     nvbes_observability::install_safe_panic_hook();
+    let _error_reporting_guard = nvbes_observability::init_error_reporting_with_config(
+        nvbes_observability::ErrorReportingConfig {
+            app_name: "nvbes-identity-service",
+            service_name: "nvbes-identity-service",
+            environment: &config.environment,
+            dsn: config.sentry_dsn.as_deref(),
+            traces_sample_rate: config.sentry_traces_sample_rate,
+        },
+    );
     nvbes_observability::init_tracing_with_config(
         nvbes_observability::TracingConfig {
             environment: &config.environment,
-            otlp_endpoint: None,
-            otlp_authorization_header: None,
+            otlp_endpoint: config.otlp_endpoint.as_deref(),
+            otlp_authorization_header: config.otlp_authorization_header.as_deref(),
             protocol: nvbes_observability::OtlpProtocol::Http,
         },
         "nvbes-identity-service",
     );
     let db = database::connect_lazy(&config.database_url, config.database_max_connections)?;
-    let router = health::router();
+    let state = app::IdentityState::new(config.clone(), db.clone());
+    let http_metrics = nvbes_observability::metrics::HttpMetrics {
+        handle: state.metrics.clone(),
+    };
+    let router = health::router(state.clone())
+        .merge(metrics::router(state))
+        .layer(axum::middleware::from_fn_with_state(
+            http_metrics,
+            nvbes_observability::middleware::observe_request,
+        ));
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
     tracing::info!(bind_addr = %config.bind_addr, environment = %config.environment, "starting closed identity foundation");
 
     axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
+    nvbes_observability::flush_error_reporting(std::time::Duration::from_secs(2));
     db.close().await;
     Ok(())
 }

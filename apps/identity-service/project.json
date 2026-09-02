@@ -26,6 +26,20 @@
         "cwd": "."
       }
     },
+    "test:container": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/Dockerfile",
+        "{projectRoot}/tests/**/*",
+        "{projectRoot}/Cargo.toml",
+        "{projectRoot}/src/main.rs"
+      ],
+      "options": {
+        "command": "node --test apps/identity-service/tests/container-contract.test.mjs",
+        "cwd": "."
+      }
+    },
     "test:database": {
       "executor": "nx:run-commands",
       "cache": false,
