@@ -140,11 +140,13 @@ resource "scaleway_object_bucket_policy" "ci_cache" {
         Action = [
           "s3:GetBucketAcl",
           "s3:GetBucketCORS",
+          "s3:GetEncryptionConfiguration",
           "s3:GetBucketObjectLockConfiguration",
           "s3:GetBucketTagging",
           "s3:GetBucketVersioning",
           "s3:GetLifecycleConfiguration",
           "s3:ListBucket",
+          "s3:PutEncryptionConfiguration",
         ]
         Resource = [scaleway_object_bucket.ci_cache.name]
         Condition = {

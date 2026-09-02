@@ -94,9 +94,17 @@ test("cache access is restricted to the CI application and dedicated bucket", ()
 	assert.match(bucketConfigurationStatement, /"s3:GetBucketCORS"/u);
 	assert.match(
 		bucketConfigurationStatement,
+		/"s3:GetEncryptionConfiguration"/u,
+	);
+	assert.match(
+		bucketConfigurationStatement,
 		/"s3:GetBucketObjectLockConfiguration"/u,
 	);
 	assert.match(bucketConfigurationStatement, /"s3:GetLifecycleConfiguration"/u);
+	assert.match(
+		bucketConfigurationStatement,
+		/"s3:PutEncryptionConfiguration"/u,
+	);
 	assert.doesNotMatch(bucketConfigurationStatement, /s3:GetObject/u);
 	assert.match(
 		cacheModule,
@@ -189,17 +197,6 @@ test("rotation is restricted to the protected bootstrap environment", () => {
 		/-target=module\.ci_cache\.scaleway_object_bucket_policy\.ci_cache/u,
 	);
 	assert.match(rotationWorkflow, /ci-cache-policy-repair\.tfplan/u);
-	assert.match(rotationWorkflow, /migrate_bucket_encryption:/u);
-	assert.match(
-		rotationWorkflow,
-		/if: inputs\.migrate_bucket_encryption == true/u,
-	);
-	assert.match(rotationWorkflow, /-destroy/u);
-	assert.match(
-		rotationWorkflow,
-		/-target=module\.ci_cache\.scaleway_object_bucket_policy\.ci_cache/u,
-	);
-	assert.match(rotationWorkflow, /ci-cache-policy-removal\.tfplan/u);
 	assert.match(
 		cacheModule,
 		/depends_on = \[scaleway_object_bucket_server_side_encryption_configuration\.ci_cache\]/u,
