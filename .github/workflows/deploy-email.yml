@@ -303,17 +303,17 @@ jobs:
           TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
         run: |
           resource=scaleway_mnq_sns_topic_subscription.email_worker
-          desired_id="fr-par/${SCW_DEFAULT_PROJECT_ID}/nvbes-prod-email-events/${EMAIL_SNS_SUBSCRIPTION_ID}"
-          current_id=""
+          desired_arn="arn:scw:sns:fr-par:project-${SCW_DEFAULT_PROJECT_ID}:nvbes-prod-email-events:${EMAIL_SNS_SUBSCRIPTION_ID}"
+          current_arn=""
           resource_managed=false
           if state_snapshot="$(terraform -chdir="$STACK_ROOT" state show -no-color "$resource" 2>/dev/null)"; then
             resource_managed=true
-            current_id="$(
+            current_arn="$(
               printf '%s\n' "$state_snapshot" |
-                awk -F' = ' '$1 ~ /^[[:space:]]*id$/ { gsub(/"/, "", $2); print $2 }'
+                awk -F' = ' '$1 ~ /^[[:space:]]*arn$/ { gsub(/"/, "", $2); print $2 }'
             )"
           fi
-          if [[ "$current_id" != "$desired_id" ]]; then
+          if [[ "$current_arn" != "$desired_arn" ]]; then
             if [[ "$resource_managed" == "true" ]]; then
               terraform -chdir="$STACK_ROOT" state rm -lock-timeout=5m "$resource"
             fi
@@ -340,12 +340,31 @@ jobs:
             )"
             printf '::add-mask::%s\n' "$TF_VAR_email_sns_management_access_key_override"
             printf '::add-mask::%s\n' "$TF_VAR_email_sns_management_secret_key_override"
+
+            credential_id="$(
+              jq --exit-status --raw-output \
+                '.resources[] | select(.type == "scaleway_mnq_sns_credentials" and .name == "email_events_terraform") | .instances[0].attributes.id | split("/")[-1]' \
+                <<<"$state_snapshot_json"
+            )"
+            credential_metadata="$(
+              curl --fail-with-body --silent --show-error \
+                --header "X-Auth-Token: $SCW_SECRET_KEY" \
+                "https://api.scaleway.com/mnq/v1beta1/regions/fr-par/sns-credentials/${credential_id}"
+            )"
+            jq --exit-status \
+              '.permissions.can_manage == true and .permissions.can_publish == true and .permissions.can_receive == true' \
+              <<<"$credential_metadata" >/dev/null
+            expected_secret_checksum="$(jq --exit-status --raw-output '.secret_checksum' <<<"$credential_metadata")"
+            actual_secret_checksum="$(printf '%s' "$TF_VAR_email_sns_management_secret_key_override" | shasum -a 1 | awk '{print $1}')"
+            [[ "$actual_secret_checksum" == "$expected_secret_checksum" ]]
+            echo 'SNS management credential permissions and secret checksum verified.'
+            unset credential_metadata actual_secret_checksum expected_secret_checksum
             unset state_snapshot_json
 
             export TF_VAR_email_internal_validation_enabled=false
             export TF_VAR_email_worker_image="$EMAIL_ROLLBACK_IMAGE"
-            tools/ci/terraform-plan-with-sns-propagation-retry.sh \
-              terraform -chdir="$STACK_ROOT" plan \
+            terraform -chdir="$STACK_ROOT" plan \
+              -refresh=false \
               -lock-timeout=5m \
               -target="$resource" \
               -out=email-sns-subscription-import.tfplan
@@ -689,8 +708,8 @@ jobs:
             [[ "${EMAIL_ROLLBACK_IMAGE:-}" =~ ^${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker@sha256:[0-9a-f]{64}$ ]]
             export TF_VAR_email_worker_image="$EMAIL_ROLLBACK_IMAGE"
           fi
-          tools/ci/terraform-plan-with-sns-propagation-retry.sh \
-            terraform -chdir="$STACK_ROOT" plan \
+          terraform -chdir="$STACK_ROOT" plan \
+            -refresh=false \
             -lock-timeout=5m \
             -target=scaleway_container.email_runtime \
             -target=scaleway_container_trigger.email_dispatch \
