@@ -163,6 +163,14 @@ test("rotation is restricted to the protected bootstrap environment", () => {
 	);
 	assert.match(rotationWorkflow, /-target=module\.ci_cache/u);
 	assert.match(rotationWorkflow, /ci-cache-rotation\.tfplan/u);
+	assert.match(rotationWorkflow, /repair_bucket_policy:/u);
+	assert.match(rotationWorkflow, /if: inputs\.repair_bucket_policy == true/u);
+	assert.match(rotationWorkflow, /-refresh=false/u);
+	assert.match(
+		rotationWorkflow,
+		/-target=module\.ci_cache\.scaleway_object_bucket_policy\.ci_cache/u,
+	);
+	assert.match(rotationWorkflow, /ci-cache-policy-repair\.tfplan/u);
 });
 
 test("branch pushes use the correctly scoped Scaleway S3 cache", () => {

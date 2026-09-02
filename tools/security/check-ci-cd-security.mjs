@@ -410,6 +410,13 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
 			text.includes(`ref: ${githubExpression("github.sha")}`) &&
 			text.includes("production/bootstrap/terraform.tfstate") &&
+			text.includes("repair_bucket_policy:") &&
+			text.includes("if: inputs.repair_bucket_policy == true") &&
+			text.includes("-refresh=false") &&
+			text.includes(
+				"-target=module.ci_cache.scaleway_object_bucket_policy.ci_cache",
+			) &&
+			text.includes("ci-cache-policy-repair.tfplan") &&
 			text.includes("-target=module.ci_cache") &&
 			text.includes("ci-cache-rotation.tfplan");
 		const isValidatedBranchCacheWorkflow =
