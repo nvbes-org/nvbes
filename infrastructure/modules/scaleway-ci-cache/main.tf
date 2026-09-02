@@ -128,7 +128,6 @@ resource "scaleway_iam_policy" "branch_cache" {
 resource "scaleway_object_bucket_policy" "ci_cache" {
   bucket     = scaleway_object_bucket.ci_cache.name
   project_id = scaleway_account_project.ci_cache.id
-  depends_on = [scaleway_object_bucket_server_side_encryption_configuration.ci_cache]
   policy = jsonencode({
     Version = "2023-04-17"
     Id      = "nvbes-production-ci-cache"
