@@ -40,6 +40,9 @@
 				"{workspaceRoot}/.github/workflows/validate-identity-restore.yml",
 				"{workspaceRoot}/infrastructure/environments/identity-production/**/*",
 				"{workspaceRoot}/tools/deployment/prove-identity-synthetic-auth.sh",
+				"{workspaceRoot}/tools/deployment/prove-identity-synthetic-token.sh",
+				"{workspaceRoot}/tools/deployment/prove-identity-synthetic-mfa.sh",
+				"{workspaceRoot}/tools/deployment/prove-identity-synthetic-invitation.sh",
 				"{workspaceRoot}/tools/deployment/prove-identity-public-runtime.sh"
 			],
 			"options": {

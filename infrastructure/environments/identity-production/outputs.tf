@@ -33,3 +33,38 @@ output "identity_error_reporting_smoke_job_id" {
   description = "Job definition proving Identity Sentry event delivery."
   value       = scaleway_job_definition.identity_error_reporting_smoke.id
 }
+
+output "identity_synthetic_token_job_id" {
+  description = "Job definition proving audience-bound Account access-token issuance."
+  value       = scaleway_job_definition.identity_synthetic_token.id
+}
+
+output "identity_synthetic_mfa_job_id" {
+  description = "Job definition proving encrypted TOTP step-up in production."
+  value       = scaleway_job_definition.identity_synthetic_mfa.id
+}
+
+output "identity_synthetic_invitation_job_id" {
+  description = "Job definition proving invitation-only account creation in production."
+  value       = scaleway_job_definition.identity_synthetic_invitation.id
+}
+
+output "identity_token_issuer" {
+  description = "Public issuer passed only to the explicit private token proof job."
+  value       = var.identity_token_issuer
+}
+
+output "identity_token_key_id" {
+  description = "Non-secret signing key identifier passed only to the explicit private token proof job."
+  value       = var.identity_token_key_id
+}
+
+output "identity_token_audiences" {
+  description = "Fixed V1 audiences passed only to the explicit private token proof job."
+  value       = var.identity_token_audiences
+}
+
+output "identity_mfa_key_version" {
+  description = "Active non-secret MFA key version passed only to the explicit private MFA proof job."
+  value       = var.identity_mfa_key_version
+}

@@ -12,6 +12,8 @@ mod email;
 mod error_reporting;
 #[path = "identity.health.rs"]
 mod health;
+#[path = "identity.invitations.rs"]
+mod invitations;
 #[path = "identity.metrics.rs"]
 mod metrics;
 #[path = "identity.mfa.rs"]
@@ -26,6 +28,8 @@ mod synthetic;
 mod tokens;
 #[path = "identity.tokens.config.rs"]
 mod tokens_config;
+#[path = "identity.tokens.policy.rs"]
+mod tokens_policy;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -83,30 +87,44 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if matches!(command.as_slice(), [action] if action == "synthetic-mfa-smoke") {
-        let runtime = config::IdentityConfig::from_env()?;
+        let runtime = config::mfa_runtime_config_from_env()?;
         let email = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL")?;
         let password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
         let pool = database::connect(&runtime.database_url, 2).await?;
         let crypto = mfa_crypto::MfaCrypto::with_rotation(
-            runtime.mfa_key_version,
-            runtime.mfa_encryption_key,
+            runtime.key_version,
+            runtime.encryption_key,
             runtime
-                .mfa_previous_key_version
-                .zip(runtime.mfa_previous_encryption_key),
+                .previous_key_version
+                .zip(runtime.previous_encryption_key),
         )?;
         let result = mfa::run_synthetic_smoke(&pool, &crypto, &email, &password).await?;
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
 
+    if matches!(command.as_slice(), [action] if action == "synthetic-invitation-smoke") {
+        let database_url = config::database_url_from_env()?;
+        let inviter_email = required_secret("NVBES_IDENTITY_SYNTHETIC_INVITER_EMAIL")?;
+        let invited_email = required_secret("NVBES_IDENTITY_SYNTHETIC_INVITED_EMAIL")?;
+        let password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
+        let pool = database::connect(&database_url, 2).await?;
+        let result =
+            invitations::run_synthetic_smoke(&pool, &inviter_email, &invited_email, &password)
+                .await?;
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
+
     if matches!(command.as_slice(), [action] if action == "synthetic-token-smoke") {
-        let runtime = config::IdentityConfig::from_env()?;
+        let environment = config::environment_from_env();
+        let database_url = config::database_url_from_env()?;
         let email = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL")?;
         let password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
         let audience = required_secret("NVBES_IDENTITY_SYNTHETIC_TOKEN_AUDIENCE")?;
-        let token_config = tokens_config::TokenConfig::from_env(&runtime.environment)?;
+        let token_config = tokens_config::TokenConfig::from_env(&environment)?;
         let token_service = tokens::TokenService::new(token_config)?;
-        let pool = database::connect(&runtime.database_url, 2).await?;
+        let pool = database::connect(&database_url, 2).await?;
         let result =
             tokens::run_synthetic_smoke(&pool, &token_service, &email, &password, &audience)
                 .await?;
@@ -137,7 +155,7 @@ async fn main() -> anyhow::Result<()> {
     }
     if !command.is_empty() {
         anyhow::bail!(
-            "usage: nvbes-identity-service [migrate|validate-runtime|error-reporting-smoke|synthetic-auth-smoke|synthetic-auth-email-smoke|synthetic-mfa-smoke|synthetic-token-smoke|rotate-mfa-key]"
+            "usage: nvbes-identity-service [migrate|validate-runtime|error-reporting-smoke|synthetic-auth-smoke|synthetic-auth-email-smoke|synthetic-mfa-smoke|synthetic-invitation-smoke|synthetic-token-smoke|rotate-mfa-key]"
         );
     }
 

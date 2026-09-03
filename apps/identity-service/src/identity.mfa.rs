@@ -186,11 +186,13 @@ async fn persist_session_grant(
     principal_id: Uuid,
     expires_at: DateTime<Utc>,
 ) -> anyhow::Result<()> {
-    sqlx::query("UPDATE identity_sessions SET step_up_expires_at = $1 WHERE id = $2")
-        .bind(expires_at)
-        .bind(session_id)
-        .execute(&mut **tx)
-        .await?;
+    sqlx::query(
+        "UPDATE identity_sessions SET step_up_expires_at = $1,step_up_method='totp' WHERE id = $2",
+    )
+    .bind(expires_at)
+    .bind(session_id)
+    .execute(&mut **tx)
+    .await?;
     audit(tx, principal_id, "identity.step_up_granted").await?;
     Ok(())
 }

@@ -24,17 +24,29 @@ pub(super) async fn create_synthetic_identity(
     email: &str,
     password: &str,
 ) -> anyhow::Result<Uuid> {
+    let mut tx = db.begin().await?;
+    let principal_id =
+        create_active_human(&mut tx, email, password, "identity.synthetic_created").await?;
+    tx.commit().await?;
+    Ok(principal_id)
+}
+
+pub(super) async fn create_active_human(
+    tx: &mut Transaction<'_, Postgres>,
+    email: &str,
+    password: &str,
+    audit_event: &str,
+) -> anyhow::Result<Uuid> {
     let email = normalize_email(email)?;
     validate_password(password)?;
     let password_hash =
         hash_password(password).map_err(|_| anyhow::anyhow!("password hashing failed"))?;
     let principal_id = Uuid::new_v4();
-    let mut tx = db.begin().await?;
     sqlx::query(
         "INSERT INTO identity_principals (id, kind, status) VALUES ($1, 'human', 'active')",
     )
     .bind(principal_id)
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await?;
     sqlx::query(
         "INSERT INTO identity_login_identifiers (id, principal_id, kind, normalized_value, verified_at) VALUES ($1, $2, 'email', $3, clock_timestamp())",
@@ -42,18 +54,17 @@ pub(super) async fn create_synthetic_identity(
     .bind(Uuid::new_v4())
     .bind(principal_id)
     .bind(&email)
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await?;
     sqlx::query(
         "INSERT INTO identity_password_credentials (principal_id, password_hash) VALUES ($1, $2)",
     )
     .bind(principal_id)
     .bind(password_hash)
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await?;
-    audit(&mut tx, principal_id, "identity.synthetic_created").await?;
-    outbox(&mut tx, principal_id, "identity.principal.created.v1").await?;
-    tx.commit().await?;
+    audit(tx, principal_id, audit_event).await?;
+    outbox(tx, principal_id, "identity.principal.created.v1").await?;
     Ok(principal_id)
 }
 
@@ -198,7 +209,7 @@ pub(super) fn hash_token(token: &str) -> Vec<u8> {
     Sha256::digest(token.as_bytes()).to_vec()
 }
 
-fn normalize_email(email: &str) -> anyhow::Result<String> {
+pub(super) fn normalize_email(email: &str) -> anyhow::Result<String> {
     let email = email.trim().to_ascii_lowercase();
     let valid = email.len() <= 320
         && email
@@ -209,7 +220,7 @@ fn normalize_email(email: &str) -> anyhow::Result<String> {
         .ok_or_else(|| anyhow::anyhow!("synthetic email is invalid"))
 }
 
-fn validate_password(password: &str) -> anyhow::Result<()> {
+pub(super) fn validate_password(password: &str) -> anyhow::Result<()> {
     if !(12..=1024).contains(&password.len()) {
         anyhow::bail!("synthetic password must contain between 12 and 1024 bytes");
     }

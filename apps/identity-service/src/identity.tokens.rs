@@ -8,8 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::auth;
-use crate::tokens_config::TokenConfig;
+use crate::{auth, tokens_config::TokenConfig, tokens_policy};
 
 const ACCESS_TOKEN_TTL_SECONDS: u64 = 15 * 60;
 
@@ -58,6 +57,8 @@ pub struct SyntheticTokenResult {
     pub algorithm: &'static str,
     pub key_id: String,
     pub expires_in_seconds: u64,
+    pub scope: String,
+    pub amr: Vec<String>,
     pub active_before_revocation: bool,
     pub inactive_for_wrong_audience: bool,
     pub inactive_after_revocation: bool,
@@ -90,7 +91,7 @@ impl TokenService {
         &self.jwks
     }
 
-    pub fn issue(
+    fn issue(
         &self,
         principal_id: Uuid,
         session_id: Uuid,
@@ -101,7 +102,8 @@ impl TokenService {
         if !self.config.allowed_audiences.contains(audience) {
             anyhow::bail!("token audience is not allowed");
         }
-        validate_scope(scope)?;
+        tokens_policy::validate_scopes(audience, scope)?;
+        tokens_policy::validate_amr(&amr)?;
         let issued_at = Utc::now().timestamp() as u64;
         let claims = AccessTokenClaims {
             sub: principal_id.to_string(),
@@ -120,6 +122,27 @@ impl TokenService {
         header.kid = Some(self.config.key_id.clone());
         header.typ = Some("at+jwt".into());
         Ok(encode(&header, &claims, &self.encoding_key)?)
+    }
+
+    pub async fn issue_for_active_session(
+        &self,
+        db: &PgPool,
+        session_id: Uuid,
+        audience: &str,
+        scope: &str,
+    ) -> anyhow::Result<String> {
+        let session = sqlx::query_as::<_, (Uuid, Option<String>)>(
+            "SELECT s.principal_id,CASE WHEN s.step_up_expires_at>clock_timestamp() THEN s.step_up_method ELSE NULL END FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.id=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active'",
+        )
+        .bind(session_id)
+        .fetch_optional(db)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("session is not active"))?;
+        let mut amr = vec!["pwd".to_owned()];
+        if let Some(method) = tokens_policy::step_up_method(session.1)? {
+            amr.push(method);
+        }
+        self.issue(session.0, session_id, audience, scope, amr)
     }
 
     pub fn verify(
@@ -190,13 +213,14 @@ pub async fn run_synthetic_smoke(
     .bind(principal_id)
     .fetch_one(db)
     .await?;
-    let access_token = service.issue(
-        principal_id,
-        session_id,
-        audience,
-        "account:read",
-        vec!["pwd".into()],
-    )?;
+    let access_token = service
+        .issue_for_active_session(
+            db,
+            session_id,
+            audience,
+            "account:read account:write account:export account:close",
+        )
+        .await?;
     let active_before_revocation = service
         .introspect(db, &access_token, audience)
         .await?
@@ -214,30 +238,50 @@ pub async fn run_synthetic_smoke(
         .await?
         .is_none();
     let key = &service.jwks().keys[0];
+    let claims = service.verify(&access_token, audience)?;
+    record_synthetic_proof(
+        db,
+        principal_id,
+        session_id,
+        &claims,
+        active_before_revocation,
+        inactive_after_revocation,
+    )
+    .await?;
     Ok(SyntheticTokenResult {
         principal_id,
         session_id,
         algorithm: key.alg,
         key_id: key.kid.clone(),
         expires_in_seconds: ACCESS_TOKEN_TTL_SECONDS,
+        scope: claims.scope,
+        amr: claims.amr,
         active_before_revocation,
         inactive_for_wrong_audience,
         inactive_after_revocation,
     })
 }
 
-fn validate_scope(scope: &str) -> anyhow::Result<()> {
-    let valid = !scope.is_empty()
-        && scope.len() <= 1024
-        && scope.split(' ').all(|item| {
-            !item.is_empty()
-                && item.bytes().all(|byte| {
-                    byte.is_ascii_alphanumeric() || matches!(byte, b':' | b'-' | b'_' | b'.')
-                })
-        });
-    if !valid {
-        anyhow::bail!("token scope is invalid")
-    }
+async fn record_synthetic_proof(
+    db: &PgPool,
+    principal_id: Uuid,
+    session_id: Uuid,
+    claims: &AccessTokenClaims,
+    active_before_revocation: bool,
+    inactive_after_revocation: bool,
+) -> anyhow::Result<()> {
+    sqlx::query("INSERT INTO identity_audit_events(id,principal_id,actor_principal_id,event_type,correlation_id,details) VALUES($1,$2,$2,'identity.token.synthetic_proven',$3,jsonb_build_object('session_id',$4,'audience',$5,'scope',$6,'amr',$7,'active_before_revocation',$8,'inactive_after_revocation',$9))")
+        .bind(Uuid::new_v4())
+        .bind(principal_id)
+        .bind(Uuid::new_v4())
+        .bind(session_id)
+        .bind(&claims.aud)
+        .bind(&claims.scope)
+        .bind(serde_json::to_value(&claims.amr)?)
+        .bind(active_before_revocation)
+        .bind(inactive_after_revocation)
+        .execute(db)
+        .await?;
     Ok(())
 }
 
