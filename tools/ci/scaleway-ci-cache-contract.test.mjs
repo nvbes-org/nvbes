@@ -199,11 +199,9 @@ test("rotation is restricted to the protected bootstrap environment", () => {
 	assert.match(rotationWorkflow, /ci-cache-policy-repair\.tfplan/u);
 });
 
-test("branch pushes use the correctly scoped Scaleway S3 cache", () => {
-	assert.match(
-		ciWorkflow,
-		/rust-tests-scaleway-cache:\n {4}if: github\.event_name == 'push'/u,
-	);
+test("the unified quality job selects the correctly scoped Rust cache", () => {
+	assert.match(ciWorkflow, /jobs:\n {2}quality:/u);
+	assert.doesNotMatch(ciWorkflow, /rust-tests-scaleway-cache:/u);
 	assert.match(ciWorkflow, /'production-ci-cache' \|\| 'branch-ci-cache'/u);
 	assert.match(ciWorkflow, /RUSTC_WRAPPER: sccache/u);
 	assert.match(ciWorkflow, /CARGO_INCREMENTAL: '0'/u);
@@ -224,14 +222,12 @@ test("branch pushes use the correctly scoped Scaleway S3 cache", () => {
 		/SCCACHE_S3_KEY_PREFIX: \$\{\{[\s\S]*?\}\}\/rust\/\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}\/rust-1\.91\.1/u,
 	);
 	assert.match(ciWorkflow, /format\('branches\/\{0\}', github\.ref_name\)/u);
-	assert.match(ciWorkflow, /name: Detect Scaleway cache credentials/u);
+	assert.match(ciWorkflow, /name: Test Rust workspace/u);
+	assert.match(ciWorkflow, /GITHUB_EVENT_NAME.*!=.*push/u);
+	assert.match(ciWorkflow, /export SCCACHE_GHA_ENABLED=true/u);
 	assert.match(
 		ciWorkflow,
-		/name: Run Rust tests with Scaleway cache\n {8}if: github\.event_name == 'push' && steps\.scaleway-cache\.outputs\.available == 'true'/u,
-	);
-	assert.match(
-		ciWorkflow,
-		/name: Run Rust tests with bootstrap cache fallback\n {8}if: github\.event_name == 'push' && steps\.scaleway-cache\.outputs\.available != 'true'[\s\S]*?SCCACHE_GHA_ENABLED: 'true'/u,
+		/unset SCCACHE_BUCKET SCCACHE_ENDPOINT SCCACHE_REGION/u,
 	);
 	assert.match(
 		ciWorkflow,
@@ -245,8 +241,9 @@ test("branch pushes use the correctly scoped Scaleway S3 cache", () => {
 		ciWorkflow,
 		/sccache --zero-stats\n {10}cargo test --workspace --locked\n {10}sccache --show-stats/u,
 	);
-	assert.match(
-		ciWorkflow,
-		/name: Test email contract and runtime\n {8}if: github\.event_name != 'push'\n {8}run: pnpm test/u,
+	assert.equal(
+		ciWorkflow.match(/cargo test --workspace --locked/gu)?.length,
+		1,
+		"the unified quality job must contain one workspace test",
 	);
 });
