@@ -1,0 +1,57 @@
+name: deploy platform operations
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-platform-operations-production
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  ci-test-gate:
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - name: Enable pnpm
+        run: |-
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Enforce FinOps contract
+        run: pnpm check:finops
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Initialize Platform Operations Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/environments/platform-operations-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated Platform Operations Terraform stack
+        run: terraform -chdir=infrastructure/environments/platform-operations-production validate
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+          components: rustfmt, clippy
+      - name: Validate Platform Operations Rust and Container
+        run: |
+          cargo check --package nvbes-platform --all-targets
+          cargo test --package nvbes-platform
+          node apps/platform-operations-service/tests/container-contract.test.mjs

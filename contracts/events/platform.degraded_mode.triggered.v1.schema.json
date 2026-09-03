@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/platform.degraded_mode.triggered.v1.schema.json",
+  "title": "nvbes Platform Degraded Mode Triggered Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "procedure_id",
+    "scenario",
+    "action",
+    "operator_id",
+    "reason",
+    "triggered_at"
+  ],
+  "properties": {
+    "procedure_id": { "type": "string", "format": "uuid" },
+    "scenario": {
+      "type": "string",
+      "enum": [
+        "identity_unavailable",
+        "account_unavailable",
+        "stripe_unavailable",
+        "email_delayed",
+        "trust_risk_unavailable",
+        "postgres_in_restore",
+        "finops_threshold_exceeded"
+      ]
+    },
+    "action": { "type": "string", "enum": ["activated", "deactivated"] },
+    "operator_id": { "type": "string", "minLength": 3 },
+    "reason": { "type": "string", "minLength": 3, "maxLength": 300 },
+    "triggered_at": { "type": "string", "format": "date-time" }
+  }
+}
