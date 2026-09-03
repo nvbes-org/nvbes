@@ -6,6 +6,10 @@ function reject(message) {
 }
 
 export function validateAccountTestDatabaseTarget(environment) {
+  const targetEnvironment = (environment.NVBES_ENVIRONMENT ?? environment.NVBES_ENV)
+    ?.trim()
+    .toLowerCase();
+
   let target;
   try {
     target = new URL(environment.DATABASE_URL);
@@ -20,7 +24,12 @@ export function validateAccountTestDatabaseTarget(environment) {
     hostname === 'localhost' ||
     (isIP(hostname) === 4 && hostname.split('.')[0] === '127') ||
     (isIP(hostname) === 6 && hostname === '::1');
-  if (!loopback) {
+  const devcontainerPostgres = environment.NVBES_DEVCONTAINER === 'true' && hostname === 'postgres';
+  const githubActionsPostgres =
+    environment.GITHUB_ACTIONS === 'true' &&
+    targetEnvironment === 'ci' &&
+    hostname === 'host.docker.internal';
+  if (!loopback && !devcontainerPostgres && !githubActionsPostgres) {
     reject(`account database tests refuse PostgreSQL host ${hostname}`);
   }
   const databaseName = decodeURIComponent(target.pathname.replace(/^\/+/, ''));

@@ -31,3 +31,25 @@ test('rejects a non-test database name', () => {
     /must contain account_test/u,
   );
 });
+
+test('accepts host.docker.internal in GitHub Actions CI environment', () => {
+  assert.deepEqual(
+    validateAccountTestDatabaseTarget({
+      DATABASE_URL: 'postgres://postgres:test@host.docker.internal:5432/nvbes_account_test',
+      GITHUB_ACTIONS: 'true',
+      NVBES_ENV: 'ci',
+    }),
+    { databaseName: 'nvbes_account_test', hostname: 'host.docker.internal' },
+  );
+});
+
+test('accepts postgres host in devcontainer environment', () => {
+  assert.deepEqual(
+    validateAccountTestDatabaseTarget({
+      DATABASE_URL: 'postgres://postgres:test@postgres:5432/nvbes_account_test',
+      NVBES_DEVCONTAINER: 'true',
+    }),
+    { databaseName: 'nvbes_account_test', hostname: 'postgres' },
+  );
+});
+

@@ -2,6 +2,42 @@
   "envelope": "contracts/events/envelope.schema.json",
   "events": [
     {
+      "event_type": "account.profile.created",
+      "event_version": 1,
+      "schema": "contracts/events/account.profile.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.team.created",
+      "event_version": 1,
+      "schema": "contracts/events/account.team.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.team.member_joined",
+      "event_version": 1,
+      "schema": "contracts/events/account.team.member_joined.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.export.requested",
+      "event_version": 1,
+      "schema": "contracts/events/account.export.requested.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.closure.requested",
+      "event_version": 1,
+      "schema": "contracts/events/account.closure.requested.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.closure.completed",
+      "event_version": 1,
+      "schema": "contracts/events/account.closure.completed.v1.schema.json",
+      "critical": true
+    },
+    {
       "event_type": "account.user.created",
       "event_version": 1,
       "schema": "contracts/events/account.user.created.v1.schema.json",

@@ -216,6 +216,28 @@
 								"expected_principal_id",
 								"DELETE_RESTORE_DATABASE=true"
 							]
+						},
+						{
+							"path": ".github/workflows/deploy-account.yml",
+							"includes": [
+								"name: production-account",
+								"if: github.ref == 'refs/heads/main'",
+								"ref: ${{ github.sha }}",
+								"production/account/terraform.tfstate",
+								"cosign verify",
+								"account-runtime.tfplan"
+							]
+						},
+						{
+							"path": ".github/workflows/validate-account-restore.yml",
+							"includes": [
+								"name: production-account",
+								"if: github.ref == 'refs/heads/main'",
+								"ref: ${{ inputs.approved_sha }}",
+								"validate-account-production-restore",
+								"expected_principal_id",
+								"DELETE_RESTORE_DATABASE=true"
+							]
 						}
 					]
 				}
@@ -348,6 +370,10 @@
 	"allowedSecrets": [
 		"ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_PEM",
 		"ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_PEM",
+		"ACCOUNT_METRICS_TOKEN",
+		"ACCOUNT_SENTRY_DSN",
+		"ACCOUNT_TERRAFORM_STATE_ACCESS_KEY",
+		"ACCOUNT_TERRAFORM_STATE_SECRET_KEY",
 		"BOOTSTRAP_TERRAFORM_STATE_ACCESS_KEY",
 		"BOOTSTRAP_TERRAFORM_STATE_SECRET_KEY",
 		"CI_CACHE_GITHUB_TOKEN",
@@ -377,6 +403,7 @@
 		"IDENTITY_SYNTHETIC_RECOVERED_PASSWORD",
 		"IDENTITY_TERRAFORM_STATE_ACCESS_KEY",
 		"IDENTITY_TERRAFORM_STATE_SECRET_KEY",
+		"IDENTITY_TOKEN_PUBLIC_KEY_PEM",
 		"NVBES_STAGING_ACCOUNT_PASSWORD",
 		"POSTHOG_CLI_API_KEY",
 		"SCALEWAY_EMAIL_SECRET_KEY",
