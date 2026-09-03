@@ -52,4 +52,3 @@ test('accepts postgres host in devcontainer environment', () => {
     { databaseName: 'nvbes_account_test', hostname: 'postgres' },
   );
 });
-
