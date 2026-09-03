@@ -33,6 +33,7 @@
     ]
   },
   "parallel": 4,
+  "cacheDirectory": ".nx/cache",
   "targetDefaults": {
     "build": {
       "cache": true,
@@ -71,5 +72,5 @@
     }
   },
   "analytics": false,
-  "nxCloudId": "6a3bfc09a9d6ced97d0c39c1"
+  "neverConnectToCloud": true
 }

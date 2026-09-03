@@ -86,6 +86,11 @@ jobs:
           [[ "$GITHUB_EVENT_NAME" == "push" ]]
           [[ "$GITHUB_REF" == refs/heads/* ]]
           [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+      - name: Configure Nx cache and affected scope
+        id: nx-scope
+        env:
+          NVBES_CI_BASE_CANDIDATE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node tools/ci/nx-cache-manager.mjs
       - name: Initialize isolated Identity Terraform providers
         run: >-
           terraform -chdir=infrastructure/environments/identity-production init
@@ -101,7 +106,10 @@ jobs:
       - name: Validate CI cache bootstrap
         run: terraform -chdir=infrastructure/bootstrap/production/initial validate
       - name: Validate CI workflow contract
-        run: node --test tools/ci/continuous-integration-contract.test.mjs
+        run: >-
+          node --test
+          tools/ci/continuous-integration-contract.test.mjs
+          tools/ci/nx-cache-manager.test.mjs
       - name: Export email test database URL
         run: |
           database_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports['5432'] }}/nvbes_email_test"
@@ -119,6 +127,7 @@ jobs:
         with:
           version: v0.17.0
       - name: Test Rust workspace
+        if: steps.nx-scope.outputs.rust-affected == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
@@ -132,14 +141,21 @@ jobs:
           sccache --zero-stats
           cargo test --workspace --locked
           sccache --show-stats
-      - name: Validate active workspace
+      - name: Validate global workspace contracts
         run: |
-          pnpm format:check
+          pnpm exec vp fmt --check package.json pnpm-workspace.yaml vite.config.ts tsconfig.base.json nx.json
+          cargo fmt --all --check
           pnpm check:structure
           pnpm check:nx-boundaries
           pnpm check:secrets
-          pnpm check:web
-          pnpm check:api
+          pnpm check:web-runtime-guardrails
+          pnpm check:ajax-security
+      - name: Validate affected TypeScript projects
+        if: steps.nx-scope.outputs.typescript-projects != ''
+        run: >-
+          pnpm exec nx run-many
+          -t format:check,lint,typecheck,check
+          --projects="${{ steps.nx-scope.outputs.typescript-projects }}"
       - name: Validate email deployment contract
         run: pnpm test:pre-deploy
       - name: Initialize email stack Terraform providers
