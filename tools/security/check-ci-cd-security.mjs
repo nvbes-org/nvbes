@@ -34,7 +34,7 @@ const requiredLockfileInstalls = ["pnpm install --frozen-lockfile"];
 const fullCommitShaPattern = /^[0-9a-f]{40}$/u;
 const githubExpression = (value) => `\${{ ${value} }}`;
 const trustedCacheBranchCondition =
-	"(github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/'))";
+	"(github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/release/'))";
 const cacheEnvironmentSelector = `${trustedCacheBranchCondition} && 'production-ci-cache' || 'branch-ci-cache'`;
 const cachePrefixSelector = `${trustedCacheBranchCondition} && 'trusted' || format('branches/{0}', github.ref_name)`;
 const workflowScope = parseWorkflowScope(process.argv.slice(2));
@@ -455,9 +455,7 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes(
 				'[[ "$ACCOUNT_DEPLOY_CONFIRMATION" == "deploy-account-production" ]]',
 			) &&
-			text.includes(
-				'[[ "$ACCOUNT_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]',
-			) &&
+			text.includes('[[ "$ACCOUNT_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
 			text.includes('[[ "$ACCOUNT_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]') &&
 			text.includes(`ref: ${githubExpression("github.sha")}`) &&
 			text.includes("production/account/terraform.tfstate") &&

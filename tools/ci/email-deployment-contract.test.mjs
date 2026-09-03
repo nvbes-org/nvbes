@@ -145,7 +145,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	assert.match(workflow, /error-reporting-smoke/u);
 	assert.match(workflow, /\.status == "sent"[\s\S]*?\.flushed == true/u);
 	assert.match(workflow, /email_worker_metrics_endpoint/u);
-	assert.match(workflow, /Authorization: Bearer \$EMAIL_OBSERVABILITY_INTERNAL_TOKEN/u);
+	assert.match(
+		workflow,
+		/Authorization: Bearer \$EMAIL_OBSERVABILITY_INTERNAL_TOKEN/u,
+	);
 	assert.match(workflow, /anonymous_status[\s\S]*?== "401"/u);
 	assert.match(
 		workflow,
@@ -226,7 +229,10 @@ test("email production deploy is isolated and uses an immutable signed image", (
 	);
 	assert.match(delivery, /SENTRY_DSN\s*=\s*var\.email_sentry_dsn/u);
 	assert.match(delivery, /SENTRY_RELEASE\s*=\s*split/u);
-	assert.match(observability, /resource "grafana_dashboard" "email_communications"/u);
+	assert.match(
+		observability,
+		/resource "grafana_dashboard" "email_communications"/u,
+	);
 	assert.match(observability, /resource "grafana_rule_group" "email"/u);
 	assert.match(observability, /nvbes-email-production-v1/u);
 	assert.match(
@@ -261,10 +267,7 @@ test("email production deploy is isolated and uses an immutable signed image", (
 		database,
 		/split\([\s\S]*?"\?"[\s\S]*?trimprefix\(scaleway_sdb_sql_database\.email\.endpoint, "postgres:\/\/"\)[\s\S]*?\)\[0\]/u,
 	);
-	assert.match(
-		database,
-		/"postgres:\/\/%s:%s@%s\?sslmode=verify-full"/u,
-	);
+	assert.match(database, /"postgres:\/\/%s:%s@%s\?sslmode=verify-full"/u);
 	assert.match(
 		provider,
 		/resource "scaleway_mnq_sns_credentials" "email_events_terraform"[\s\S]*?can_receive\s*=\s*true/u,
@@ -285,15 +288,13 @@ test("container release publishes the image name consumed by Terraform", () => {
 
 test("email CI validates the isolated deployment stack", () => {
 	const workflow = read(workflowPath);
+	const continuousIntegration = read(".github/workflows/ci.yml");
 	const packageScripts = JSON.parse(read("package.json")).scripts;
-	assert.match(
-		workflow,
-		/  ci-test-gate:\n    runs-on: [^\n]+\n    timeout-minutes:\s*(?:4[5-9]|[5-9]\d|\d{3,})/u,
-	);
+	assert.match(workflow, /  ci-provenance:\n/u);
+	assert.match(workflow, /node tools\/ci\/verify-ci-provenance\.mjs/u);
 	assert.doesNotMatch(workflow, /Swatinem\/rust-cache@/u);
 	assert.doesNotMatch(workflow, /^\s+cache: pnpm\s*$/mu);
-	assert.match(workflow, /pnpm test:pre-deploy/u);
-	assert.match(workflow, /pnpm nx run email-worker:test/u);
+	assert.match(continuousIntegration, /pnpm test:pre-deploy/u);
 	assert.doesNotMatch(workflow, /pnpm test:unit/u);
 	assert.match(
 		workflow,
@@ -302,19 +303,19 @@ test("email CI validates the isolated deployment stack", () => {
 	assert.doesNotMatch(workflow, /format: cyclonedx-json/u);
 	assert.match(packageScripts["test:pre-deploy"], /terraform fmt -check/u);
 	assert.match(
-		workflow,
+		continuousIntegration,
 		/terraform -chdir=infrastructure\/environments\/email-production init[\s\S]*?-backend=false/u,
 	);
 	assert.match(
-		workflow,
+		continuousIntegration,
 		/terraform -chdir=infrastructure\/environments\/email-production validate/u,
 	);
 	assert.match(
-		workflow,
+		continuousIntegration,
 		/terraform -chdir=infrastructure\/stacks\/email\/production init[\s\S]*?-backend=false/u,
 	);
 	assert.match(
-		workflow,
+		continuousIntegration,
 		/terraform -chdir=infrastructure\/stacks\/email\/production validate/u,
 	);
 });

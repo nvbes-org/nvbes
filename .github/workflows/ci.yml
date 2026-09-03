@@ -4,7 +4,7 @@ on:
   push:
     branches: ['**']
   pull_request:
-    branches: ['main', 'staging', 'dev']
+    branches: ['main', 'dev']
   workflow_dispatch:
 
 concurrency:
@@ -22,7 +22,7 @@ defaults:
 jobs:
   quality:
     environment:
-      name: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/')) && 'production-ci-cache' || 'branch-ci-cache' }}
+      name: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/release/')) && 'production-ci-cache' || 'branch-ci-cache' }}
       deployment: false
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 90
@@ -92,12 +92,50 @@ jobs:
           NVBES_CI_BASE_CANDIDATE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node tools/ci/nx-cache-manager.mjs
       - name: Initialize isolated Identity Terraform providers
+        if: steps.nx-scope.outputs.identity-affected == 'true'
         run: >-
           terraform -chdir=infrastructure/environments/identity-production init
           -backend=false
           -input=false
       - name: Validate isolated Identity Terraform stack
+        if: steps.nx-scope.outputs.identity-affected == 'true'
         run: terraform -chdir=infrastructure/environments/identity-production validate
+      - name: Initialize Account Terraform providers
+        if: steps.nx-scope.outputs.account-affected == 'true'
+        run: >-
+          terraform -chdir=infrastructure/environments/account-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated Account Terraform stack
+        if: steps.nx-scope.outputs.account-affected == 'true'
+        run: terraform -chdir=infrastructure/environments/account-production validate
+      - name: Initialize Billing Terraform providers
+        if: steps.nx-scope.outputs.billing-affected == 'true'
+        run: >-
+          terraform -chdir=infrastructure/environments/billing-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated Billing Terraform stack
+        if: steps.nx-scope.outputs.billing-affected == 'true'
+        run: terraform -chdir=infrastructure/environments/billing-production validate
+      - name: Initialize Trust/Risk Terraform providers
+        if: steps.nx-scope.outputs.trust-risk-affected == 'true'
+        run: >-
+          terraform -chdir=infrastructure/environments/trust-risk-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated Trust/Risk Terraform stack
+        if: steps.nx-scope.outputs.trust-risk-affected == 'true'
+        run: terraform -chdir=infrastructure/environments/trust-risk-production validate
+      - name: Initialize Platform Operations Terraform providers
+        if: steps.nx-scope.outputs.platform-affected == 'true'
+        run: >-
+          terraform -chdir=infrastructure/environments/platform-operations-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated Platform Operations Terraform stack
+        if: steps.nx-scope.outputs.platform-affected == 'true'
+        run: terraform -chdir=infrastructure/environments/platform-operations-production validate
       - name: Initialize CI cache bootstrap providers
         run: >-
           terraform -chdir=infrastructure/bootstrap/production/initial init
@@ -109,12 +147,16 @@ jobs:
         run: >-
           node --test
           tools/ci/continuous-integration-contract.test.mjs
+          tools/ci/deployment-provenance-contract.test.mjs
           tools/ci/nx-cache-manager.test.mjs
+          tools/ci/verify-ci-provenance.test.mjs
       - name: Export email test database URL
+        if: steps.nx-scope.outputs.email-affected == 'true'
         run: |
           database_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports['5432'] }}/nvbes_email_test"
           printf '%s\n' "DATABASE_URL=${database_url}" >> "${GITHUB_ENV}"
       - name: Provision isolated Account test database
+        if: steps.nx-scope.outputs.account-affected == 'true'
         run: |
           docker exec "${{ job.services.postgres.id }}" createdb --username postgres nvbes_account_test
           account_database_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports['5432'] }}/nvbes_account_test"
@@ -131,7 +173,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
-          SCCACHE_S3_KEY_PREFIX: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/')) && 'trusted' || format('branches/{0}', github.ref_name) }}/rust/${{ runner.os }}-${{ runner.arch }}/rust-1.91.1
+          SCCACHE_S3_KEY_PREFIX: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/release/')) && 'trusted' || format('branches/{0}', github.ref_name) }}/rust/${{ runner.os }}-${{ runner.arch }}/rust-1.91.1
         run: |
           if [[ "$GITHUB_EVENT_NAME" != "push" || -z "$AWS_ACCESS_KEY_ID" || -z "$AWS_SECRET_ACCESS_KEY" || -z "$SCCACHE_BUCKET" ]]; then
             unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
@@ -157,29 +199,48 @@ jobs:
           -t format:check,lint,typecheck,check
           --projects="${{ steps.nx-scope.outputs.typescript-projects }}"
       - name: Validate email deployment contract
+        if: steps.nx-scope.outputs.email-affected == 'true'
         run: pnpm test:pre-deploy
       - name: Initialize email stack Terraform providers
+        if: steps.nx-scope.outputs.email-affected == 'true'
         run: >-
           terraform -chdir=infrastructure/stacks/email/production init
           -backend=false
           -input=false
       - name: Validate email Terraform stack
+        if: steps.nx-scope.outputs.email-affected == 'true'
         run: terraform -chdir=infrastructure/stacks/email/production validate
       - name: Test email Terraform deployment and rotation
+        if: steps.nx-scope.outputs.email-affected == 'true'
         run: >-
           PATH="$PWD/infrastructure/stacks/email/production/tests/bin:$PATH"
           terraform -chdir=infrastructure/stacks/email/production test
       - name: Test email database invariants
+        if: steps.nx-scope.outputs.email-affected == 'true'
         run: bash scripts/test-email-worker-database.sh
       - name: Test Account database invariants
+        if: steps.nx-scope.outputs.account-affected == 'true'
         env:
           DATABASE_URL: ${{ env.NVBES_ACCOUNT_DATABASE_URL }}
         run: pnpm nx run account-service:test:database
       - name: Validate email container contract
+        if: steps.nx-scope.outputs.email-affected == 'true'
         run: node --test apps/email-worker/tests/container-contract.test.mjs
       - name: Validate Identity container contract
+        if: steps.nx-scope.outputs.identity-affected == 'true'
         run: pnpm nx run identity-service:test:container
       - name: Validate Account container contract
+        if: steps.nx-scope.outputs.account-affected == 'true'
         run: pnpm nx run account-service:test:container
+      - name: Validate Billing container contract
+        if: steps.nx-scope.outputs.billing-affected == 'true'
+        run: node --test apps/billing-service/tests/container-contract.test.mjs
+      - name: Validate Trust/Risk container contract
+        if: steps.nx-scope.outputs.trust-risk-affected == 'true'
+        run: node --test apps/trust-risk-service/tests/container-contract.test.mjs
       - name: Validate Identity restore contract
+        if: steps.nx-scope.outputs.identity-affected == 'true'
         run: node --test tools/ci/identity-restore-contract.test.mjs
+      - name: Validate Platform Operations container contract
+        if: steps.nx-scope.outputs.platform-affected == 'true'
+        run: node apps/platform-operations-service/tests/container-contract.test.mjs

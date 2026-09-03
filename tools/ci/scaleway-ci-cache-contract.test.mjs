@@ -65,7 +65,7 @@ test("cache credentials rotate through two staggered slots", () => {
 	assert.match(cacheModule, /scaleway_account_project\.ci_cache\.id/u);
 	assert.match(cacheModule, /branch_pattern = "main"/u);
 	assert.match(cacheModule, /branch_pattern = "dev"/u);
-	assert.match(cacheModule, /branch_pattern = "staging"/u);
+	assert.doesNotMatch(cacheModule, /branch_pattern = "staging"/u);
 	assert.match(cacheModule, /branch_pattern = "release\/\*"/u);
 	assert.match(cacheModule, /resource "time_rotating" "branch_cache"/u);
 	assert.match(cacheModule, /resource "scaleway_iam_api_key" "branch_cache"/u);

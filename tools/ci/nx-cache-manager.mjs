@@ -12,6 +12,7 @@ import {
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	isDeliveryScopeAffected,
 	isTrustedPush,
 	isUsableCommitSha,
 	selectTypeScriptProjects,
@@ -118,9 +119,76 @@ const affectedProjects = nxJson(
 	`--head=${environment.headSha}`,
 	"--json",
 );
+const changedPaths = git(
+	"diff",
+	"--name-only",
+	"--diff-filter=ACMRD",
+	baseSha,
+	environment.headSha,
+)
+	.split("\n")
+	.filter(Boolean);
 const graph = nxJson("graph", "--print").graph.nodes;
 const typeScriptProjects = selectTypeScriptProjects(affectedProjects, graph);
 const rustAffected = affectedProjects.includes("rust-workspace");
+const deliveryScopes = {
+	email: isDeliveryScopeAffected(affectedProjects, changedPaths, {
+		projects: ["email-worker", "email-ui", "email-scaleway"],
+		paths: [
+			"apps/email-worker",
+			"libs/rust/email",
+			"infrastructure/environments/email-production",
+			"infrastructure/stacks/email",
+		],
+	}),
+	identity: isDeliveryScopeAffected(affectedProjects, changedPaths, {
+		projects: [
+			"identity-service",
+			"identity-sdk",
+			"identity-sdk-backend",
+			"identity-sdk-core",
+			"identity-sdk-web",
+			"identity-client",
+		],
+		paths: [
+			"apps/identity-service",
+			"contracts/protobuf/nvbes/identity",
+			"infrastructure/environments/identity-production",
+		],
+	}),
+	account: isDeliveryScopeAffected(affectedProjects, changedPaths, {
+		projects: ["account-service", "account-client"],
+		paths: [
+			"apps/account-service",
+			"contracts/protobuf/nvbes/account",
+			"infrastructure/environments/account-production",
+		],
+	}),
+	billing: isDeliveryScopeAffected(affectedProjects, changedPaths, {
+		projects: ["billing-service", "billing-client", "billing"],
+		paths: [
+			"apps/billing-service",
+			"libs/rust/billing",
+			"contracts/protobuf/nvbes/billing",
+			"infrastructure/environments/billing-production",
+		],
+	}),
+	trustRisk: isDeliveryScopeAffected(affectedProjects, changedPaths, {
+		projects: ["trust-risk-service", "trust-risk"],
+		paths: [
+			"apps/trust-risk-service",
+			"infrastructure/environments/trust-risk-production",
+		],
+	}),
+	platform: isDeliveryScopeAffected(affectedProjects, changedPaths, {
+		projects: ["platform-operations-service", "platform"],
+		paths: [
+			"apps/platform-operations-service",
+			"libs/rust/platform",
+			"infrastructure/environments/platform-operations-production",
+		],
+	}),
+};
 const githubOutput = requiredEnvironment("GITHUB_OUTPUT");
 const githubEnvironment = requiredEnvironment("GITHUB_ENV");
 
@@ -131,6 +199,12 @@ appendFileSync(
 		`projects=${JSON.stringify(affectedProjects)}`,
 		`typescript-projects=${typeScriptProjects.join(",")}`,
 		`rust-affected=${rustAffected}`,
+		`email-affected=${deliveryScopes.email}`,
+		`identity-affected=${deliveryScopes.identity}`,
+		`account-affected=${deliveryScopes.account}`,
+		`billing-affected=${deliveryScopes.billing}`,
+		`trust-risk-affected=${deliveryScopes.trustRisk}`,
+		`platform-affected=${deliveryScopes.platform}`,
 		`cache-mode=${cacheMode}`,
 		"",
 	].join("\n"),
@@ -144,5 +218,6 @@ console.log(
 		affectedProjects,
 		typeScriptProjects,
 		rustAffected,
+		deliveryScopes,
 	}),
 );

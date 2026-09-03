@@ -1,6 +1,14 @@
 import { join } from 'node:path';
 
-const trustedRefs = new Set(['refs/heads/main', 'refs/heads/dev', 'refs/heads/staging']);
+const trustedRefs = new Set(['refs/heads/main', 'refs/heads/dev']);
+
+const globalScopePaths = new Set([
+  'Cargo.lock',
+  'Cargo.toml',
+  'nx.json',
+  'rust-toolchain.toml',
+  '.github/workflows/ci.yml',
+]);
 
 export function isTrustedPush(eventName, ref) {
   return eventName === 'push' && (trustedRefs.has(ref) || ref.startsWith('refs/heads/release/'));
@@ -44,4 +52,13 @@ export function selectTypeScriptProjects(affectedProjects, graphNodes) {
       ['format:check', 'lint', 'typecheck'].every((target) => Object.hasOwn(targets, target))
     );
   });
+}
+
+export function isDeliveryScopeAffected(affectedProjects, changedPaths, { projects, paths }) {
+  if (affectedProjects.some((project) => projects.includes(project))) return true;
+  return changedPaths.some(
+    (path) =>
+      globalScopePaths.has(path) ||
+      paths.some((prefix) => path === prefix || path.startsWith(`${prefix}/`)),
+  );
 }

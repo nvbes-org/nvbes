@@ -282,12 +282,6 @@ resource "github_repository_environment_deployment_policy" "dev" {
   branch_pattern = "dev"
 }
 
-resource "github_repository_environment_deployment_policy" "staging" {
-  repository     = var.github_repository
-  environment    = github_repository_environment.ci_cache.environment
-  branch_pattern = "staging"
-}
-
 resource "github_repository_environment_deployment_policy" "release" {
   repository     = var.github_repository
   environment    = github_repository_environment.ci_cache.environment

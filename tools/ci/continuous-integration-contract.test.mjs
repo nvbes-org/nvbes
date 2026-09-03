@@ -6,10 +6,8 @@ const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
 
 test("continuous CI runs on every active delivery branch", () => {
 	assert.match(workflow, /push:\n {4}branches: \['\*\*'\]/u);
-	assert.match(
-		workflow,
-		/pull_request:\n {4}branches: \['main', 'staging', 'dev'\]/u,
-	);
+	assert.match(workflow, /pull_request:\n {4}branches: \['main', 'dev'\]/u);
+	assert.doesNotMatch(workflow, /staging/u);
 	assert.match(workflow, /workflow_dispatch:/u);
 	assert.match(workflow, /quality:/u);
 	assert.match(
@@ -66,6 +64,22 @@ test("continuous CI selects affected projects with an isolated Nx cache", () => 
 	);
 	assert.match(workflow, /-t format:check,lint,typecheck,check/u);
 	assert.match(workflow, /NVBES_CI_BASE_CANDIDATE/u);
+	for (const scope of [
+		"email",
+		"identity",
+		"account",
+		"billing",
+		"trust-risk",
+		"platform",
+	]) {
+		assert.match(
+			workflow,
+			new RegExp(
+				`if: steps\\.nx-scope\\.outputs\\.${scope}-affected == 'true'`,
+				"u",
+			),
+		);
+	}
 });
 
 test("continuous CI runs Rust tests once with the appropriate cache backend", () => {

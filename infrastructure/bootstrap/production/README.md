@@ -121,8 +121,8 @@ L'environnement `production-bootstrap` doit contenir les secrets
 
 Le workflow hebdomadaire alterne deux clés de 60 jours décalées de 30 jours.
 Chaque environnement GitHub reçoit, pour son identité dédiée, le slot dont
-l'échéance est la plus lointaine. `production-ci-cache` autorise `main`, `dev`,
-`staging` et `release/*`; `branch-ci-cache` n'est utilisé que par les jobs de
+l'échéance est la plus lointaine. `production-ci-cache` autorise `main`, `dev`
+et `release/*`; `branch-ci-cache` n'est utilisé que par les jobs de
 push et reste isolé du préfixe trusted. Les pull requests restent sur le cache
 GitHub Actions sans secret Scaleway. Le bucket supprime automatiquement les
 objets reproductibles après 30 jours ; le registry utilise un tag `buildcache`

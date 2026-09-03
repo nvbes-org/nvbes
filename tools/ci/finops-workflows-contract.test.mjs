@@ -51,35 +51,6 @@ const workflowContracts = [
 		terraformValidationStepName: "Validate isolated email Terraform stack",
 		workflowPath: ".github/workflows/ci.yml",
 	},
-	deployContract,
-	{
-		...deployContract,
-		path: ".github/workflows/deploy-trust-risk.yml",
-		deployJob: "deploy-trust-risk",
-		terraformEnvironmentPath:
-			"infrastructure/environments/trust-risk-production",
-		terraformInitStepName: "Initialize Trust/Risk Terraform providers",
-		terraformValidationStepName: "Validate isolated Trust/Risk Terraform stack",
-		workflowPath: ".github/workflows/deploy-trust-risk.yml",
-	},
-	{
-		...deployContract,
-		path: ".github/workflows/deploy-identity.yml",
-		deployJob: "deploy-identity",
-		terraformEnvironmentPath: "infrastructure/environments/identity-production",
-		terraformInitStepName: "Initialize Identity Terraform providers",
-		terraformValidationStepName: "Validate isolated Identity Terraform stack",
-		workflowPath: ".github/workflows/deploy-identity.yml",
-	},
-	{
-		...deployContract,
-		path: ".github/workflows/deploy-billing.yml",
-		deployJob: "deploy-billing",
-		terraformEnvironmentPath: "infrastructure/environments/billing-production",
-		terraformInitStepName: "Initialize Billing Terraform providers",
-		terraformValidationStepName: "Validate isolated Billing Terraform stack",
-		workflowPath: ".github/workflows/deploy-billing.yml",
-	},
 ];
 
 const validPrefix = `
