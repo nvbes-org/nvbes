@@ -144,7 +144,7 @@ jobs:
             jq --exit-status --raw-output 'select(.status == "ready") | .endpoint')"
           [[ "$restore_endpoint" == postgres://*?sslmode=require ]]
           restore_url="${runtime_url%@*}@${restore_endpoint#postgres://}"
-          restore_url="${restore_url/sslmode=require/sslmode=verify-full}"
+          restore_url="${restore_url/sslmode=require/sslmode=verify-full}&sslrootcert=system"
           integrity="$(docker run --rm --interactive --platform linux/amd64 postgres:16-alpine \
             psql "$restore_url" --no-psqlrc --tuples-only --no-align \
               --set ON_ERROR_STOP=1 --set principal_id="$EXPECTED_PRINCIPAL_ID" \
