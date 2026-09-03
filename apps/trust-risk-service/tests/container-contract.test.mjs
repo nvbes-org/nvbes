@@ -94,7 +94,7 @@ test("deployment materializes the data-only database identity before runtime val
 test("new image builds use the local Docker runner for linux/amd64", () => {
 	assert.ok(
 		deploymentWorkflow.includes(
-			"build-scan-sign:\n    needs: [ci-test-gate]\n    runs-on: [self-hosted, macOS, ARM64]",
+			"build-scan-sign:\n    needs: [ci-provenance]\n    runs-on: [self-hosted, macOS, ARM64]",
 		),
 	);
 	assert.ok(deploymentWorkflow.includes("platforms: linux/amd64"));
@@ -115,15 +115,13 @@ test("deployment can reuse only a signed artifact with unchanged runtime inputs"
 	);
 });
 
-test("artifact reuse keeps the CI gate lightweight after source equivalence", () => {
-	assert.ok(
-		deploymentWorkflow.includes("- name: Verify reused Trust/Risk source"),
+test("artifact reuse keeps the provenance gate lightweight", () => {
+	const gate = deploymentWorkflow.slice(
+		deploymentWorkflow.indexOf("  ci-provenance:"),
+		deploymentWorkflow.indexOf("  build-scan-sign:"),
 	);
-	assert.ok(
-		deploymentWorkflow.includes(
-			"if: vars.TRUST_RISK_REUSE_SOURCE_IMAGE_DIGEST == ''",
-		),
-	);
+	assert.match(gate, /node tools\/ci\/verify-ci-provenance\.mjs/u);
+	assert.doesNotMatch(gate, /pnpm install|cargo (?:check|test)|terraform .*validate/u);
 });
 
 test("runtime initializes Sentry and authenticated Grafana OTLP", () => {
