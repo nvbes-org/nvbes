@@ -95,6 +95,8 @@ test("continuous CI runs Rust tests once with the appropriate cache backend", ()
 	);
 	assert.match(workflow, /format\('branches\/\{0\}', github\.ref_name\)/u);
 	assert.match(workflow, /cargo test --workspace --locked/u);
+	assert.match(workflow, /name: Configure Rust compilation cache/u);
+	assert.match(workflow, /sccache --start-server/u);
 	assert.match(workflow, /name: Test Rust workspace/u);
 	assert.match(workflow, /GITHUB_EVENT_NAME.*!=.*push/u);
 	assert.match(workflow, /export SCCACHE_GHA_ENABLED=true/u);

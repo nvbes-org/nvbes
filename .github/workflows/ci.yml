@@ -168,8 +168,7 @@ jobs:
       - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
         with:
           version: v0.17.0
-      - name: Test Rust workspace
-        if: steps.nx-scope.outputs.rust-affected == 'true'
+      - name: Configure Rust compilation cache
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
@@ -180,6 +179,10 @@ jobs:
             unset SCCACHE_BUCKET SCCACHE_ENDPOINT SCCACHE_REGION SCCACHE_S3_KEY_PREFIX
             export SCCACHE_GHA_ENABLED=true
           fi
+          sccache --start-server
+      - name: Test Rust workspace
+        if: steps.nx-scope.outputs.rust-affected == 'true'
+        run: |
           sccache --zero-stats
           cargo test --workspace --locked
           sccache --show-stats
