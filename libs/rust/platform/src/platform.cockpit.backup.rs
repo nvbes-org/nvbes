@@ -77,12 +77,7 @@ mod tests {
     fn detects_stale_backup_violating_rpo() {
         let now = Utc::now();
         let stale_backup = now - Duration::hours(36);
-        let summary = BackupRestoreMonitor::evaluate(
-            Some(stale_backup),
-            Some(now),
-            Some(60),
-            true,
-        );
+        let summary = BackupRestoreMonitor::evaluate(Some(stale_backup), Some(now), Some(60), true);
 
         assert!(!summary.meets_rpo);
     }

@@ -8,13 +8,30 @@ use crate::cockpit_degraded::DegradedScenario;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "action_type", content = "payload", rename_all = "snake_case")]
 pub enum OperatorActionPayload {
-    ReplayEmailMessage { message_id: Uuid },
-    ApplyEmailSuppression { email: String, reason: String },
-    ReleaseEmailSuppression { email: String },
-    ResolveTrustRiskCase { case_id: Uuid, resolution: String },
-    ReconcileBillingEvent { event_id: String, resolution: String },
-    ActivateDegradedProcedure { scenario: DegradedScenario },
-    DeactivateDegradedProcedure { scenario: DegradedScenario },
+    ReplayEmailMessage {
+        message_id: Uuid,
+    },
+    ApplyEmailSuppression {
+        email: String,
+        reason: String,
+    },
+    ReleaseEmailSuppression {
+        email: String,
+    },
+    ResolveTrustRiskCase {
+        case_id: Uuid,
+        resolution: String,
+    },
+    ReconcileBillingEvent {
+        event_id: String,
+        resolution: String,
+    },
+    ActivateDegradedProcedure {
+        scenario: DegradedScenario,
+    },
+    DeactivateDegradedProcedure {
+        scenario: DegradedScenario,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -91,13 +108,22 @@ impl OperatorActionDispatcher {
                 true,
                 Some(format!("Execute apply_email_suppression for {}", email)),
             ),
-            OperatorActionPayload::ResolveTrustRiskCase { case_id, resolution } => (
+            OperatorActionPayload::ResolveTrustRiskCase {
+                case_id,
+                resolution,
+            } => (
                 "resolve_trust_risk_case".to_string(),
                 format!("Case {} marked resolved: {}", case_id, resolution),
                 true,
-                Some(format!("Reopen review case {} via trust-risk operations", case_id)),
+                Some(format!(
+                    "Reopen review case {} via trust-risk operations",
+                    case_id
+                )),
             ),
-            OperatorActionPayload::ReconcileBillingEvent { event_id, resolution } => (
+            OperatorActionPayload::ReconcileBillingEvent {
+                event_id,
+                resolution,
+            } => (
                 "reconcile_billing_event".to_string(),
                 format!("Event {} manually reconciled: {}", event_id, resolution),
                 false,
@@ -107,13 +133,19 @@ impl OperatorActionDispatcher {
                 "activate_degraded_procedure".to_string(),
                 format!("Activated degraded mode procedure for {:?}", scenario),
                 true,
-                Some(format!("Execute deactivate_degraded_procedure for {:?}", scenario)),
+                Some(format!(
+                    "Execute deactivate_degraded_procedure for {:?}",
+                    scenario
+                )),
             ),
             OperatorActionPayload::DeactivateDegradedProcedure { scenario } => (
                 "deactivate_degraded_procedure".to_string(),
                 format!("Deactivated degraded mode procedure for {:?}", scenario),
                 true,
-                Some(format!("Execute activate_degraded_procedure for {:?}", scenario)),
+                Some(format!(
+                    "Execute activate_degraded_procedure for {:?}",
+                    scenario
+                )),
             ),
         };
 

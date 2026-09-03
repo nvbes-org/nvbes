@@ -37,7 +37,9 @@ pub struct DetailedEvaluationView {
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum TrustRiskReviewError {
-    #[error("cannot automatically apply recommendation {0:?}: automated enforcement forbidden in V1")]
+    #[error(
+        "cannot automatically apply recommendation {0:?}: automated enforcement forbidden in V1"
+    )]
     AutomatedEnforcementForbidden(RiskRecommendation),
     #[error("review case {0} is already resolved")]
     CaseAlreadyResolved(Uuid),

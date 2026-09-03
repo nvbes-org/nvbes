@@ -80,7 +80,10 @@ mod tests {
 
     #[test]
     fn validates_manual_reconciliation_reason() {
-        assert!(BillingCockpitView::validate_manual_reconciliation("Manual bank transfer verified").is_ok());
+        assert!(
+            BillingCockpitView::validate_manual_reconciliation("Manual bank transfer verified")
+                .is_ok()
+        );
         assert_eq!(
             BillingCockpitView::validate_manual_reconciliation("no"),
             Err(BillingCockpitError::InvalidReconciliationReason)

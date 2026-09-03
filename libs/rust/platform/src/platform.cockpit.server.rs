@@ -2,18 +2,18 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::{
+    Json, Router,
     extract::State,
     http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
 };
 use chrono::Utc;
 use serde_json::json;
 
 use crate::{
     cockpit_actions::{ActionExecutionError, OperatorActionDispatcher, OperatorCommand},
-    cockpit_auth::{require_operator_auth, OperatorAuthPolicy},
+    cockpit_auth::{OperatorAuthPolicy, require_operator_auth},
     cockpit_backup::BackupRestoreMonitor,
     cockpit_billing::BillingCockpitView,
     cockpit_degraded::DegradedModeRegistry,
@@ -73,7 +73,9 @@ async fn get_cockpit_overview(
         .map_err(|(status, body)| (status, body).into_response())?;
 
     let probes = HealthAggregator::default_probes();
-    let health = state.health_aggregator.aggregate(probes.into_values().collect());
+    let health = state
+        .health_aggregator
+        .aggregate(probes.into_values().collect());
 
     let mut spends = HashMap::new();
     spends.insert("domain_dns", 200);
@@ -86,7 +88,8 @@ async fn get_cockpit_overview(
     let trust_risk = TrustRiskCockpitView::summarize(&[]);
     let email = EmailCockpitView::build_summary(0, 42, 42, 0, 0, 1, 0);
     let billing = BillingCockpitView::build_summary(18, 0, 0, 0, Some(Utc::now()));
-    let backup_restore = BackupRestoreMonitor::evaluate(Some(Utc::now()), Some(Utc::now()), Some(45), true);
+    let backup_restore =
+        BackupRestoreMonitor::evaluate(Some(Utc::now()), Some(Utc::now()), Some(45), true);
 
     let overview = CockpitOverview {
         environment: state.environment.clone(),

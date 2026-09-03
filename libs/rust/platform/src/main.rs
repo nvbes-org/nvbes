@@ -5,7 +5,7 @@ use nvbes_platform::{
     cockpit_auth::OperatorAuthPolicy,
     cockpit_finops::FinOpsMonitor,
     cockpit_health::HealthAggregator,
-    cockpit_server::{create_platform_cockpit_router, PlatformCockpitState},
+    cockpit_server::{PlatformCockpitState, create_platform_cockpit_router},
 };
 use tokio::net::TcpListener;
 use tracing::{info, warn};
@@ -19,7 +19,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|p| p.parse().ok())
         .unwrap_or(8084);
 
-    let environment = std::env::var("NVBES_ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
+    let environment =
+        std::env::var("NVBES_ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
 
     let operator_token = std::env::var("NVBES_PLATFORM_OPERATIONS_TOKEN").unwrap_or_else(|_| {
         if environment == "production" {

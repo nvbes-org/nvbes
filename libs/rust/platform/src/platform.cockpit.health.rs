@@ -34,7 +34,8 @@ impl HealthAggregator {
     }
 
     pub fn evaluate_runtime(&self, probe: HealthProbeResult) -> RuntimeHealth {
-        let is_cold_start = probe.live && probe.ready && probe.latency_ms >= self.cold_start_threshold_ms;
+        let is_cold_start =
+            probe.live && probe.ready && probe.latency_ms >= self.cold_start_threshold_ms;
         let status = if !probe.live {
             HealthStatus::Unavailable
         } else if !probe.ready {

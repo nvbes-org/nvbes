@@ -81,8 +81,14 @@ mod tests {
 
     #[test]
     fn masks_email_addresses_for_privacy() {
-        assert_eq!(EmailCockpitView::mask_email("user@example.com"), "u***r@example.com");
-        assert_eq!(EmailCockpitView::mask_email("ab@domain.com"), "*@domain.com");
+        assert_eq!(
+            EmailCockpitView::mask_email("user@example.com"),
+            "u***r@example.com"
+        );
+        assert_eq!(
+            EmailCockpitView::mask_email("ab@domain.com"),
+            "*@domain.com"
+        );
         assert_eq!(EmailCockpitView::mask_email("invalid"), "redacted");
     }
 

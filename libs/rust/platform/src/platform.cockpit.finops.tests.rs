@@ -6,10 +6,22 @@ fn evaluates_budget_stages_consistently() {
 
     assert_eq!(monitor.stage_for_spend(1500), BudgetStage::Normal);
     assert_eq!(monitor.stage_for_spend(2499), BudgetStage::Normal);
-    assert_eq!(monitor.stage_for_spend(2500), BudgetStage::DisableNonEssential);
-    assert_eq!(monitor.stage_for_spend(2799), BudgetStage::DisableNonEssential);
-    assert_eq!(monitor.stage_for_spend(2800), BudgetStage::FreezeCostCreation);
-    assert_eq!(monitor.stage_for_spend(2999), BudgetStage::FreezeCostCreation);
+    assert_eq!(
+        monitor.stage_for_spend(2500),
+        BudgetStage::DisableNonEssential
+    );
+    assert_eq!(
+        monitor.stage_for_spend(2799),
+        BudgetStage::DisableNonEssential
+    );
+    assert_eq!(
+        monitor.stage_for_spend(2800),
+        BudgetStage::FreezeCostCreation
+    );
+    assert_eq!(
+        monitor.stage_for_spend(2999),
+        BudgetStage::FreezeCostCreation
+    );
     assert_eq!(monitor.stage_for_spend(3000), BudgetStage::EssentialOnly);
     assert_eq!(monitor.stage_for_spend(3500), BudgetStage::EssentialOnly);
 }

@@ -34,7 +34,11 @@ impl FinOpsMonitor {
         self.thresholds.stage_for(spend_cents)
     }
 
-    pub fn project_monthly_spend(spend_so_far_cents: u32, day_of_month: u32, days_in_month: u32) -> u32 {
+    pub fn project_monthly_spend(
+        spend_so_far_cents: u32,
+        day_of_month: u32,
+        days_in_month: u32,
+    ) -> u32 {
         if day_of_month == 0 || days_in_month == 0 {
             return spend_so_far_cents;
         }
