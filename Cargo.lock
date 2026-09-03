@@ -3024,6 +3024,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvbes-account-service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "jsonwebtoken",
+ "metrics-exporter-prometheus",
+ "nvbes-observability",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "thiserror 2.0.20",
+ "tokio",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "nvbes-analytics-posthog"
 version = "0.1.0"
 dependencies = [

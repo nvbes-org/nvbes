@@ -254,6 +254,24 @@ function assertSecrets(path, text, allowedSecrets) {
 				".github/workflows/validate-identity-restore.yml",
 			]),
 		]),
+		...[
+			"ACCOUNT_METRICS_TOKEN",
+			"IDENTITY_TOKEN_PUBLIC_KEY_PEM",
+			"ACCOUNT_SENTRY_DSN",
+		].map((secret) => [
+			secret,
+			new Set([".github/workflows/deploy-account.yml"]),
+		]),
+		...[
+			"ACCOUNT_TERRAFORM_STATE_ACCESS_KEY",
+			"ACCOUNT_TERRAFORM_STATE_SECRET_KEY",
+		].map((secret) => [
+			secret,
+			new Set([
+				".github/workflows/deploy-account.yml",
+				".github/workflows/validate-account-restore.yml",
+			]),
+		]),
 	]);
 	for (const secret of referencedSecrets) {
 		if (!allowedSecrets.includes(secret)) {
@@ -400,6 +418,47 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes("production/identity/terraform.tfstate") &&
 			text.includes("expected_principal_id") &&
 			text.includes("DELETE_RESTORE_DATABASE=true");
+		const isValidatedAccountDeploymentWorkflow =
+			path === ".github/workflows/deploy-account.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			!/^\s+inputs:\s*$/mu.test(text) &&
+			text.includes("name: production-account") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+			text.includes(
+				`ACCOUNT_DEPLOY_CONFIRMATION: ${githubExpression("vars.ACCOUNT_DEPLOY_CONFIRMATION")}`,
+			) &&
+			text.includes(
+				`ACCOUNT_DEPLOY_APPROVED_SHA: ${githubExpression("vars.ACCOUNT_DEPLOY_APPROVED_SHA")}`,
+			) &&
+			text.includes(
+				'[[ "$ACCOUNT_DEPLOY_CONFIRMATION" == "deploy-account-production" ]]',
+			) &&
+			text.includes(
+				'[[ "$ACCOUNT_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]',
+			) &&
+			text.includes('[[ "$ACCOUNT_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]') &&
+			text.includes(`ref: ${githubExpression("github.sha")}`) &&
+			text.includes("production/account/terraform.tfstate") &&
+			text.includes("ghcr.io/nvbes-org/nvbes-account-service") &&
+			text.includes("cosign verify") &&
+			text.includes("account-runtime.tfplan");
+		const isValidatedAccountRestoreWorkflow =
+			path === ".github/workflows/validate-account-restore.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			text.includes("name: production-account") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes(
+				'[[ "$CONFIRMATION" == "validate-account-production-restore" ]]',
+			) &&
+			text.includes('[[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
+			text.includes('[[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]') &&
+			text.includes(`ref: ${githubExpression("inputs.approved_sha")}`) &&
+			text.includes("production/account/terraform.tfstate") &&
+			text.includes("expected_principal_id") &&
+			text.includes("DELETE_RESTORE_DATABASE=true");
 		const isValidatedCiCacheRotationWorkflow =
 			path === ".github/workflows/rotate-ci-cache-credentials.yml" &&
 			/^\s+schedule:\s*$/mu.test(text) &&
@@ -451,6 +510,8 @@ function assertSecrets(path, text, allowedSecrets) {
 			!isValidatedTrustRiskDeploymentWorkflow &&
 			!isValidatedIdentityDeploymentWorkflow &&
 			!isValidatedIdentityRestoreWorkflow &&
+			!isValidatedAccountDeploymentWorkflow &&
+			!isValidatedAccountRestoreWorkflow &&
 			!isValidatedCiCacheRotationWorkflow &&
 			!isValidatedBranchCacheWorkflow
 		) {

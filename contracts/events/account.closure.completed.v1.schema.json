@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/account.closure.completed.v1.schema.json",
+  "title": "account.closure.completed v1",
+  "type": "object",
+  "required": ["event_type", "event_version", "payload"],
+  "properties": {
+    "event_type": { "const": "account.closure.completed" },
+    "event_version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["saga_id", "principal_id"],
+      "properties": {
+        "saga_id": { "type": "string", "format": "uuid" },
+        "principal_id": { "type": "string", "format": "uuid" }
+      }
+    }
+  }
+}

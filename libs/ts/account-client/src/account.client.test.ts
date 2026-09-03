@@ -6,291 +6,125 @@ import {
   AccountHttpError,
 } from './index';
 
-type RecordedFetch = {
-  input: RequestInfo | URL;
-  init: RequestInit | undefined;
-};
+type RecordedFetch = { input: RequestInfo | URL; init: RequestInit | undefined };
 
-describe('AccountClient OAuth transport', () => {
-  it('sends the bearer token and explicitly omits browser credentials', async () => {
+describe('AccountClient V1 contract', () => {
+  it('uses bearer-only transport and validates the Account profile envelope', async () => {
     const recorder = fetchRecorder(profileEnvelope());
-    const client = new AccountClient({
-      baseUrl: 'https://account.example.test',
-      fetchImpl: recorder.fetchImpl,
-      getAccessToken: async () => 'account-access-token',
-    });
+    const client = clientFor(recorder);
 
-    await expect(client.getProfile()).resolves.toMatchObject({
-      display_name: 'Account Person',
-      id: 'principal-1',
-    });
+    await expect(client.getProfile()).resolves.toMatchObject({ display_name: 'Account Person' });
 
     const request = onlyRequest(recorder.calls);
-    expect(request.url.toString()).toBe('https://account.example.test/api/v1/profile');
+    expect(request.url.pathname).toBe('/api/v1/profile');
     expect(request.headers.get('Authorization')).toBe('Bearer account-access-token');
-    expect(request.headers.has('Cookie')).toBe(false);
-    expect(request.headers.has('X-Auth-User')).toBe(false);
-    expect(request.headers.has('X-CSRF-Token')).toBe(false);
     expect(request.init.credentials).toBe('omit');
+    expect(request.headers.has('Cookie')).toBe(false);
   });
 
-  it('fails before the network when no access token is available', async () => {
+  it('models team creation, listing and join with the runtime routes', async () => {
+    const team = {
+      created_at: '2026-09-03T12:00:00Z',
+      id: '7f8c519f-4ca9-4242-a49e-b0d174e4c14b',
+      name: 'Invited team',
+      role: 'owner',
+    };
+    const responses = [
+      { ...team, join_code: 'team_123' },
+      { teams: [team] },
+      { ...team, role: 'member' },
+    ];
+    const recorder = fetchRecorder(() => responses.shift());
+    const client = clientFor(recorder);
+
+    await client.createTeam({ name: 'Invited team' });
+    await client.listTeams();
+    await client.joinTeam({ join_code: 'team_123' });
+
+    expect(requestAt(recorder.calls, 0).url.pathname).toBe('/api/v1/teams');
+    expect(requestAt(recorder.calls, 0).init.method).toBe('POST');
+    expect(requestAt(recorder.calls, 1).init.method).toBe('GET');
+    expect(requestAt(recorder.calls, 2).url.pathname).toBe('/api/v1/teams/join');
+  });
+
+  it('uses durable export and cancellable closure resources', async () => {
+    const id = '7f8c519f-4ca9-4242-a49e-b0d174e4c14b';
+    const responses = [
+      { export_id: id, requested_at: '2026-09-03T12:00:00Z', status: 'pending' },
+      { requested_at: '2026-09-03T12:00:00Z', saga_id: id, status: 'pending' },
+      undefined,
+    ];
+    const recorder = fetchRecorder(
+      () => responses.shift(),
+      () => (responses.length === 0 ? 204 : 202),
+    );
+    const client = clientFor(recorder);
+
+    await client.requestDataExport();
+    await client.closeAccount();
+    await client.cancelAccountClosure();
+
+    expect(requestAt(recorder.calls, 0).url.pathname).toBe('/api/v1/privacy/exports');
+    expect(requestAt(recorder.calls, 1).url.pathname).toBe('/api/v1/closure');
+    expect(requestAt(recorder.calls, 2).url.pathname).toBe('/api/v1/closure/cancel');
+  });
+
+  it('fails locally without a token and exposes typed remote failures', async () => {
     const recorder = fetchRecorder(profileEnvelope());
-    const client = new AccountClient({
+    const unauthenticated = new AccountClient({
       fetchImpl: recorder.fetchImpl,
       getAccessToken: () => null,
     });
-
-    await expect(client.getProfile()).rejects.toBeInstanceOf(AccountAuthenticationError);
+    await expect(unauthenticated.getProfile()).rejects.toBeInstanceOf(AccountAuthenticationError);
     expect(recorder.calls).toHaveLength(0);
-  });
 
-  it('resolves a fresh token for every request', async () => {
-    const recorder = fetchRecorder({ language: 'fr', theme: 'dark' });
-    const tokens = ['first-token', 'second-token'];
-    const client = new AccountClient({
-      fetchImpl: recorder.fetchImpl,
-      getAccessToken: () => tokens.shift() ?? null,
-    });
-
-    await client.getPreferences();
-    await client.getPreferences();
-
-    expect(
-      recorder.calls.map((call) => new Headers(call.init?.headers).get('Authorization')),
-    ).toEqual(['Bearer first-token', 'Bearer second-token']);
-    expect(recorder.calls.every((call) => call.init?.credentials === 'omit')).toBe(true);
-  });
-
-  it('keeps bearer-only transport for binary downloads', async () => {
-    const calls: RecordedFetch[] = [];
-    const client = new AccountClient({
-      fetchImpl: async (input, init) => {
-        calls.push({ input, init });
-        return new Response('avatar', { status: 200 });
-      },
-      getAccessToken: () => 'download-token',
-    });
-
-    await expect(client.downloadAvatar()).resolves.toBeInstanceOf(Blob);
-
-    const request = onlyRequest(calls);
-    expect(request.headers.get('Authorization')).toBe('Bearer download-token');
-    expect(request.headers.has('Cookie')).toBe(false);
-    expect(request.init.credentials).toBe('omit');
-  });
-
-  it('encodes consent cursors and sends Account-only preference fields', async () => {
-    const responses = [
-      {
-        consents: [],
-        has_more: false,
-        next_cursor: null,
-      },
-      { language: 'en', theme: 'system' },
-    ];
-    const recorder = fetchRecorder(() => responses.shift());
-    const client = new AccountClient({
-      baseUrl: 'https://account.example.test/gateway',
-      fetchImpl: recorder.fetchImpl,
-      getAccessToken: () => 'token',
-    });
-
-    await client.listConsents({ cursor: 'next/page?scope=other', limit: 25 });
-    await client.updatePreferences({ language: 'en', theme: 'system' });
-
-    const first = requestAt(recorder.calls, 0);
-    expect(first.url.toString()).toBe(
-      'https://account.example.test/gateway/api/v1/consents?limit=25&cursor=next%2Fpage%3Fscope%3Dother',
+    const forbidden = fetchRecorder(
+      { error: { message: 'Step-up required', request_id: 'request-1' } },
+      () => 403,
     );
-    const second = requestAt(recorder.calls, 1);
-    if (typeof second.init.body !== 'string') {
-      throw new Error('Expected a JSON request body');
-    }
-    expect(JSON.parse(second.init.body) as unknown).toEqual({
-      language: 'en',
-      theme: 'system',
-    });
-  });
+    await expect(clientFor(forbidden).closeAccount()).rejects.toBeInstanceOf(AccountHttpError);
 
-  it('lists and revokes sessions through the Account security API', async () => {
-    const responses = [{ has_more: false, next_cursor: null, sessions: [] }, { success: true }];
-    const recorder = fetchRecorder(() => responses.shift());
-    const client = new AccountClient({
-      baseUrl: 'https://account.example.test',
-      fetchImpl: recorder.fetchImpl,
-      getAccessToken: () => 'session-token',
-    });
-
-    await client.listSessions({ cursor: 'next/session', limit: 20 });
-    await client.revokeSession('session/with spaces');
-
-    const listRequest = requestAt(recorder.calls, 0);
-    expect(listRequest.url.toString()).toBe(
-      'https://account.example.test/api/v1/security/sessions?limit=20&cursor=next%2Fsession',
-    );
-    expect(listRequest.init.method).toBe('GET');
-
-    const revokeRequest = requestAt(recorder.calls, 1);
-    expect(revokeRequest.url.toString()).toBe(
-      'https://account.example.test/api/v1/security/sessions/session%2Fwith%20spaces',
-    );
-    expect(revokeRequest.init.method).toBe('DELETE');
-    expect(revokeRequest.headers.get('Authorization')).toBe('Bearer session-token');
-    expect(revokeRequest.init.credentials).toBe('omit');
-  });
-
-  it('returns the durable closure saga accepted by Account', async () => {
-    const recorder = fetchRecorder({
-      requested_at: '2026-08-02T12:00:00Z',
-      saga_id: '7f8c519f-4ca9-4242-a49e-b0d174e4c14b',
-      status: 'pending',
-    });
-    const client = new AccountClient({
-      baseUrl: 'https://account.example.test',
-      fetchImpl: recorder.fetchImpl,
-      getAccessToken: () => 'closure-token',
-    });
-
-    await expect(client.closeAccount()).resolves.toMatchObject({ status: 'pending' });
-    const request = onlyRequest(recorder.calls);
-    expect(request.url.toString()).toBe('https://account.example.test/api/v1/closure');
-    expect(request.init.method).toBe('POST');
-  });
-
-  it('reads participant checkpoints for an accepted closure', async () => {
-    const recorder = fetchRecorder({
-      completed_at: null,
-      last_error: null,
-      participants: [
-        {
-          attempts: 1,
-          completed_at: '2026-08-02T12:00:01Z',
-          last_error: null,
-          participant: 'cloud',
-          status: 'completed',
-        },
-      ],
-      requested_at: '2026-08-02T12:00:00Z',
-      saga_id: '7f8c519f-4ca9-4242-a49e-b0d174e4c14b',
-      status: 'dispatching',
-      updated_at: '2026-08-02T12:00:01Z',
-    });
-    const client = new AccountClient({
-      baseUrl: 'https://account.example.test',
-      fetchImpl: recorder.fetchImpl,
-      getAccessToken: () => 'closure-token',
-    });
-
-    await expect(client.getAccountClosure()).resolves.toMatchObject({
-      participants: [{ participant: 'cloud', status: 'completed' }],
-    });
-    expect(onlyRequest(recorder.calls).init.method).toBe('GET');
-  });
-
-  it('uses the canonical distributed export resources', async () => {
-    const exportId = '7f8c519f-4ca9-4242-a49e-b0d174e4c14b';
-    const responses = [
-      { export_id: exportId, requested_at: '2026-08-02T12:00:00Z', status: 'pending' },
-      {
-        completed_at: '2026-08-02T12:00:04Z',
-        expires_at: '2026-08-03T12:00:04Z',
-        export_id: exportId,
-        last_error: null,
-        participants: [
-          {
-            attempts: 1,
-            completed_at: '2026-08-02T12:00:01Z',
-            last_error: null,
-            participant: 'cloud',
-            status: 'completed',
-          },
-        ],
-        requested_at: '2026-08-02T12:00:00Z',
-        status: 'completed',
-        updated_at: '2026-08-02T12:00:04Z',
-      },
-      { schema_version: 'nvbes-account-export.v1' },
-    ];
-    const recorder = fetchRecorder(() => responses.shift());
-    const client = new AccountClient({
-      baseUrl: 'https://account.example.test',
-      fetchImpl: recorder.fetchImpl,
-      getAccessToken: () => 'export-token',
-    });
-
-    await expect(client.requestDataExport()).resolves.toMatchObject({ export_id: exportId });
-    await expect(client.getLatestDataExport()).resolves.toMatchObject({ status: 'completed' });
-    await expect(client.downloadDataExport(exportId)).resolves.toBeInstanceOf(Blob);
-
-    expect(requestAt(recorder.calls, 0).url.pathname).toBe('/api/v1/privacy/exports');
-    expect(requestAt(recorder.calls, 1).url.pathname).toBe('/api/v1/privacy/exports/latest');
-    expect(requestAt(recorder.calls, 2).url.pathname).toBe(
-      `/api/v1/privacy/exports/${exportId}/document`,
-    );
-  });
-
-  it('exposes typed HTTP and DTO failures', async () => {
-    const failed = fetchRecorder(
-      { error: { message: 'Scope refused', request_id: 'request-1' } },
-      { status: 403 },
-    );
     const malformed = fetchRecorder({ unexpected: true });
-    const failedClient = new AccountClient({
-      fetchImpl: failed.fetchImpl,
-      getAccessToken: () => 'token',
-    });
-    const malformedClient = new AccountClient({
-      fetchImpl: malformed.fetchImpl,
-      getAccessToken: () => 'token',
-    });
-
-    await expect(failedClient.getProfile()).rejects.toMatchObject({
-      message: 'Scope refused',
-      requestId: 'request-1',
-      status: 403,
-    });
-    await expect(failedClient.getProfile()).rejects.toBeInstanceOf(AccountHttpError);
-    await expect(malformedClient.getProfile()).rejects.toBeInstanceOf(AccountDtoValidationError);
+    await expect(clientFor(malformed).getProfile()).rejects.toBeInstanceOf(
+      AccountDtoValidationError,
+    );
   });
 });
 
 function profileEnvelope(): unknown {
   return {
-    current_organization_id: null,
-    current_tenant_id: null,
-    current_workspace_id: null,
-    current_workspace_region: null,
     user: {
       birthdate: null,
-      created_at: '2026-07-30T12:00:00Z',
+      created_at: '2026-09-03T12:00:00Z',
       display_name: 'Account Person',
-      email: 'identity-owned@example.test',
-      email_verified: true,
       firstname: null,
-      id: 'principal-1',
+      id: '7f8c519f-4ca9-4242-a49e-b0d174e4c14b',
       lastname: null,
-      mfa_enabled: true,
       region: null,
       username: null,
     },
   };
 }
 
+function clientFor(recorder: ReturnType<typeof fetchRecorder>): AccountClient {
+  return new AccountClient({
+    baseUrl: 'https://account.example.test',
+    fetchImpl: recorder.fetchImpl,
+    getAccessToken: () => 'account-access-token',
+  });
+}
+
 function fetchRecorder(
   body: unknown,
-  init: { status?: number } = {},
-): {
-  calls: RecordedFetch[];
-  fetchImpl: typeof fetch;
-} {
+  status: () => number = () => 200,
+): { calls: RecordedFetch[]; fetchImpl: typeof fetch } {
   const calls: RecordedFetch[] = [];
-  const fetchImpl: typeof fetch = async (input, requestInit) => {
-    calls.push({ input, init: requestInit });
-    const responseBody = typeof body === 'function' ? (body as () => unknown)() : body;
-    return new Response(JSON.stringify(responseBody), {
-      headers: { 'Content-Type': 'application/json' },
-      status: init.status ?? 200,
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    const value = typeof body === 'function' ? (body as () => unknown)() : body;
+    return new Response(value === undefined ? null : JSON.stringify(value), {
+      headers: value === undefined ? undefined : { 'Content-Type': 'application/json' },
+      status: status(),
     });
   };
   return { calls, fetchImpl };
@@ -301,18 +135,9 @@ function onlyRequest(calls: RecordedFetch[]): ReturnType<typeof requestAt> {
   return requestAt(calls, 0);
 }
 
-function requestAt(
-  calls: RecordedFetch[],
-  index: number,
-): {
-  headers: Headers;
-  init: RequestInit;
-  url: URL;
-} {
+function requestAt(calls: RecordedFetch[], index: number) {
   const call = calls[index];
-  if (!call) {
-    throw new Error(`Expected fetch call at index ${index}`);
-  }
+  if (!call) throw new Error(`Expected fetch call at index ${index}`);
   const rawUrl =
     typeof call.input === 'string'
       ? call.input

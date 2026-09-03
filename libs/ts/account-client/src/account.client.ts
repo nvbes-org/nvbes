@@ -1,33 +1,27 @@
 import {
-  type AccountAvatarUpload,
-  type AccountAvatarUploadInput,
-  AccountAvatarUploadSchema,
-  type AccountConsent,
-  type AccountConsentHistory,
-  AccountConsentHistorySchema,
-  type AccountConsentInput,
-  AccountConsentSchema,
   type AccountClosure,
   AccountClosureSchema,
   type AccountClosureStatus,
   AccountClosureStatusSchema,
-  type AccountGpcStatus,
-  AccountGpcStatusSchema,
+  type AccountCreateTeamInput,
+  type AccountCreatedTeam,
+  AccountCreatedTeamSchema,
   type AccountExportRequest,
   AccountExportRequestSchema,
   type AccountExportStatus,
   AccountExportStatusSchema,
+  type AccountJoinTeamInput,
   type AccountNotifications,
   AccountNotificationsSchema,
   type AccountPreferences,
   AccountPreferencesSchema,
   type AccountProfile,
   AccountProfileEnvelopeSchema,
+  type AccountTeam,
+  AccountTeamSchema,
+  AccountTeamsEnvelopeSchema,
   type AccountUpdateProfileInput,
   EmptyResponseSchema,
-  AccountSuccessSchema,
-  type AccountSessionsPage,
-  AccountSessionsPageSchema,
 } from './account.schemas';
 import {
   type AccountRequestOptions,
@@ -36,16 +30,6 @@ import {
 } from './account.transport';
 
 export type AccountClientOptions = AccountTransportOptions;
-
-export type AccountConsentPageOptions = AccountRequestOptions & {
-  cursor?: string;
-  limit?: number;
-};
-
-export type AccountSessionPageOptions = AccountRequestOptions & {
-  cursor?: string;
-  limit?: number;
-};
 
 export class AccountClient {
   private readonly transport: AccountTransport;
@@ -71,25 +55,6 @@ export class AccountClient {
         method: 'PUT',
       })
       .then(({ user }) => user);
-  }
-
-  prepareAvatarUpload(
-    input: AccountAvatarUploadInput,
-    options?: AccountRequestOptions,
-  ): Promise<AccountAvatarUpload> {
-    return this.transport.request('/api/v1/profile/avatar', AccountAvatarUploadSchema, {
-      ...options,
-      body: input,
-      method: 'POST',
-    });
-  }
-
-  downloadAvatar(options?: AccountRequestOptions): Promise<Blob> {
-    return this.transport.requestBlob('/api/v1/profile/avatar', options);
-  }
-
-  deleteAvatar(options?: AccountRequestOptions): Promise<void> {
-    return this.success('/api/v1/profile/avatar', 'DELETE', options);
   }
 
   getPreferences(options?: AccountRequestOptions): Promise<AccountPreferences> {
@@ -128,64 +93,29 @@ export class AccountClient {
     });
   }
 
-  listConsents(options: AccountConsentPageOptions = {}): Promise<AccountConsentHistory> {
-    const params = new URLSearchParams();
-    if (options.limit !== undefined) params.set('limit', String(options.limit));
-    if (options.cursor) params.set('cursor', options.cursor);
-    const query = params.toString();
-    return this.transport.request(
-      `/api/v1/consents${query ? `?${query}` : ''}`,
-      AccountConsentHistorySchema,
-      { method: 'GET', signal: options.signal },
-    );
+  listTeams(options?: AccountRequestOptions): Promise<AccountTeam[]> {
+    return this.transport
+      .request('/api/v1/teams', AccountTeamsEnvelopeSchema, { ...options, method: 'GET' })
+      .then(({ teams }) => teams);
   }
 
-  grantConsent(
-    consent: AccountConsentInput,
+  createTeam(
+    input: AccountCreateTeamInput,
     options?: AccountRequestOptions,
-  ): Promise<AccountConsent> {
-    return this.transport.request('/api/v1/consents', AccountConsentSchema, {
+  ): Promise<AccountCreatedTeam> {
+    return this.transport.request('/api/v1/teams', AccountCreatedTeamSchema, {
       ...options,
-      body: consent,
+      body: input,
       method: 'POST',
     });
   }
 
-  revokeConsent(consent: AccountConsentInput, options?: AccountRequestOptions): Promise<void> {
-    return this.transport
-      .request('/api/v1/consents', EmptyResponseSchema, {
-        ...options,
-        body: consent,
-        method: 'DELETE',
-      })
-      .then(() => undefined);
-  }
-
-  getGpcStatus(options?: AccountRequestOptions): Promise<AccountGpcStatus> {
-    return this.transport.request('/api/v1/privacy/gpc', AccountGpcStatusSchema, {
+  joinTeam(input: AccountJoinTeamInput, options?: AccountRequestOptions): Promise<AccountTeam> {
+    return this.transport.request('/api/v1/teams/join', AccountTeamSchema, {
       ...options,
-      method: 'GET',
+      body: input,
+      method: 'POST',
     });
-  }
-
-  listSessions(options: AccountSessionPageOptions = {}): Promise<AccountSessionsPage> {
-    const params = new URLSearchParams();
-    if (options.limit !== undefined) params.set('limit', String(options.limit));
-    if (options.cursor) params.set('cursor', options.cursor);
-    const query = params.toString();
-    return this.transport.request(
-      `/api/v1/security/sessions${query ? `?${query}` : ''}`,
-      AccountSessionsPageSchema,
-      { method: 'GET', signal: options.signal },
-    );
-  }
-
-  revokeSession(sessionId: string, options?: AccountRequestOptions): Promise<void> {
-    return this.success(
-      `/api/v1/security/sessions/${encodeURIComponent(sessionId)}`,
-      'DELETE',
-      options,
-    );
   }
 
   requestDataExport(options?: AccountRequestOptions): Promise<AccountExportRequest> {
@@ -223,13 +153,9 @@ export class AccountClient {
     });
   }
 
-  private success(
-    path: string,
-    method: 'DELETE' | 'POST',
-    options?: AccountRequestOptions,
-  ): Promise<void> {
+  cancelAccountClosure(options?: AccountRequestOptions): Promise<void> {
     return this.transport
-      .request(path, AccountSuccessSchema, { ...options, method })
+      .request('/api/v1/closure/cancel', EmptyResponseSchema, { ...options, method: 'POST' })
       .then(() => undefined);
   }
 }
