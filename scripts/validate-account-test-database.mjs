@@ -6,9 +6,7 @@ function reject(message) {
 }
 
 export function validateAccountTestDatabaseTarget(environment) {
-  const targetEnvironment = (environment.NVBES_ENVIRONMENT ?? environment.NVBES_ENV)
-    ?.trim()
-    .toLowerCase();
+  const targetEnvironment = (environment.NVBES_ENVIRONMENT ?? environment.NVBES_ENV)?.trim().toLowerCase();
 
   let target;
   try {
