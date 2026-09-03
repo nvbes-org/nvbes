@@ -1,0 +1,40 @@
+[package]
+name = "nvbes-billing-service"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+
+[workspace]
+
+[features]
+database-tests = []
+
+[[bin]]
+name = "nvbes-billing-service"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.103"
+axum = { version = "0.8.9", features = ["multipart"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+hmac = "0.12.1"
+jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
+metrics = "0.24.6"
+metrics-exporter-prometheus = "0.16"
+nvbes-billing = { path = "../../libs/rust/billing" }
+nvbes-core = { path = "../../libs/rust/core" }
+nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha2 = "0.10.9"
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate", "macros"] }
+thiserror = "2"
+tokio = { version = "1.52.3", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "timeout", "compression-full"] }
+tracing = "0.1.44"
+uuid = { version = "1.23.1", features = ["serde", "v4"] }
+
+[dev-dependencies]
+tower = "0.5"

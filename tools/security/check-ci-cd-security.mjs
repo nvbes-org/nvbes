@@ -272,6 +272,26 @@ function assertSecrets(path, text, allowedSecrets) {
 				".github/workflows/validate-account-restore.yml",
 			]),
 		]),
+		...[
+			"BILLING_METRICS_TOKEN",
+			"BILLING_OPERATOR_TOKEN",
+			"BILLING_SENTRY_DSN",
+			"STRIPE_SECRET_KEY",
+			"STRIPE_WEBHOOK_SECRET",
+		].map((secret) => [
+			secret,
+			new Set([".github/workflows/deploy-billing.yml"]),
+		]),
+		...[
+			"BILLING_TERRAFORM_STATE_ACCESS_KEY",
+			"BILLING_TERRAFORM_STATE_SECRET_KEY",
+		].map((secret) => [
+			secret,
+			new Set([
+				".github/workflows/deploy-billing.yml",
+				".github/workflows/validate-billing-restore.yml",
+			]),
+		]),
 	]);
 	for (const secret of referencedSecrets) {
 		if (!allowedSecrets.includes(secret)) {
@@ -459,6 +479,33 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes("production/account/terraform.tfstate") &&
 			text.includes("expected_principal_id") &&
 			text.includes("DELETE_RESTORE_DATABASE=true");
+		const isValidatedBillingDeploymentWorkflow =
+			path === ".github/workflows/deploy-billing.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			!/^\s+inputs:\s*$/mu.test(text) &&
+			text.includes("name: production-billing") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+			text.includes(`ref: ${githubExpression("github.sha")}`) &&
+			text.includes("production/billing/terraform.tfstate") &&
+			text.includes("ghcr.io/nvbes-org/nvbes-billing-service") &&
+			text.includes("cosign verify") &&
+			text.includes("billing-runtime.tfplan");
+		const isValidatedBillingRestoreWorkflow =
+			path === ".github/workflows/validate-billing-restore.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			text.includes("name: production-billing") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes(
+				'[[ "$CONFIRMATION" == "validate-billing-production-restore" ]]',
+			) &&
+			text.includes('[[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
+			text.includes('[[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]') &&
+			text.includes(`ref: ${githubExpression("inputs.approved_sha")}`) &&
+			text.includes("production/billing/terraform.tfstate") &&
+			text.includes("restore_database_id");
 		const isValidatedCiCacheRotationWorkflow =
 			path === ".github/workflows/rotate-ci-cache-credentials.yml" &&
 			/^\s+schedule:\s*$/mu.test(text) &&
@@ -508,6 +555,8 @@ function assertSecrets(path, text, allowedSecrets) {
 			!isValidatedEmailDeploymentWorkflow &&
 			!isValidatedEmailRestoreWorkflow &&
 			!isValidatedTrustRiskDeploymentWorkflow &&
+			!isValidatedBillingDeploymentWorkflow &&
+			!isValidatedBillingRestoreWorkflow &&
 			!isValidatedIdentityDeploymentWorkflow &&
 			!isValidatedIdentityRestoreWorkflow &&
 			!isValidatedAccountDeploymentWorkflow &&
