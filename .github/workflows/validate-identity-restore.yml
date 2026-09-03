@@ -80,6 +80,8 @@ jobs:
           -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}"
       - name: Provision isolated restore
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.IDENTITY_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.IDENTITY_TERRAFORM_STATE_SECRET_KEY }}
           INPUT_RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
           SCW_PROJECT_ID: ${{ vars.SCW_PROJECT_ID }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
