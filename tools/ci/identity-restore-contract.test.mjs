@@ -19,6 +19,10 @@ test("Identity restore is restricted to an exact approved main revision", () => 
 });
 
 test("Identity restore is isolated, bounded, verified and automatically removed", () => {
+	assert.match(
+		workflow,
+		/- name: Provision isolated restore[\s\S]*?AWS_ACCESS_KEY_ID: \$\{\{ secrets\.IDENTITY_TERRAFORM_STATE_ACCESS_KEY \}\}[\s\S]*?terraform -chdir=infrastructure\/environments\/identity-production output/u,
+	);
 	assert.match(workflow, /from_backup_id: \$backup_id/u);
 	assert.match(workflow, /cpu_min: 0, cpu_max: 1/u);
 	assert.match(workflow, /\.migrations == 3 and \.tables == 8/u);
