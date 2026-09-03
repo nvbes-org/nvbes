@@ -13,6 +13,9 @@ pub async fn stripe_post_form(
         .stripe_secret_key
         .as_deref()
         .ok_or(StripeProviderError::NotConfigured)?;
+    if secret_key.starts_with("sk_live_") || secret_key.starts_with("rk_live_") {
+        return Err(StripeProviderError::LiveKeyRejected);
+    }
     let url = format!(
         "{}{}",
         config.stripe_api_base_url.trim_end_matches('/'),

@@ -1,0 +1,178 @@
+name: validate billing restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      approved_sha:
+        description: Exact main commit reviewed for Billing recovery validation
+        required: true
+        type: string
+      expected_account_id:
+        description: Synthetic account UUID that must exist in the restored backup
+        required: true
+        type: string
+      restore_database_id:
+        description: Optional isolated restore UUID; empty creates and deletes a fresh restore
+        required: false
+        default: ''
+        type: string
+      confirmation:
+        description: Enter validate-billing-production-restore
+        required: true
+        type: string
+
+concurrency:
+  group: validate-billing-production-restore
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  validate-restore:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 20
+    environment:
+      name: production-billing
+    env:
+      BILLING_TERRAFORM_STATE_KEY: production/billing/terraform.tfstate
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.approved_sha }}
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/validate-billing-restore.yml
+      - name: Enforce recovery approval contract
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          EXPECTED_ACCOUNT_ID: ${{ inputs.expected_account_id }}
+          INPUT_RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
+        run: |
+          uuid_pattern='^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$CONFIRMATION" == "validate-billing-production-restore" ]]
+          [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]
+          [[ "$EXPECTED_ACCOUNT_ID" =~ $uuid_pattern ]]
+          [[ -z "$INPUT_RESTORE_DATABASE_ID" || "$INPUT_RESTORE_DATABASE_ID" =~ $uuid_pattern ]]
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Initialize isolated Billing state
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BILLING_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BILLING_TERRAFORM_STATE_SECRET_KEY }}
+        run: >-
+          terraform -chdir=infrastructure/environments/billing-production init
+          -reconfigure
+          -backend-config=backend.ci.hcl
+          -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}"
+      - name: Provision isolated restore
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BILLING_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BILLING_TERRAFORM_STATE_SECRET_KEY }}
+          INPUT_RESTORE_DATABASE_ID: ${{ inputs.restore_database_id }}
+          SCW_PROJECT_ID: ${{ vars.SCW_PROJECT_ID }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          if [[ -n "$INPUT_RESTORE_DATABASE_ID" ]]; then
+            printf 'RESTORE_DATABASE_ID=%s\n' "$INPUT_RESTORE_DATABASE_ID" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          source_id="$(terraform -chdir=infrastructure/environments/billing-production output -raw billing_database_id)"
+          source_id="${source_id#*/}"
+          backups="$(curl --fail --silent --show-error --get \
+            --header "X-Auth-Token: $SCW_SECRET_KEY" \
+            --data-urlencode "database_id=$source_id" \
+            --data-urlencode "order_by=created_at_desc" \
+            https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/fr-par/backups)"
+          backup_id="$(jq --exit-status --raw-output \
+            '.backups | map(select(.status == "ready")) | first | .id' <<<"$backups")"
+          backup_created_at="$(jq --exit-status --raw-output --arg id "$backup_id" \
+            '.backups[] | select(.id == $id) | .created_at' <<<"$backups")"
+          restore="$(jq --null-input \
+            --arg project_id "$SCW_PROJECT_ID" \
+            --arg name "nvbes-billing-restore-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --arg backup_id "$backup_id" \
+            '{project_id: $project_id, name: $name, cpu_min: 0, cpu_max: 1, from_backup_id: $backup_id}' |
+            curl --fail --silent --show-error --request POST \
+              --header 'Content-Type: application/json' \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" --data-binary @- \
+              https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/fr-par/databases)"
+          restore_id="$(jq --exit-status --raw-output '.id' <<<"$restore")"
+          [[ "$restore_id" =~ ^[0-9a-f-]{36}$ ]]
+          printf 'RESTORE_DATABASE_ID=%s\n' "$restore_id" >> "$GITHUB_ENV"
+          printf 'DELETE_RESTORE_DATABASE=true\n' >> "$GITHUB_ENV"
+          printf 'RESTORE_STARTED_AT=%s\n' "$(date -u +%s)" >> "$GITHUB_ENV"
+          printf 'RESTORE_BACKUP_ID=%s\n' "$backup_id" >> "$GITHUB_ENV"
+          printf 'RESTORE_BACKUP_CREATED_AT=%s\n' "$backup_created_at" >> "$GITHUB_ENV"
+
+          for _attempt in {1..60}; do
+            status="$(curl --fail --silent --show-error \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" \
+              "https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/fr-par/databases/${restore_id}" |
+              jq --exit-status --raw-output '.status')"
+            [[ "$status" == "ready" ]] && exit 0
+            [[ "$status" == "error" ]] && exit 1
+            sleep 10
+          done
+          echo 'Timed out waiting for the isolated Billing restore.' >&2
+          exit 1
+      - name: Verify restored Billing schema
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BILLING_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BILLING_TERRAFORM_STATE_SECRET_KEY }}
+          EXPECTED_ACCOUNT_ID: ${{ inputs.expected_account_id }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          runtime_url="$(terraform -chdir=infrastructure/environments/billing-production output -raw billing_database_endpoint)"
+          restore_endpoint="$(curl --fail --silent --show-error \
+            --header "X-Auth-Token: $SCW_SECRET_KEY" \
+            "https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/fr-par/databases/${RESTORE_DATABASE_ID}" |
+            jq --exit-status --raw-output 'select(.status == "ready") | .endpoint')"
+          [[ "$restore_endpoint" == postgres://*?sslmode=require ]]
+          restore_url="postgres://user:pass@${restore_endpoint#postgres://}"
+          integrity="$(docker run --rm --interactive --platform linux/amd64 postgres:16-alpine \
+            psql "$restore_url" --no-psqlrc --tuples-only --no-align \
+              --set ON_ERROR_STOP=1 --set account_id="$EXPECTED_ACCOUNT_ID" \
+              --file=- <<'SQL'
+              SELECT json_build_object(
+                'migrations', (SELECT count(*) FROM _sqlx_migrations WHERE success),
+                'tables', (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('billing_plans', 'billing_customers', 'billing_checkout_sessions', 'billing_subscriptions', 'billing_webhook_events', 'billing_reconciliation_items', 'billing_audit_events', 'billing_outbox')),
+                'constraints_valid', (SELECT bool_and(convalidated) FROM pg_constraint WHERE connamespace = 'public'::regnamespace)
+              );
+          SQL
+          )"
+          jq --exit-status \
+            '.migrations >= 1 and .tables == 8 and .constraints_valid == true' \
+            <<<"$integrity" >/dev/null
+          printf '### Billing restore integrity\n\n```json\n%s\n```\n' "$integrity" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -n "${RESTORE_STARTED_AT:-}" ]]; then
+            rto_seconds=$(( $(date -u +%s) - RESTORE_STARTED_AT ))
+            printf '\nBackup `%s` created at `%s`; isolated restore RTO: `%ss`.\n' \
+              "$RESTORE_BACKUP_ID" "$RESTORE_BACKUP_CREATED_AT" "$rto_seconds" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Delete automatically provisioned restore
+        if: ${{ always() }}
+        env:
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          [[ "${DELETE_RESTORE_DATABASE:-false}" == "true" ]] || exit 0
+          [[ "${RESTORE_DATABASE_ID:-}" =~ ^[0-9a-f-]{36}$ ]]
+          curl --fail --silent --show-error --request DELETE \
+            --header "X-Auth-Token: $SCW_SECRET_KEY" \
+            "https://api.scaleway.com/serverless-sqldb/v1alpha1/regions/fr-par/databases/${RESTORE_DATABASE_ID}"
+          printf '\nAutomatically provisioned restore `%s` deleted.\n' \
+            "$RESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
