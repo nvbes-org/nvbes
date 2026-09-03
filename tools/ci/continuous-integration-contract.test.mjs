@@ -11,16 +11,17 @@ test("continuous CI runs on every active delivery branch", () => {
 		/pull_request:\n {4}branches: \['main', 'staging', 'dev'\]/u,
 	);
 	assert.match(workflow, /workflow_dispatch:/u);
-	assert.match(workflow, /email-quality:/u);
+	assert.match(workflow, /quality:/u);
 	assert.match(
 		workflow,
-		/email-quality:\n {4}runs-on: \[[^\n]+\]\n {4}timeout-minutes: (?:9\d|[1-9]\d{2,})/u,
+		/quality:[\s\S]*?runs-on: \[[^\n]+\]\n {4}timeout-minutes: (?:9\d|[1-9]\d{2,})/u,
 	);
+	assert.doesNotMatch(workflow, /rust-tests-scaleway-cache:/u);
 });
 
 test("continuous CI validates the active Email and closed Identity runtimes", () => {
 	assert.match(workflow, /POSTGRES_DB: nvbes_email_test/u);
-	assert.match(workflow, /job\.services\.postgres\.ports\[5432\]/u);
+	assert.match(workflow, /job\.services\.postgres\.ports\['5432'\]/u);
 	assert.match(workflow, /host\.docker\.internal/u);
 	assert.match(workflow, /pnpm test:pre-deploy/u);
 	assert.match(workflow, /pnpm test/u);
@@ -52,13 +53,9 @@ test("continuous CI avoids remote dependency caches on self-hosted runners", () 
 	);
 });
 
-test("continuous CI uses isolated Scaleway caches only for branch pushes", () => {
+test("continuous CI runs Rust tests once with the appropriate cache backend", () => {
 	assert.match(workflow, /RUSTC_WRAPPER: sccache/u);
-	assert.match(workflow, /SCCACHE_GHA_ENABLED: 'true'/u);
-	assert.match(
-		workflow,
-		/rust-tests-scaleway-cache:\n {4}if: github\.event_name == 'push'/u,
-	);
+	assert.doesNotMatch(workflow, /rust-tests-scaleway-cache:/u);
 	assert.match(
 		workflow,
 		/name: \$\{\{[\s\S]*?'production-ci-cache' \|\| 'branch-ci-cache' \}\}\n {6}deployment: false/u,
@@ -69,17 +66,12 @@ test("continuous CI uses isolated Scaleway caches only for branch pushes", () =>
 	);
 	assert.match(workflow, /format\('branches\/\{0\}', github\.ref_name\)/u);
 	assert.match(workflow, /cargo test --workspace --locked/u);
-	assert.match(workflow, /id: scaleway-cache/u);
-	assert.match(
-		workflow,
-		/steps\.scaleway-cache\.outputs\.available == 'true'/u,
-	);
-	assert.match(
-		workflow,
-		/steps\.scaleway-cache\.outputs\.available != 'true'/u,
-	);
-	assert.match(
-		workflow,
-		/name: Test email contract and runtime\n {8}if: github\.event_name != 'push'\n {8}run: pnpm test/u,
+	assert.match(workflow, /name: Test Rust workspace/u);
+	assert.match(workflow, /GITHUB_EVENT_NAME.*!=.*push/u);
+	assert.match(workflow, /export SCCACHE_GHA_ENABLED=true/u);
+	assert.equal(
+		workflow.match(/cargo test --workspace --locked/gu)?.length,
+		1,
+		"the unified quality job must run the Rust workspace test exactly once",
 	);
 });

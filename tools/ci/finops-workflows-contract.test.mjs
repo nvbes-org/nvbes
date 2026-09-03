@@ -31,16 +31,19 @@ const deployContract = {
 const workflowContracts = [
 	{
 		path: ".github/workflows/ci.yml",
-		job: "email-quality",
+		job: "quality",
 		gateEnv: {
 			CARGO_INCREMENTAL: "0",
 			CI: "true",
 			NVBES_ENV: "ci",
 			RUSTFLAGS: "-C debuginfo=0",
 			RUSTC_WRAPPER: "sccache",
-			SCCACHE_GHA_ENABLED: "true",
+			SCCACHE_BUCKET: `\${{ vars.SCW_CI_CACHE_BUCKET }}`,
+			SCCACHE_ENDPOINT: `\${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}`,
+			SCCACHE_REGION: `\${{ vars.SCW_CI_CACHE_REGION }}`,
+			SCCACHE_S3_ENABLE_VIRTUAL_HOST_STYLE: "true",
+			SCCACHE_S3_USE_SSL: "true",
 		},
-		additionalJobs: ["rust-tests-scaleway-cache"],
 		runsOn: ["self-hosted", "macOS", "ARM64"],
 		shell: safeShell,
 		terraformEnvironmentPath: emailTerraformEnvironmentPath,
