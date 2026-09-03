@@ -6,7 +6,7 @@ buckets produit existants :
 - un projet Scaleway dédié ;
 - un Container Registry privé pour les caches BuildKit `type=registry` ;
 - un bucket Object Storage chiffré pour `sccache`, pnpm ou Nx ;
-- une application IAM trusted pour `main`, `dev`, `staging` et `release/*` ;
+- une application IAM trusted pour `main`, `dev` et `release/*` ;
 - une application IAM séparée, limitée aux préfixes de branches ;
 - deux API keys à rotation décalée par application ;
 - un environnement GitHub protégé pour les branches trusted ;

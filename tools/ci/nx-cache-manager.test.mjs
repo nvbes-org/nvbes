@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
+  isDeliveryScopeAffected,
   isTrustedPush,
   isUsableCommitSha,
   selectTypeScriptProjects,
@@ -20,12 +21,12 @@ test('only protected branch pushes share the trusted cache', () => {
   for (const ref of [
     'refs/heads/main',
     'refs/heads/dev',
-    'refs/heads/staging',
     'refs/heads/release/1.0',
   ]) {
     assert.equal(isTrustedPush('push', ref), true);
   }
   assert.equal(isTrustedPush('pull_request', 'refs/heads/main'), false);
+  assert.equal(isTrustedPush('push', 'refs/heads/staging'), false);
   assert.equal(isTrustedPush('push', 'refs/heads/feature/cache'), false);
 });
 
@@ -67,4 +68,15 @@ test('selects affected TypeScript projects from the Nx graph', () => {
     selectTypeScriptProjects(['core', 'identity-sdk-core', 'web-ui', 'identity-client'], graph),
     ['web-ui', 'identity-client'],
   );
+});
+
+test('selects delivery scopes from projects, owned paths, and global inputs', () => {
+  const scope = {
+    projects: ['account-service', 'account-client'],
+    paths: ['apps/account-service', 'infrastructure/environments/account-production'],
+  };
+  assert.equal(isDeliveryScopeAffected(['account-client'], [], scope), true);
+  assert.equal(isDeliveryScopeAffected([], ['apps/account-service/src/main.rs'], scope), true);
+  assert.equal(isDeliveryScopeAffected([], ['Cargo.lock'], scope), true);
+  assert.equal(isDeliveryScopeAffected([], ['docs/README.md'], scope), false);
 });
