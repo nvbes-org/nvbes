@@ -29,10 +29,11 @@ done
 [[ "$state" == "succeeded" ]]
 
 runtime_url="$(terraform -chdir="$STACK_ROOT" output -raw identity_database_runtime_url)&sslrootcert=system"
-evidence="$(docker run --rm --platform linux/amd64 postgres:16-alpine \
+evidence="$(docker run --rm --interactive --platform linux/amd64 postgres:16-alpine \
   psql "$runtime_url" --no-psqlrc --tuples-only --no-align \
     --set ON_ERROR_STOP=1 --set synthetic_email="$synthetic_email" \
-    --command "SELECT json_build_object(
+    --file=- <<'SQL'
+    SELECT json_build_object(
       'principal_id', p.id,
       'audit_events', count(DISTINCT a.id),
       'sessions', count(DISTINCT s.id),
@@ -45,7 +46,9 @@ evidence="$(docker run --rm --platform linux/amd64 postgres:16-alpine \
     JOIN identity_sessions s ON s.principal_id = p.id
     JOIN identity_recovery_challenges r ON r.principal_id = p.id
     WHERE i.kind = 'email' AND i.normalized_value = :'synthetic_email'
-    GROUP BY p.id;")"
+    GROUP BY p.id;
+SQL
+)"
 jq --exit-status \
   '.principal_id != null and .audit_events == 5 and .sessions == 2 and .recovery_consumed == true and .old_sessions_revoked == true' \
   <<<"$evidence" >/dev/null

@@ -23,6 +23,8 @@ test("Identity restore is isolated, bounded, verified and automatically removed"
 	assert.match(workflow, /cpu_min: 0, cpu_max: 1/u);
 	assert.match(workflow, /\.migrations == 3 and \.tables == 8/u);
 	assert.match(workflow, /\.principal == 1 and \.audit_events > 0/u);
+	assert.match(workflow, /--file=- <<'SQL'/u);
+	assert.doesNotMatch(workflow, /--command "SELECT/u);
 	assert.match(workflow, /DELETE_RESTORE_DATABASE=true/u);
 	assert.match(workflow, /if: \$\{\{ always\(\) \}\}/u);
 });
