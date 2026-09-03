@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/identity/access-token.v1.schema.json",
+  "title": "Identity access token v1",
+  "description": "RS256 JWT (typ at+jwt) issued by Identity for downstream runtimes. Consumers verify signature, iss, aud, exp and required claims locally; optional introspection rejects revoked sessions immediately.",
+  "type": "object",
+  "required": [
+    "sub",
+    "token_type",
+    "scope",
+    "amr",
+    "iss",
+    "aud",
+    "exp",
+    "iat",
+    "nbf",
+    "jti",
+    "sid"
+  ],
+  "properties": {
+    "sub": { "type": "string", "format": "uuid", "description": "Principal identifier." },
+    "token_type": { "const": "access" },
+    "scope": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^([a-z0-9][a-z0-9:._-]*)( [a-z0-9][a-z0-9:._-]*)*$",
+      "description": "Space-delimited scopes allowed for the token audience."
+    },
+    "amr": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["pwd", "totp", "webauthn"] },
+      "contains": { "const": "pwd" },
+      "description": "Authentication methods. pwd is always present; totp or webauthn appear after an active step-up grant."
+    },
+    "iss": { "type": "string", "format": "uri", "description": "Identity token issuer HTTPS origin." },
+    "aud": {
+      "type": "string",
+      "description": "Target runtime audience, for example nvbes-account-service."
+    },
+    "exp": { "type": "integer", "minimum": 1 },
+    "iat": { "type": "integer", "minimum": 0 },
+    "nbf": { "type": "integer", "minimum": 0 },
+    "jti": { "type": "string", "format": "uuid" },
+    "sid": { "type": "string", "format": "uuid", "description": "Session bound to this access token." }
+  },
+  "additionalProperties": false
+}
