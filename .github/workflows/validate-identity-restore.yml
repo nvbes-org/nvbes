@@ -143,16 +143,19 @@ jobs:
           [[ "$restore_endpoint" == postgres://*?sslmode=require ]]
           restore_url="${runtime_url%@*}@${restore_endpoint#postgres://}"
           restore_url="${restore_url/sslmode=require/sslmode=verify-full}"
-          integrity="$(docker run --rm --platform linux/amd64 postgres:16-alpine \
+          integrity="$(docker run --rm --interactive --platform linux/amd64 postgres:16-alpine \
             psql "$restore_url" --no-psqlrc --tuples-only --no-align \
               --set ON_ERROR_STOP=1 --set principal_id="$EXPECTED_PRINCIPAL_ID" \
-              --command "SELECT json_build_object(
+              --file=- <<'SQL'
+              SELECT json_build_object(
                 'migrations', (SELECT count(*) FROM _sqlx_migrations WHERE success),
                 'tables', (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('identity_principals', 'identity_login_identifiers', 'identity_password_credentials', 'identity_audit_events', 'identity_outbox', 'identity_sessions', 'identity_recovery_challenges', 'identity_auth_factors')),
                 'principal', (SELECT count(*) FROM identity_principals WHERE id = :'principal_id'::uuid),
                 'audit_events', (SELECT count(*) FROM identity_audit_events WHERE principal_id = :'principal_id'::uuid),
                 'constraints_valid', (SELECT bool_and(convalidated) FROM pg_constraint WHERE connamespace = 'public'::regnamespace)
-              );")"
+              );
+          SQL
+          )"
           jq --exit-status \
             '.migrations == 3 and .tables == 8 and .principal == 1 and .audit_events > 0 and .constraints_valid == true' \
             <<<"$integrity" >/dev/null

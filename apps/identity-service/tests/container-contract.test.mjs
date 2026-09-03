@@ -38,10 +38,7 @@ const productionVariables = readFileSync(
 	"utf8",
 );
 const syntheticProof = readFileSync(
-	join(
-		workspaceRoot,
-		"tools/deployment/prove-identity-synthetic-auth.sh",
-	),
+	join(workspaceRoot, "tools/deployment/prove-identity-synthetic-auth.sh"),
 	"utf8",
 );
 const publicRuntimeProof = readFileSync(
@@ -133,13 +130,17 @@ test("deployment migrates before apply and proves public auth stays absent", () 
 		),
 	);
 	assert.ok(publicRuntimeProof.includes('/auth/register"'));
-	assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "404" ]]'));
+	assert.ok(
+		publicRuntimeProof.includes('[[ "$registration_status" == "404" ]]'),
+	);
 });
 
 test("deployment records bounded activation and access-control evidence", () => {
 	assert.ok(publicRuntimeProof.includes("--max-time 60"));
 	assert.ok(publicRuntimeProof.includes('activation_seconds="$SECONDS"'));
-	assert.ok(publicRuntimeProof.includes('[[ "$anonymous_metrics_status" == "401" ]]'));
+	assert.ok(
+		publicRuntimeProof.includes('[[ "$anonymous_metrics_status" == "401" ]]'),
+	);
 	assert.ok(publicRuntimeProof.includes("Identity public runtime"));
 });
 
@@ -169,6 +170,8 @@ test("deployment proves a private synthetic account lifecycle", () => {
 	assert.ok(syntheticProof.includes(".sessions == 2"));
 	assert.ok(syntheticProof.includes(".recovery_consumed == true"));
 	assert.ok(syntheticProof.includes(".old_sessions_revoked == true"));
+	assert.ok(syntheticProof.includes("--file=- <<'SQL'"));
+	assert.equal(syntheticProof.includes('--command "SELECT'), false);
 });
 
 test("deployment proves Sentry delivery from a private production job", () => {
