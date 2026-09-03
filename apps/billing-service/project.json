@@ -15,7 +15,7 @@
         "{workspaceRoot}/libs/rust/observability/**/*"
       ],
       "options": {
-        "command": "cargo check --manifest-path apps/billing-service/Cargo.toml --all-targets",
+        "command": "cargo check --locked --package nvbes-billing-service --all-targets",
         "cwd": "."
       }
     },
@@ -23,7 +23,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "cargo test --manifest-path apps/billing-service/Cargo.toml",
+        "command": "cargo test --locked --package nvbes-billing-service",
         "cwd": "."
       }
     },
