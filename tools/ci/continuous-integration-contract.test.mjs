@@ -49,8 +49,23 @@ test("continuous CI avoids remote dependency caches on self-hosted runners", () 
 	assert.doesNotMatch(workflow, /^\s+cache: pnpm\s*$/mu);
 	assert.match(
 		workflow,
-		/node --test tools\/ci\/continuous-integration-contract\.test\.mjs/u,
+		/node --test[\s\S]*?tools\/ci\/continuous-integration-contract\.test\.mjs/u,
 	);
+});
+
+test("continuous CI selects affected projects with an isolated Nx cache", () => {
+	assert.match(workflow, /name: Configure Nx cache and affected scope/u);
+	assert.match(workflow, /node tools\/ci\/nx-cache-manager\.mjs/u);
+	assert.match(
+		workflow,
+		/if: steps\.nx-scope\.outputs\.rust-affected == 'true'/u,
+	);
+	assert.match(
+		workflow,
+		/if: steps\.nx-scope\.outputs\.typescript-projects != ''/u,
+	);
+	assert.match(workflow, /-t format:check,lint,typecheck,check/u);
+	assert.match(workflow, /NVBES_CI_BASE_CANDIDATE/u);
 });
 
 test("continuous CI runs Rust tests once with the appropriate cache backend", () => {
