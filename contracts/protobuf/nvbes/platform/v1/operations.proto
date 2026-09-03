@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package nvbes.platform.v1;
+
+import "nvbes/platform/v1/common.proto";
+
+service PlatformOperationsService {
+  rpc GetCockpitOverview(GetCockpitOverviewRequest) returns (CockpitOverviewResponse);
+  rpc DispatchOperatorAction(DispatchOperatorActionRequest) returns (OperatorActionReceiptResponse);
+  rpc ListDegradedProcedures(ListDegradedProceduresRequest) returns (ListDegradedProceduresResponse);
+}
+
+message GetCockpitOverviewRequest {
+  RequestContext context = 1;
+  string environment = 2;
+}
+
+message CockpitOverviewResponse {
+  string environment = 1;
+  string generated_at = 2;
+  string overall_health_status = 3;
+  uint32 degraded_services_count = 4;
+  uint32 current_spend_cents = 5;
+  uint32 projected_monthly_cents = 6;
+  string budget_stage = 7;
+  uint64 pending_outbox_messages = 8;
+  uint64 dead_letter_messages = 9;
+  uint64 pending_trust_risk_reviews = 10;
+  uint64 active_email_suppressions = 11;
+  uint64 billing_reconciliation_mismatches = 12;
+  bool meets_rpo = 13;
+  bool meets_rto = 14;
+}
+
+message DispatchOperatorActionRequest {
+  RequestContext context = 1;
+  string operator_id = 2;
+  string reason = 3;
+  string idempotency_key = 4;
+  string action_type = 5;
+  string payload_json = 6;
+}
+
+message OperatorActionReceiptResponse {
+  string receipt_id = 1;
+  string operator_id = 2;
+  string action_type = 3;
+  string executed_at = 4;
+  string status = 5;
+  string details = 6;
+  bool is_reversible = 7;
+  string reversal_instruction = 8;
+}
+
+message ListDegradedProceduresRequest {
+  RequestContext context = 1;
+}
+
+message DegradedProcedureItem {
+  string scenario = 1;
+  string title = 2;
+  string severity = 3;
+  string description = 4;
+  string automatic_fallback = 5;
+  repeated string operator_checklist = 6;
+  repeated string verification_steps = 7;
+}
+
+message ListDegradedProceduresResponse {
+  repeated DegradedProcedureItem procedures = 1;
+}
