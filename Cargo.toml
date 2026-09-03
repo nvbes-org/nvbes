@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "apps/billing-service",
   "apps/email-worker",
   "apps/account-service",
   "apps/identity-service",
