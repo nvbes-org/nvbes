@@ -64,7 +64,8 @@ impl StripeProviderError {
                 "NVBES_STRIPE_SECRET_KEY must be configured before billing actions.".to_string()
             }
             Self::LiveKeyRejected => {
-                "Stripe live keys are forbidden in V1. Use test keys (sk_test_ / rk_test_).".to_string()
+                "Stripe live keys are forbidden in V1. Use test keys (sk_test_ / rk_test_)."
+                    .to_string()
             }
             Self::RequestFailed(message)
             | Self::ResponseFailed(message)
@@ -150,7 +151,10 @@ pub fn parse_stripe_event(payload: &[u8]) -> Option<StripeWebhookEvent> {
     let value: Value = serde_json::from_slice(payload).ok()?;
     let id = value.get("id").and_then(Value::as_str)?.to_owned();
     let event_type = value.get("type").and_then(Value::as_str)?.to_owned();
-    let livemode = value.get("livemode").and_then(Value::as_bool).unwrap_or(false);
+    let livemode = value
+        .get("livemode")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     let data_object = value.pointer("/data/object").cloned()?;
     Some(StripeWebhookEvent {
         id,

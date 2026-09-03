@@ -66,7 +66,9 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if !command.is_empty() && command[0] != "serve" {
-        anyhow::bail!("usage: nvbes-billing-service [serve|migrate|validate-runtime|synthetic-billing-smoke]");
+        anyhow::bail!(
+            "usage: nvbes-billing-service [serve|migrate|validate-runtime|synthetic-billing-smoke]"
+        );
     }
 
     let db = database::connect(&config.database_url, 5).await?;

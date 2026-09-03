@@ -19,8 +19,9 @@ impl BillingConfig {
             .unwrap_or_else(|_| "0.0.0.0:8080".to_string())
             .parse()?;
 
-        let database_url = std::env::var("NVBES_BILLING_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes_billing".to_string());
+        let database_url = std::env::var("NVBES_BILLING_DATABASE_URL").unwrap_or_else(|_| {
+            "postgres://postgres:postgres@localhost:5432/nvbes_billing".to_string()
+        });
 
         let stripe_secret_key = std::env::var("NVBES_STRIPE_SECRET_KEY")
             .unwrap_or_else(|_| "sk_test_dummy_key_for_testing".to_string());
@@ -39,8 +40,8 @@ impl BillingConfig {
         let metrics_token = std::env::var("NVBES_BILLING_METRICS_TOKEN").ok();
         let operator_token = std::env::var("NVBES_BILLING_OPERATOR_TOKEN").ok();
 
-        let app_url = std::env::var("NVBES_APP_URL")
-            .unwrap_or_else(|_| "https://nvbes.test".to_string());
+        let app_url =
+            std::env::var("NVBES_APP_URL").unwrap_or_else(|_| "https://nvbes.test".to_string());
 
         Ok(Self {
             bind_addr,

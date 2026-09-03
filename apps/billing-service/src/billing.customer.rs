@@ -1,7 +1,10 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{config::BillingConfig, error::{BillingError, BillingResult}};
+use crate::{
+    config::BillingConfig,
+    error::{BillingError, BillingResult},
+};
 
 pub async fn get_or_create_customer(
     db: &PgPool,
@@ -53,11 +56,17 @@ async fn create_stripe_test_customer(
     email: Option<&str>,
 ) -> BillingResult<String> {
     let client = reqwest::Client::new();
-    let url = format!("{}/v1/customers", config.stripe_api_base_url.trim_end_matches('/'));
+    let url = format!(
+        "{}/v1/customers",
+        config.stripe_api_base_url.trim_end_matches('/')
+    );
 
     let mut form = vec![
         ("metadata[account_id]".to_string(), account_id.to_string()),
-        ("metadata[account_type]".to_string(), account_type.to_string()),
+        (
+            "metadata[account_type]".to_string(),
+            account_type.to_string(),
+        ),
     ];
     if let Some(em) = email {
         form.push(("email".to_string(), em.to_string()));
@@ -73,7 +82,9 @@ async fn create_stripe_test_customer(
 
     if !response.status().is_success() {
         let err_text = response.text().await.unwrap_or_default();
-        return Err(BillingError::Stripe(format!("failed to create Stripe customer: {err_text}")));
+        return Err(BillingError::Stripe(format!(
+            "failed to create Stripe customer: {err_text}"
+        )));
     }
 
     let json: serde_json::Value = response

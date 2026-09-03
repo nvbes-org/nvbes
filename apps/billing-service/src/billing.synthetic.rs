@@ -5,11 +5,8 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    audit::record_audit_event,
-    config::BillingConfig,
-    customer::get_or_create_customer,
-    reconciliation::record_reconciliation_item,
-    subscriptions::apply_subscription_event,
+    audit::record_audit_event, config::BillingConfig, customer::get_or_create_customer,
+    reconciliation::record_reconciliation_item, subscriptions::apply_subscription_event,
 };
 
 #[derive(Debug, Serialize)]
@@ -34,9 +31,15 @@ pub async fn run(
     _owner_id: Uuid,
 ) -> anyhow::Result<SyntheticBillingResult> {
     // 1. Customer mapping
-    let customer_id = get_or_create_customer(db, config, workspace_id, "team", Some("billing-synthetic@nvbes.test"))
-        .await
-        .map_err(|e| anyhow::anyhow!("customer mapping failed: {e}"))?;
+    let customer_id = get_or_create_customer(
+        db,
+        config,
+        workspace_id,
+        "team",
+        Some("billing-synthetic@nvbes.test"),
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("customer mapping failed: {e}"))?;
 
     // 2. Checkout session & idempotency
     let idem_key = format!("synthetic_idem_{}", Uuid::new_v4());
@@ -105,8 +108,15 @@ pub async fn run(
         .execute(db)
         .await?;
 
-    record_audit_event(db, workspace_id, "stripe", "checkout_completed", &json!({ "session_id": session_id })).await
-        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    record_audit_event(
+        db,
+        workspace_id,
+        "stripe",
+        "checkout_completed",
+        &json!({ "session_id": session_id }),
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // 4. Test Webhook deduplication: try inserting same event.id
     let reinserted: Option<String> = sqlx::query_scalar(
@@ -137,9 +147,15 @@ pub async fn run(
         }
     });
 
-    apply_subscription_event(db, "evt_sub_created", "customer.subscription.created", t2, &sub_created_data)
-        .await
-        .map_err(|e| anyhow::anyhow!("sub created failed: {e}"))?;
+    apply_subscription_event(
+        db,
+        "evt_sub_created",
+        "customer.subscription.created",
+        t2,
+        &sub_created_data,
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("sub created failed: {e}"))?;
 
     // 6. Out-of-order test: older update at T1 < T2 with status 'past_due'
     let t1 = now - Duration::minutes(10);
@@ -153,9 +169,15 @@ pub async fn run(
         }
     });
 
-    apply_subscription_event(db, "evt_sub_old", "customer.subscription.updated", t1, &sub_old_update_data)
-        .await
-        .map_err(|e| anyhow::anyhow!("sub old update failed: {e}"))?;
+    apply_subscription_event(
+        db,
+        "evt_sub_old",
+        "customer.subscription.updated",
+        t1,
+        &sub_old_update_data,
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("sub old update failed: {e}"))?;
 
     // Verify subscription status is still 'active' because T1 < T2
     let current_status: String = sqlx::query_scalar(
@@ -188,28 +210,25 @@ pub async fn run(
     .execute(db)
     .await?;
 
-    let recon_status: String = sqlx::query_scalar(
-        "SELECT status FROM billing_reconciliation_items WHERE id = $1",
-    )
-    .bind(recon_id)
-    .fetch_one(db)
-    .await?;
+    let recon_status: String =
+        sqlx::query_scalar("SELECT status FROM billing_reconciliation_items WHERE id = $1")
+            .bind(recon_id)
+            .fetch_one(db)
+            .await?;
     let reconciliation_resolved = recon_status == "resolved";
 
     // 8. Count audit and outbox
-    let audit_events: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM billing_audit_events WHERE account_id = $1",
-    )
-    .bind(workspace_id)
-    .fetch_one(db)
-    .await?;
+    let audit_events: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM billing_audit_events WHERE account_id = $1")
+            .bind(workspace_id)
+            .fetch_one(db)
+            .await?;
 
-    let outbox_events: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM billing_outbox WHERE aggregate_id = $1",
-    )
-    .bind(workspace_id)
-    .fetch_one(db)
-    .await?;
+    let outbox_events: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM billing_outbox WHERE aggregate_id = $1")
+            .bind(workspace_id)
+            .fetch_one(db)
+            .await?;
 
     Ok(SyntheticBillingResult {
         workspace_id,

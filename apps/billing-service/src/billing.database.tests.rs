@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
-use crate::{config::BillingConfig, synthetic};
 use super::{connect, migrate};
+use crate::{config::BillingConfig, synthetic};
 
 #[tokio::test]
 async fn billing_lifecycle_is_isolated_deduplicated_and_audited() {

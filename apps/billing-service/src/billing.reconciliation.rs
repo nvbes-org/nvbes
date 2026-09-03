@@ -1,4 +1,7 @@
-use axum::{Json, extract::{Path, State}};
+use axum::{
+    Json,
+    extract::{Path, State},
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -67,17 +70,15 @@ pub async fn operator_overview_handler(
     State(state): State<BillingState>,
     _auth: OperatorAuth,
 ) -> BillingResult<Json<OperatorOverviewResponse>> {
-    let active_subs: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM billing_subscriptions WHERE status = 'active'",
-    )
-    .fetch_one(&state.db)
-    .await?;
+    let active_subs: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM billing_subscriptions WHERE status = 'active'")
+            .fetch_one(&state.db)
+            .await?;
 
-    let open_checkouts: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM billing_checkout_sessions WHERE status = 'open'",
-    )
-    .fetch_one(&state.db)
-    .await?;
+    let open_checkouts: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM billing_checkout_sessions WHERE status = 'open'")
+            .fetch_one(&state.db)
+            .await?;
 
     let pending_reconciliations: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM billing_reconciliation_items WHERE status = 'pending'",
@@ -85,11 +86,10 @@ pub async fn operator_overview_handler(
     .fetch_one(&state.db)
     .await?;
 
-    let pending_outbox: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM billing_outbox WHERE published_at IS NULL",
-    )
-    .fetch_one(&state.db)
-    .await?;
+    let pending_outbox: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM billing_outbox WHERE published_at IS NULL")
+            .fetch_one(&state.db)
+            .await?;
 
     Ok(Json(OperatorOverviewResponse {
         active_subscriptions: active_subs,

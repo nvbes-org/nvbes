@@ -1,4 +1,8 @@
-use axum::{Json, extract::{Path, State}, http::HeaderMap};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::HeaderMap,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -52,22 +56,27 @@ pub async fn create_checkout_handler(
     .await?
     .ok_or(BillingError::Invalid("unknown_or_inactive_plan"))?;
 
-    let customer_id = get_or_create_customer(
-        &state.db,
-        &state.config,
-        workspace_id,
-        account_type,
-        None,
-    )
-    .await?;
+    let customer_id =
+        get_or_create_customer(&state.db, &state.config, workspace_id, account_type, None).await?;
 
-    let (checkout_url, stripe_session_id) = if state.config.stripe_secret_key.starts_with("sk_test_dummy") {
-        let sid = format!("cs_test_{}", Uuid::new_v4().simple());
-        let url = format!("{}/billing/mock-checkout?session_id={sid}", state.config.app_url);
-        (url, sid)
-    } else {
-        create_stripe_checkout(&state, &customer_id, workspace_id, &payload.plan_code, &stripe_price_id).await?
-    };
+    let (checkout_url, stripe_session_id) =
+        if state.config.stripe_secret_key.starts_with("sk_test_dummy") {
+            let sid = format!("cs_test_{}", Uuid::new_v4().simple());
+            let url = format!(
+                "{}/billing/mock-checkout?session_id={sid}",
+                state.config.app_url
+            );
+            (url, sid)
+        } else {
+            create_stripe_checkout(
+                &state,
+                &customer_id,
+                workspace_id,
+                &payload.plan_code,
+                &stripe_price_id,
+            )
+            .await?
+        };
 
     sqlx::query(
         r#"
@@ -126,9 +135,15 @@ async fn create_stripe_checkout(
     stripe_price_id: &str,
 ) -> BillingResult<(String, String)> {
     let client = reqwest::Client::new();
-    let url = format!("{}/v1/checkout/sessions", state.config.stripe_api_base_url.trim_end_matches('/'));
+    let url = format!(
+        "{}/v1/checkout/sessions",
+        state.config.stripe_api_base_url.trim_end_matches('/')
+    );
 
-    let success_url = format!("{}/billing/success?session_id={{CHECKOUT_SESSION_ID}}", state.config.app_url);
+    let success_url = format!(
+        "{}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+        state.config.app_url
+    );
     let cancel_url = format!("{}/billing/cancel", state.config.app_url);
 
     let form = [
@@ -141,7 +156,10 @@ async fn create_stripe_checkout(
         ("client_reference_id", &account_id.to_string()),
         ("metadata[account_id]", &account_id.to_string()),
         ("metadata[plan_code]", plan_code),
-        ("subscription_data[metadata][account_id]", &account_id.to_string()),
+        (
+            "subscription_data[metadata][account_id]",
+            &account_id.to_string(),
+        ),
         ("subscription_data[metadata][plan_code]", plan_code),
     ];
 
@@ -155,7 +173,9 @@ async fn create_stripe_checkout(
 
     if !response.status().is_success() {
         let err_text = response.text().await.unwrap_or_default();
-        return Err(BillingError::Stripe(format!("failed to create checkout session: {err_text}")));
+        return Err(BillingError::Stripe(format!(
+            "failed to create checkout session: {err_text}"
+        )));
     }
 
     let json: serde_json::Value = response
@@ -163,9 +183,15 @@ async fn create_stripe_checkout(
         .await
         .map_err(|e| BillingError::Stripe(e.to_string()))?;
 
-    let session_id = json.get("id").and_then(|v| v.as_str()).map(str::to_owned)
+    let session_id = json
+        .get("id")
+        .and_then(|v| v.as_str())
+        .map(str::to_owned)
         .ok_or_else(|| BillingError::Stripe("missing checkout session id".into()))?;
-    let checkout_url = json.get("url").and_then(|v| v.as_str()).map(str::to_owned)
+    let checkout_url = json
+        .get("url")
+        .and_then(|v| v.as_str())
+        .map(str::to_owned)
         .ok_or_else(|| BillingError::Stripe("missing checkout url".into()))?;
 
     Ok((checkout_url, session_id))

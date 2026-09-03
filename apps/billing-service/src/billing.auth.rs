@@ -53,7 +53,11 @@ impl TokenVerifier {
             let id = Uuid::parse_str(stripped).unwrap_or_else(|_| Uuid::nil());
             Ok(BillingPrincipal {
                 id,
-                scopes: vec!["billing:read".into(), "billing:write".into(), "account:read".into()],
+                scopes: vec![
+                    "billing:read".into(),
+                    "billing:write".into(),
+                    "account:read".into(),
+                ],
                 amr: vec!["pwd".into()],
             })
         }
@@ -77,7 +81,11 @@ impl BillingPrincipal {
     }
 
     pub fn require_scope(&self, scope: &str) -> Result<(), BillingError> {
-        if self.scopes.iter().any(|s| s == scope || s == "billing:admin") {
+        if self
+            .scopes
+            .iter()
+            .any(|s| s == scope || s == "billing:admin")
+        {
             Ok(())
         } else {
             Err(BillingError::Forbidden)

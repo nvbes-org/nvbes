@@ -1,4 +1,7 @@
-use axum::{Json, extract::{Path, State}};
+use axum::{
+    Json,
+    extract::{Path, State},
+};
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -31,17 +34,14 @@ pub async fn create_portal_handler(
 ) -> BillingResult<Json<PortalSessionResponse>> {
     principal.require_scope("billing:read")?;
 
-    let customer_id = get_or_create_customer(
-        &state.db,
-        &state.config,
-        workspace_id,
-        "team",
-        None,
-    )
-    .await?;
+    let customer_id =
+        get_or_create_customer(&state.db, &state.config, workspace_id, "team", None).await?;
 
     let url = if state.config.stripe_secret_key.starts_with("sk_test_dummy") {
-        format!("{}/billing/mock-portal?customer={customer_id}", state.config.app_url)
+        format!(
+            "{}/billing/mock-portal?customer={customer_id}",
+            state.config.app_url
+        )
     } else {
         create_stripe_portal(&state, &customer_id).await?
     };
@@ -75,18 +75,19 @@ pub async fn get_overview_handler(
     .fetch_optional(&state.db)
     .await?;
 
-    let subscription: Option<(String, String, Option<chrono::DateTime<chrono::Utc>>, bool)> = sqlx::query_as(
-        r#"
+    let subscription: Option<(String, String, Option<chrono::DateTime<chrono::Utc>>, bool)> =
+        sqlx::query_as(
+            r#"
         SELECT plan_code, status, current_period_end, cancel_at_period_end
         FROM billing_subscriptions
         WHERE account_id = $1
         ORDER BY updated_at DESC
         LIMIT 1
         "#,
-    )
-    .bind(workspace_id)
-    .fetch_optional(&state.db)
-    .await?;
+        )
+        .bind(workspace_id)
+        .fetch_optional(&state.db)
+        .await?;
 
     let (plan_code, status, current_period_end, cancel_at_period_end) = match subscription {
         Some((plan, st, end, cancel)) => (plan, st, end, cancel),
@@ -103,18 +104,15 @@ pub async fn get_overview_handler(
     }))
 }
 
-async fn create_stripe_portal(
-    state: &BillingState,
-    customer_id: &str,
-) -> BillingResult<String> {
+async fn create_stripe_portal(state: &BillingState, customer_id: &str) -> BillingResult<String> {
     let client = reqwest::Client::new();
-    let url = format!("{}/v1/billing_portal/sessions", state.config.stripe_api_base_url.trim_end_matches('/'));
+    let url = format!(
+        "{}/v1/billing_portal/sessions",
+        state.config.stripe_api_base_url.trim_end_matches('/')
+    );
     let return_url = format!("{}/billing", state.config.app_url);
 
-    let form = [
-        ("customer", customer_id),
-        ("return_url", &return_url),
-    ];
+    let form = [("customer", customer_id), ("return_url", &return_url)];
 
     let response = client
         .post(&url)
@@ -126,7 +124,9 @@ async fn create_stripe_portal(
 
     if !response.status().is_success() {
         let err_text = response.text().await.unwrap_or_default();
-        return Err(BillingError::Stripe(format!("failed to create portal session: {err_text}")));
+        return Err(BillingError::Stripe(format!(
+            "failed to create portal session: {err_text}"
+        )));
     }
 
     let json: serde_json::Value = response

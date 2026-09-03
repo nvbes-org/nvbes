@@ -71,7 +71,10 @@ pub async fn apply_subscription_event(
     let raw_status = match event_type {
         "customer.subscription.deleted" => "canceled",
         "invoice.payment_failed" => "past_due",
-        _ => data.get("status").and_then(Value::as_str).unwrap_or("active"),
+        _ => data
+            .get("status")
+            .and_then(Value::as_str)
+            .unwrap_or("active"),
     };
 
     let mapped_status = nvbes_billing::stripe::stripe_subscription_status(Some(raw_status));
@@ -79,14 +82,24 @@ pub async fn apply_subscription_event(
     let plan_code = data
         .pointer("/metadata/plan_code")
         .and_then(Value::as_str)
-        .or_else(|| data.pointer("/items/data/0/price/lookup_key").and_then(Value::as_str))
+        .or_else(|| {
+            data.pointer("/items/data/0/price/lookup_key")
+                .and_then(Value::as_str)
+        })
         .unwrap_or("standard_monthly");
 
-    let period_start = data.get("current_period_start").and_then(Value::as_i64)
+    let period_start = data
+        .get("current_period_start")
+        .and_then(Value::as_i64)
         .and_then(|ts| Utc.timestamp_opt(ts, 0).single());
-    let period_end = data.get("current_period_end").and_then(Value::as_i64)
+    let period_end = data
+        .get("current_period_end")
+        .and_then(Value::as_i64)
         .and_then(|ts| Utc.timestamp_opt(ts, 0).single());
-    let cancel_at_end = data.get("cancel_at_period_end").and_then(Value::as_bool).unwrap_or(false);
+    let cancel_at_end = data
+        .get("cancel_at_period_end")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
 
     sqlx::query(
         r#"

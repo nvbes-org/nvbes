@@ -10,11 +10,8 @@ use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::{
-    app::BillingState,
-    audit::record_audit_event,
-    error::BillingError,
-    reconciliation::record_reconciliation_item,
-    subscriptions::apply_subscription_event,
+    app::BillingState, audit::record_audit_event, error::BillingError,
+    reconciliation::record_reconciliation_item, subscriptions::apply_subscription_event,
 };
 
 pub async fn stripe_webhook_handler(
@@ -46,8 +43,8 @@ pub async fn stripe_webhook_handler(
         ));
     }
 
-    let raw_json: Value = serde_json::from_slice(&body)
-        .map_err(|_| BillingError::Invalid("invalid_json"))?;
+    let raw_json: Value =
+        serde_json::from_slice(&body).map_err(|_| BillingError::Invalid("invalid_json"))?;
 
     let event_created = raw_json
         .get("created")
@@ -73,11 +70,22 @@ pub async fn stripe_webhook_handler(
 
     if inserted.is_none() {
         // Idempotent duplicate: already received and processed
-        return Ok((StatusCode::OK, Json(json!({ "received": true, "idempotent": true }))));
+        return Ok((
+            StatusCode::OK,
+            Json(json!({ "received": true, "idempotent": true })),
+        ));
     }
 
     // 5. Process event
-    match process_stripe_event(&state, &event.id, &event.event_type, event_created, &event.data_object).await {
+    match process_stripe_event(
+        &state,
+        &event.id,
+        &event.event_type,
+        event_created,
+        &event.data_object,
+    )
+    .await
+    {
         Ok(_) => {
             sqlx::query("UPDATE billing_webhook_events SET processed_at = clock_timestamp() WHERE event_id = $1")
                 .bind(&event.id)
@@ -100,7 +108,8 @@ pub async fn stripe_webhook_handler(
                 None,
                 "webhook_processing_failed",
                 &json!({ "event_type": event.event_type, "error": error_msg }),
-            ).await;
+            )
+            .await;
 
             Err(err)
         }
@@ -130,7 +139,14 @@ async fn process_stripe_event(
                 .await?;
 
                 if let Some(acc_id) = account_id {
-                    record_audit_event(&state.db, acc_id, "stripe", "checkout_completed", &json!({ "session_id": session_id })).await?;
+                    record_audit_event(
+                        &state.db,
+                        acc_id,
+                        "stripe",
+                        "checkout_completed",
+                        &json!({ "session_id": session_id }),
+                    )
+                    .await?;
                 }
             }
         }
