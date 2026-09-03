@@ -1,0 +1,10 @@
+scaleway_project_id = "00000000-0000-0000-0000-000000000000"
+scaleway_region     = "fr-par"
+scaleway_zone       = "fr-par-1"
+environment         = "production"
+billing_image       = "rg.fr-par.scw.cloud/nvbes-production-billing/billing-service@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+stripe_secret_key      = "sk_test_placeholder"
+stripe_webhook_secret  = "whsec_placeholder"
+billing_metrics_token  = "placeholder-metrics-token"
+billing_operator_token = "placeholder-operator-token"

@@ -34,6 +34,8 @@ pub struct StripeCustomer {
 pub enum StripeProviderError {
     #[error("stripe_not_configured")]
     NotConfigured,
+    #[error("stripe_live_key_rejected: Stripe live keys are forbidden in V1")]
+    LiveKeyRejected,
     #[error("stripe_request_failed: {0}")]
     RequestFailed(String),
     #[error("stripe_response_failed: {0}")]
@@ -48,6 +50,7 @@ impl StripeProviderError {
     pub fn code(&self) -> &'static str {
         match self {
             Self::NotConfigured => "stripe_not_configured",
+            Self::LiveKeyRejected => "stripe_live_key_rejected",
             Self::RequestFailed(_) => "stripe_request_failed",
             Self::ResponseFailed(_) => "stripe_response_failed",
             Self::ResponseInvalid(_) => "stripe_response_invalid",
@@ -59,6 +62,9 @@ impl StripeProviderError {
         match self {
             Self::NotConfigured => {
                 "NVBES_STRIPE_SECRET_KEY must be configured before billing actions.".to_string()
+            }
+            Self::LiveKeyRejected => {
+                "Stripe live keys are forbidden in V1. Use test keys (sk_test_ / rk_test_).".to_string()
             }
             Self::RequestFailed(message)
             | Self::ResponseFailed(message)
@@ -76,6 +82,7 @@ impl StripeProviderError {
 pub struct StripeWebhookEvent {
     pub id: String,
     pub event_type: String,
+    pub livemode: bool,
     pub data_object: Value,
 }
 
@@ -143,10 +150,12 @@ pub fn parse_stripe_event(payload: &[u8]) -> Option<StripeWebhookEvent> {
     let value: Value = serde_json::from_slice(payload).ok()?;
     let id = value.get("id").and_then(Value::as_str)?.to_owned();
     let event_type = value.get("type").and_then(Value::as_str)?.to_owned();
+    let livemode = value.get("livemode").and_then(Value::as_bool).unwrap_or(false);
     let data_object = value.pointer("/data/object").cloned()?;
     Some(StripeWebhookEvent {
         id,
         event_type,
+        livemode,
         data_object,
     })
 }

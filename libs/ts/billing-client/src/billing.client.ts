@@ -10,6 +10,10 @@ import {
   BillingPortalViewSchema,
   BillingUsageSchema,
   ProductEntitlementsSchema,
+  BillingPlanSchema,
+  BillingOverviewV1Schema,
+  BillingOperatorOverviewSchema,
+  BillingReconciliationItemSchema,
   type BillingCheckoutRedirect,
   type BillingOverview,
   type BillingPortalCapabilities,
@@ -20,6 +24,10 @@ import {
   type BillingPortalView,
   type BillingUsage,
   type ProductEntitlements,
+  type BillingPlan,
+  type BillingOverviewV1,
+  type BillingOperatorOverview,
+  type BillingReconciliationItem,
 } from './billing.schemas';
 
 export type RequestOptions = { signal?: AbortSignal };
@@ -122,6 +130,43 @@ export class BillingClient {
     return this.http.get(
       `/workspaces/${workspaceId}/billing/subscriptions`,
       BillingPortalSubscriptionProviderSchema.array(),
+      options,
+    );
+  }
+
+  getPlans(options?: RequestOptions): Promise<BillingPlan[]> {
+    return this.http.get('/billing/plans', BillingPlanSchema.array(), options);
+  }
+
+  getOverviewV1(workspaceId: string, options?: RequestOptions): Promise<BillingOverviewV1> {
+    return this.http.get(
+      `/workspaces/${workspaceId}/billing/overview`,
+      BillingOverviewV1Schema,
+      options,
+    );
+  }
+
+  getOperatorOverview(options?: RequestOptions): Promise<BillingOperatorOverview> {
+    return this.http.get('/operator/billing/overview', BillingOperatorOverviewSchema, options);
+  }
+
+  listReconciliations(options?: RequestOptions): Promise<BillingReconciliationItem[]> {
+    return this.http.get(
+      '/operator/billing/reconciliations',
+      BillingReconciliationItemSchema.array(),
+      options,
+    );
+  }
+
+  resolveReconciliation(
+    id: string,
+    notes: string,
+    options?: RequestOptions,
+  ): Promise<BillingReconciliationItem> {
+    return this.http.post(
+      `/operator/billing/reconciliations/${id}/resolve`,
+      BillingReconciliationItemSchema,
+      { resolution_notes: notes },
       options,
     );
   }

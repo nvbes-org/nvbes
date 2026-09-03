@@ -10,6 +10,10 @@ const trustRiskWorkflow = readFileSync(
 	".github/workflows/deploy-trust-risk.yml",
 	"utf8",
 );
+const billingWorkflow = readFileSync(
+	".github/workflows/deploy-billing.yml",
+	"utf8",
+);
 const rotationWorkflow = readFileSync(
 	".github/workflows/rotate-ci-cache-credentials.yml",
 	"utf8",
@@ -32,6 +36,7 @@ test("deployment builds use isolated Scaleway registry cache scopes", () => {
 	for (const [workflow, scope] of [
 		[emailWorkflow, "email-worker"],
 		[trustRiskWorkflow, "trust-risk-service"],
+		[billingWorkflow, "billing-service"],
 	]) {
 		assert.match(workflow, /name: production-ci-cache/u);
 		assert.match(

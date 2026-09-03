@@ -6,11 +6,12 @@ const BillingRedirectSchema = z.object({
 });
 
 export const BillingCheckoutRedirectSchema = BillingRedirectSchema.extend({
-  provider: BillingProviderCodeSchema,
+  provider: BillingProviderCodeSchema.optional(),
+  session_id: z.string().optional(),
 });
 
 export const BillingPortalRedirectSchema = BillingRedirectSchema.extend({
-  provider: BillingProviderCodeSchema,
+  provider: BillingProviderCodeSchema.optional(),
 });
 
 export const BillingPortalCapabilitiesSchema = z.object({
@@ -181,3 +182,45 @@ export type BillingUsageLine = z.infer<typeof BillingUsageLineSchema>;
 export type BillingUsage = z.infer<typeof BillingUsageSchema>;
 export type ProductEntitlements = z.infer<typeof ProductEntitlementsSchema>;
 export type BillingOverview = z.infer<typeof BillingOverviewSchema>;
+
+export const BillingPlanSchema = z.object({
+  plan_code: z.string(),
+  name: z.string(),
+  stripe_price_id: z.string(),
+  currency: z.string(),
+  amount_cents: z.number(),
+  billing_interval: z.string(),
+});
+export type BillingPlan = z.infer<typeof BillingPlanSchema>;
+
+export const BillingOverviewV1Schema = z.object({
+  account_id: z.string(),
+  customer_id: z.string().nullable().optional(),
+  plan_code: z.string(),
+  status: z.string(),
+  current_period_end: z.string().nullable().optional(),
+  cancel_at_period_end: z.boolean(),
+});
+export type BillingOverviewV1 = z.infer<typeof BillingOverviewV1Schema>;
+
+export const BillingOperatorOverviewSchema = z.object({
+  active_subscriptions: z.number(),
+  open_checkouts: z.number(),
+  pending_reconciliations: z.number(),
+  pending_outbox: z.number(),
+});
+export type BillingOperatorOverview = z.infer<typeof BillingOperatorOverviewSchema>;
+
+export const BillingReconciliationItemSchema = z.object({
+  id: z.string(),
+  source_event_id: z.string().nullable().optional(),
+  account_id: z.string().nullable().optional(),
+  reason: z.string(),
+  details: z.record(z.string(), z.unknown()),
+  status: z.string(),
+  resolved_by: z.string().nullable().optional(),
+  resolved_at: z.string().nullable().optional(),
+  resolution_notes: z.string().nullable().optional(),
+  created_at: z.string(),
+});
+export type BillingReconciliationItem = z.infer<typeof BillingReconciliationItemSchema>;

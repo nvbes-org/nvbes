@@ -71,6 +71,15 @@ const workflowContracts = [
 		terraformValidationStepName: "Validate isolated Identity Terraform stack",
 		workflowPath: ".github/workflows/deploy-identity.yml",
 	},
+	{
+		...deployContract,
+		path: ".github/workflows/deploy-billing.yml",
+		deployJob: "deploy-billing",
+		terraformEnvironmentPath: "infrastructure/environments/billing-production",
+		terraformInitStepName: "Initialize Billing Terraform providers",
+		terraformValidationStepName: "Validate isolated Billing Terraform stack",
+		workflowPath: ".github/workflows/deploy-billing.yml",
+	},
 ];
 
 const validPrefix = `
