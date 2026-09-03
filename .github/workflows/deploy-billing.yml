@@ -56,8 +56,8 @@ jobs:
         run: node --test apps/billing-service/tests/container-contract.test.mjs
       - name: Validate Billing Rust compilation and tests
         run: |
-          cargo check --manifest-path apps/billing-service/Cargo.toml
-          cargo test --manifest-path apps/billing-service/Cargo.toml
+          cargo check --locked --package nvbes-billing-service
+          cargo test --locked --package nvbes-billing-service
 
   build-scan-sign:
     needs: [ci-test-gate]
