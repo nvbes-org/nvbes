@@ -3,11 +3,10 @@ import { join } from 'node:path';
 const trustedRefs = new Set(['refs/heads/main', 'refs/heads/dev']);
 
 const globalScopePaths = new Set([
-  'Cargo.lock',
-  'Cargo.toml',
   'nx.json',
-  'rust-toolchain.toml',
   '.github/workflows/ci.yml',
+  'tools/ci/nx-cache-manager.core.mjs',
+  'tools/ci/nx-cache-manager.mjs',
 ]);
 
 export function isTrustedPush(eventName, ref) {

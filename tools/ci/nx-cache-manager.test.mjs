@@ -18,11 +18,7 @@ test('keeps Nx local and disconnected from metered cloud services', () => {
 });
 
 test('only protected branch pushes share the trusted cache', () => {
-  for (const ref of [
-    'refs/heads/main',
-    'refs/heads/dev',
-    'refs/heads/release/1.0',
-  ]) {
+  for (const ref of ['refs/heads/main', 'refs/heads/dev', 'refs/heads/release/1.0']) {
     assert.equal(isTrustedPush('push', ref), true);
   }
   assert.equal(isTrustedPush('pull_request', 'refs/heads/main'), false);
@@ -77,6 +73,7 @@ test('selects delivery scopes from projects, owned paths, and global inputs', ()
   };
   assert.equal(isDeliveryScopeAffected(['account-client'], [], scope), true);
   assert.equal(isDeliveryScopeAffected([], ['apps/account-service/src/main.rs'], scope), true);
-  assert.equal(isDeliveryScopeAffected([], ['Cargo.lock'], scope), true);
+  assert.equal(isDeliveryScopeAffected([], ['Cargo.lock'], scope), false);
+  assert.equal(isDeliveryScopeAffected([], ['tools/ci/nx-cache-manager.mjs'], scope), true);
   assert.equal(isDeliveryScopeAffected([], ['docs/README.md'], scope), false);
 });
