@@ -28,9 +28,11 @@ COPY contracts ./contracts
 COPY libs ./libs
 COPY vendor ./vendor
 
+WORKDIR /usr/src/nvbes/apps/billing-service
+
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/usr/src/nvbes/target \
+    --mount=type=cache,target=/usr/src/nvbes/apps/billing-service/target \
     cargo build --locked --release --bin nvbes-billing-service \
     && install -D target/release/nvbes-billing-service /out/billing-service
 
