@@ -110,9 +110,18 @@ test("selects Rust only for Rust sources and workspace configuration", () => {
 });
 
 test("installs Rust tooling for workspace and database test scopes", () => {
-	assert.equal(isRustToolchainRequired(true, { account: false, email: false }), true);
-	assert.equal(isRustToolchainRequired(false, { account: true, email: false }), true);
-	assert.equal(isRustToolchainRequired(false, { account: false, email: false }), false);
+	assert.equal(
+		isRustToolchainRequired(true, { account: false, email: false }),
+		true,
+	);
+	assert.equal(
+		isRustToolchainRequired(false, { account: true, email: false }),
+		true,
+	);
+	assert.equal(
+		isRustToolchainRequired(false, { account: false, email: false }),
+		false,
+	);
 });
 
 test("selects database checks from persistence paths only", () => {
@@ -167,5 +176,13 @@ test("selects only Terraform stacks that own changed configuration", () => {
 	assert.deepEqual(
 		terraformScopes(["infrastructure/modules/scaleway-ci-cache/main.tf"]),
 		["ci-cache-bootstrap"],
+	);
+	assert.deepEqual(
+		terraformScopes(["infrastructure/modules/terraform-state-backend/main.tf"]),
+		["ci-cache-bootstrap"],
+	);
+	assert.deepEqual(
+		terraformScopes(["infrastructure/modules/scaleway-audit-archive/main.tf"]),
+		["security-audit-archive"],
 	);
 });

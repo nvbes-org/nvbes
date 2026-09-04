@@ -6,6 +6,8 @@ provider "registry.terraform.io/scaleway/scaleway" {
   constraints = "~> 2.79"
   hashes = [
     "h1:LcxR9sNfLg0lMcPGni34/aFAIL0A3x06mZ8Lhg9LYtk=",
+    "h1:ppfv4S+zXnjoESuhtHx/wE3GZO1sIn+d7c54uouZQrs=",
+    "h1:x3gIy3vBOjxW6HSR1tlGPQU/HuKg+RmjOfOVydFwBFQ=",
     "zh:01ec419b6692bd0ee6c1b64c6a7a9823bc2b757ea6d37958ebf7bf0057ef8083",
     "zh:025a88b258bd3283439c3380e27edefb4529af875a281e111e43bff9ecc28244",
     "zh:1ce6ab69fbf08ae529dc7978ccaad00a2b13752f086372f4916d063cf65f5ae8",

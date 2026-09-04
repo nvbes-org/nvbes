@@ -35,7 +35,7 @@ const fullCommitShaPattern = /^[0-9a-f]{40}$/u;
 const githubExpression = (value) => `\${{ ${value} }}`;
 const trustedCacheBranchCondition =
 	"(github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/release/'))";
-const cacheEnvironmentSelector = `github.event_name != 'push' && 'ci-no-secrets' || (${trustedCacheBranchCondition} && 'production-ci-cache' || 'branch-ci-cache')`;
+const cacheEnvironmentSelector = `github.event_name == 'push' && (${trustedCacheBranchCondition} && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets')`;
 const cachePrefixSelector = `${trustedCacheBranchCondition} && 'trusted' || format('branches/{0}', github.ref_name)`;
 const workflowScope = parseWorkflowScope(process.argv.slice(2));
 
@@ -528,7 +528,13 @@ function assertSecrets(path, text, allowedSecrets) {
 			/^ {2}push:\n {4}branches: \[main, dev, 'release\/\*\*'\]$/mu.test(
 				text,
 			) &&
-			text.includes("jobs:\n  quality:") &&
+			text.includes("jobs:\n  authorize-cache:") &&
+			text.includes(
+				`ref: ${githubExpression("github.event.pull_request.base.sha")}`,
+			) &&
+			text.includes("path: trusted-base") &&
+			text.includes("node trusted-base/tools/ci/authorize-pr-cache.mjs") &&
+			text.includes("quality:\n    needs: authorize-cache") &&
 			text.includes(
 				`environment:\n      name: ${githubExpression(cacheEnvironmentSelector)}\n      deployment: false`,
 			) &&

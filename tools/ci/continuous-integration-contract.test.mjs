@@ -29,6 +29,16 @@ test("continuous CI runs once per pull request and on protected pushes", () => {
 	);
 	assert.match(workflow, /cancel-in-progress: true/u);
 	assert.match(workflow, /workflow_dispatch:/u);
+	assert.match(workflow, /authorize-cache:/u);
+	assert.match(
+		workflow,
+		/ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/u,
+	);
+	assert.match(
+		workflow,
+		/node trusted-base\/tools\/ci\/authorize-pr-cache\.mjs/u,
+	);
+	assert.match(workflow, /needs\.authorize-cache\.outputs\.trusted == 'true'/u);
 });
 
 test("continuous CI scopes expensive runtimes after affected discovery", () => {
@@ -82,6 +92,7 @@ test("continuous CI restores and publishes only the caches each scope consumes",
 	assert.ok(nxRestore > scope);
 	assert.match(workflow, /scaleway-cache-manager\.mjs restore pnpm/u);
 	assert.match(workflow, /scaleway-cache-manager\.mjs restore nx/u);
+	assert.match(workflow, /mkdir -p "\$TF_PLUGIN_CACHE_DIR"/u);
 	assert.match(workflow, /cache_kinds\+=\(cargo\)/u);
 	assert.match(workflow, /cache_kinds\+=\(terraform\)/u);
 	assert.match(workflow, /scaleway-cache-manager\.mjs save pnpm nx/u);
@@ -90,12 +101,15 @@ test("continuous CI restores and publishes only the caches each scope consumes",
 	assert.match(workflow, /if: success\(\) && github\.event_name == 'push'/u);
 });
 
-test("continuous CI runs the Rust workspace once and only for Rust inputs", () => {
+test("continuous CI runs affected Rust packages once and only for Rust inputs", () => {
 	assert.match(workflow, /RUSTC_WRAPPER: sccache/u);
 	assert.match(workflow, /name: Configure Rust compilation cache/u);
 	assert.match(workflow, /name: Test affected Rust workspace/u);
 	assert.match(workflow, /cargo fmt --all --check/u);
-	assert.equal(workflow.match(/cargo test --workspace --locked/gu)?.length, 1);
+	assert.match(workflow, /node tools\/ci\/cargo-affected\.mjs/u);
+	assert.match(workflow, /cargo_args\+=\(--package "\$package"\)/u);
+	assert.equal(workflow.match(/cargo test --locked/gu)?.length, 1);
+	assert.doesNotMatch(workflow, /cargo test --workspace/u);
 	assert.match(workflow, /export SCCACHE_GHA_ENABLED=true/u);
 });
 
@@ -132,6 +146,7 @@ test("continuous CI scopes database, Terraform, and container contracts independ
 		"identity",
 		"platform-operations",
 		"trust-risk",
+		"security-audit-archive",
 	]) {
 		assert.match(
 			workflow,
@@ -141,6 +156,10 @@ test("continuous CI scopes database, Terraform, and container contracts independ
 			),
 		);
 	}
+	assert.equal(
+		workflow.match(/terraform .* init .* -lockfile=readonly/gu)?.length,
+		9,
+	);
 });
 
 test("continuous CI uses GitHub-hosted quality and self-hosted delivery runners", () => {

@@ -127,13 +127,13 @@ test("cache access is restricted to the CI application and dedicated bucket", ()
 	const branchTrustedReadStart = cacheModule.indexOf(
 		'Sid       = "ReadTrustedCacheObjectsFromBranches"',
 	);
-	const branchListStart = cacheModule.indexOf(
-		'Sid       = "ListBranchCacheObjects"',
+	const branchTrustedDenyStart = cacheModule.indexOf(
+		'Sid       = "DenyTrustedCacheWritesFromBranches"',
 	);
 	assert.ok(branchTrustedReadStart >= 0);
-	assert.ok(branchListStart > branchTrustedReadStart);
+	assert.ok(branchTrustedDenyStart > branchTrustedReadStart);
 	assert.doesNotMatch(
-		cacheModule.slice(branchTrustedReadStart, branchListStart),
+		cacheModule.slice(branchTrustedReadStart, branchTrustedDenyStart),
 		/s3:PutObject/u,
 	);
 	assert.match(
@@ -143,6 +143,10 @@ test("cache access is restricted to the CI application and dedicated bucket", ()
 	assert.doesNotMatch(
 		cacheModule,
 		/ReadWriteBranchCacheObjects[\s\S]*?ObjectStorageObjectsDelete/u,
+	);
+	assert.match(
+		cacheModule,
+		/DenyTrustedCacheWritesFromBranches[\s\S]*?Effect {4}= "Deny"[\s\S]*?"s3:DeleteObject", "s3:PutObject"[\s\S]*?trusted\/\*/u,
 	);
 });
 
@@ -166,9 +170,10 @@ test("the security gate validates the branch cache trust boundary", () => {
 		securityChecker,
 		/text\.includes\('\[\[ "\$GITHUB_REF" == refs\/heads\/\* \]\]'\)/u,
 	);
+	assert.match(securityChecker, /needs\.authorize-cache\.outputs\.trusted/u);
 	assert.match(
 		securityChecker,
-		/github\.event_name != 'push' && 'ci-no-secrets'/u,
+		/node trusted-base\/tools\/ci\/authorize-pr-cache\.mjs/u,
 	);
 	assert.match(
 		securityChecker,
@@ -222,9 +227,12 @@ test("rotation is restricted to the protected bootstrap environment", () => {
 });
 
 test("the unified quality job selects the correctly scoped Rust cache", () => {
-	assert.match(ciWorkflow, /jobs:\n {2}quality:/u);
+	assert.match(ciWorkflow, /\n {2}quality:/u);
 	assert.doesNotMatch(ciWorkflow, /rust-tests-scaleway-cache:/u);
-	assert.match(ciWorkflow, /github\.event_name != 'push' && 'ci-no-secrets'/u);
+	assert.match(
+		ciWorkflow,
+		/needs\.authorize-cache\.outputs\.trusted == 'true'/u,
+	);
 	assert.match(ciWorkflow, /RUSTC_WRAPPER: sccache/u);
 	assert.match(ciWorkflow, /CARGO_INCREMENTAL: '0'/u);
 	assert.match(
@@ -245,7 +253,10 @@ test("the unified quality job selects the correctly scoped Rust cache", () => {
 	);
 	assert.match(ciWorkflow, /format\('branches\/\{0\}', github\.ref_name\)/u);
 	assert.match(ciWorkflow, /name: Test affected Rust workspace/u);
-	assert.match(ciWorkflow, /GITHUB_EVENT_NAME.*!=.*push/u);
+	assert.doesNotMatch(
+		ciWorkflow,
+		/GITHUB_EVENT_NAME.*!=.*push.*AWS_ACCESS_KEY_ID/u,
+	);
 	assert.match(ciWorkflow, /export SCCACHE_GHA_ENABLED=true/u);
 	assert.match(
 		ciWorkflow,
@@ -261,11 +272,11 @@ test("the unified quality job selects the correctly scoped Rust cache", () => {
 	);
 	assert.match(
 		ciWorkflow,
-		/sccache --zero-stats\n {10}cargo fmt --all --check\n {10}cargo test --workspace --locked\n {10}sccache --show-stats/u,
+		/sccache --zero-stats[\s\S]*?cargo fmt --all --check[\s\S]*?cargo test --locked "\$\{cargo_args\[@\]\}"[\s\S]*?sccache --show-stats/u,
 	);
 	assert.equal(
-		ciWorkflow.match(/cargo test --workspace --locked/gu)?.length,
+		ciWorkflow.match(/cargo test --locked/gu)?.length,
 		1,
-		"the unified quality job must contain one workspace test",
+		"the unified quality job must contain one affected Cargo test",
 	);
 });
