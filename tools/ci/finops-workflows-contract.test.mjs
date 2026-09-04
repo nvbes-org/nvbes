@@ -32,6 +32,8 @@ const workflowContracts = [
 	{
 		path: ".github/workflows/ci.yml",
 		job: "quality",
+		allowedIf:
+			"github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository",
 		dependencyCacheStep: {
 			env: {
 				AWS_ACCESS_KEY_ID: `\${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}`,

@@ -27,18 +27,18 @@ function runSteps(job) {
 	});
 }
 
-function isFailClosed(value) {
+function isFailClosed(value, allowedIf) {
 	return (
-		!Object.hasOwn(value, "if") &&
+		(!Object.hasOwn(value, "if") || value.if === allowedIf) &&
 		(!Object.hasOwn(value, "continue-on-error") ||
 			value["continue-on-error"] === false)
 	);
 }
 
-function assertFailClosedGateJob(gate, jobName, shell) {
+function assertFailClosedGateJob(gate, jobName, shell, allowedIf) {
 	assert.ok(isRecord(gate), "workflow job must be an object");
 	assert.equal(
-		isFailClosed(gate),
+		isFailClosed(gate, allowedIf),
 		true,
 		`${jobName} must be unconditional and fail closed`,
 	);
@@ -232,7 +232,12 @@ export function validateWorkflowContract(source, contract) {
 	);
 
 	const gate = workflow.jobs[contract.job];
-	assertFailClosedGateJob(gate, contract.job, contract.shell);
+	assertFailClosedGateJob(
+		gate,
+		contract.job,
+		contract.shell,
+		contract.allowedIf,
+	);
 	assertExecutionContext(workflow, gate, contract);
 	const gateRunSteps = runSteps(gate);
 	const finOpsSteps = gateRunSteps.filter(({ run }) => run === FINOPS_COMMAND);

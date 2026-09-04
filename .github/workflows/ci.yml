@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: continuous-integration-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: continuous-integration-${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 permissions:
@@ -21,6 +21,7 @@ defaults:
 
 jobs:
   quality:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     environment:
       name: ${{ github.event_name != 'push' && 'ci-no-secrets' || ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/release/')) && 'production-ci-cache' || 'branch-ci-cache') }}
       deployment: false

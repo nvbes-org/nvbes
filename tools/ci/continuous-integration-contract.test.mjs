@@ -19,6 +19,14 @@ test("continuous CI runs on every active delivery branch", () => {
 	assert.match(workflow, /quality:/u);
 	assert.match(
 		workflow,
+		/if: github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.head\.repo\.full_name != github\.repository/u,
+	);
+	assert.match(
+		workflow,
+		/group: continuous-integration-\$\{\{ github\.workflow \}\}-\$\{\{ github\.event_name \}\}/u,
+	);
+	assert.match(
+		workflow,
 		/quality:[\s\S]*?runs-on: ubuntu-latest\n {4}timeout-minutes: (?:9\d|[1-9]\d{2,})/u,
 	);
 	assert.doesNotMatch(workflow, /rust-tests-scaleway-cache:/u);
