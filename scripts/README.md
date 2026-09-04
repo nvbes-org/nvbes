@@ -31,11 +31,12 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
   le paquet d'acceptation Account signé, l'attestation control-plane du release et le
   smoke sur les URLs de production.
 - `check-llm-structure.sh`: verifie la platitude de `src/`, et les seuils de taille des fichiers Rust.
-- `dev-account-worker.sh`: lance le worker Account en isolation.
-- `dev-account-db-reset.sh`: recree la base Account locale `nvbes` quand les checksums SQLx dev ne correspondent plus.
-- `dev-cloud-worker.sh`: lance le worker Cloud en isolation.
-- `dev-cloud-db-reset.sh`: recree la base Cloud locale `nvbes_cloud` quand les checksums SQLx dev ne correspondent plus.
-- `dev-worker.sh`: alias historique vers le worker Account.
+- `dev.sh`: prépare les bases locales puis lance Email, Trust/Risk, Identity, Account et Billing.
+- `dev-account-service.sh`: lance Account en isolation sur le port local 3070.
+- `dev-billing-service.sh`: lance le workspace Cargo Billing autonome sur le port local 3080.
+- `dev-email-worker.sh`: génère les templates et lance Email avec rechargement à chaud si `cargo-watch` est disponible.
+- `dev-identity-service.sh`: lance Identity en isolation sur le port local 3060.
+- `dev-trust-risk-service.sh`: lance Trust/Risk en isolation sur le port local 3050.
 - `generate-openapi.sh`: regenere les specs OpenAPI Identity, Account, Developer, Cloud et Backoffice, puis republie les SDK generes.
 
 Variables attendues pour les tests deployes:

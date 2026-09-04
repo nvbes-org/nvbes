@@ -8,6 +8,10 @@ source "$SCRIPT_DIR/lib/test-env.sh"
 
 cd "$ROOT_DIR"
 
+export NVBES_EMAIL_DATABASE_URL="${NVBES_DEV_EMAIL_DATABASE_URL:-postgres://postgres:postgres@localhost:5432/nvbes_dev_email}"
+export NVBES_EMAIL_HTTP_BIND_ADDR="${NVBES_DEV_EMAIL_BIND_ADDR:-127.0.0.1:3040}"
+export NVBES_EMAIL_GRPC_BIND_ADDR="$NVBES_EMAIL_HTTP_BIND_ADDR"
+
 pnpm generate:email
 
 if cargo watch --version >/dev/null 2>&1; then

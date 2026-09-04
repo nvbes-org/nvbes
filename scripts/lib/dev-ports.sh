@@ -37,7 +37,7 @@ dev_port_pid_is_protected() {
 
   command="$(ps -p "$pid" -o command= 2>/dev/null || true)"
   case "$command" in
-    *"Code Helper"* | *"Visual Studio Code"* | *"/Applications/Visual Studio Code.app"*)
+    *"Code Helper"* | *"Visual Studio Code"*)
       return 0
       ;;
     *)
@@ -95,7 +95,9 @@ terminate_child_jobs() {
     return 0
   fi
 
-  kill -TERM $pids 2>/dev/null || true
+  for pid in $pids; do
+    kill -TERM "$pid" 2>/dev/null || true
+  done
 
   for pid in $pids; do
     if ! wait_for_port_exit "$pid"; then

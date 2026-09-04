@@ -23,6 +23,51 @@ void test('email worker reloads when its renderer or generated React templates c
     'the cargo watcher must not start Nx inside a detached PTY',
   );
   assert.match(launcher, /run -p nvbes-email-worker/);
+  assert.match(launcher, /NVBES_DEV_EMAIL_BIND_ADDR/);
+  assert.match(launcher, /NVBES_EMAIL_GRPC_BIND_ADDR="\$NVBES_EMAIL_HTTP_BIND_ADDR"/);
+});
+
+void test('the root development launcher starts the complete V1 ecosystem', async () => {
+  const launcher = await workspaceFile('scripts/dev.sh');
+
+  assert.match(launcher, /docker compose .* up --detach --wait/);
+  assert.match(launcher, /dev-email-worker\.sh/);
+  assert.match(launcher, /dev-trust-risk-service\.sh/);
+  assert.match(launcher, /dev-identity-service\.sh/);
+  assert.match(launcher, /dev-account-service\.sh/);
+  assert.match(launcher, /dev-billing-service\.sh/);
+  assert.match(
+    launcher,
+    /for database in nvbes_dev_email nvbes_dev_trust_risk nvbes_dev_identity nvbes_dev_account nvbes_dev_billing/,
+  );
+  assert.match(launcher, /createdb --username postgres "\$database"/);
+  assert.match(launcher, /cargo run --package nvbes-email-worker -- migrate/);
+  assert.match(launcher, /cargo run --package nvbes-trust-risk-service -- migrate/);
+  assert.match(launcher, /cargo run --package nvbes-identity-service -- migrate/);
+  assert.match(launcher, /cargo run --package nvbes-account-service -- migrate/);
+  assert.match(
+    launcher,
+    /cargo run --manifest-path apps\/billing-service\/Cargo\.toml -- migrate/,
+  );
+  assert.doesNotMatch(launcher, /dev-(cloud|enterprise|developer|backoffice)/);
+});
+
+void test('local Identity consumers share one generated RSA public key', async () => {
+  const [keys, account, billing] = await Promise.all([
+    workspaceFile('scripts/lib/dev-identity-keys.sh'),
+    workspaceFile('scripts/dev-account-service.sh'),
+    workspaceFile('scripts/dev-billing-service.sh'),
+  ]);
+
+  assert.match(keys, /\.temp\/dev-runtime/);
+  assert.match(keys, /openssl genpkey -algorithm RSA/);
+  assert.match(keys, /NVBES_IDENTITY_PUBLIC_KEY_PEM/);
+  assert.match(account, /load_dev_identity_keys/);
+  assert.match(billing, /load_dev_identity_keys/);
+  assert.match(
+    billing,
+    /--manifest-path apps\/billing-service\/Cargo\.toml -- serve/,
+  );
 });
 
 void test('development environment loaders expose custom Node debugger names', async () => {

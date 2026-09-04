@@ -7,15 +7,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/test-env.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/dev-ports.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/dev-identity-keys.sh"
 
-export NVBES_ACCOUNT_DATABASE_URL="${NVBES_ACCOUNT_DATABASE_URL:-postgres://postgres:postgres@localhost:5432/nvbes_account}"
-export NVBES_ACCOUNT_SERVICE_PORT="${NVBES_ACCOUNT_SERVICE_PORT:-4001}"
-export NVBES_ACCOUNT_SERVICE_BASE_URL="${NVBES_ACCOUNT_SERVICE_BASE_URL:-http://localhost:${NVBES_ACCOUNT_SERVICE_PORT}}"
-export NVBES_IDENTITY_SERVICE_BASE_URL="${NVBES_IDENTITY_SERVICE_BASE_URL:-http://localhost:4000}"
-export NVBES_ACCOUNT_WEB_BASE_URL="${NVBES_ACCOUNT_WEB_BASE_URL:-http://localhost:3001}"
-export NVBES_ACCOUNT_AVATAR_STORAGE_MODE="${NVBES_ACCOUNT_AVATAR_STORAGE_MODE:-mock}"
+load_dev_identity_keys
 export NVBES_ENVIRONMENT="${NVBES_ENVIRONMENT:-development}"
+export NVBES_ACCOUNT_DATABASE_URL="${NVBES_DEV_ACCOUNT_DATABASE_URL:-postgres://postgres:postgres@localhost:5432/nvbes_dev_account}"
+export NVBES_ACCOUNT_BIND_ADDR="${NVBES_ACCOUNT_BIND_ADDR:-127.0.0.1:3070}"
 
 cd "$ROOT_DIR"
-free_dev_port "$NVBES_ACCOUNT_SERVICE_PORT" "account-service"
-exec cargo run -p nvbes-account-service
+free_dev_port "${NVBES_ACCOUNT_BIND_ADDR##*:}" "account-service"
+exec cargo run --package nvbes-account-service
