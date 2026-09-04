@@ -44,7 +44,7 @@ const workflowContracts = [
 			SCCACHE_S3_ENABLE_VIRTUAL_HOST_STYLE: "true",
 			SCCACHE_S3_USE_SSL: "true",
 		},
-		runsOn: ["self-hosted", "macOS", "ARM64"],
+		runsOn: "ubuntu-latest",
 		shell: safeShell,
 		terraformEnvironmentPath: emailTerraformEnvironmentPath,
 		terraformInitStepName: "Initialize isolated email Terraform providers",

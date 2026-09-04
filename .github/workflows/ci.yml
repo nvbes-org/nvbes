@@ -24,7 +24,7 @@ jobs:
     environment:
       name: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/release/')) && 'production-ci-cache' || 'branch-ci-cache' }}
       deployment: false
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
       CI: 'true'
@@ -153,13 +153,13 @@ jobs:
       - name: Export email test database URL
         if: steps.nx-scope.outputs.email-affected == 'true'
         run: |
-          database_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports['5432'] }}/nvbes_email_test"
+          database_url="postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/nvbes_email_test"
           printf '%s\n' "DATABASE_URL=${database_url}" >> "${GITHUB_ENV}"
       - name: Provision isolated Account test database
         if: steps.nx-scope.outputs.account-affected == 'true'
         run: |
           docker exec "${{ job.services.postgres.id }}" createdb --username postgres nvbes_account_test
-          account_database_url="postgres://postgres:postgres@host.docker.internal:${{ job.services.postgres.ports['5432'] }}/nvbes_account_test"
+          account_database_url="postgres://postgres:postgres@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/nvbes_account_test"
           printf '%s\n' "NVBES_ACCOUNT_DATABASE_URL=${account_database_url}" >> "${GITHUB_ENV}"
       - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
         with:
