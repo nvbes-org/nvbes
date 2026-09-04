@@ -13,4 +13,4 @@ require_env DATABASE_URL
 node --test "$ROOT_DIR/scripts/validate-billing-test-database.test.mjs"
 node "$ROOT_DIR/scripts/validate-billing-test-database.mjs"
 
-cargo test --locked --package nvbes-billing-service --features database-tests -- --test-threads=1
+cargo test --manifest-path apps/billing-service/Cargo.toml --features database-tests -- --test-threads=1

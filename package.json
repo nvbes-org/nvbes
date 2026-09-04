@@ -4,8 +4,12 @@
   "private": true,
   "license": "AGPL-3.0-only",
   "scripts": {
-    "dev": "pnpm dev:email-worker",
+    "dev": "bash scripts/dev.sh",
+    "dev:account-service": "bash scripts/dev-account-service.sh",
+    "dev:billing-service": "bash scripts/dev-billing-service.sh",
     "dev:email-worker": "bash scripts/dev-email-worker.sh",
+    "dev:identity-service": "bash scripts/dev-identity-service.sh",
+    "dev:trust-risk-service": "bash scripts/dev-trust-risk-service.sh",
     "dev:infra": "docker compose --profile infra -f infrastructure/local/docker-compose.yml up -d",
     "dev:infra:down": "docker compose --profile infra -f infrastructure/local/docker-compose.yml down",
     "dev:infra:obs": "docker compose --profile observability -f infrastructure/local/docker-compose.yml up -d",

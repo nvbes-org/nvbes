@@ -69,13 +69,17 @@ Prérequis : Node.js 24+, pnpm 11+, Rust stable, Docker Compose et OpenTofu.
 pnpm install
 pnpm env:sync
 pnpm env:check
-pnpm dev:infra
-pnpm dev
+pnpm dev              # Email + Trust/Risk + Identity + Account + Billing
 ```
 
 Commandes principales :
 
 ```bash
+pnpm dev:identity-service      # Identity seul
+pnpm dev:account-service       # Account seul
+pnpm dev:billing-service       # Billing seul
+pnpm dev:email-worker          # Email seul
+pnpm dev:trust-risk-service    # Trust/Risk seul
 pnpm check            # Gates complets, dont FinOps
 pnpm check:finops     # Budget et plafonds serverless
 pnpm lint             # Lint web et Rust

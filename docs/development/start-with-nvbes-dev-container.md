@@ -4,18 +4,20 @@ This Dev Container gives you the full Nvbes local stack without installing the p
 
 ## First Start
 
-Run the database migrations, then start the development stack:
+Start the complete development stack, including its local infrastructure:
 
 ```bash
-pnpm db:migrate
 pnpm dev
 ```
 
 ## Useful Commands
 
 ```bash
-pnpm dev:web
-pnpm dev:api
+pnpm dev:email-worker
+pnpm dev:trust-risk-service
+pnpm dev:identity-service
+pnpm dev:account-service
+pnpm dev:billing-service
 pnpm check
 pnpm test
 pnpm verify
@@ -23,17 +25,12 @@ pnpm verify
 
 ## Local URLs
 
-- Cloud web: http://localhost:5173
-- Account web: http://localhost:3001
-- Account service: http://localhost:4000
-- Cloud service: http://localhost:4002
+- Email HTTP/gRPC: http://localhost:3040
+- Trust/Risk HTTP/gRPC: http://localhost:3050
+- Identity: http://localhost:3060
+- Account: http://localhost:3070
+- Billing: http://localhost:3080
+- Mailpit: http://localhost:8025
 - Grafana: http://localhost:13000
-
-## Reset Local Data
-
-```bash
-pnpm dev:drive-db:reset
-pnpm db:migrate
-```
 
 For the full setup notes, see `docs/development/devcontainer.md`.

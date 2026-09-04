@@ -139,12 +139,11 @@ Fichiers sous 300 lignes = contexte LLM optimal. Le LLM peut lire un fichier ent
 
 ```bash
 pnpm dev              # Runtimes locaux principaux
-pnpm dev:web          # Frontend uniquement
-pnpm dev:api          # Services Rust
+pnpm dev:identity-service
 pnpm dev:account-service
-pnpm dev:cloud-service
-pnpm dev:account-worker
-pnpm dev:cloud-worker
+pnpm dev:billing-service
+pnpm dev:email-worker
+pnpm dev:trust-risk-service
 pnpm check            # Checks complets
 pnpm lint             # Lint complet
 pnpm test             # Tests complets

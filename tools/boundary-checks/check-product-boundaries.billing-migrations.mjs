@@ -84,7 +84,7 @@ function checkBillingMigrationPipeline(errors) {
 }
 
 function checkIdentityMigrationScriptsDoNotTargetBilling(errors) {
-	for (const script of ["scripts/db-migrate.sh", "scripts/dev-account-db-reset.sh"]) {
+	for (const script of ["scripts/db-migrate.sh"]) {
 		if (!existsSync(script)) continue;
 		const content = readFileSync(script, "utf8");
 		for (const forbidden of ["NVBES_BILLING_DATABASE_URL", "nvbes-billing-service", "apps/billing-service/migrations"]) {
