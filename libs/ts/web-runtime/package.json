@@ -34,7 +34,7 @@
     "@sentry/browser": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
-    "posthog-js": "1.396.3",
+    "posthog-js": "1.422.2",
     "react": "catalog:",
     "zod": "^4.4.3"
   },
