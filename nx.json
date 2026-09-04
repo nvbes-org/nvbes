@@ -72,5 +72,10 @@
     }
   },
   "analytics": false,
+  "pluginsConfig": {
+    "@nx/js": {
+      "projectsAffectedByDependencyUpdates": "auto"
+    }
+  },
   "neverConnectToCloud": true
 }

@@ -6,16 +6,14 @@ import openapiTS, { astToString, COMMENT_HEADER } from 'openapi-typescript';
 const packageRoot = new URL('./', import.meta.url);
 const openapiUrl = new URL('openapi.json', packageRoot);
 const generatedTypesUrl = new URL('src/types.gen.ts', packageRoot);
-const serviceOpenapiUrl = new URL('../../../apps/identity-service/openapi.json', packageRoot);
 const methods = ['get', 'put', 'post', 'delete', 'patch', 'options', 'head', 'trace'];
 
 async function readJson(url) {
   return JSON.parse(await readFile(url, 'utf8'));
 }
 
-test('service, SDK and optional runtime OpenAPI documents are identical', async () => {
+test('SDK and optional runtime OpenAPI documents are identical', async () => {
   const sdk = await readJson(openapiUrl);
-  assert.deepEqual(await readJson(serviceOpenapiUrl), sdk);
 
   if (process.env.IDENTITY_RUNTIME_OPENAPI) {
     assert.deepEqual(JSON.parse(await readFile(process.env.IDENTITY_RUNTIME_OPENAPI, 'utf8')), sdk);

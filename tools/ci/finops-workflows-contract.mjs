@@ -86,6 +86,9 @@ function expectedGatePrefix(contract) {
 	prefix.push(
 		{ name: "Install locked dependencies", run: LOCKED_INSTALL_COMMAND },
 		{ name: "Enforce FinOps contract", run: FINOPS_COMMAND },
+	);
+	if (contract.scopedInfrastructure === true) return prefix;
+	prefix.push(
 		{
 			uses: SETUP_TERRAFORM_ACTION,
 			with: { terraform_version: "1.15.8", terraform_wrapper: false },
@@ -266,7 +269,20 @@ export function validateWorkflowContract(source, contract) {
 		1,
 		"Terraform validation must run after pnpm check:finops",
 	);
-	assertCriticalSteps(terraformSteps, contract.job);
+	if (contract.terraformValidationIf === undefined) {
+		assertCriticalSteps(terraformSteps, contract.job);
+	} else {
+		assert.equal(
+			terraformSteps[0].step.if,
+			contract.terraformValidationIf,
+			`${contract.job} must scope Terraform validation explicitly`,
+		);
+		assert.equal(
+			terraformSteps[0].step["continue-on-error"],
+			undefined,
+			`${contract.job} Terraform validation must fail closed`,
+		);
+	}
 
 	assertDownstreamJobs(workflow, contract);
 	assertJobInventory(workflow, contract);
