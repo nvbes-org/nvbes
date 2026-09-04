@@ -32,6 +32,16 @@ const workflowContracts = [
 	{
 		path: ".github/workflows/ci.yml",
 		job: "quality",
+		allowedIf:
+			"github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository",
+		dependencyCacheStep: {
+			env: {
+				AWS_ACCESS_KEY_ID: `\${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}`,
+				AWS_SECRET_ACCESS_KEY: `\${{ secrets.SCW_CI_CACHE_SECRET_KEY }}`,
+			},
+			name: "Restore central dependency caches",
+			run: 'mkdir -p "$TF_PLUGIN_CACHE_DIR"\nnode tools/ci/scaleway-cache-manager.mjs restore pnpm cargo terraform\n',
+		},
 		gateEnv: {
 			CARGO_INCREMENTAL: "0",
 			CI: "true",
@@ -43,6 +53,7 @@ const workflowContracts = [
 			SCCACHE_REGION: `\${{ vars.SCW_CI_CACHE_REGION }}`,
 			SCCACHE_S3_ENABLE_VIRTUAL_HOST_STYLE: "true",
 			SCCACHE_S3_USE_SSL: "true",
+			TF_PLUGIN_CACHE_DIR: "/tmp/nvbes-terraform-plugin-cache",
 		},
 		runsOn: "ubuntu-latest",
 		shell: safeShell,

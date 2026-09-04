@@ -119,6 +119,23 @@ test("cache access is restricted to the CI application and dedicated bucket", ()
 		cacheModule,
 		/Resource {2}= \["\$\{scaleway_object_bucket\.ci_cache\.name\}\/trusted\/\*"\]/u,
 	);
+	assert.match(cacheModule, /Sid {7}= "ReadTrustedCacheObjectsFromBranches"/u);
+	assert.match(
+		cacheModule,
+		/ReadTrustedCacheObjectsFromBranches[\s\S]*?Action {4}= \["s3:GetObject"\][\s\S]*?trusted\/\*/u,
+	);
+	const branchTrustedReadStart = cacheModule.indexOf(
+		'Sid       = "ReadTrustedCacheObjectsFromBranches"',
+	);
+	const branchListStart = cacheModule.indexOf(
+		'Sid       = "ListBranchCacheObjects"',
+	);
+	assert.ok(branchTrustedReadStart >= 0);
+	assert.ok(branchListStart > branchTrustedReadStart);
+	assert.doesNotMatch(
+		cacheModule.slice(branchTrustedReadStart, branchListStart),
+		/s3:PutObject/u,
+	);
 	assert.match(
 		cacheModule,
 		/Resource {2}= \["\$\{scaleway_object_bucket\.ci_cache\.name\}\/branches\/\*"\]/u,
@@ -151,7 +168,7 @@ test("the security gate validates the branch cache trust boundary", () => {
 	);
 	assert.match(
 		securityChecker,
-		/'production-ci-cache' \|\| 'branch-ci-cache'/u,
+		/github\.event_name != 'push' && 'ci-no-secrets'/u,
 	);
 	assert.match(
 		securityChecker,
@@ -207,7 +224,7 @@ test("rotation is restricted to the protected bootstrap environment", () => {
 test("the unified quality job selects the correctly scoped Rust cache", () => {
 	assert.match(ciWorkflow, /jobs:\n {2}quality:/u);
 	assert.doesNotMatch(ciWorkflow, /rust-tests-scaleway-cache:/u);
-	assert.match(ciWorkflow, /'production-ci-cache' \|\| 'branch-ci-cache'/u);
+	assert.match(ciWorkflow, /github\.event_name != 'push' && 'ci-no-secrets'/u);
 	assert.match(ciWorkflow, /RUSTC_WRAPPER: sccache/u);
 	assert.match(ciWorkflow, /CARGO_INCREMENTAL: '0'/u);
 	assert.match(

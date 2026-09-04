@@ -9,9 +9,7 @@ const deploymentWorkflows = [
 	"deploy-email.yml",
 	"deploy-identity.yml",
 	"deploy-trust-risk.yml",
-].map((name) =>
-	readFileSync(`.github/workflows/${name}`, "utf8"),
-);
+].map((name) => readFileSync(`.github/workflows/${name}`, "utf8"));
 
 test("continuous CI runs on every active delivery branch", () => {
 	assert.match(workflow, /push:\n {4}branches: \['\*\*'\]/u);
@@ -19,6 +17,14 @@ test("continuous CI runs on every active delivery branch", () => {
 	assert.doesNotMatch(workflow, /staging/u);
 	assert.match(workflow, /workflow_dispatch:/u);
 	assert.match(workflow, /quality:/u);
+	assert.match(
+		workflow,
+		/if: github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.head\.repo\.full_name != github\.repository/u,
+	);
+	assert.match(
+		workflow,
+		/group: continuous-integration-\$\{\{ github\.workflow \}\}-\$\{\{ github\.event_name \}\}/u,
+	);
 	assert.match(
 		workflow,
 		/quality:[\s\S]*?runs-on: ubuntu-latest\n {4}timeout-minutes: (?:9\d|[1-9]\d{2,})/u,
@@ -54,10 +60,7 @@ test("continuous CI validates the active Email and closed Identity runtimes", ()
 test("continuous CI uses GitHub-hosted quality and self-hosted delivery runners", () => {
 	assert.match(workflow, /runs-on: ubuntu-latest/u);
 	for (const deploymentWorkflow of deploymentWorkflows) {
-		assert.match(
-			deploymentWorkflow,
-			/runs-on: \[self-hosted, macOS, ARM64\]/u,
-		);
+		assert.match(deploymentWorkflow, /runs-on: \[self-hosted, macOS, ARM64\]/u);
 	}
 	assert.doesNotMatch(workflow, /Swatinem\/rust-cache@/u);
 	assert.doesNotMatch(workflow, /^\s+cache: pnpm\s*$/mu);
@@ -98,12 +101,38 @@ test("continuous CI selects affected projects with an isolated Nx cache", () => 
 	}
 });
 
+test("central caches restore before consumers and publish only after successful pushes", () => {
+	const dependencyRestore = workflow.indexOf(
+		"name: Restore central dependency caches",
+	);
+	const install = workflow.indexOf("name: Install locked dependencies");
+	const nxSetup = workflow.indexOf(
+		"name: Configure Nx cache and affected scope",
+	);
+	const nxRestore = workflow.indexOf("name: Restore central Nx task cache");
+	const publish = workflow.indexOf("name: Publish central caches");
+	assert.ok(dependencyRestore > 0 && dependencyRestore < install);
+	assert.ok(nxRestore > nxSetup);
+	assert.ok(publish > nxRestore);
+	assert.match(
+		workflow,
+		/TF_PLUGIN_CACHE_DIR: \/tmp\/nvbes-terraform-plugin-cache/u,
+	);
+	assert.match(
+		workflow,
+		/scaleway-cache-manager\.mjs restore pnpm cargo terraform/u,
+	);
+	assert.match(workflow, /scaleway-cache-manager\.mjs restore nx/u);
+	assert.match(workflow, /if: success\(\) && github\.event_name == 'push'/u);
+	assert.match(workflow, /scaleway-cache-manager\.mjs save/u);
+});
+
 test("continuous CI runs Rust tests once with the appropriate cache backend", () => {
 	assert.match(workflow, /RUSTC_WRAPPER: sccache/u);
 	assert.doesNotMatch(workflow, /rust-tests-scaleway-cache:/u);
 	assert.match(
 		workflow,
-		/name: \$\{\{[\s\S]*?'production-ci-cache' \|\| 'branch-ci-cache' \}\}\n {6}deployment: false/u,
+		/name: \$\{\{ github\.event_name != 'push' && 'ci-no-secrets' \|\|[\s\S]*?'production-ci-cache' \|\| 'branch-ci-cache'\) \}\}\n {6}deployment: false/u,
 	);
 	assert.match(
 		workflow,
