@@ -8,6 +8,7 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
+	readdirSync,
 	realpathSync,
 	rmSync,
 	statSync,
@@ -66,14 +67,10 @@ function fileDigest(paths) {
 }
 
 function terraformLockfiles() {
-	return execFileSync(
-		"rg",
-		["--files", "-g", ".terraform.lock.hcl", "infrastructure"],
-		{ cwd: workspace, encoding: "utf8" },
-	)
-		.trim()
-		.split("\n")
-		.filter(Boolean);
+	return readdirSync(join(workspace, "infrastructure"), { recursive: true })
+		.filter((file) => typeof file === "string" && file.endsWith(".terraform.lock.hcl"))
+		.map((file) => join("infrastructure", file))
+		.sort();
 }
 
 function cacheDefinitions() {
