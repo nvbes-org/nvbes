@@ -244,7 +244,7 @@ test("the unified quality job selects the correctly scoped Rust cache", () => {
 		/SCCACHE_S3_KEY_PREFIX: \$\{\{[\s\S]*?\}\}\/rust\/\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}\/rust-1\.91\.1/u,
 	);
 	assert.match(ciWorkflow, /format\('branches\/\{0\}', github\.ref_name\)/u);
-	assert.match(ciWorkflow, /name: Test Rust workspace/u);
+	assert.match(ciWorkflow, /name: Test affected Rust workspace/u);
 	assert.match(ciWorkflow, /GITHUB_EVENT_NAME.*!=.*push/u);
 	assert.match(ciWorkflow, /export SCCACHE_GHA_ENABLED=true/u);
 	assert.match(
@@ -261,7 +261,7 @@ test("the unified quality job selects the correctly scoped Rust cache", () => {
 	);
 	assert.match(
 		ciWorkflow,
-		/sccache --zero-stats\n {10}cargo test --workspace --locked\n {10}sccache --show-stats/u,
+		/sccache --zero-stats\n {10}cargo fmt --all --check\n {10}cargo test --workspace --locked\n {10}sccache --show-stats/u,
 	);
 	assert.equal(
 		ciWorkflow.match(/cargo test --workspace --locked/gu)?.length,

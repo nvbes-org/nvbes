@@ -7,7 +7,12 @@ updates:
       day: monday
       time: '04:00'
       timezone: Europe/Paris
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
+    rebase-strategy: disabled
+    cooldown:
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     groups:
       rust-security-compatible:
         update-types:
@@ -18,10 +23,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
+      day: tuesday
       time: '04:15'
       timezone: Europe/Paris
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
+    rebase-strategy: disabled
+    cooldown:
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     groups:
       javascript-security-compatible:
         update-types:
@@ -32,12 +42,22 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
+      day: wednesday
       time: '04:30'
       timezone: Europe/Paris
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 2
+    rebase-strategy: disabled
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: docker
     directory: /apps/email-worker
     schedule:
       interval: weekly
+      day: thursday
+      time: '04:45'
+      timezone: Europe/Paris
+    open-pull-requests-limit: 2
+    rebase-strategy: disabled
+    cooldown:
+      default-days: 7
