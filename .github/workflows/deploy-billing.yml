@@ -191,8 +191,9 @@ jobs:
             digest="${source_image##*@}"
           else
             digest="$(docker buildx imagetools inspect "$IMAGE_TAG" --format '{{.Manifest.Digest}}')"
-            source_image="${IMAGE_TAG%:*}:${digest}"
+            source_image="ghcr.io/nvbes-org/nvbes-billing-service@${digest}"
           fi
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           echo "BILLING_IMAGE_DIGEST=${digest}" >> "$GITHUB_ENV"
           echo "BILLING_SOURCE_IMAGE=${source_image}" >> "$GITHUB_ENV"
           identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/deploy-billing.yml@refs/heads/main"
