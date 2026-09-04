@@ -1,0 +1,18 @@
+{
+	"name": "terraform-billing-production",
+	"projectType": "application",
+	"root": "infrastructure/environments/billing-production",
+	"implicitDependencies": ["terraform-modules"],
+	"targets": {
+		"terraform:validate": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["default", "^default"],
+			"options": {
+				"command": "terraform fmt -check -recursive infrastructure/environments/billing-production && terraform -chdir=infrastructure/environments/billing-production init -reconfigure -backend=false -input=false -lockfile=readonly && terraform -chdir=infrastructure/environments/billing-production validate",
+				"cwd": "."
+			}
+		}
+	},
+	"tags": ["scope:infrastructure", "type:terraform", "domain:billing"]
+}

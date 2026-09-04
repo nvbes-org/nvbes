@@ -66,6 +66,9 @@ function terraformInitCommand(contract) {
 }
 
 function terraformValidationCommand(contract) {
+	if (typeof contract.terraformValidationCommand === "string") {
+		return contract.terraformValidationCommand;
+	}
 	return `terraform -chdir=${contract.terraformEnvironmentPath} validate`;
 }
 

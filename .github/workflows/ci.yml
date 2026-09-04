@@ -118,16 +118,7 @@ jobs:
           [[ "${{ steps.nx-scope.outputs.terraform-affected }}" == "true" ]] && cache_kinds+=(terraform)
           node tools/ci/scaleway-cache-manager.mjs restore "${cache_kinds[@]}"
       - name: Validate CI workflow contracts
-        run: >-
-          node --test
-          tools/ci/authorize-pr-cache.test.mjs
-          tools/ci/cargo-affected.test.mjs
-          tools/ci/continuous-integration-contract.test.mjs
-          tools/ci/deployment-provenance-contract.test.mjs
-          tools/ci/identity-restore-contract.test.mjs
-          tools/ci/nx-cache-manager.test.mjs
-          tools/ci/scaleway-cache-manager.test.mjs
-          tools/ci/verify-ci-provenance.test.mjs
+        run: pnpm nx run ci-contracts:test:ci-contract --outputStyle=static
       - name: Validate global workspace contracts
         run: |
           pnpm exec vp fmt --check package.json pnpm-workspace.yaml vite.config.ts tsconfig.base.json nx.json
@@ -183,62 +174,39 @@ jobs:
           cargo test --locked "${cargo_args[@]}"
           sccache --show-stats
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        if: steps.nx-scope.outputs.terraform-affected == 'true' || steps.nx-scope.outputs.email-affected == 'true'
+        if: steps.nx-scope.outputs.terraform-affected == 'true'
         with:
           terraform_version: 1.15.8
           terraform_wrapper: false
-      - name: Validate isolated Identity Terraform stack
-        if: steps.nx-scope.outputs.identity-terraform-affected == 'true'
-        run: |
-          terraform -chdir=infrastructure/environments/identity-production init -backend=false -input=false -lockfile=readonly
-          terraform -chdir=infrastructure/environments/identity-production validate
-      - name: Validate isolated Account Terraform stack
-        if: steps.nx-scope.outputs.account-terraform-affected == 'true'
-        run: |
-          terraform -chdir=infrastructure/environments/account-production init -backend=false -input=false -lockfile=readonly
-          terraform -chdir=infrastructure/environments/account-production validate
-      - name: Validate isolated Billing Terraform stack
-        if: steps.nx-scope.outputs.billing-terraform-affected == 'true'
-        run: |
-          terraform -chdir=infrastructure/environments/billing-production init -backend=false -input=false -lockfile=readonly
-          terraform -chdir=infrastructure/environments/billing-production validate
-      - name: Initialize isolated Email Terraform providers
-        if: steps.nx-scope.outputs.email-terraform-affected == 'true'
-        run: terraform -chdir=infrastructure/environments/email-production init -backend=false -input=false -lockfile=readonly
-      - name: Validate isolated Email Terraform stack
-        if: steps.nx-scope.outputs.email-terraform-affected == 'true'
-        run: terraform -chdir=infrastructure/environments/email-production validate
-      - name: Validate isolated Trust/Risk Terraform stack
-        if: steps.nx-scope.outputs.trust-risk-terraform-affected == 'true'
-        run: |
-          terraform -chdir=infrastructure/environments/trust-risk-production init -backend=false -input=false -lockfile=readonly
-          terraform -chdir=infrastructure/environments/trust-risk-production validate
-      - name: Validate isolated Platform Operations Terraform stack
-        if: steps.nx-scope.outputs.platform-operations-terraform-affected == 'true'
-        run: |
-          terraform -chdir=infrastructure/environments/platform-operations-production init -backend=false -input=false -lockfile=readonly
-          terraform -chdir=infrastructure/environments/platform-operations-production validate
-      - name: Validate CI cache bootstrap Terraform stack
-        if: steps.nx-scope.outputs.ci-cache-bootstrap-terraform-affected == 'true'
-        run: |
-          terraform -chdir=infrastructure/bootstrap/production/initial init -backend=false -input=false -lockfile=readonly
-          terraform -chdir=infrastructure/bootstrap/production/initial validate
-      - name: Validate Security Audit Archive Terraform stack
-        if: steps.nx-scope.outputs.security-audit-archive-terraform-affected == 'true'
-        run: |
-          terraform -chdir=infrastructure/environments/security-audit-archive init -backend=false -input=false -lockfile=readonly
-          terraform -chdir=infrastructure/environments/security-audit-archive validate
-      - name: Validate Email deployment contracts
-        if: steps.nx-scope.outputs.email-affected == 'true'
-        run: pnpm test:pre-deploy
-      - name: Validate Email legacy Terraform stack
+      - name: Validate affected Terraform stacks
+        if: steps.nx-scope.outputs.terraform-affected == 'true'
+        run: >-
+          pnpm nx affected -t terraform:validate
+          --base="${{ steps.nx-scope.outputs.base-sha }}"
+          --head="$GITHUB_SHA"
+          --parallel=3
+          --outputStyle=static
+      - name: Test affected Terraform stacks
         if: steps.nx-scope.outputs.email-stack-terraform-affected == 'true'
-        run: |
-          terraform -chdir=infrastructure/stacks/email/production init -backend=false -input=false -lockfile=readonly
-          terraform -chdir=infrastructure/stacks/email/production validate
-          PATH="$PWD/infrastructure/stacks/email/production/tests/bin:$PATH" terraform -chdir=infrastructure/stacks/email/production test
+        run: >-
+          pnpm nx affected -t terraform:test
+          --base="${{ steps.nx-scope.outputs.base-sha }}"
+          --head="$GITHUB_SHA"
+          --parallel=1
+          --outputStyle=static
+      - name: Validate affected deployment and container contracts
+        if: steps.nx-scope.outputs.email-affected == 'true'
+        run: pnpm nx run ci-contracts:test:contract --outputStyle=static
+      - name: Validate affected container contracts
+        run: >-
+          pnpm nx affected -t test:contract
+          --base="${{ steps.nx-scope.outputs.base-sha }}"
+          --head="$GITHUB_SHA"
+          --exclude=ci-contracts
+          --parallel=4
+          --outputStyle=static
       - name: Start scoped PostgreSQL
-        if: steps.nx-scope.outputs.email-database-affected == 'true' || steps.nx-scope.outputs.account-database-affected == 'true'
+        if: steps.nx-scope.outputs.database-affected == 'true'
         run: |
           docker run --detach --name nvbes-ci-postgres \
             --env POSTGRES_DB=nvbes_email_test \
@@ -252,44 +220,28 @@ jobs:
           done
           exit 1
       - name: Configure scoped test databases
-        if: steps.nx-scope.outputs.email-database-affected == 'true' || steps.nx-scope.outputs.account-database-affected == 'true'
+        if: steps.nx-scope.outputs.database-affected == 'true'
         run: |
-          if [[ "${{ steps.nx-scope.outputs.email-database-affected }}" == "true" ]]; then
-            printf '%s\n' 'DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_email_test' >> "$GITHUB_ENV"
-          fi
-          if [[ "${{ steps.nx-scope.outputs.account-database-affected }}" == "true" ]]; then
-            docker exec nvbes-ci-postgres createdb --username postgres nvbes_account_test
-            printf '%s\n' 'NVBES_ACCOUNT_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_account_test' >> "$GITHUB_ENV"
-          fi
-      - name: Test Email database invariants
-        if: steps.nx-scope.outputs.email-database-affected == 'true'
-        run: bash scripts/test-email-worker-database.sh
-      - name: Test Account database invariants
-        if: steps.nx-scope.outputs.account-database-affected == 'true'
-        env:
-          DATABASE_URL: ${{ env.NVBES_ACCOUNT_DATABASE_URL }}
-        run: pnpm nx run account-service:test:database
+          for database in nvbes_account_test nvbes_billing_test nvbes_identity_test nvbes_trust_risk_test; do
+            docker exec nvbes-ci-postgres createdb --username postgres "$database"
+          done
+          {
+            printf '%s\n' 'NVBES_ACCOUNT_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_account_test'
+            printf '%s\n' 'NVBES_BILLING_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_billing_test'
+            printf '%s\n' 'NVBES_EMAIL_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_email_test'
+            printf '%s\n' 'NVBES_IDENTITY_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test'
+            printf '%s\n' 'NVBES_TRUST_RISK_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_trust_risk_test'
+          } >> "$GITHUB_ENV"
+      - name: Test affected database invariants
+        if: steps.nx-scope.outputs.database-affected == 'true'
+        run: >-
+          pnpm nx run-many -t test:database
+          --projects="${{ steps.nx-scope.outputs.database-projects }}"
+          --parallel=1
+          --outputStyle=static
       - name: Stop scoped PostgreSQL
-        if: always() && (steps.nx-scope.outputs.email-database-affected == 'true' || steps.nx-scope.outputs.account-database-affected == 'true')
+        if: always() && steps.nx-scope.outputs.database-affected == 'true'
         run: docker rm --force nvbes-ci-postgres
-      - name: Validate Email container contract
-        if: steps.nx-scope.outputs.email-container-affected == 'true'
-        run: node --test apps/email-worker/tests/container-contract.test.mjs
-      - name: Validate Identity container contract
-        if: steps.nx-scope.outputs.identity-container-affected == 'true'
-        run: pnpm nx run identity-service:test:container
-      - name: Validate Account container contract
-        if: steps.nx-scope.outputs.account-container-affected == 'true'
-        run: pnpm nx run account-service:test:container
-      - name: Validate Billing container contract
-        if: steps.nx-scope.outputs.billing-container-affected == 'true'
-        run: node --test apps/billing-service/tests/container-contract.test.mjs
-      - name: Validate Trust/Risk container contract
-        if: steps.nx-scope.outputs.trust-risk-container-affected == 'true'
-        run: node --test apps/trust-risk-service/tests/container-contract.test.mjs
-      - name: Validate Platform Operations container contract
-        if: steps.nx-scope.outputs.platform-container-affected == 'true'
-        run: node apps/platform-operations-service/tests/container-contract.test.mjs
       - name: Publish central pnpm and Nx caches
         if: success() && github.event_name == 'push'
         env:

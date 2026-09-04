@@ -1,0 +1,18 @@
+{
+	"name": "terraform-identity-production",
+	"projectType": "application",
+	"root": "infrastructure/environments/identity-production",
+	"implicitDependencies": ["terraform-modules"],
+	"targets": {
+		"terraform:validate": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["default", "^default"],
+			"options": {
+				"command": "terraform fmt -check -recursive infrastructure/environments/identity-production && terraform -chdir=infrastructure/environments/identity-production init -reconfigure -backend=false -input=false -lockfile=readonly && terraform -chdir=infrastructure/environments/identity-production validate",
+				"cwd": "."
+			}
+		}
+	},
+	"tags": ["scope:infrastructure", "type:terraform", "domain:identity"]
+}

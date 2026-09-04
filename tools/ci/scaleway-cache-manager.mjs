@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
 	appendFileSync,
 	existsSync,
@@ -53,6 +54,28 @@ function pnpmStore() {
 	}).trim();
 }
 
+function fileDigest(paths) {
+	const hash = createHash("sha256");
+	for (const path of [...paths].sort()) {
+		hash.update(path);
+		hash.update("\0");
+		hash.update(readFileSync(join(workspace, path)));
+		hash.update("\0");
+	}
+	return hash.digest("hex");
+}
+
+function terraformLockfiles() {
+	return execFileSync(
+		"rg",
+		["--files", "-g", ".terraform.lock.hcl", "infrastructure"],
+		{ cwd: workspace, encoding: "utf8" },
+	)
+		.trim()
+		.split("\n")
+		.filter(Boolean);
+}
+
 function cacheDefinitions() {
 	const platform = `${process.env.RUNNER_OS ?? process.platform}-${process.env.RUNNER_ARCH ?? process.arch}`;
 	const cargoHome = process.env.CARGO_HOME || join(homedir(), ".cargo");
@@ -65,7 +88,7 @@ function cacheDefinitions() {
 	return {
 		pnpm: {
 			path: pnpmStore(),
-			key: `v1/pnpm/${platform}/pnpm-11.18.0-node-24`,
+			key: `v2/pnpm/${platform}/pnpm-11.18.0-node-24/${fileDigest(["pnpm-lock.yaml"])}`,
 		},
 		cargo: {
 			path: cargoHome,
@@ -74,11 +97,12 @@ function cacheDefinitions() {
 		},
 		terraform: {
 			path: terraformHome,
-			key: `v1/terraform/${platform}/terraform-1.15.8`,
+			key: `v2/terraform/${platform}/terraform-1.15.8/${fileDigest(terraformLockfiles())}`,
 		},
 		nx: {
 			path: nxPath,
 			key: `v1/nx/${platform}/nx-${nxVersion}`,
+			mode: "sync",
 		},
 	};
 }
@@ -95,7 +119,7 @@ function configured() {
 function aws(arguments_, options = {}) {
 	return spawnSync("aws", arguments_, {
 		encoding: "utf8",
-		stdio: options.quiet ? "ignore" : "inherit",
+		stdio: options.capture ? "pipe" : options.quiet ? "ignore" : "inherit",
 		env: {
 			...process.env,
 			AWS_DEFAULT_REGION: storage.region,
@@ -105,6 +129,10 @@ function aws(arguments_, options = {}) {
 
 function objectUrl(prefix, definition) {
 	return `s3://${storage.bucket}/${prefix}/archives/${definition.key}.tar.gz`;
+}
+
+function objectPrefix(prefix, definition) {
+	return `s3://${storage.bucket}/${prefix}/objects/${definition.key}`;
 }
 
 function cachePath(definition) {
@@ -129,31 +157,58 @@ function restore(definitions) {
 		const destination = cachePath(definition);
 		let hit = null;
 		for (const prefix of restorePrefixes(environment)) {
-			const temporary = join(
-				mkdtempSync(join(tmpdir(), "nvbes-cache-")),
-				`${kind}.tar.gz`,
-			);
-			const download = aws(
-				[
-					"--endpoint-url",
-					storage.endpoint,
-					"s3",
-					"cp",
-					objectUrl(prefix, definition),
-					temporary,
-					"--only-show-errors",
-				],
-				{ quiet: true },
-			);
-			if (download.status === 0) {
-				const extracted = spawnSync(
-					"tar",
-					["-xzf", temporary, "-C", destination],
-					{ stdio: "inherit" },
+			if (definition.mode === "sync") {
+				const source = objectPrefix(prefix, definition);
+				const objects = aws(
+					[
+						"--endpoint-url",
+						storage.endpoint,
+						"s3",
+						"ls",
+						source,
+						"--recursive",
+					],
+					{ capture: true },
 				);
-				if (extracted.status === 0) hit = prefix;
+				if (objects.status === 0 && objects.stdout?.trim()) {
+					const synced = aws([
+						"--endpoint-url",
+						storage.endpoint,
+						"s3",
+						"sync",
+						source,
+						destination,
+						"--only-show-errors",
+					]);
+					if (synced.status === 0) hit = prefix;
+				}
+			} else {
+				const temporary = join(
+					mkdtempSync(join(tmpdir(), "nvbes-cache-")),
+					`${kind}.tar.gz`,
+				);
+				const download = aws(
+					[
+						"--endpoint-url",
+						storage.endpoint,
+						"s3",
+						"cp",
+						objectUrl(prefix, definition),
+						temporary,
+						"--only-show-errors",
+					],
+					{ quiet: true },
+				);
+				if (download.status === 0) {
+					const extracted = spawnSync(
+						"tar",
+						["-xzf", temporary, "-C", destination],
+						{ stdio: "inherit" },
+					);
+					if (extracted.status === 0) hit = prefix;
+				}
+				rmSync(dirname(temporary), { recursive: true, force: true });
 			}
-			rmSync(dirname(temporary), { recursive: true, force: true });
 			if (hit) break;
 		}
 		lines.push(`${kind}: ${hit ? `hit (${hit})` : "miss"}`);
@@ -172,6 +227,39 @@ function save(definitions) {
 			continue;
 		}
 		const source = cachePath(definition);
+		if (definition.mode === "sync") {
+			const uploaded = aws([
+				"--endpoint-url",
+				storage.endpoint,
+				"s3",
+				"sync",
+				source,
+				objectPrefix(prefix, definition),
+				"--size-only",
+				"--only-show-errors",
+			]);
+			lines.push(
+				`nx: ${uploaded.status === 0 ? `synchronisé (${prefix})` : "échec de publication"}`,
+			);
+			continue;
+		}
+		const existing = aws(
+			[
+				"--endpoint-url",
+				storage.endpoint,
+				"s3api",
+				"head-object",
+				"--bucket",
+				storage.bucket,
+				"--key",
+				`${prefix}/archives/${definition.key}.tar.gz`,
+			],
+			{ quiet: true },
+		);
+		if (existing.status === 0) {
+			lines.push(`${kind}: déjà publié (${prefix})`);
+			continue;
+		}
 		const temporaryDirectory = mkdtempSync(join(tmpdir(), "nvbes-cache-"));
 		const archive = join(temporaryDirectory, `${kind}.tar.gz`);
 		const members = definition.members ?? ["."];

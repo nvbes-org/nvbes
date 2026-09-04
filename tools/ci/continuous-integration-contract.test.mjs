@@ -63,7 +63,7 @@ test("continuous CI scopes expensive runtimes after affected discovery", () => {
 	);
 	assert.match(
 		workflow,
-		/if: steps\.nx-scope\.outputs\.terraform-affected == 'true' \|\| steps\.nx-scope\.outputs\.email-affected == 'true'/u,
+		/if: steps\.nx-scope\.outputs\.terraform-affected == 'true'/u,
 	);
 });
 
@@ -113,53 +113,18 @@ test("continuous CI runs affected Rust packages once and only for Rust inputs", 
 	assert.match(workflow, /export SCCACHE_GHA_ENABLED=true/u);
 });
 
-test("continuous CI scopes database, Terraform, and container contracts independently", () => {
-	for (const scope of ["account", "email"]) {
-		assert.match(
-			workflow,
-			new RegExp(
-				`steps\\.nx-scope\\.outputs\\.${scope}-database-affected`,
-				"u",
-			),
-		);
-	}
-	for (const scope of [
-		"account",
-		"billing",
-		"email",
-		"identity",
-		"platform",
-		"trust-risk",
-	]) {
-		assert.match(
-			workflow,
-			new RegExp(
-				`steps\\.nx-scope\\.outputs\\.${scope}-container-affected`,
-				"u",
-			),
-		);
-	}
-	for (const scope of [
-		"account",
-		"billing",
-		"email",
-		"identity",
-		"platform-operations",
-		"trust-risk",
-		"security-audit-archive",
-	]) {
-		assert.match(
-			workflow,
-			new RegExp(
-				`steps\\.nx-scope\\.outputs\\.${scope}-terraform-affected`,
-				"u",
-			),
-		);
-	}
-	assert.equal(
-		workflow.match(/terraform .* init .* -lockfile=readonly/gu)?.length,
-		9,
-	);
+test("continuous CI groups Terraform, contracts, and database invariants through Nx", () => {
+	assert.match(workflow, /pnpm nx affected -t terraform:validate/u);
+	assert.match(workflow, /pnpm nx affected -t terraform:test/u);
+	assert.match(workflow, /pnpm nx run ci-contracts:test:contract/u);
+	assert.match(workflow, /pnpm nx affected -t test:contract/u);
+	assert.match(workflow, /--exclude=ci-contracts/u);
+	assert.match(workflow, /pnpm nx run-many -t test:database/u);
+	assert.match(workflow, /steps\.nx-scope\.outputs\.database-projects/u);
+	assert.match(workflow, /steps\.nx-scope\.outputs\.database-affected/u);
+	assert.match(workflow, /pnpm nx run ci-contracts:test:ci-contract/u);
+	assert.doesNotMatch(workflow, /Validate isolated Identity Terraform stack/u);
+	assert.doesNotMatch(workflow, /Validate Email container contract/u);
 });
 
 test("continuous CI uses GitHub-hosted quality and self-hosted delivery runners", () => {

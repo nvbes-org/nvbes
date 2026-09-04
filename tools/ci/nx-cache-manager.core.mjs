@@ -104,6 +104,13 @@ export function isDatabaseScopeAffected(changedPaths, scope) {
 			"scripts/test-account-service-database.sh",
 			"scripts/validate-account-test-database",
 		],
+		billing: [
+			"apps/billing-service/migrations",
+			"apps/billing-service/src/billing.db",
+			"apps/billing-service/src/billing.database",
+			"scripts/test-billing-service-database.sh",
+			"scripts/validate-billing-test-database",
+		],
 		email: [
 			"apps/email-worker/migrations",
 			"apps/email-worker/src/email.worker.database",
@@ -112,6 +119,20 @@ export function isDatabaseScopeAffected(changedPaths, scope) {
 			"apps/email-worker/src/email.worker.webhook.db",
 			"scripts/test-email-worker-database.sh",
 			"scripts/validate-email-test-database",
+		],
+		identity: [
+			"apps/identity-service/migrations",
+			"apps/identity-service/src/identity.db",
+			"apps/identity-service/src/identity.database",
+			"scripts/test-identity-service-database.sh",
+			"scripts/validate-identity-test-database",
+		],
+		"trust-risk": [
+			"apps/trust-risk-service/migrations",
+			"apps/trust-risk-service/src/trust_risk.db",
+			"apps/trust-risk-service/src/trust_risk.database",
+			"scripts/test-trust-risk-service-database.sh",
+			"scripts/validate-trust-risk-test-database",
 		],
 	};
 	return changedPaths.some((path) => matchesPath(path, patterns[scope] ?? []));
@@ -143,6 +164,12 @@ export function terraformScopes(changedPaths) {
 		) {
 			scopes.add(scope);
 		}
+	}
+	if (changedPaths.some((path) => path.startsWith("infrastructure/modules/"))) {
+		for (const scope of environments) scopes.add(scope);
+		scopes.add("email-stack");
+		scopes.add("ci-cache-bootstrap");
+		scopes.add("security-audit-archive");
 	}
 	if (
 		changedPaths.some((path) => path.startsWith("infrastructure/stacks/email/"))

@@ -289,12 +289,21 @@ test("container release publishes the image name consumed by Terraform", () => {
 test("email CI validates the isolated deployment stack", () => {
 	const workflow = read(workflowPath);
 	const continuousIntegration = read(".github/workflows/ci.yml");
+	const emailEnvironmentProject = read(
+		"infrastructure/environments/email-production/project.json",
+	);
+	const emailStackProject = read(
+		"infrastructure/stacks/email/production/project.json",
+	);
 	const packageScripts = JSON.parse(read("package.json")).scripts;
 	assert.match(workflow, /  ci-provenance:\n/u);
 	assert.match(workflow, /node tools\/ci\/verify-ci-provenance\.mjs/u);
 	assert.doesNotMatch(workflow, /Swatinem\/rust-cache@/u);
 	assert.doesNotMatch(workflow, /^\s+cache: pnpm\s*$/mu);
-	assert.match(continuousIntegration, /pnpm test:pre-deploy/u);
+	assert.match(
+		continuousIntegration,
+		/pnpm nx run ci-contracts:test:contract/u,
+	);
 	assert.doesNotMatch(workflow, /pnpm test:unit/u);
 	assert.match(
 		workflow,
@@ -303,19 +312,14 @@ test("email CI validates the isolated deployment stack", () => {
 	assert.doesNotMatch(workflow, /format: cyclonedx-json/u);
 	assert.match(packageScripts["test:pre-deploy"], /terraform fmt -check/u);
 	assert.match(
-		continuousIntegration,
+		emailEnvironmentProject,
 		/terraform -chdir=infrastructure\/environments\/email-production init[\s\S]*?-backend=false/u,
 	);
+	assert.match(emailEnvironmentProject, /terraform:validate/u);
 	assert.match(
-		continuousIntegration,
-		/terraform -chdir=infrastructure\/environments\/email-production validate/u,
-	);
-	assert.match(
-		continuousIntegration,
+		emailStackProject,
 		/terraform -chdir=infrastructure\/stacks\/email\/production init[\s\S]*?-backend=false/u,
 	);
-	assert.match(
-		continuousIntegration,
-		/terraform -chdir=infrastructure\/stacks\/email\/production validate/u,
-	);
+	assert.match(emailStackProject, /terraform:validate/u);
+	assert.match(emailStackProject, /terraform:test/u);
 });

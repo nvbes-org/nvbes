@@ -26,7 +26,7 @@
 				"cwd": "."
 			}
 		},
-		"test:container": {
+		"test:contract": {
 			"executor": "nx:run-commands",
 			"cache": true,
 			"inputs": [

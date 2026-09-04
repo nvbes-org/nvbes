@@ -62,7 +62,9 @@ const workflowContracts = [
 		terraformInitStepName: "Initialize isolated email Terraform providers",
 		terraformValidationStepName: "Validate isolated email Terraform stack",
 		terraformValidationIf:
-			"steps.nx-scope.outputs.email-terraform-affected == 'true'",
+			"steps.nx-scope.outputs.terraform-affected == 'true'",
+		terraformValidationCommand:
+			'pnpm nx affected -t terraform:validate --base="${{ steps.nx-scope.outputs.base-sha }}" --head="$GITHUB_SHA" --parallel=3 --outputStyle=static',
 		workflowPath: ".github/workflows/ci.yml",
 	},
 ];

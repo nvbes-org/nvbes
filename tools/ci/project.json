@@ -1,0 +1,41 @@
+{
+	"name": "ci-contracts",
+	"projectType": "library",
+	"root": "tools/ci",
+	"implicitDependencies": [
+		"email-worker",
+		"terraform-email-production",
+		"terraform-email-legacy-stack"
+	],
+	"targets": {
+		"test:ci-contract": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/**/*",
+				"{workspaceRoot}/.github/workflows/**/*",
+				"{workspaceRoot}/infrastructure/**/*",
+				"{workspaceRoot}/tools/security/check-ci-cd-security.mjs"
+			],
+			"options": {
+				"command": "node --test tools/ci/authorize-pr-cache.test.mjs tools/ci/cargo-affected.test.mjs tools/ci/continuous-integration-contract.test.mjs tools/ci/deployment-provenance-contract.test.mjs tools/ci/identity-restore-contract.test.mjs tools/ci/nx-cache-manager.test.mjs tools/ci/scaleway-cache-manager.test.mjs tools/ci/verify-ci-provenance.test.mjs",
+				"cwd": "."
+			}
+		},
+		"test:contract": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{workspaceRoot}/package.json",
+				"{workspaceRoot}/tools/ci/email-deployment-contract.test.mjs",
+				"{workspaceRoot}/infrastructure/environments/email-production/**/*",
+				"{workspaceRoot}/infrastructure/stacks/email/production/**/*"
+			],
+			"options": {
+				"command": "pnpm test:pre-deploy",
+				"cwd": "."
+			}
+		}
+	},
+	"tags": ["scope:internal", "type:workspace", "domain:shared", "layer:tooling"]
+}

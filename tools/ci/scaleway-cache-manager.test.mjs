@@ -19,6 +19,15 @@ test("the manager accepts the shared sccache S3 environment", () => {
 	assert.match(manager, /process\.env\.SCCACHE_REGION/u);
 });
 
+test("dependency archives are immutable and Nx is synchronized incrementally", () => {
+	assert.match(manager, /fileDigest\(\["pnpm-lock\.yaml"\]\)/u);
+	assert.match(manager, /terraformLockfiles\(\)/u);
+	assert.match(manager, /"s3api",\n\s+"head-object"/u);
+	assert.match(manager, /definition\.mode === "sync"/u);
+	assert.match(manager, /"s3",\n\s+"sync"/u);
+	assert.match(manager, /"--size-only"/u);
+});
+
 test("protected refs share the trusted namespace", () => {
 	for (const ref of [
 		"refs/heads/main",

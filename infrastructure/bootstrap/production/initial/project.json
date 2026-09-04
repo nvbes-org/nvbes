@@ -1,0 +1,18 @@
+{
+	"name": "terraform-ci-cache-bootstrap",
+	"projectType": "application",
+	"root": "infrastructure/bootstrap/production/initial",
+	"implicitDependencies": ["terraform-modules"],
+	"targets": {
+		"terraform:validate": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["default", "^default"],
+			"options": {
+				"command": "terraform fmt -check -recursive infrastructure/bootstrap/production/initial && terraform -chdir=infrastructure/bootstrap/production/initial init -reconfigure -backend=false -input=false -lockfile=readonly && terraform -chdir=infrastructure/bootstrap/production/initial validate",
+				"cwd": "."
+			}
+		}
+	},
+	"tags": ["scope:infrastructure", "type:terraform", "domain:bootstrap"]
+}
