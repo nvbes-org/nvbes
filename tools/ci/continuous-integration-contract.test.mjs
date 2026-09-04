@@ -3,6 +3,15 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+const deploymentWorkflows = [
+	"deploy-account.yml",
+	"deploy-billing.yml",
+	"deploy-email.yml",
+	"deploy-identity.yml",
+	"deploy-trust-risk.yml",
+].map((name) =>
+	readFileSync(`.github/workflows/${name}`, "utf8"),
+);
 
 test("continuous CI runs on every active delivery branch", () => {
 	assert.match(workflow, /push:\n {4}branches: \['\*\*'\]/u);
@@ -12,7 +21,7 @@ test("continuous CI runs on every active delivery branch", () => {
 	assert.match(workflow, /quality:/u);
 	assert.match(
 		workflow,
-		/quality:[\s\S]*?runs-on: \[[^\n]+\]\n {4}timeout-minutes: (?:9\d|[1-9]\d{2,})/u,
+		/quality:[\s\S]*?runs-on: ubuntu-latest\n {4}timeout-minutes: (?:9\d|[1-9]\d{2,})/u,
 	);
 	assert.doesNotMatch(workflow, /rust-tests-scaleway-cache:/u);
 });
@@ -20,7 +29,7 @@ test("continuous CI runs on every active delivery branch", () => {
 test("continuous CI validates the active Email and closed Identity runtimes", () => {
 	assert.match(workflow, /POSTGRES_DB: nvbes_email_test/u);
 	assert.match(workflow, /job\.services\.postgres\.ports\['5432'\]/u);
-	assert.match(workflow, /host\.docker\.internal/u);
+	assert.match(workflow, /127\.0\.0\.1/u);
 	assert.match(workflow, /pnpm test:pre-deploy/u);
 	assert.match(workflow, /pnpm test/u);
 	assert.match(workflow, /bash scripts\/test-email-worker-database\.sh/u);
@@ -42,7 +51,14 @@ test("continuous CI validates the active Email and closed Identity runtimes", ()
 	assert.doesNotMatch(workflow, /pnpm test:unit/u);
 });
 
-test("continuous CI avoids remote dependency caches on self-hosted runners", () => {
+test("continuous CI uses GitHub-hosted quality and self-hosted delivery runners", () => {
+	assert.match(workflow, /runs-on: ubuntu-latest/u);
+	for (const deploymentWorkflow of deploymentWorkflows) {
+		assert.match(
+			deploymentWorkflow,
+			/runs-on: \[self-hosted, macOS, ARM64\]/u,
+		);
+	}
 	assert.doesNotMatch(workflow, /Swatinem\/rust-cache@/u);
 	assert.doesNotMatch(workflow, /^\s+cache: pnpm\s*$/mu);
 	assert.match(
