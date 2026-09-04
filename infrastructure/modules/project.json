@@ -1,0 +1,6 @@
+{
+	"name": "terraform-modules",
+	"projectType": "library",
+	"root": "infrastructure/modules",
+	"tags": ["scope:infrastructure", "type:terraform-module"]
+}

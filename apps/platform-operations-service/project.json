@@ -1,41 +1,43 @@
 {
-  "name": "platform-operations-service",
-  "projectType": "application",
-  "root": "apps/platform-operations-service",
-  "sourceRoot": "libs/rust/platform/src",
-  "targets": {
-    "check": {
-      "executor": "nx:run-commands",
-      "cache": true,
-      "inputs": [
-        "{projectRoot}/**/*",
-        "{workspaceRoot}/libs/rust/platform/**/*"
-      ],
-      "options": {
-        "command": "cargo check --package nvbes-platform --all-targets",
-        "cwd": "."
-      }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "cache": false,
-      "options": {
-        "command": "cargo test --package nvbes-platform",
-        "cwd": "."
-      }
-    },
-    "test:container": {
-      "executor": "nx:run-commands",
-      "cache": true,
-      "inputs": [
-        "{projectRoot}/Dockerfile",
-        "{projectRoot}/tests/**/*"
-      ],
-      "options": {
-        "command": "node --test apps/platform-operations-service/tests/container-contract.test.mjs",
-        "cwd": "."
-      }
-    }
-  },
-  "tags": ["scope:platform", "type:app", "domain:platform-operations", "layer:app"]
+	"name": "platform-operations-service",
+	"projectType": "application",
+	"root": "apps/platform-operations-service",
+	"sourceRoot": "libs/rust/platform/src",
+	"targets": {
+		"check": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/**/*",
+				"{workspaceRoot}/libs/rust/platform/**/*"
+			],
+			"options": {
+				"command": "cargo check --package nvbes-platform --all-targets",
+				"cwd": "."
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "cargo test --package nvbes-platform",
+				"cwd": "."
+			}
+		},
+		"test:contract": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["{projectRoot}/Dockerfile", "{projectRoot}/tests/**/*"],
+			"options": {
+				"command": "node --test apps/platform-operations-service/tests/container-contract.test.mjs",
+				"cwd": "."
+			}
+		}
+	},
+	"tags": [
+		"scope:platform",
+		"type:app",
+		"domain:platform-operations",
+		"layer:app"
+	]
 }

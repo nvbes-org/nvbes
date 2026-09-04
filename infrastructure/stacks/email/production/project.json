@@ -1,0 +1,27 @@
+{
+	"name": "terraform-email-legacy-stack",
+	"projectType": "application",
+	"root": "infrastructure/stacks/email/production",
+	"implicitDependencies": ["terraform-modules"],
+	"targets": {
+		"terraform:validate": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["default", "^default"],
+			"options": {
+				"command": "terraform fmt -check -recursive infrastructure/stacks/email/production && terraform -chdir=infrastructure/stacks/email/production init -reconfigure -backend=false -input=false -lockfile=readonly && terraform -chdir=infrastructure/stacks/email/production validate",
+				"cwd": "."
+			}
+		},
+		"terraform:test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["default", "^default"],
+			"options": {
+				"command": "PATH=\"$PWD/infrastructure/stacks/email/production/tests/bin:$PATH\" terraform -chdir=infrastructure/stacks/email/production test",
+				"cwd": "."
+			}
+		}
+	},
+	"tags": ["scope:infrastructure", "type:terraform", "domain:email"]
+}

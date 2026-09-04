@@ -21,22 +21,22 @@ resource "scaleway_container_namespace" "account" {
 locals {
   account_image_digest = split("@", var.account_image)[1]
   account_runtime_environment = {
-    NVBES_ENVIRONMENT                       = local.environment
-    NVBES_ACCOUNT_BIND_ADDR                 = "0.0.0.0:8080"
-    NVBES_ACCOUNT_DATABASE_MAX_CONNECTIONS  = "5"
-    NVBES_IDENTITY_TOKEN_ISSUER             = var.identity_token_issuer
-    NVBES_ACCOUNT_TOKEN_AUDIENCE            = var.identity_token_audience
-    NVBES_IDENTITY_TOKEN_KEY_ID             = var.identity_token_key_id
-    NVBES_OTLP_ENDPOINT                     = var.grafana_otlp_endpoint
-    SENTRY_RELEASE                          = local.account_image_digest
-    SENTRY_TRACES_SAMPLE_RATE               = tostring(var.account_sentry_traces_sample_rate)
+    NVBES_ENVIRONMENT                      = local.environment
+    NVBES_ACCOUNT_BIND_ADDR                = "0.0.0.0:8080"
+    NVBES_ACCOUNT_DATABASE_MAX_CONNECTIONS = "5"
+    NVBES_IDENTITY_TOKEN_ISSUER            = var.identity_token_issuer
+    NVBES_ACCOUNT_TOKEN_AUDIENCE           = var.identity_token_audience
+    NVBES_IDENTITY_TOKEN_KEY_ID            = var.identity_token_key_id
+    NVBES_OTLP_ENDPOINT                    = var.grafana_otlp_endpoint
+    SENTRY_RELEASE                         = local.account_image_digest
+    SENTRY_TRACES_SAMPLE_RATE              = tostring(var.account_sentry_traces_sample_rate)
   }
   account_runtime_secrets = {
-    NVBES_ACCOUNT_DATABASE_URL              = local.account_database_runtime_url
-    NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM     = var.identity_token_public_key_pem
-    NVBES_ACCOUNT_METRICS_TOKEN             = var.account_metrics_token
-    NVBES_OTLP_AUTHORIZATION_HEADER         = var.grafana_otlp_authorization_header
-    SENTRY_DSN                              = var.account_sentry_dsn
+    NVBES_ACCOUNT_DATABASE_URL          = local.account_database_runtime_url
+    NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM = var.identity_token_public_key_pem
+    NVBES_ACCOUNT_METRICS_TOKEN         = var.account_metrics_token
+    NVBES_OTLP_AUTHORIZATION_HEADER     = var.grafana_otlp_authorization_header
+    SENTRY_DSN                          = var.account_sentry_dsn
   }
 }
 

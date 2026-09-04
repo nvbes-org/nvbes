@@ -146,6 +146,27 @@ test("selects database checks from persistence paths only", () => {
 		),
 		true,
 	);
+	assert.equal(
+		isDatabaseScopeAffected(
+			["apps/billing-service/migrations/0001.sql"],
+			"billing",
+		),
+		true,
+	);
+	assert.equal(
+		isDatabaseScopeAffected(
+			["apps/identity-service/src/identity.database.rs"],
+			"identity",
+		),
+		true,
+	);
+	assert.equal(
+		isDatabaseScopeAffected(
+			["scripts/test-trust-risk-service-database.sh"],
+			"trust-risk",
+		),
+		true,
+	);
 });
 
 test("selects container contracts without selecting application sources", () => {
@@ -166,6 +187,17 @@ test("selects container contracts without selecting application sources", () => 
 });
 
 test("selects only Terraform stacks that own changed configuration", () => {
+	const allTerraformScopes = [
+		"account",
+		"billing",
+		"ci-cache-bootstrap",
+		"email",
+		"email-stack",
+		"identity",
+		"platform-operations",
+		"security-audit-archive",
+		"trust-risk",
+	];
 	assert.deepEqual(
 		terraformScopes([
 			"infrastructure/environments/account-production/main.tf",
@@ -175,14 +207,14 @@ test("selects only Terraform stacks that own changed configuration", () => {
 	);
 	assert.deepEqual(
 		terraformScopes(["infrastructure/modules/scaleway-ci-cache/main.tf"]),
-		["ci-cache-bootstrap"],
+		allTerraformScopes,
 	);
 	assert.deepEqual(
 		terraformScopes(["infrastructure/modules/terraform-state-backend/main.tf"]),
-		["ci-cache-bootstrap"],
+		allTerraformScopes,
 	);
 	assert.deepEqual(
 		terraformScopes(["infrastructure/modules/scaleway-audit-archive/main.tf"]),
-		["security-audit-archive"],
+		allTerraformScopes,
 	);
 });

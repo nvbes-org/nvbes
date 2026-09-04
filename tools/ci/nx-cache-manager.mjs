@@ -196,8 +196,20 @@ const deliveryScopes = {
 };
 const databases = {
 	account: isDatabaseScopeAffected(changedPaths, "account"),
+	billing: isDatabaseScopeAffected(changedPaths, "billing"),
 	email: isDatabaseScopeAffected(changedPaths, "email"),
+	identity: isDatabaseScopeAffected(changedPaths, "identity"),
+	trustRisk: isDatabaseScopeAffected(changedPaths, "trust-risk"),
 };
+const databaseProjects = Object.entries({
+	account: "account-service",
+	billing: "billing-service",
+	email: "email-worker",
+	identity: "identity-service",
+	trustRisk: "trust-risk-service",
+})
+	.filter(([scope]) => databases[scope])
+	.map(([, project]) => project);
 const rustRequired = isRustToolchainRequired(rustAffected, databases);
 const containers = {
 	account: isContainerScopeAffected(changedPaths, "apps/account-service"),
@@ -229,7 +241,12 @@ appendFileSync(
 		`trust-risk-affected=${deliveryScopes.trustRisk}`,
 		`platform-affected=${deliveryScopes.platform}`,
 		`account-database-affected=${databases.account}`,
+		`billing-database-affected=${databases.billing}`,
 		`email-database-affected=${databases.email}`,
+		`identity-database-affected=${databases.identity}`,
+		`trust-risk-database-affected=${databases.trustRisk}`,
+		`database-affected=${databaseProjects.length > 0}`,
+		`database-projects=${databaseProjects.join(",")}`,
 		`account-container-affected=${containers.account}`,
 		`billing-container-affected=${containers.billing}`,
 		`email-container-affected=${containers.email}`,
@@ -267,6 +284,7 @@ console.log(
 		rustRequired,
 		deliveryScopes,
 		databases,
+		databaseProjects,
 		containers,
 		terraform,
 	}),
