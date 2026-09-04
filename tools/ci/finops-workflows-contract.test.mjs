@@ -32,6 +32,7 @@ const workflowContracts = [
 	{
 		path: ".github/workflows/ci.yml",
 		job: "quality",
+		additionalJobs: ["authorize-cache"],
 		allowedIf: undefined,
 		dependencyCacheStep: {
 			env: {

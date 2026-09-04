@@ -247,6 +247,7 @@ appendFileSync(
 			"trust-risk",
 			"email-stack",
 			"ci-cache-bootstrap",
+			"security-audit-archive",
 		].map(
 			(scope) => `${scope}-terraform-affected=${terraform.includes(scope)}`,
 		),

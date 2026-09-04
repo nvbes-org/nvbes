@@ -191,6 +191,13 @@ resource "scaleway_object_bucket_policy" "ci_cache" {
         }
       },
       {
+        Sid       = "DenyTrustedCacheWritesFromBranches"
+        Effect    = "Deny"
+        Principal = { SCW = "application_id:${scaleway_iam_application.branch_cache.id}" }
+        Action    = ["s3:DeleteObject", "s3:PutObject"]
+        Resource  = ["${scaleway_object_bucket.ci_cache.name}/trusted/*"]
+      },
+      {
         Sid       = "ListBranchCacheObjects"
         Effect    = "Allow"
         Principal = { SCW = "application_id:${scaleway_iam_application.branch_cache.id}" }

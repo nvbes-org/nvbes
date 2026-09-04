@@ -170,6 +170,27 @@ export function terraformScopes(changedPaths) {
 	) {
 		scopes.add("ci-cache-bootstrap");
 	}
+	if (
+		changedPaths.some((path) =>
+			path.startsWith("infrastructure/modules/terraform-state-backend/"),
+		)
+	) {
+		scopes.add("ci-cache-bootstrap");
+	}
+	if (
+		changedPaths.some((path) =>
+			path.startsWith("infrastructure/modules/scaleway-audit-archive/"),
+		)
+	) {
+		scopes.add("security-audit-archive");
+	}
+	if (
+		changedPaths.some((path) =>
+			path.startsWith("infrastructure/environments/security-audit-archive/"),
+		)
+	) {
+		scopes.add("security-audit-archive");
+	}
 	return [...scopes].sort();
 }
 
