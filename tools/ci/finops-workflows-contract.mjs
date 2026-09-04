@@ -70,7 +70,7 @@ function terraformValidationCommand(contract) {
 }
 
 function expectedGatePrefix(contract) {
-	return [
+	const prefix = [
 		{
 			uses: CHECKOUT_ACTION,
 			with: { "fetch-depth": 0, "persist-credentials": false },
@@ -81,6 +81,9 @@ function expectedGatePrefix(contract) {
 			run: `node tools/security/check-ci-cd-security.mjs --workflow ${contract.workflowPath}`,
 		},
 		{ name: "Enable pnpm", run: COREPACK_COMMAND },
+	];
+	if (contract.dependencyCacheStep) prefix.push(contract.dependencyCacheStep);
+	prefix.push(
 		{ name: "Install locked dependencies", run: LOCKED_INSTALL_COMMAND },
 		{ name: "Enforce FinOps contract", run: FINOPS_COMMAND },
 		{
@@ -95,14 +98,16 @@ function expectedGatePrefix(contract) {
 			name: contract.terraformValidationStepName,
 			run: terraformValidationCommand(contract),
 		},
-	];
+	);
+	return prefix;
 }
 
 function assertGatePrefix(gate, contract) {
-	const prefix = gate.steps.slice(0, 9);
+	const expected = expectedGatePrefix(contract);
+	const prefix = gate.steps.slice(0, expected.length);
 	assert.equal(
 		prefix.length,
-		9,
+		expected.length,
 		`${contract.job} must use the allowlisted gate step prefix`,
 	);
 	assertCriticalSteps(
@@ -111,7 +116,7 @@ function assertGatePrefix(gate, contract) {
 	);
 	assert.deepEqual(
 		prefix,
-		expectedGatePrefix(contract),
+		expected,
 		`${contract.job} must use the allowlisted gate step prefix`,
 	);
 }
