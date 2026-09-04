@@ -51,7 +51,7 @@ const workflowContracts = [
 			SCCACHE_REGION: `\${{ vars.SCW_CI_CACHE_REGION }}`,
 			SCCACHE_S3_ENABLE_VIRTUAL_HOST_STYLE: "true",
 			SCCACHE_S3_USE_SSL: "true",
-			TF_PLUGIN_CACHE_DIR: `\${{ runner.temp }}/terraform-plugin-cache`,
+			TF_PLUGIN_CACHE_DIR: "/tmp/nvbes-terraform-plugin-cache",
 		},
 		runsOn: "ubuntu-latest",
 		shell: safeShell,

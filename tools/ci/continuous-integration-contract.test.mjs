@@ -108,7 +108,7 @@ test("central caches restore before consumers and publish only after successful 
 	assert.ok(publish > nxRestore);
 	assert.match(
 		workflow,
-		/TF_PLUGIN_CACHE_DIR: \$\{\{ runner\.temp \}\}\/terraform-plugin-cache/u,
+		/TF_PLUGIN_CACHE_DIR: \/tmp\/nvbes-terraform-plugin-cache/u,
 	);
 	assert.match(
 		workflow,
