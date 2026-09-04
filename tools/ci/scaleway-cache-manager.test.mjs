@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
 	branchCacheId,
@@ -6,6 +7,17 @@ import {
 	restorePrefixes,
 	writablePrefix,
 } from "./scaleway-cache-manager.core.mjs";
+
+const manager = readFileSync(
+	new URL("./scaleway-cache-manager.mjs", import.meta.url),
+	"utf8",
+);
+
+test("the manager accepts the shared sccache S3 environment", () => {
+	assert.match(manager, /process\.env\.SCCACHE_BUCKET/u);
+	assert.match(manager, /process\.env\.SCCACHE_ENDPOINT/u);
+	assert.match(manager, /process\.env\.SCCACHE_REGION/u);
+});
 
 test("protected refs share the trusted namespace", () => {
 	for (const ref of [

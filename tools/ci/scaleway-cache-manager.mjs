@@ -33,6 +33,12 @@ const environment = {
 	refName: process.env.GITHUB_REF_NAME ?? "",
 	headRef: process.env.GITHUB_HEAD_REF ?? "",
 };
+const storage = {
+	bucket: process.env.SCW_CI_CACHE_BUCKET || process.env.SCCACHE_BUCKET || "",
+	endpoint:
+		process.env.SCW_CI_CACHE_S3_ENDPOINT || process.env.SCCACHE_ENDPOINT || "",
+	region: process.env.SCW_CI_CACHE_REGION || process.env.SCCACHE_REGION || "",
+};
 
 if (!new Set(["restore", "save"]).has(action)) {
 	throw new Error(
@@ -79,8 +85,8 @@ function cacheDefinitions() {
 
 function configured() {
 	return Boolean(
-		process.env.SCW_CI_CACHE_BUCKET &&
-			process.env.SCW_CI_CACHE_S3_ENDPOINT &&
+		storage.bucket &&
+			storage.endpoint &&
 			process.env.AWS_ACCESS_KEY_ID &&
 			process.env.AWS_SECRET_ACCESS_KEY,
 	);
@@ -92,13 +98,13 @@ function aws(arguments_, options = {}) {
 		stdio: options.quiet ? "ignore" : "inherit",
 		env: {
 			...process.env,
-			AWS_DEFAULT_REGION: process.env.SCW_CI_CACHE_REGION,
+			AWS_DEFAULT_REGION: storage.region,
 		},
 	});
 }
 
 function objectUrl(prefix, definition) {
-	return `s3://${process.env.SCW_CI_CACHE_BUCKET}/${prefix}/archives/${definition.key}.tar.gz`;
+	return `s3://${storage.bucket}/${prefix}/archives/${definition.key}.tar.gz`;
 }
 
 function cachePath(definition) {
@@ -130,7 +136,7 @@ function restore(definitions) {
 			const download = aws(
 				[
 					"--endpoint-url",
-					process.env.SCW_CI_CACHE_S3_ENDPOINT,
+					storage.endpoint,
 					"s3",
 					"cp",
 					objectUrl(prefix, definition),
@@ -182,7 +188,7 @@ function save(definitions) {
 		}
 		const uploaded = aws([
 			"--endpoint-url",
-			process.env.SCW_CI_CACHE_S3_ENDPOINT,
+			storage.endpoint,
 			"s3",
 			"cp",
 			archive,
