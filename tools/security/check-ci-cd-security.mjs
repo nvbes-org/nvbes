@@ -35,7 +35,7 @@ const fullCommitShaPattern = /^[0-9a-f]{40}$/u;
 const githubExpression = (value) => `\${{ ${value} }}`;
 const trustedCacheBranchCondition =
 	"(github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/release/'))";
-const cacheEnvironmentSelector = `${trustedCacheBranchCondition} && 'production-ci-cache' || 'branch-ci-cache'`;
+const cacheEnvironmentSelector = `github.event_name != 'push' && 'ci-no-secrets' || (${trustedCacheBranchCondition} && 'production-ci-cache' || 'branch-ci-cache')`;
 const cachePrefixSelector = `${trustedCacheBranchCondition} && 'trusted' || format('branches/{0}', github.ref_name)`;
 const workflowScope = parseWorkflowScope(process.argv.slice(2));
 

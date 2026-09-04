@@ -101,7 +101,7 @@ resource "scaleway_iam_policy" "ci_cache" {
 
 resource "scaleway_iam_application" "branch_cache" {
   name            = "nvbes-branch-ci-cache"
-  description     = "GitHub Actions identity restricted to isolated branch compiler caches."
+  description     = "GitHub Actions identity with trusted-cache reads and isolated branch-cache writes."
   organization_id = var.organization_id
 
   lifecycle {
@@ -111,7 +111,7 @@ resource "scaleway_iam_application" "branch_cache" {
 
 resource "scaleway_iam_policy" "branch_cache" {
   name            = "nvbes-branch-ci-cache"
-  description     = "Read and write access to isolated branch compiler-cache prefixes only."
+  description     = "Read trusted cache objects and read/write isolated branch cache objects."
   application_id  = scaleway_iam_application.branch_cache.id
   organization_id = var.organization_id
 
@@ -171,6 +171,18 @@ resource "scaleway_object_bucket_policy" "ci_cache" {
         Effect    = "Allow"
         Principal = { SCW = "application_id:${scaleway_iam_application.ci_cache.id}" }
         Action    = ["s3:GetObject", "s3:PutObject"]
+        Resource  = ["${scaleway_object_bucket.ci_cache.name}/trusted/*"]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "true"
+          }
+        }
+      },
+      {
+        Sid       = "ReadTrustedCacheObjectsFromBranches"
+        Effect    = "Allow"
+        Principal = { SCW = "application_id:${scaleway_iam_application.branch_cache.id}" }
+        Action    = ["s3:GetObject"]
         Resource  = ["${scaleway_object_bucket.ci_cache.name}/trusted/*"]
         Condition = {
           Bool = {

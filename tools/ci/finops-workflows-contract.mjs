@@ -27,18 +27,18 @@ function runSteps(job) {
 	});
 }
 
-function isFailClosed(value) {
+function isFailClosed(value, allowedIf) {
 	return (
-		!Object.hasOwn(value, "if") &&
+		(!Object.hasOwn(value, "if") || value.if === allowedIf) &&
 		(!Object.hasOwn(value, "continue-on-error") ||
 			value["continue-on-error"] === false)
 	);
 }
 
-function assertFailClosedGateJob(gate, jobName, shell) {
+function assertFailClosedGateJob(gate, jobName, shell, allowedIf) {
 	assert.ok(isRecord(gate), "workflow job must be an object");
 	assert.equal(
-		isFailClosed(gate),
+		isFailClosed(gate, allowedIf),
 		true,
 		`${jobName} must be unconditional and fail closed`,
 	);
@@ -70,7 +70,7 @@ function terraformValidationCommand(contract) {
 }
 
 function expectedGatePrefix(contract) {
-	return [
+	const prefix = [
 		{
 			uses: CHECKOUT_ACTION,
 			with: { "fetch-depth": 0, "persist-credentials": false },
@@ -81,6 +81,9 @@ function expectedGatePrefix(contract) {
 			run: `node tools/security/check-ci-cd-security.mjs --workflow ${contract.workflowPath}`,
 		},
 		{ name: "Enable pnpm", run: COREPACK_COMMAND },
+	];
+	if (contract.dependencyCacheStep) prefix.push(contract.dependencyCacheStep);
+	prefix.push(
 		{ name: "Install locked dependencies", run: LOCKED_INSTALL_COMMAND },
 		{ name: "Enforce FinOps contract", run: FINOPS_COMMAND },
 		{
@@ -95,14 +98,16 @@ function expectedGatePrefix(contract) {
 			name: contract.terraformValidationStepName,
 			run: terraformValidationCommand(contract),
 		},
-	];
+	);
+	return prefix;
 }
 
 function assertGatePrefix(gate, contract) {
-	const prefix = gate.steps.slice(0, 9);
+	const expected = expectedGatePrefix(contract);
+	const prefix = gate.steps.slice(0, expected.length);
 	assert.equal(
 		prefix.length,
-		9,
+		expected.length,
 		`${contract.job} must use the allowlisted gate step prefix`,
 	);
 	assertCriticalSteps(
@@ -111,7 +116,7 @@ function assertGatePrefix(gate, contract) {
 	);
 	assert.deepEqual(
 		prefix,
-		expectedGatePrefix(contract),
+		expected,
 		`${contract.job} must use the allowlisted gate step prefix`,
 	);
 }
@@ -227,7 +232,12 @@ export function validateWorkflowContract(source, contract) {
 	);
 
 	const gate = workflow.jobs[contract.job];
-	assertFailClosedGateJob(gate, contract.job, contract.shell);
+	assertFailClosedGateJob(
+		gate,
+		contract.job,
+		contract.shell,
+		contract.allowedIf,
+	);
 	assertExecutionContext(workflow, gate, contract);
 	const gateRunSteps = runSteps(gate);
 	const finOpsSteps = gateRunSteps.filter(({ run }) => run === FINOPS_COMMAND);

@@ -17,15 +17,22 @@ vers GitHub le slot dont la prochaine rotation est la plus éloignée. Le slot
 remplacé est donc inactif depuis une demi-période, ce qui évite de révoquer les
 credentials d'un build déjà démarré.
 
-Le bucket sépare les artefacts `sccache` en deux espaces :
+Le bucket sépare tous les artefacts CI (`sccache`, archives pnpm, Cargo,
+Terraform et Nx) en deux espaces :
 
 - `trusted/rust/<plateforme>/<toolchain>/` partagé par les branches protégées ;
 - `branches/<branche>/rust/<plateforme>/<toolchain>/` pour les autres pushes.
 
-La bucket policy empêche l'identité de branche de lire ou d'écrire dans
-`trusted/`. Les pull requests utilisent le backend GitHub Actions et ne
-reçoivent aucun credential Scaleway, notamment lorsqu'elles proviennent d'un
-fork ou de Dependabot.
+L'identité de branche peut lire `trusted/` pour amorcer un build, mais ne peut
+y écrire. Elle écrit uniquement dans son préfixe `branches/<hash>/`. Toutes les
+pull requests s'exécutent sans credential Scaleway et utilisent le fallback
+GitHub Actions de `sccache`.
+
+Le gestionnaire n'archive jamais `node_modules`, les répertoires Cargo `target`
+ni les credentials. Les stores adressés par contenu sont séparés par plateforme
+et version d'outil, ce qui permet de réutiliser les objets inchangés même si un
+lockfile évolue. Une branche tente son archive isolée avant l'archive centrale
+de confiance.
 
 Les lectures de configuration du bucket nécessaires au refresh Terraform sont
 autorisées pour les principals qui disposent déjà des permissions IAM
