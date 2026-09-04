@@ -525,7 +525,9 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes("ci-cache-rotation.tfplan");
 		const isValidatedBranchCacheWorkflow =
 			path === ".github/workflows/ci.yml" &&
-			/^ {2}push:\n {4}branches: \['\*\*'\]$/mu.test(text) &&
+			/^ {2}push:\n {4}branches: \[main, dev, 'release\/\*\*'\]$/mu.test(
+				text,
+			) &&
 			text.includes("jobs:\n  quality:") &&
 			text.includes(
 				`environment:\n      name: ${githubExpression(cacheEnvironmentSelector)}\n      deployment: false`,

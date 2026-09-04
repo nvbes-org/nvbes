@@ -32,15 +32,14 @@ const workflowContracts = [
 	{
 		path: ".github/workflows/ci.yml",
 		job: "quality",
-		allowedIf:
-			"github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository",
+		allowedIf: undefined,
 		dependencyCacheStep: {
 			env: {
 				AWS_ACCESS_KEY_ID: `\${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}`,
 				AWS_SECRET_ACCESS_KEY: `\${{ secrets.SCW_CI_CACHE_SECRET_KEY }}`,
 			},
-			name: "Restore central dependency caches",
-			run: 'mkdir -p "$TF_PLUGIN_CACHE_DIR"\nnode tools/ci/scaleway-cache-manager.mjs restore pnpm cargo terraform\n',
+			name: "Restore pnpm cache",
+			run: "node tools/ci/scaleway-cache-manager.mjs restore pnpm",
 		},
 		gateEnv: {
 			CARGO_INCREMENTAL: "0",
@@ -56,10 +55,13 @@ const workflowContracts = [
 			TF_PLUGIN_CACHE_DIR: "/tmp/nvbes-terraform-plugin-cache",
 		},
 		runsOn: "ubuntu-latest",
+		scopedInfrastructure: true,
 		shell: safeShell,
 		terraformEnvironmentPath: emailTerraformEnvironmentPath,
 		terraformInitStepName: "Initialize isolated email Terraform providers",
 		terraformValidationStepName: "Validate isolated email Terraform stack",
+		terraformValidationIf:
+			"steps.nx-scope.outputs.email-terraform-affected == 'true'",
 		workflowPath: ".github/workflows/ci.yml",
 	},
 ];

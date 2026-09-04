@@ -12,10 +12,15 @@ import {
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	isContainerScopeAffected,
+	isDatabaseScopeAffected,
 	isDeliveryScopeAffected,
+	isRustToolchainRequired,
+	isRustWorkspaceAffected,
 	isTrustedPush,
 	isUsableCommitSha,
 	selectTypeScriptProjects,
+	terraformScopes,
 	trustedCacheDirectory,
 } from "./nx-cache-manager.core.mjs";
 
@@ -130,7 +135,7 @@ const changedPaths = git(
 	.filter(Boolean);
 const graph = nxJson("graph", "--print").graph.nodes;
 const typeScriptProjects = selectTypeScriptProjects(affectedProjects, graph);
-const rustAffected = affectedProjects.includes("rust-workspace");
+const rustAffected = isRustWorkspaceAffected(changedPaths);
 const deliveryScopes = {
 	email: isDeliveryScopeAffected(affectedProjects, changedPaths, {
 		projects: ["email-worker", "email-ui", "email-scaleway"],
@@ -189,6 +194,23 @@ const deliveryScopes = {
 		],
 	}),
 };
+const databases = {
+	account: isDatabaseScopeAffected(changedPaths, "account"),
+	email: isDatabaseScopeAffected(changedPaths, "email"),
+};
+const rustRequired = isRustToolchainRequired(rustAffected, databases);
+const containers = {
+	account: isContainerScopeAffected(changedPaths, "apps/account-service"),
+	billing: isContainerScopeAffected(changedPaths, "apps/billing-service"),
+	email: isContainerScopeAffected(changedPaths, "apps/email-worker"),
+	identity: isContainerScopeAffected(changedPaths, "apps/identity-service"),
+	platform: isContainerScopeAffected(
+		changedPaths,
+		"apps/platform-operations-service",
+	),
+	trustRisk: isContainerScopeAffected(changedPaths, "apps/trust-risk-service"),
+};
+const terraform = terraformScopes(changedPaths);
 const githubOutput = requiredEnvironment("GITHUB_OUTPUT");
 const githubEnvironment = requiredEnvironment("GITHUB_ENV");
 
@@ -199,12 +221,35 @@ appendFileSync(
 		`projects=${JSON.stringify(affectedProjects)}`,
 		`typescript-projects=${typeScriptProjects.join(",")}`,
 		`rust-affected=${rustAffected}`,
+		`rust-required=${rustRequired}`,
 		`email-affected=${deliveryScopes.email}`,
 		`identity-affected=${deliveryScopes.identity}`,
 		`account-affected=${deliveryScopes.account}`,
 		`billing-affected=${deliveryScopes.billing}`,
 		`trust-risk-affected=${deliveryScopes.trustRisk}`,
 		`platform-affected=${deliveryScopes.platform}`,
+		`account-database-affected=${databases.account}`,
+		`email-database-affected=${databases.email}`,
+		`account-container-affected=${containers.account}`,
+		`billing-container-affected=${containers.billing}`,
+		`email-container-affected=${containers.email}`,
+		`identity-container-affected=${containers.identity}`,
+		`platform-container-affected=${containers.platform}`,
+		`trust-risk-container-affected=${containers.trustRisk}`,
+		`terraform-scopes=${terraform.join(",")}`,
+		`terraform-affected=${terraform.length > 0}`,
+		...[
+			"account",
+			"billing",
+			"email",
+			"identity",
+			"platform-operations",
+			"trust-risk",
+			"email-stack",
+			"ci-cache-bootstrap",
+		].map(
+			(scope) => `${scope}-terraform-affected=${terraform.includes(scope)}`,
+		),
 		`cache-mode=${cacheMode}`,
 		"",
 	].join("\n"),
@@ -218,6 +263,10 @@ console.log(
 		affectedProjects,
 		typeScriptProjects,
 		rustAffected,
+		rustRequired,
 		deliveryScopes,
+		databases,
+		containers,
+		terraform,
 	}),
 );
