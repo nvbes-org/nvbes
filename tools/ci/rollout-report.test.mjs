@@ -3,6 +3,38 @@ import test from 'node:test';
 import { summarizeRollout } from './rollout-report.core.mjs';
 import { validateCommittedReport, validateRolloutPolicy } from './rollout-policy.mjs';
 import { runMeasurements, scopeMetric } from './rollout-metrics.mjs';
+import { collectRunLogs } from './rollout-logs.mjs';
+
+test('cancelled jobs without steps do not hide executed job logs', () => {
+  const jobs = [
+    { id: 10, conclusion: 'success', steps: [{ name: 'test' }] },
+    { id: 11, conclusion: 'cancelled', steps: [] },
+  ];
+  const missing = Object.assign(new Error('missing log'), { stderr: 'log not found: 11' });
+  const gh = (...args) => {
+    if (!args.includes('--job')) throw missing;
+    assert.equal(args[args.indexOf('--job') + 1], '10');
+    return 'executed job evidence';
+  };
+  assert.equal(collectRunLogs({ id: 1 }, jobs, 'owner/repo', gh), 'executed job evidence');
+  assert.throws(
+    () =>
+      collectRunLogs(
+        { id: 1 },
+        [...jobs.slice(0, 1), { ...jobs[1], steps: [{ name: 'test' }] }],
+        'owner/repo',
+        gh,
+      ),
+    /missing log/u,
+  );
+  assert.throws(
+    () =>
+      collectRunLogs({ id: 1 }, jobs, 'owner/repo', () => {
+        throw Object.assign(new Error('expired execution log'), { stderr: 'log not found: 10' });
+      }),
+    /expired execution log/u,
+  );
+});
 
 test('measurements separate elapsed time from rounded runner minutes', () => {
   const job = (name, start, end, conclusion = 'success') => ({

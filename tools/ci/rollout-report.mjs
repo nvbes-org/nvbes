@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { summarizeRollout } from './rollout-report.core.mjs';
 import { runMeasurements } from './rollout-metrics.mjs';
+import { collectRunLogs } from './rollout-logs.mjs';
 
 const repository = process.env.GITHUB_REPOSITORY || 'nvbes-org/nvbes';
 const limit = Number(process.argv[2] ?? 100);
@@ -22,7 +23,8 @@ for (const run of listed.workflow_runs.filter((run) => run.status === 'completed
       `repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`,
     ),
   );
-  const logs = gh('run', 'view', String(run.id), '--repo', repository, '--log');
+  const jobs = pages.flatMap((page) => page.jobs);
+  const logs = collectRunLogs(run, jobs, repository, gh);
   const evidence = [...logs.matchAll(/CI_RUST_EVIDENCE (\{[^\r\n]+\})/gu)].flatMap((match) => {
     const row = JSON.parse(match[1]);
     const linkedPr = run.pull_requests?.some((pr) => String(pr.number) === String(row.pr));
@@ -38,7 +40,7 @@ for (const run of listed.workflow_runs.filter((run) => run.status === 'completed
   const scopes = [...logs.matchAll(/CI_SCOPE (\{[^\r\n]+\})/gu)].map((match) =>
     JSON.parse(match[1]),
   );
-  runs.push({ ...run, jobs: pages.flatMap((page) => page.jobs), evidence, metrics, scopes });
+  runs.push({ ...run, jobs, evidence, metrics, scopes });
 }
 const report = {
   generatedAt: new Date().toISOString(),

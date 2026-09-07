@@ -64,6 +64,9 @@ par job, les résultats et les observations Rust. Le taux de cache Nx reste
 `null` si les logs n'exposent pas de compteurs ; il n'est jamais déduit du simple
 succès d'une restauration. Les identifiants de run, SHA source et numéros de PR
 sont recoupés avec l'API GitHub. Des logs expirés bloquent la collecte.
+Les jobs annulés avant leur démarrage n'ont pas de journal : ils sont exclus
+de la lecture des logs uniquement si l'API confirme l'absence d'étapes exécutées.
+Tous les journaux des jobs effectivement démarrés restent requis.
 
 Le tableau `measurements` conserve une entrée par exécution avec son URL,
 sa catégorie (`docs`, `ci`, combinaison de runtimes ou `fallback-full`), son
