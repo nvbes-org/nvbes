@@ -18,48 +18,60 @@ intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n
 Le protocole public n'est **pas encore monté**. Les nouvelles primitives sont
 dans la bibliothèque du package Identity, pas dans une application archivée.
 
-| Exigence                                                                                 | État et preuve                                                                                                                   |
-| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| A — clients publics explicitement enregistrés, redirections exactes, scopes par audience | Implémenté dans `identity.oauth.clients.rs` et `identity.oauth.request.rs` ; tests de refus redirection/scope/HTTP hors loopback |
-| A — PKCE S256 et refus downgrade                                                         | Implémenté ; vecteur RFC 7636 et valeurs invalides testés                                                                        |
-| A — stockage des transactions et codes à usage unique                                    | Migration 0007 ; handles/codes hashés, sessions et principal contrôlés sous verrou                                               |
-| A — consommation concurrente, rejeu et révocation de grant                               | Tests PostgreSQL passent ; rejeu valide révoque le grant même après expiration du code                                           |
-| A — serveur HTTP autorisation/token, discovery, JWKS, UserInfo et ID tokens              | À implémenter ; métadonnées limitées à la couverture réelle                                                                      |
-| A — login hébergé, consentement, cookies/CSRF/Origin/CORS et throttling                  | À implémenter ; les primitives synthétiques ne suffisent pas                                                                     |
-| A — audience/scopes cohérents Account/Billing, audit et erreurs publiques                | À terminer ; `billing:checkout` de PR 175 diverge du `billing:write` actuel                                                      |
-| B — passkeys, clés de sécurité et enrollment                                             | À implémenter avec webauthn-rs, sans attribution automatique AAL3                                                                |
-| B — récupération, facteurs supplémentaires et politique opérateur                        | À implémenter ; ne pas confondre reset mot de passe et récupération MFA                                                          |
-| B — step-up frais / AMR exact / TOTP HTTP                                                | À implémenter ; la politique héritée de PR 175 exige encore pwd et doit évoluer pour passkeys                                    |
-| C — refresh rotation, familles, concurrence et détection de rejeu                        | À implémenter sur PostgreSQL, sans Redis obligatoire                                                                             |
-| C — introspection/révocation, rotation JWKS et logout intersites                         | À implémenter ; tokens doivent consulter le grant révoqué selon la politique explicite                                           |
-| D — PAR HTTP et consommation atomique                                                    | Consommation PostgreSQL testée ; exposition HTTP restante                                                                        |
-| D — DPoP AS + SDK + serveurs de ressources                                               | À implémenter ; la validation actuelle de jkt ne vérifie pas encore une preuve DPoP                                              |
-| D — délégation machine si nécessaire                                                     | À statuer selon façade sécurité ; pas de reprise du Token Exchange Cloud                                                         |
-| Gates — contrats, vrais parcours, caches, panne, migration et budget                     | À compléter avant clôture ; aucune ressource payante ajoutée                                                                     |
+| Exigence                                                                                 | État et preuve                                                                                                                      |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| A — clients publics explicitement enregistrés, redirections exactes, scopes par audience | Implémenté dans `identity.oauth.clients.rs` et `identity.oauth.request.rs` ; tests de refus redirection/scope/HTTP hors loopback    |
+| A — PKCE S256 et refus downgrade                                                         | Implémenté ; vecteur RFC 7636 et valeurs invalides testés                                                                           |
+| A — stockage des transactions et codes à usage unique                                    | Migration 0007 ; handles/codes hashés, sessions et principal contrôlés sous verrou                                                  |
+| A — consommation concurrente, rejeu et révocation de grant                               | Tests PostgreSQL passent ; rejeu valide révoque le grant même après expiration du code                                              |
+| A — serveur HTTP autorisation/token, discovery, JWKS, UserInfo et ID tokens              | ID tokens et JWKS implémentés dans la bibliothèque ; routes HTTP/discovery/UserInfo restantes                                       |
+| A — login hébergé, consentement, cookies/CSRF/Origin/CORS et throttling                  | À implémenter ; les primitives synthétiques ne suffisent pas                                                                        |
+| A — audience/scopes cohérents Account/Billing, audit et erreurs publiques                | À terminer ; `billing:checkout` de PR 175 diverge du `billing:write` actuel                                                         |
+| B — passkeys, clés de sécurité et enrollment                                             | À implémenter avec webauthn-rs, sans attribution automatique AAL3                                                                   |
+| B — récupération, facteurs supplémentaires et politique opérateur                        | À implémenter ; ne pas confondre reset mot de passe et récupération MFA                                                             |
+| B — step-up frais / AMR exact / TOTP HTTP                                                | Méthode primaire et dates de preuve enregistrées ; AMR issu du snapshot d'autorisation, passkeys sans pwd possibles ; HTTP restant  |
+| C — refresh rotation, familles, concurrence et détection de rejeu                        | À implémenter sur PostgreSQL, sans Redis obligatoire                                                                                |
+| C — introspection/révocation, rotation JWKS et logout intersites                         | Introspection du grant/session/principal et registre courant testée ; rotation de clés avec échéances testée ; HTTP/logout restants |
+| D — PAR HTTP et consommation atomique                                                    | Consommation PostgreSQL testée ; exposition HTTP restante                                                                           |
+| D — DPoP AS + SDK + serveurs de ressources                                               | À implémenter ; la validation actuelle de jkt ne vérifie pas encore une preuve DPoP                                                 |
+| D — délégation machine si nécessaire                                                     | À statuer selon façade sécurité ; pas de reprise du Token Exchange Cloud                                                            |
+| Gates — contrats, vrais parcours, caches, panne, migration et budget                     | À compléter avant clôture ; aucune ressource payante ajoutée                                                                        |
 
 ## Prochaine tranche
 
-1. Relier l'émission des tokens au grant actif, avec ID token OIDC, auth_time et
-   distinction des audiences. Ne pas fournir aux appelants un moyen de déclarer
-   eux-mêmes AMR ou DPoP sans preuve validée.
-2. Implémenter la session navigateur et le login hébergé avec consentement lié à
+1. Implémenter la session navigateur et le login hébergé avec consentement lié à
    la transaction, cookies hôte, CSRF, Origin et limites PostgreSQL bornées.
-3. Monter les routes Code/PKCE et OIDC complètes, tester les erreurs de protocole
+2. Monter les routes Code/PKCE et OIDC complètes, tester les erreurs de protocole
    et documenter leurs contrats. Puis poursuivre B, C et D sans réduire le scope.
+3. UserInfo doit disposer d'une audience explicitement autorisée : ne pas accepter
+   arbitrairement un access token destiné exclusivement à Account ou Billing.
+   La prise en charge des scopes OIDC/profile/email doit correspondre aux claims
+   réellement servis. Le jkt doit devenir une preuve DPoP vérifiée, pas une chaîne
+   déclarée par l'appelant.
 
 Les tables de transactions doivent avoir un nettoyage borné avant exposition.
-La fraîcheur, prompt=login/none, le refus utilisateur, le renouvellement et la
-politique de déconnexion ne sont pas couverts par les seuls tests de stockage.
+Les timestamps de fraîcheur sont enregistrés et testés, mais leur contrôle dans
+Account/Billing reste à implémenter. prompt=login/none, le refus utilisateur, le
+renouvellement et la politique de déconnexion ne sont pas encore couverts.
+
+L'émission a été déplacée dans la bibliothèque du package, sans seconde pile de
+signature. Le diagnostic synthétique traverse désormais le vrai grant OAuth.
+La migration 0008 ajoute les preuves primaires, les dates de step-up, le snapshot
+d'autorisation et la consommation unique de l'émission. Voir le
+[cycle des jetons et la procédure de rotation](identity-token-lifecycle.md).
 
 ## Validation effectuée
 
 - `cargo check --workspace` : succès dans le worktree isolé.
-- Cible Nx `identity-service:test:database` : 10 tests de bibliothèque OAuth et
-  28 tests du binaire réussis, plus 3 tests du garde de base de données.
+- Cible Nx `identity-service:test:database` : 24 tests de bibliothèque OAuth/tokens
+  et 22 tests du binaire réussis, plus 3 tests du garde de base de données.
 - Base dédiée `nvbes_identity_test_protocol`, PostgreSQL local sur port 15432 ;
-  migrations 0001–0007 appliquées. Aucun test sur les bases applicatives.
-- Les 10 tests comprennent 6 validations pures et 4 scénarios PostgreSQL, avec
-  courses concurrentes pour PAR et échange du code.
+  migrations 0001–0008 appliquées. Aucun test sur les bases applicatives.
+- Tests PostgreSQL de concurrence PAR, échange de code et émission ; rejeu
+  invalidant un jeton déjà émis ; suspension avant signature ; retrait du client
+  et preuves MFA capturées avant une modification ultérieure de la session.
+- Tests cryptographiques d'audiences/types distincts, at_hash/nonce/auth_time,
+  claims hostiles, clés faibles/non appariées, rotation avec échéance et AMR exact.
 - Cible Nx `identity-service:test:contract` : 11 tests réussis ; ce contrat
   confirme pour l'instant que le runtime public reste fermé.
 - Les routes publiques, facteurs WebAuthn, refresh et DPoP complets restent à

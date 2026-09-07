@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+use crate::tokens_error::TokenError;
+
 pub const ACCOUNT_AUDIENCE: &str = "nvbes-account-service";
 pub const BILLING_AUDIENCE: &str = "nvbes-billing-service";
 
@@ -12,7 +14,7 @@ const ACCOUNT_SCOPES: [&str; 4] = [
 const BILLING_SCOPES: [&str; 2] = ["billing:read", "billing:checkout"];
 const ALLOWED_AMR: [&str; 3] = ["pwd", "totp", "webauthn"];
 
-pub fn validate_scopes(audience: &str, scope: &str) -> anyhow::Result<()> {
+pub fn validate_scopes(audience: &str, scope: &str) -> Result<(), TokenError> {
     if scope.len() > 1024
         || scope.split(' ').any(|item| {
             item.is_empty()
@@ -21,46 +23,40 @@ pub fn validate_scopes(audience: &str, scope: &str) -> anyhow::Result<()> {
                 })
         })
     {
-        anyhow::bail!("token scope syntax is invalid");
+        return Err(TokenError::InvalidPolicy);
     }
     let requested = scope.split_whitespace().collect::<BTreeSet<_>>();
     if requested.is_empty() || requested.len() != scope.split_whitespace().count() {
-        anyhow::bail!("token scopes must be non-empty and unique");
+        return Err(TokenError::InvalidPolicy);
     }
     let allowed = allowed_scopes(audience)?;
     if requested.iter().any(|item| !allowed.contains(item)) {
-        anyhow::bail!("token scope is not allowed for its audience");
+        return Err(TokenError::InvalidPolicy);
     }
     Ok(())
 }
 
-pub fn validate_amr(amr: &[String]) -> anyhow::Result<()> {
+pub fn validate_amr(amr: &[String]) -> Result<(), TokenError> {
     if amr.is_empty()
         || amr
             .iter()
             .any(|method| !ALLOWED_AMR.contains(&method.as_str()))
     {
-        anyhow::bail!("token amr is invalid");
+        return Err(TokenError::InvalidAuthentication);
     }
-    if amr.iter().collect::<BTreeSet<_>>().len() != amr.len() || !amr.iter().any(|m| m == "pwd") {
-        anyhow::bail!("token amr must include one password authentication");
+    if amr.iter().collect::<BTreeSet<_>>().len() != amr.len()
+        || !amr.iter().any(|m| matches!(m.as_str(), "pwd" | "webauthn"))
+    {
+        return Err(TokenError::InvalidAuthentication);
     }
     Ok(())
 }
 
-pub fn step_up_method(method: Option<String>) -> anyhow::Result<Option<String>> {
-    match method.as_deref() {
-        None => Ok(None),
-        Some("totp" | "webauthn") => Ok(method),
-        Some(_) => anyhow::bail!("stored step-up method is invalid"),
-    }
-}
-
-fn allowed_scopes(audience: &str) -> anyhow::Result<&'static [&'static str]> {
+fn allowed_scopes(audience: &str) -> Result<&'static [&'static str], TokenError> {
     match audience {
         ACCOUNT_AUDIENCE => Ok(&ACCOUNT_SCOPES),
         BILLING_AUDIENCE => Ok(&BILLING_SCOPES),
-        _ => anyhow::bail!("token audience has no scope policy"),
+        _ => Err(TokenError::InvalidPolicy),
     }
 }
 
@@ -78,9 +74,10 @@ mod tests {
     }
 
     #[test]
-    fn amr_requires_password_and_known_step_up_methods() {
+    fn amr_accepts_passwordless_but_not_a_standalone_totp() {
         assert!(validate_amr(&["pwd".into(), "totp".into()]).is_ok());
-        assert!(validate_amr(&["webauthn".into()]).is_err());
+        assert!(validate_amr(&["webauthn".into()]).is_ok());
+        assert!(validate_amr(&["totp".into()]).is_err());
         assert!(validate_amr(&["pwd".into(), "sms".into()]).is_err());
     }
 }

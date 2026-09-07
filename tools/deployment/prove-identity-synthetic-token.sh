@@ -56,7 +56,7 @@ SQL
 )"
 jq --exit-status \
   '.audience == "nvbes-account-service" and
-   .scope == "account:read account:write account:export account:close" and
+   (.scope | split(" ") | sort) == ["account:close","account:export","account:read","account:write"] and
    .amr == ["pwd"] and
    .active_before_revocation == true and
    .inactive_after_revocation == true' \

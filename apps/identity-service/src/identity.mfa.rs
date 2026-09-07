@@ -187,7 +187,7 @@ async fn persist_session_grant(
     expires_at: DateTime<Utc>,
 ) -> anyhow::Result<()> {
     sqlx::query(
-        "UPDATE identity_sessions SET step_up_expires_at = $1,step_up_method='totp' WHERE id = $2",
+        "UPDATE identity_sessions SET step_up_expires_at = $1,step_up_method='totp',step_up_at=clock_timestamp() WHERE id = $2",
     )
     .bind(expires_at)
     .bind(session_id)

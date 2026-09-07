@@ -24,12 +24,9 @@ mod mfa_crypto;
 mod mfa_rotation;
 #[path = "identity.synthetic.rs"]
 mod synthetic;
-#[path = "identity.tokens.rs"]
-mod tokens;
-#[path = "identity.tokens.config.rs"]
-mod tokens_config;
-#[path = "identity.tokens.policy.rs"]
-mod tokens_policy;
+#[path = "identity.tokens.synthetic.rs"]
+mod tokens_synthetic;
+use nvbes_identity_service::{tokens, tokens_config};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -125,9 +122,14 @@ async fn main() -> anyhow::Result<()> {
         let token_config = tokens_config::TokenConfig::from_env(&environment)?;
         let token_service = tokens::TokenService::new(token_config)?;
         let pool = database::connect(&database_url, 2).await?;
-        let result =
-            tokens::run_synthetic_smoke(&pool, &token_service, &email, &password, &audience)
-                .await?;
+        let result = tokens_synthetic::run_synthetic_smoke(
+            &pool,
+            &token_service,
+            &email,
+            &password,
+            &audience,
+        )
+        .await?;
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }

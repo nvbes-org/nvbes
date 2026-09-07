@@ -16,10 +16,13 @@ pub struct AuthorizationCode {
 }
 
 pub struct AuthorizedGrant {
-    pub id: Uuid,
-    pub principal_id: Uuid,
-    pub session_id: Uuid,
-    pub request: AuthorizationRequest,
+    pub(crate) id: Uuid,
+}
+
+impl AuthorizedGrant {
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
 }
 
 /// Called only after hosted authentication and consent. Session authentication
@@ -31,22 +34,27 @@ pub async fn authorize(
     session_token: &str,
 ) -> Result<AuthorizationCode, StoreError> {
     let mut tx = db.begin().await?;
-    let (session_id, principal_id, authenticated_at): (Uuid, Uuid, DateTime<Utc>) =
-        sqlx::query_as("SELECT s.id,s.principal_id,s.created_at FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' FOR UPDATE OF s,p")
+    let (session_id, principal_id, authentication): (Uuid, Uuid, serde_json::Value) =
+        sqlx::query_as("SELECT s.id,s.principal_id,jsonb_build_object('authenticated_at',s.authenticated_at,'primary_amr',s.primary_amr,'step_up_method',s.step_up_method,'step_up_at',s.step_up_at,'step_up_expires_at',s.step_up_expires_at) FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' FOR UPDATE OF s,p")
             .bind(hash(session_token)).fetch_optional(&mut *tx).await?
             .ok_or(OAuthError::AccessDenied)?;
+    let evidence: crate::authentication::Authentication =
+        serde_json::from_value(authentication.clone())?;
+    evidence
+        .validate(Utc::now())
+        .map_err(|_| OAuthError::AccessDenied)?;
     let value: serde_json::Value = sqlx::query_scalar("DELETE FROM identity_oauth_requests WHERE handle_hash=$1 AND kind='authorization' AND expires_at>clock_timestamp() RETURNING parameters")
         .bind(hash(handle)).fetch_optional(&mut *tx).await?.ok_or(OAuthError::InvalidRequest)?;
     let request = AuthorizationRequest::restore(value.clone(), clients)?;
     if request
         .max_age
-        .is_some_and(|max| (Utc::now() - authenticated_at).num_seconds() > i64::from(max))
+        .is_some_and(|max| (Utc::now() - evidence.authenticated_at).num_seconds() > i64::from(max))
     {
         return Err(OAuthError::AccessDenied.into());
     }
     let code = random_secret();
-    sqlx::query("INSERT INTO identity_oauth_codes(code_hash,session_id,principal_id,client_id,parameters) VALUES($1,$2,$3,$4,$5)")
-        .bind(hash(&code)).bind(session_id).bind(principal_id).bind(&request.client_id).bind(value)
+    sqlx::query("INSERT INTO identity_oauth_codes(code_hash,session_id,principal_id,client_id,parameters,authentication) VALUES($1,$2,$3,$4,$5,$6)")
+        .bind(hash(&code)).bind(session_id).bind(principal_id).bind(&request.client_id).bind(value).bind(authentication)
         .execute(&mut *tx).await?;
     audit(&mut tx, principal_id, "identity.oauth.authorized").await?;
     tx.commit().await?;
@@ -113,10 +121,5 @@ pub async fn exchange(
         .await?;
     audit(&mut tx, code.principal_id, "identity.oauth.code_exchanged").await?;
     tx.commit().await?;
-    Ok(AuthorizedGrant {
-        id,
-        principal_id: code.principal_id,
-        session_id: code.session_id,
-        request,
-    })
+    Ok(AuthorizedGrant { id })
 }

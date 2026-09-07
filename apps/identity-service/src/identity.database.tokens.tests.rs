@@ -21,7 +21,7 @@ async fn session_issued_tokens_derive_step_up_amr_and_survive_step_up_expiry() {
     let service = TokenService::new(
         TokenConfig::from_values(
             "test",
-            "http://identity.test".into(),
+            "http://localhost:3000".into(),
             "identity-key-1".into(),
             private
                 .to_pkcs8_pem(Default::default())
@@ -50,29 +50,29 @@ async fn session_issued_tokens_derive_step_up_amr_and_survive_step_up_expiry() {
     .unwrap();
 
     assert_eq!(
-        claims(&service, &pool, session_id, "account:read")
+        claims(&service, &pool, &session_token, "account:read")
             .await
             .amr,
         ["pwd"]
     );
-    sqlx::query("UPDATE identity_sessions SET step_up_expires_at=clock_timestamp()+interval '10 minutes',step_up_method='webauthn' WHERE id=$1")
+    sqlx::query("UPDATE identity_sessions SET step_up_expires_at=clock_timestamp()+interval '10 minutes',step_up_method='webauthn',step_up_at=clock_timestamp() WHERE id=$1")
         .bind(session_id)
         .execute(&pool)
         .await
         .unwrap();
     assert_eq!(
-        claims(&service, &pool, session_id, "account:close")
+        claims(&service, &pool, &session_token, "account:close")
             .await
             .amr,
         ["pwd", "webauthn"]
     );
-    sqlx::query("UPDATE identity_sessions SET step_up_expires_at=clock_timestamp()-interval '1 second' WHERE id=$1")
+    sqlx::query("UPDATE identity_sessions SET authenticated_at=clock_timestamp()-interval '20 minutes',step_up_at=clock_timestamp()-interval '11 minutes',step_up_expires_at=clock_timestamp()-interval '1 second' WHERE id=$1")
         .bind(session_id)
         .execute(&pool)
         .await
         .unwrap();
     assert_eq!(
-        claims(&service, &pool, session_id, "account:read")
+        claims(&service, &pool, &session_token, "account:read")
             .await
             .amr,
         ["pwd"]
@@ -82,12 +82,17 @@ async fn session_issued_tokens_derive_step_up_amr_and_survive_step_up_expiry() {
 async fn claims(
     service: &TokenService,
     pool: &sqlx::PgPool,
-    session_id: Uuid,
+    session_token: &str,
     scope: &str,
-) -> crate::tokens::AccessTokenClaims {
-    let token = service
-        .issue_for_active_session(pool, session_id, "nvbes-account-service", scope)
-        .await
-        .unwrap();
+) -> nvbes_identity_service::tokens_claims::AccessTokenClaims {
+    let token = crate::tokens_synthetic::issue_for_session(
+        service,
+        pool,
+        session_token,
+        "nvbes-account-service",
+        scope,
+    )
+    .await
+    .unwrap();
     service.verify(&token, "nvbes-account-service").unwrap()
 }

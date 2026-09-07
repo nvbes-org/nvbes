@@ -92,7 +92,7 @@ pub(super) async fn authenticate(
     let token = random_token();
     let mut tx = db.begin().await?;
     sqlx::query(
-        "INSERT INTO identity_sessions (id, principal_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)",
+        "INSERT INTO identity_sessions (id, principal_id, token_hash, expires_at, authenticated_at, primary_amr) VALUES ($1, $2, $3, $4, clock_timestamp(), 'pwd')",
     )
     .bind(Uuid::new_v4())
     .bind(principal_id)
@@ -199,7 +199,7 @@ async fn outbox(
     Ok(())
 }
 
-fn random_token() -> String {
+pub(super) fn random_token() -> String {
     let mut bytes = [0_u8; 32];
     rand::rng().fill_bytes(&mut bytes);
     URL_SAFE_NO_PAD.encode(bytes)
