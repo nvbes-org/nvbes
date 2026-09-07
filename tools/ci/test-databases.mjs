@@ -24,9 +24,23 @@ if (process.argv[2] === 'stop') {
   let ready = false;
   for (let attempt = 0; attempt < 30; attempt++) {
     if (
-      spawnSync('docker', ['exec', 'nvbes-ci-postgres', 'pg_isready', '--username', 'postgres'], {
-        stdio: 'ignore',
-      }).status === 0
+      // The image's temporary initialization server only listens on a Unix
+      // socket. TCP readiness waits for the final server after its restart.
+      spawnSync(
+        'docker',
+        [
+          'exec',
+          'nvbes-ci-postgres',
+          'pg_isready',
+          '--host',
+          '127.0.0.1',
+          '--username',
+          'postgres',
+        ],
+        {
+          stdio: 'ignore',
+        },
+      ).status === 0
     ) {
       ready = true;
       break;
@@ -44,7 +58,16 @@ if (process.argv[2] === 'stop') {
     }[project];
     if (!scope) throw new Error(`No isolated database for ${project}`);
     const database = `nvbes_${scope}_test`;
-    docker('exec', 'nvbes-ci-postgres', 'createdb', '--username', 'postgres', database);
+    docker(
+      'exec',
+      'nvbes-ci-postgres',
+      'createdb',
+      '--host',
+      '127.0.0.1',
+      '--username',
+      'postgres',
+      database,
+    );
     appendFileSync(
       process.env.GITHUB_ENV,
       `NVBES_${scope.toUpperCase()}_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/${database}\n`,
