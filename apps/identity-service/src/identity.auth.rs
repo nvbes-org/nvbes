@@ -5,10 +5,14 @@ use nvbes_core::auth::{dummy_verify_password, hash_password, verify_password};
 use rand::RngCore;
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Transaction};
+use tokio::sync::Semaphore;
 use uuid::Uuid;
 
 const SESSION_TTL_HOURS: i64 = 1;
 const RECOVERY_TTL_MINUTES: i64 = 15;
+const PASSWORD_VERIFY_CONCURRENCY: usize = 2;
+
+static PASSWORD_VERIFY_PERMITS: Semaphore = Semaphore::const_new(PASSWORD_VERIFY_CONCURRENCY);
 
 #[derive(Debug, Clone)]
 pub struct RecoveryNotification {
@@ -81,16 +85,26 @@ pub(super) async fn authenticate(
     .fetch_optional(db)
     .await?;
     let Some((principal_id, password_hash)) = credential else {
-        dummy_verify_password(password, None);
+        verify_dummy_password(password).await?;
         anyhow::bail!("authentication failed");
     };
-    let password_valid = verify_password(password, &password_hash)
-        .map_err(|_| anyhow::anyhow!("password verification failed"))?;
+    let password_valid = verify_stored_password(password, &password_hash).await?;
     if !password_valid {
         anyhow::bail!("authentication failed");
     }
     let token = random_token();
     let mut tx = db.begin().await?;
+    let unchanged = sqlx::query_scalar::<_, bool>(
+        "SELECT p.status = 'active' AND c.password_hash = $2 FROM identity_principals p JOIN identity_password_credentials c ON c.principal_id = p.id WHERE p.id = $1 FOR UPDATE OF p,c",
+    )
+    .bind(principal_id)
+    .bind(&password_hash)
+    .fetch_optional(&mut *tx)
+    .await?
+    .unwrap_or(false);
+    if !unchanged {
+        anyhow::bail!("authentication failed");
+    }
     sqlx::query(
         "INSERT INTO identity_sessions (id, principal_id, token_hash, expires_at, authenticated_at, primary_amr) VALUES ($1, $2, $3, $4, clock_timestamp(), 'pwd')",
     )
@@ -103,6 +117,34 @@ pub(super) async fn authenticate(
     audit(&mut tx, principal_id, "identity.authenticated").await?;
     tx.commit().await?;
     Ok(token)
+}
+
+async fn verify_stored_password(password: &str, password_hash: &str) -> anyhow::Result<bool> {
+    let permit = PASSWORD_VERIFY_PERMITS
+        .acquire()
+        .await
+        .map_err(|_| anyhow::anyhow!("password verification unavailable"))?;
+    let password = password.to_owned();
+    let password_hash = password_hash.to_owned();
+    let verified = tokio::task::spawn_blocking(move || verify_password(&password, &password_hash))
+        .await
+        .map_err(|_| anyhow::anyhow!("password verification unavailable"))?
+        .map_err(|_| anyhow::anyhow!("password verification failed"))?;
+    drop(permit);
+    Ok(verified)
+}
+
+async fn verify_dummy_password(password: &str) -> anyhow::Result<()> {
+    let permit = PASSWORD_VERIFY_PERMITS
+        .acquire()
+        .await
+        .map_err(|_| anyhow::anyhow!("password verification unavailable"))?;
+    let password = password.to_owned();
+    tokio::task::spawn_blocking(move || dummy_verify_password(&password, None))
+        .await
+        .map_err(|_| anyhow::anyhow!("password verification unavailable"))?;
+    drop(permit);
+    Ok(())
 }
 
 pub(super) async fn request_recovery(
