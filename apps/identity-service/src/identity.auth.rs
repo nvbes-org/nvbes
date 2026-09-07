@@ -1,7 +1,7 @@
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 
 use chrono::{DateTime, Duration, Utc};
-use nvbes_core::auth::{dummy_verify_password, hash_password, verify_password};
+use nvbes_core::auth::{dummy_verify_password, hash_password, verify_and_check_rehash};
 use rand::RngCore;
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Transaction};
@@ -88,7 +88,7 @@ pub(super) async fn authenticate(
         verify_dummy_password(password).await?;
         anyhow::bail!("authentication failed");
     };
-    let password_valid = verify_stored_password(password, &password_hash).await?;
+    let (password_valid, needs_rehash) = verify_stored_password(password, &password_hash).await?;
     if !password_valid {
         anyhow::bail!("authentication failed");
     }
@@ -105,6 +105,17 @@ pub(super) async fn authenticate(
     if !unchanged {
         anyhow::bail!("authentication failed");
     }
+    if needs_rehash {
+        let upgraded_hash = hash_current_password(password).await?;
+        sqlx::query(
+            "UPDATE identity_password_credentials SET password_hash=$1,changed_at=clock_timestamp() WHERE principal_id=$2 AND password_hash=$3",
+        )
+        .bind(upgraded_hash)
+        .bind(principal_id)
+        .bind(&password_hash)
+        .execute(&mut *tx)
+        .await?;
+    }
     sqlx::query(
         "INSERT INTO identity_sessions (id, principal_id, token_hash, expires_at, authenticated_at, primary_amr) VALUES ($1, $2, $3, $4, clock_timestamp(), 'pwd')",
     )
@@ -119,19 +130,38 @@ pub(super) async fn authenticate(
     Ok(token)
 }
 
-async fn verify_stored_password(password: &str, password_hash: &str) -> anyhow::Result<bool> {
+async fn verify_stored_password(
+    password: &str,
+    password_hash: &str,
+) -> anyhow::Result<(bool, bool)> {
     let permit = PASSWORD_VERIFY_PERMITS
         .acquire()
         .await
         .map_err(|_| anyhow::anyhow!("password verification unavailable"))?;
     let password = password.to_owned();
     let password_hash = password_hash.to_owned();
-    let verified = tokio::task::spawn_blocking(move || verify_password(&password, &password_hash))
-        .await
-        .map_err(|_| anyhow::anyhow!("password verification unavailable"))?
-        .map_err(|_| anyhow::anyhow!("password verification failed"))?;
+    let verified = tokio::task::spawn_blocking(move || {
+        verify_and_check_rehash(&password, &password_hash, None)
+    })
+    .await
+    .map_err(|_| anyhow::anyhow!("password verification unavailable"))?
+    .map_err(|_| anyhow::anyhow!("password verification failed"))?;
     drop(permit);
     Ok(verified)
+}
+
+async fn hash_current_password(password: &str) -> anyhow::Result<String> {
+    let permit = PASSWORD_VERIFY_PERMITS
+        .acquire()
+        .await
+        .map_err(|_| anyhow::anyhow!("password hashing unavailable"))?;
+    let password = password.to_owned();
+    let hash = tokio::task::spawn_blocking(move || hash_password(&password))
+        .await
+        .map_err(|_| anyhow::anyhow!("password hashing unavailable"))?
+        .map_err(|_| anyhow::anyhow!("password hashing failed"))?;
+    drop(permit);
+    Ok(hash)
 }
 
 async fn verify_dummy_password(password: &str) -> anyhow::Result<()> {
