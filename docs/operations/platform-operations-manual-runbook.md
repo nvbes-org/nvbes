@@ -36,6 +36,11 @@ dossier d'abus et évalué selon son contexte réel.
 
 ## Traitement d'un dossier
 
+L'[API opérateur et son client manuel](platform-operations-api.md) implémentent
+le registre de dossiers, les observations par domaine, les transitions et
+l'audit transactionnel. Ce guide décrit la configuration et les commandes
+exécutables, ainsi que les actions métier volontairement indisponibles.
+
 1. créer un identifiant et classer la demande ;
 2. enregistrer l'heure, la source et le service propriétaire ;
 3. minimiser et préserver les preuves nécessaires ;

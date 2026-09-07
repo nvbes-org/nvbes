@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn executes_valid_operator_command_with_receipt() {
+fn never_claims_an_unimplemented_domain_action_was_executed() {
     let cmd = OperatorCommand {
         operator_id: "operator-01".to_string(),
         reason: "Valid incident mitigation reason".to_string(),
@@ -13,11 +13,10 @@ fn executes_valid_operator_command_with_receipt() {
         },
     };
 
-    let receipt = OperatorActionDispatcher::execute(cmd).expect("command must succeed");
-    assert_eq!(receipt.status, "executed");
-    assert_eq!(receipt.operator_id, "operator-01");
-    assert!(receipt.is_reversible);
-    assert!(receipt.reversal_instruction.is_some());
+    assert!(matches!(
+        OperatorActionDispatcher::execute(cmd),
+        Err(ActionExecutionError::ExecutionFailed(_))
+    ));
 }
 
 #[test]
