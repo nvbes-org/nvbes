@@ -67,6 +67,9 @@ Les audiences cibles sont `nvbes-account-service` et `nvbes-billing-service`.
 
 ## Sources et écarts bloquants
 
+L'[inventaire des mécanismes archivés](identity-archive-mechanisms-review.md)
+évalue leur pertinence et les conditions de reprise dans le service actif.
+
 - [Identity main](../../apps/identity-service/src/main.rs) monte uniquement
   health et métriques. [Tokens](../../apps/identity-service/src/identity.tokens.rs)
   et [auth](../../apps/identity-service/src/identity.auth.rs) sont des primitives
