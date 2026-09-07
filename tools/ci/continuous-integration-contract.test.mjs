@@ -13,6 +13,8 @@ test('CI preserves runtime isolation, FinOps, and the required gate', () => {
   assert.deepEqual(parsed.on.pull_request.branches, ['main']);
   assert.equal(parsed.on.pull_request_target, undefined);
   assert.equal(parsed.concurrency['cancel-in-progress'], true);
+  assert.equal(parsed.env.NX_DAEMON, 'false');
+  assert.equal(parsed.env.NX_WORKSPACE_DATA_DIRECTORY, '.nx/cache/workspace-data');
 });
 for (const [name, mutate] of [
   ['missing gate dependency', (w) => w.jobs['ci-gate'].needs.pop()],
@@ -55,7 +57,7 @@ for (const [name, mutate] of [
     },
   ],
 ]) {
-  test(`rejects ${name}`, () => {
+  test(`rejects ${String(name)}`, () => {
     const changed = parse(workflow);
     mutate(changed);
     assert.throws(() => validateContinuousWorkflow(stringify(changed), setup));

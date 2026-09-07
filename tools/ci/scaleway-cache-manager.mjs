@@ -48,7 +48,7 @@ function pnpmStore() {
 
 function fileDigest(paths) {
   const hash = createHash('sha256');
-  for (const path of [...paths].sort()) {
+  for (const path of [...paths].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))) {
     hash.update(path);
     hash.update('\0');
     hash.update(readFileSync(join(workspace, path)));
@@ -87,7 +87,7 @@ function cacheDefinitions() {
     },
     nx: {
       path: nxPath,
-      key: `v2/nx/${platform}/nx-${nxVersion.split('.')[0]}/node-24/${process.env.GITHUB_JOB ?? 'local'}`,
+      key: `v3/nx/${platform}/nx-${nxVersion.split('.')[0]}/node-24/${process.env.GITHUB_JOB ?? 'local'}`,
       mode: 'sync',
     },
   };
@@ -209,7 +209,6 @@ function save(definitions) {
         'sync',
         source,
         objectPrefix(prefix, definition),
-        '--size-only',
         '--only-show-errors',
       ]);
       lines.push(

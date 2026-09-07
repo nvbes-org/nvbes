@@ -44,7 +44,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "node --test tools/ci/lockfile.integration.test.mjs",
+        "command": "node --test tools/ci/lockfile.integration.test.mjs tools/ci/nx-cache.integration.test.mjs",
         "cwd": "."
       }
     }

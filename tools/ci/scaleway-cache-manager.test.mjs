@@ -20,7 +20,8 @@ test('dependency archives are immutable and Nx is synchronized incrementally', (
   assert.match(manager, /"s3api",\n\s+"head-object"/u);
   assert.match(manager, /definition\.mode === "sync"/u);
   assert.match(manager, /"s3",\n\s+"sync"/u);
-  assert.match(manager, /"--size-only"/u);
+  // SQLite can change without changing its file size; publication must compare timestamps.
+  assert.doesNotMatch(manager, /"--size-only"/u);
 });
 
 test('protected refs share the trusted namespace', () => {

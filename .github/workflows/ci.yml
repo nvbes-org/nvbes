@@ -24,6 +24,8 @@ env:
   CI: 'true'
   NVBES_ENV: ci
   NX_NO_CLOUD: 'true'
+  NX_DAEMON: 'false'
+  NX_WORKSPACE_DATA_DIRECTORY: .nx/cache/workspace-data
   TF_PLUGIN_CACHE_DIR: /tmp/nvbes-terraform-plugin-cache
 jobs:
   authorize-cache:

@@ -104,6 +104,14 @@ TypeScript/contrats/containers : pnpm + Nx ; Rust : Cargo + sccache ; DB :
 pnpm + Cargo + sccache ; Terraform : pnpm + plugins. Les namespaces Nx sont
 séparés par lane, OS, architecture, version majeure Nx et version Node pour
 éviter les écritures concurrentes sur la même base de cache.
+Le namespace v3 inclut l'index SQLite Nx : `NX_WORKSPACE_DATA_DIRECTORY`
+pointe vers `.nx/cache/workspace-data`. Sans cet index, copier les résultats
+de tâches ne permet pas à Nx de les retrouver sur le runner suivant.
+Le daemon est désactivé afin de fermer la base avant la publication.
+La synchronisation tient compte des dates de modification : la taille seule
+ne permet pas de détecter une mise à jour de l'index SQLite.
+Un test d'intégration transfère le cache entre deux dossiers indépendants
+et vérifie la restitution du résultat par le moteur Nx installé.
 
 Aucun service payant, abonnement ou stockage supplémentaire n'est créé.
 Le gate FinOps conserve le plafond global de 30 EUR TTC/mois et précède les
