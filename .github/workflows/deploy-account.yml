@@ -96,8 +96,12 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ github.ref_name }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/account-service:buildcache
-          cache-to: type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/account-service:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
+          cache-from: |
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/account-service:buildcache
+          cache-to: |
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/account-service:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
       - name: Block vulnerable release images
         if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

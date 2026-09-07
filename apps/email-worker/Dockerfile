@@ -1,5 +1,6 @@
 FROM rust:1.91.1-slim-bookworm@sha256:8514999d4786ef12efe89239e86b3d0a021b94b9d35108c8efe6c79ca7dc1a65 AS builder
 
+ARG TARGETPLATFORM
 ARG SOURCE_DATE_EPOCH=0
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
 ENV LC_ALL=C \
@@ -25,9 +26,9 @@ COPY contracts ./contracts
 COPY libs ./libs
 COPY vendor ./vendor
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/usr/src/nvbes/target \
+RUN --mount=type=cache,id=nvbes-cargo-registry-rust-1.91.1-${TARGETPLATFORM},target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=nvbes-cargo-git-rust-1.91.1-${TARGETPLATFORM},target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,id=nvbes-email-worker-target-rust-1.91.1-${TARGETPLATFORM},target=/usr/src/nvbes/target,sharing=locked \
     cargo build --locked --release --bin nvbes-email-worker \
     && install -D target/release/nvbes-email-worker /out/email-worker
 

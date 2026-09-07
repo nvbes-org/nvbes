@@ -1,5 +1,6 @@
 FROM rust:1.91.1-slim-bookworm@sha256:8514999d4786ef12efe89239e86b3d0a021b94b9d35108c8efe6c79ca7dc1a65 AS builder
 
+ARG TARGETPLATFORM
 ARG SOURCE_DATE_EPOCH=0
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
 ARG DEBIAN_FRONTEND=noninteractive
@@ -30,9 +31,9 @@ COPY vendor ./vendor
 
 WORKDIR /usr/src/nvbes/apps/billing-service
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/usr/src/nvbes/apps/billing-service/target \
+RUN --mount=type=cache,id=nvbes-cargo-registry-rust-1.91.1-${TARGETPLATFORM},target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=nvbes-cargo-git-rust-1.91.1-${TARGETPLATFORM},target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,id=nvbes-billing-service-target-rust-1.91.1-${TARGETPLATFORM},target=/usr/src/nvbes/apps/billing-service/target,sharing=locked \
     cargo build --locked --release --bin nvbes-billing-service \
     && install -D target/release/nvbes-billing-service /out/billing-service
 

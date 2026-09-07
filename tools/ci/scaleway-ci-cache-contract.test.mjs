@@ -32,7 +32,7 @@ const securityChecker = readFileSync(
 	"utf8",
 );
 
-test("deployment builds use isolated Scaleway registry cache scopes", () => {
+test("deployment builds combine shared Rust and isolated Scaleway registry cache scopes", () => {
 	for (const [workflow, scope] of [
 		[emailWorkflow, "email-worker"],
 		[trustRiskWorkflow, "trust-risk-service"],
@@ -45,14 +45,41 @@ test("deployment builds use isolated Scaleway registry cache scopes", () => {
 		);
 		assert.ok(
 			workflow.includes(
-				`cache-from: type=registry,ref=\${{ env.CI_CACHE_REGISTRY }}/${scope}:buildcache`,
+				`type=registry,ref=\${{ env.CI_CACHE_REGISTRY }}/${scope}:buildcache`,
 			),
 		);
 		assert.ok(
 			workflow.includes(
-				`cache-to: type=registry,ref=\${{ env.CI_CACHE_REGISTRY }}/${scope}:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true`,
+				`type=registry,ref=\${{ env.CI_CACHE_REGISTRY }}/${scope}:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true`,
 			),
 		);
+		assert.equal(
+			workflow.match(/rust-builder:rust-1\.91\.1-linux-amd64/gu)?.length,
+			2,
+			"each deploy build imports and exports the shared Linux Rust cache",
+		);
+	}
+});
+
+test("Rust Dockerfiles use stable, platform-scoped BuildKit cache mounts", () => {
+	for (const service of [
+		"account-service",
+		"billing-service",
+		"email-worker",
+		"identity-service",
+		"platform-operations-service",
+		"trust-risk-service",
+	]) {
+		const dockerfile = readFileSync(`apps/${service}/Dockerfile`, "utf8");
+		assert.match(
+			dockerfile,
+			/id=nvbes-cargo-registry-rust-1\.91\.1-\$\{TARGETPLATFORM\}/u,
+		);
+		assert.match(
+			dockerfile,
+			/id=nvbes-cargo-git-rust-1\.91\.1-\$\{TARGETPLATFORM\}/u,
+		);
+		assert.match(dockerfile, /sharing=locked/u);
 	}
 });
 
