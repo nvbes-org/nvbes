@@ -17,8 +17,29 @@ Le premier incrément fournit uniquement le socle opérationnel fermé :
 - TOTP chiffré par AES-256-GCM, compteur anti-rejeu et grant de step-up borné.
 
 Aucune route d'inscription ou d'authentification publique n'est exposée par cet
-incrément. Elles seront ajoutées par parcours verticaux complets. Cela maintient
-les inscriptions publiques fermées jusqu'au GO explicite.
+incrément. `/auth/register` reste absent. Les comptes humains ne sont créés que
+par invitation opérateur (`identity_invitations`, code stocké en hash SHA-256).
+Les inscriptions publiques restent fermées jusqu'au GO explicite.
+
+## Contrat de token JWT RS256
+
+Contrat canonique : `contracts/identity/access-token.v1.schema.json` et
+`contracts/identity/scopes.v1.json`.
+
+| Audience | Scopes autorisés |
+| --- | --- |
+| `nvbes-account-service` | `account:read`, `account:write`, `account:export`, `account:close` |
+| `nvbes-billing-service` | `billing:read`, `billing:checkout` |
+
+- Algorithme : RS256, en-tête `typ=at+jwt`, claim `token_type=access`.
+- Durée de vie : 900 secondes (15 minutes).
+- `amr` : `pwd` obligatoire ; `totp` ou `webauthn` ajouté lorsque la session
+  porte un grant step-up actif (`step_up_method`, TTL 10 minutes).
+- Révocation : l'introspection session (`identity_sessions.revoked_at`) rend le
+  token inactif immédiatement. Sans introspection, les consommateurs doivent
+  respecter `exp` ; la fenêtre résiduelle maximale est donc **15 minutes**.
+- Preuve synthétique : `synthetic-token-smoke` (audit
+  `identity.token.synthetic_proven`, sans persister le JWT).
 
 ## Commandes
 
@@ -45,6 +66,16 @@ paire optionnelle `NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY` /
 `NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION`. Exécuter `rotate-mfa-key`, vérifier
 que le résultat couvre tous les facteurs de l'ancienne version, puis seulement
 retirer la clé précédente. La rotation est transactionnelle et auditée.
+
+`synthetic-invitation-smoke` exige `NVBES_IDENTITY_SYNTHETIC_INVITER_EMAIL`,
+`NVBES_IDENTITY_SYNTHETIC_INVITED_EMAIL` et `NVBES_IDENTITY_SYNTHETIC_PASSWORD`.
+Il prouve qu'un code d'invitation n'est jamais stocké en clair et qu'une
+acceptation est à usage unique.
+
+`synthetic-token-smoke` exige en plus `NVBES_IDENTITY_TOKEN_ISSUER`,
+`NVBES_IDENTITY_TOKEN_KEY_ID`, `NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM`,
+`NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM`, `NVBES_IDENTITY_TOKEN_AUDIENCES` et
+`NVBES_IDENTITY_SYNTHETIC_TOKEN_AUDIENCE` (`nvbes-account-service` en production).
 
 `synthetic-auth-email-smoke` ajoute la preuve Identity → Email. Il exige
 `NVBES_IDENTITY_RECOVERY_BASE_URL` en HTTPS ainsi que la configuration standard

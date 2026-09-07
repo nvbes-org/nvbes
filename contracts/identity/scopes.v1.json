@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "audiences": {
+    "nvbes-account-service": {
+      "scopes": [
+        "account:read",
+        "account:write",
+        "account:export",
+        "account:close"
+      ]
+    },
+    "nvbes-billing-service": {
+      "scopes": ["billing:read", "billing:checkout"]
+    }
+  },
+  "amr": ["pwd", "totp", "webauthn"],
+  "access_token_ttl_seconds": 900,
+  "revocation": {
+    "introspection_available": "inactive when the bound session is revoked or expired",
+    "introspection_unavailable": "consumers must honor exp; maximum residual validity is 900 seconds (15 minutes)"
+  }
+}

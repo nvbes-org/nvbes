@@ -228,9 +228,22 @@ async fn access_token_introspection_tracks_session_revocation() {
 
     assert_eq!(result.algorithm, "RS256");
     assert_eq!(result.expires_in_seconds, 900);
+    assert_eq!(
+        result.scope,
+        "account:read account:write account:export account:close"
+    );
+    assert_eq!(result.amr, ["pwd"]);
     assert!(result.active_before_revocation);
     assert!(result.inactive_for_wrong_audience);
     assert!(result.inactive_after_revocation);
+    let audit_mutation = sqlx::query("DELETE FROM identity_audit_events WHERE principal_id=$1")
+        .bind(result.principal_id)
+        .execute(&pool)
+        .await;
+    assert!(
+        audit_mutation.is_err(),
+        "Identity audit events are append-only"
+    );
 }
 
 fn timestamp(value: chrono::DateTime<Utc>) -> prost_types::Timestamp {
