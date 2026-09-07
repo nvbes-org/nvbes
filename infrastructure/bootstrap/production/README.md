@@ -7,7 +7,7 @@ autres stacks de production:
 - le chiffrement serveur AES-256;
 - une identité et une API key par stack;
 - une bucket policy limitée à une clé de state et son `.tflock` par identité,
-  avec listing limité au préfixe de cette stack;
+  avec listing partagé des seuls préfixes de state déclarés;
 - une condition TLS obligatoire sur chaque accès autorisé.
 
 Le bucket utilise des clés indépendantes:
@@ -36,6 +36,12 @@ cache. Elle doit réussir avant le premier déploiement de la stack concernée.
 Ce plan de réparation utilise le state existant sans rafraîchir le bucket :
 ses lectures annexes (notamment CORS) peuvent être refusées par la policy à réparer.
 Le déclenchement hebdomadaire conserve son périmètre cache habituel.
+
+Scaleway limite la policy à 10 statements. Une règle commune autorise les
+identités Terraform à lister les métadonnées des préfixes de state déclarés ;
+chaque identité conserve une règle distincte pour lire, écrire et supprimer
+uniquement son state et son lock. Les contenus des states ne sont jamais partagés.
+Le module bloque le plan au-delà de neuf stacks dans ce bucket.
 
 Object Lock/WORM est volontairement désactivé: il ne remplace pas le lockfile
 Terraform et pourrait empêcher les mises à jour normales du state.

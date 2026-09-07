@@ -4,12 +4,21 @@ import test from 'node:test';
 
 const deployableWorkflows = ['account', 'billing', 'email', 'identity', 'trust-risk'];
 
-test('state listing remains restricted to each stack prefix over TLS', () => {
+test('state policy fits Scaleway limits with shared listing and isolated object access', () => {
   const module = readFileSync('infrastructure/modules/terraform-state-backend/main.tf', 'utf8');
   assert.match(module, /Action\s*= \["s3:ListBucket"\]/u);
   assert.match(module, /Resource\s*= \[scaleway_object_bucket\.terraform_state\.name\]/u);
   assert.match(module, /Condition = merge\(local\.tls_condition,/u);
-  assert.ok(module.includes('"s3:prefix" = ["${var.environment}/${stack}/*"]'));
+  assert.ok(
+    module.includes(
+      '"s3:prefix" = [for stack in local.all_state_stacks : "${var.environment}/${stack}/*"]',
+    ),
+  );
+  assert.match(module, /Sid\s*= "ListDeclaredStatePrefixes"/u);
+  assert.match(module, /length\(local\.all_state_stacks\) \+ 1 <= 10/u);
+  assert.ok(
+    module.includes('Principal = { SCW = "application_id:${local.state_application_ids[stack]}" }'),
+  );
   assert.match(module, /"aws:SecureTransport" = "true"/u);
 });
 
