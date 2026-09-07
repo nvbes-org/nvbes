@@ -3,6 +3,12 @@ name: validate identity restore
 on:
   workflow_dispatch:
     inputs:
+      runner:
+        description: Use GitHub-hosted by default; select local only when it is required as a fallback.
+        required: false
+        default: github-hosted
+        type: choice
+        options: [github-hosted, local]
       approved_sha:
         description: Exact main commit reviewed for Identity recovery validation
         required: true
@@ -36,7 +42,7 @@ defaults:
 jobs:
   validate-restore:
     if: github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","macOS","ARM64"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     environment:
       name: production-identity

@@ -2,6 +2,13 @@ name: deploy billing
 
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        description: Use GitHub-hosted by default; select local only when it is required as a fallback.
+        required: false
+        default: github-hosted
+        type: choice
+        options: [github-hosted, local]
 
 concurrency:
   group: deploy-billing-production
@@ -17,7 +24,7 @@ defaults:
 
 jobs:
   ci-provenance:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","macOS","ARM64"]') || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -33,7 +40,7 @@ jobs:
 
   build-scan-sign:
     needs: [ci-provenance]
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","macOS","ARM64"]') || 'ubuntu-latest' }}
     if: ${{ success() }}
     timeout-minutes: 60
     environment:
@@ -131,7 +138,7 @@ jobs:
   deploy-billing:
     needs: [ci-provenance, build-scan-sign]
     if: ${{ success() && github.ref == 'refs/heads/main' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","macOS","ARM64"]') || 'ubuntu-latest' }}
     timeout-minutes: 90
     environment:
       name: production-billing
