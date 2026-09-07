@@ -116,6 +116,59 @@ variable "identity_sentry_traces_sample_rate" {
   }
 }
 
+variable "identity_token_issuer" {
+  description = "HTTPS issuer embedded in access tokens for Account and Billing."
+  type        = string
+
+  validation {
+    condition     = can(regex("^https://[^/]+$", var.identity_token_issuer))
+    error_message = "identity_token_issuer must be an HTTPS origin without a path."
+  }
+}
+
+variable "identity_token_key_id" {
+  description = "Stable key identifier placed in RS256 access-token headers."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.:-]{3,128}$", var.identity_token_key_id))
+    error_message = "identity_token_key_id must be a 3-128 character token identifier."
+  }
+}
+
+variable "identity_token_private_key_pem" {
+  description = "RSA private signing key for production Identity access tokens."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = startswith(var.identity_token_private_key_pem, "-----BEGIN")
+    error_message = "identity_token_private_key_pem must be PEM encoded."
+  }
+}
+
+variable "identity_token_public_key_pem" {
+  description = "RSA public verification key paired with the production signing key."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = startswith(var.identity_token_public_key_pem, "-----BEGIN PUBLIC KEY-----")
+    error_message = "identity_token_public_key_pem must be PEM encoded."
+  }
+}
+
+variable "identity_token_audiences" {
+  description = "Comma-separated access-token audiences enabled by Identity."
+  type        = string
+  default     = "nvbes-account-service,nvbes-billing-service"
+
+  validation {
+    condition     = var.identity_token_audiences == "nvbes-account-service,nvbes-billing-service"
+    error_message = "identity_token_audiences must enable only the Account and Billing V1 audiences."
+  }
+}
+
 variable "grafana_otlp_endpoint" {
   description = "Grafana Cloud OTLP endpoint used by Identity."
   type        = string
