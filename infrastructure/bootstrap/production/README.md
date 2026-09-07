@@ -33,6 +33,8 @@ Après l'ajout d'une identité externe, lancer manuellement le workflow
 Cette option applique uniquement le plan ciblé de la bucket policy de state,
 dans l'environnement protégé `production-bootstrap`, et saute la rotation du
 cache. Elle doit réussir avant le premier déploiement de la stack concernée.
+Ce plan de réparation utilise le state existant sans rafraîchir le bucket :
+ses lectures annexes (notamment CORS) peuvent être refusées par la policy à réparer.
 Le déclenchement hebdomadaire conserve son périmètre cache habituel.
 
 Object Lock/WORM est volontairement désactivé: il ne remplace pas le lockfile
