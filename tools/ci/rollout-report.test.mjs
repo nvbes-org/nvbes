@@ -2,6 +2,42 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { summarizeRollout } from './rollout-report.core.mjs';
 import { validateCommittedReport, validateRolloutPolicy } from './rollout-policy.mjs';
+import { runMeasurements, scopeMetric } from './rollout-metrics.mjs';
+
+test('measurements separate elapsed time from rounded runner minutes', () => {
+  const job = (name, start, end, conclusion = 'success') => ({
+    name,
+    started_at: `2026-09-07T00:00:${start}Z`,
+    completed_at: `2026-09-07T00:00:${end}Z`,
+    conclusion,
+  });
+  const [measurement] = runMeasurements([
+    {
+      id: 1,
+      scopes: [{ category: 'ci', shadow: false, planningMs: 12 }],
+      jobs: [
+        job('scope', '00', '10'),
+        job('contracts', '10', '40'),
+        job('other', '10', '35'),
+        job('rust', '00', '59', 'skipped'),
+      ],
+    },
+  ]);
+  assert.equal(measurement.elapsedSeconds, 40);
+  assert.equal(measurement.runnerMinutes, 3);
+  assert.equal(measurement.category, 'ci');
+  assert.equal(measurement.planningMs, 12);
+  assert.equal(runMeasurements([{}])[0].planningMs, null);
+  assert.equal(runMeasurements([{}])[0].category, 'unclassified');
+});
+
+test('scope categories distinguish fast paths, fallbacks and runtime combinations', () => {
+  const plan = { candidate: { contracts: true, rust: true, database: true }, shadow: true };
+  assert.equal(scopeMetric(plan, Date.now()).category, 'database+rust');
+  assert.equal(scopeMetric({ ...plan, docsOnly: true }, Date.now()).category, 'docs');
+  assert.equal(scopeMetric({ ...plan, ciOnly: true }, Date.now()).category, 'ci');
+  assert.equal(scopeMetric({ ...plan, fallbackFull: true }, Date.now()).category, 'fallback-full');
+});
 
 const evidence = (pr) => ({
   version: 1,

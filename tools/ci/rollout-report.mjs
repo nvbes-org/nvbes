@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { summarizeRollout } from './rollout-report.core.mjs';
+import { runMeasurements } from './rollout-metrics.mjs';
 
 const repository = process.env.GITHUB_REPOSITORY || 'nvbes-org/nvbes';
 const limit = Number(process.argv[2] ?? 100);
@@ -34,13 +35,17 @@ for (const run of listed.workflow_runs.filter((run) => run.status === 'completed
   const metrics = [...logs.matchAll(/CI_METRIC (\{[^\r\n]+\})/gu)].map((match) =>
     JSON.parse(match[1]),
   );
-  runs.push({ ...run, jobs: pages.flatMap((page) => page.jobs), evidence, metrics });
+  const scopes = [...logs.matchAll(/CI_SCOPE (\{[^\r\n]+\})/gu)].map((match) =>
+    JSON.parse(match[1]),
+  );
+  runs.push({ ...run, jobs: pages.flatMap((page) => page.jobs), evidence, metrics, scopes });
 }
 const report = {
   generatedAt: new Date().toISOString(),
   repository,
   ...summarizeRollout(runs),
   observations: runs.flatMap((run) => run.evidence),
+  measurements: runMeasurements(runs),
   runUrls: runs.map((run) => run.html_url),
 };
 mkdirSync('.nx/ci', { recursive: true });

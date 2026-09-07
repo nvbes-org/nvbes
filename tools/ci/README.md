@@ -65,6 +65,13 @@ par job, les résultats et les observations Rust. Le taux de cache Nx reste
 succès d'une restauration. Les identifiants de run, SHA source et numéros de PR
 sont recoupés avec l'API GitHub. Des logs expirés bloquent la collecte.
 
+Le tableau `measurements` conserve une entrée par exécution avec son URL,
+sa catégorie (`docs`, `ci`, combinaison de runtimes ou `fallback-full`), son
+mode shadow, le temps de planification, le temps écoulé entre le premier et
+le dernier job, et les minutes de runner arrondies séparément par job.
+Comparer uniquement des catégories et modes équivalents. Les anciens logs
+sans catégorie restent `unclassified`, et une mesure absente reste `null`.
+
 L'activation nécessite au moins sept jours d'observation, vingt PR Rust
 distinctes avec un candidat strictement plus petit, zéro divergence et une
 revue opérateur. Conserver le rapport dans un commit signé, puis renseigner

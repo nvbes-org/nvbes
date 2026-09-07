@@ -4,6 +4,7 @@ import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { createPlan, lanes } from './scope-plan.mjs';
 import { loadTerraformSources } from './scope-terraform.mjs';
 import { validateCommittedReport, validateRolloutPolicy } from './rollout-policy.mjs';
+import { scopeMetric } from './rollout-metrics.mjs';
 
 const preflight = JSON.parse(readFileSync('.nx/ci/preflight.json', 'utf8'));
 const git = (...args) =>
@@ -88,9 +89,7 @@ if (policy.mode === 'affected') {
   validateCommittedReport(policy, report);
 }
 const plan = createPlan(preflight, { ...context, rolloutMode: policy.mode });
-console.log(
-  `CI_SCOPE ${JSON.stringify({ head: plan.head, base: plan.base, shadow: plan.shadow, fallbackFull: plan.fallbackFull, candidate: plan.candidate })}`,
-);
+console.log(`CI_SCOPE ${JSON.stringify(scopeMetric(plan, preflight.startedAt))}`);
 writeFileSync('.nx/ci/plan.json', JSON.stringify(plan));
 const output = [
   `plan=${JSON.stringify(plan)}`,
