@@ -42,7 +42,7 @@ pub mod operations_model;
 pub mod operations_routes;
 #[path = "platform.operations.service.rs"]
 pub mod operations_service;
-#[cfg(test)]
+#[cfg(all(test, feature = "database-tests"))]
 #[path = "platform.operations.tests.rs"]
 mod operations_tests;
 #[path = "platform.operations.validation.rs"]

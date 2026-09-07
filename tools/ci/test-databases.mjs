@@ -55,6 +55,7 @@ if (process.argv[2] === 'stop') {
       'billing-service': 'billing',
       'identity-service': 'identity',
       'trust-risk-service': 'trust_risk',
+      'platform-operations-service': 'platform_operations',
     }[project];
     if (!scope) throw new Error(`No isolated database for ${project}`);
     const database = `nvbes_${scope}_test`;

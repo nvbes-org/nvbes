@@ -167,7 +167,8 @@ capacité ni nouveau fournisseur n'est autorisé par ce changement. Vérifier
 `pnpm check:finops` et les factures avant tout déploiement.
 
 ```sh
-DATABASE_URL='<PostgreSQL de test avec CREATEDB>' pnpm nx run platform-operations-service:test
+pnpm nx run platform-operations-service:test
+DATABASE_URL='<PostgreSQL de test avec CREATEDB>' pnpm nx run platform-operations-service:test:database
 pnpm nx run rust-workspace:check
 NVBES_PLATFORM_OPERATIONS_DATABASE_URL='<base de preuve jetable>' \
   bash tools/deployment/prove-platform-operations-runtime.sh

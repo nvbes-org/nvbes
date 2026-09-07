@@ -6,6 +6,7 @@ cargo check --workspace
 
 echo "=== [Step 2] Running nvbes-platform unit and integration tests ==="
 cargo test --package nvbes-platform
+bash scripts/test-platform-operations-database.sh
 
 echo "=== [Step 3] Running container contract test ==="
 node apps/platform-operations-service/tests/container-contract.test.mjs
