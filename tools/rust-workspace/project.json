@@ -27,6 +27,7 @@
       "{workspaceRoot}/apps/**/src/**/*",
       "{workspaceRoot}/libs/rust/**/Cargo.toml",
       "{workspaceRoot}/libs/rust/**/src/**/*",
+      "{workspaceRoot}/libs/rust/platform/migrations/**/*",
       "{workspaceRoot}/vendor/xmlsec/**/*"
     ],
     "production": ["default"]
