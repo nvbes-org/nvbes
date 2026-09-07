@@ -4,6 +4,11 @@
 
 Document de reference a tenir a jour avant publication.
 
+Cette politique concerne les services Nvbes exploités par Rayane Guemmoud EI
+(nom commercial OTAKIMI), identifié dans les
+[mentions légales](./site-legal-notice.md). Elle complète la
+[politique de confidentialité](./privacy-policy.md) pour les traitements Account.
+
 ## Principes
 
 - Minimisation des donnees.

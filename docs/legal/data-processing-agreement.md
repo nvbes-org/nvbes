@@ -2,7 +2,7 @@
 
 **Modèle contractuel réservé aux relations professionnelles relatives à nvbes Account**
 
-**Version : 2026-08-12**
+**Version : 2026-09-07**
 
 **Date d’effet : `[À COMPLÉTER LORS DE LA SIGNATURE]`**
 
@@ -22,10 +22,14 @@ ci-après l’« **Accord** », est conclu entre :
 1. **Le Client :** `[DÉNOMINATION SOCIALE, FORME, CAPITAL, SIÈGE,
 IMMATRICULATION]`, représenté par `[NOM ET QUALITÉ]`, ci-après le
    « **Client** » ; et
-2. **nvbes Cloud SAS :** société par actions simplifiée au capital de
-   `[À COMPLÉTER]` euros, dont le siège social est situé
-   `[À COMPLÉTER]`, immatriculée sous le numéro `[SIREN ET RCS À COMPLÉTER]`,
-   représentée par `[NOM ET QUALITÉ]`, ci-après « **nvbes** ».
+2. **Rayane Guemmoud EI :** entrepreneur individuel exerçant sous le nom
+   commercial OTAKIMI, établi rue Auguste Renoir, 33400 Talence, France,
+   inscrit au RNE sous le SIREN 905 331 674, ci-après « **nvbes** »
+   en qualité de prestataire.
+
+Nvbes et nvbes Account sont des noms de services exploités par Rayane Guemmoud EI.
+L’identité et les coordonnées devront être revérifiées avant toute signature,
+selon les réserves des [mentions légales](./site-legal-notice.md).
 
 Le Client et nvbes sont individuellement une « **Partie** » et collectivement
 les « **Parties** ».
@@ -463,10 +467,10 @@ L’absence d’exercice d’un droit ne vaut pas renonciation.
 
 ## Signatures
 
-| Pour le Client            | Pour nvbes Cloud SAS      |
+| Pour le Client            | Pour Rayane Guemmoud EI      |
 | ------------------------- | ------------------------- |
-| Nom : `[À COMPLÉTER]`     | Nom : `[À COMPLÉTER]`     |
-| Qualité : `[À COMPLÉTER]` | Qualité : `[À COMPLÉTER]` |
+| Nom : `[À COMPLÉTER]`     | Nom : Rayane Guemmoud     |
+| Qualité : `[À COMPLÉTER]` | Qualité : Entrepreneur individuel |
 | Date : `[À COMPLÉTER]`    | Date : `[À COMPLÉTER]`    |
 | Signature :               | Signature :               |
 

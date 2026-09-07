@@ -8,7 +8,10 @@
 
 ## 1. Engagement de Disponibilité
 
-nvbes Cloud SAS s'engage à maintenir une disponibilité mensuelle minimale pour les services nvbes Drive (API et accès Web) selon les paliers suivants :
+Dans ce modèle inactif, « nvbes » désigne Rayane Guemmoud EI (nom commercial
+OTAKIMI), exploitant identifié dans les [mentions légales](./site-legal-notice.md).
+Nvbes désigne le service. Si une offre future était validée et contractualisée,
+l’engagement de disponibilité envisagé pour nvbes Drive serait le suivant :
 
 | Plan | Engagement de Disponibilité |
 | :--- | :--- |

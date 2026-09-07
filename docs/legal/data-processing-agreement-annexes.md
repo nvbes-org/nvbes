@@ -1,6 +1,6 @@
 # Annexes à l’Accord relatif au traitement de données à caractère personnel
 
-**Version rattachée à l’Accord : 2026-08-12**
+**Version rattachée à l’Accord : 2026-09-07**
 
 > **Statut : annexes B2B futures et inactives.** Elles ne s'appliquent pas à la
 > V1 B2C et ne peuvent être utilisées avant complétion, validation et signature
@@ -14,7 +14,7 @@ Les présentes annexes font partie intégrante de l’Accord de même version.
 
 | Élément                                   | Client                    | nvbes                                  |
 | ----------------------------------------- | ------------------------- | -------------------------------------- |
-| Identité complète                         | `[À COMPLÉTER]`           | nvbes Cloud SAS — mentions à compléter |
+| Identité complète                         | `[À COMPLÉTER]`           | Rayane Guemmoud EI (OTAKIMI) — identification dans l’Accord |
 | Rôle                                      | Responsable du traitement | Sous-traitant                          |
 | Contact protection des données            | `[À COMPLÉTER]`           | privacy@nvbes.cloud                    |
 | DPO                                       | `[À COMPLÉTER]`           | `[À COMPLÉTER OU NON DÉSIGNÉ]`         |

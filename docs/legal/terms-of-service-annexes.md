@@ -1,6 +1,6 @@
 # Annexes aux Conditions générales d’utilisation de nvbes Account
 
-**Version rattachée aux CGU : 2026-07-30**
+**Version rattachée aux CGU : 2026-09-07**
 
 Les présentes annexes font partie intégrante des Conditions générales
 d’utilisation de nvbes Account de même version.
@@ -83,7 +83,8 @@ d’utilisation de nvbes Account de même version.
 (Veuillez compléter et renvoyer le présent formulaire uniquement si vous
 souhaitez vous rétracter du contrat.)
 
-À l’attention de nvbes Cloud SAS, `[ADRESSE GÉOGRAPHIQUE À COMPLÉTER]`,
+À l’attention de Rayane Guemmoud EI (OTAKIMI), exploitant de nvbes Account,
+rue Auguste Renoir, 33400 Talence, France,
 legal@nvbes.cloud :
 
 > Je/nous (\*) vous notifie/notifions (\*) par la présente ma/notre (\*)
@@ -113,4 +114,4 @@ legal@nvbes.cloud :
 | Restrictions techniques | Une passkey requiert un terminal compatible ; un autre moyen d’authentification autorisé demeure disponible |
 | Accessibilité | `[STATUT DE CONFORMITÉ, DÉROGATIONS ET LIEN VERS LA DÉCLARATION À COMPLÉTER]` |
 | Assistance et garanties | support@nvbes.cloud ; coordonnées complètes à l’article 1 des CGU |
-| Version contractuelle | 2026-07-30 |
+| Version contractuelle | 2026-09-07 |

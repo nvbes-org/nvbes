@@ -2,7 +2,11 @@
 
 ## Statut
 
-Version à jour au 2026-08-12.
+Liste des prestataires datée du 2026-08-12 ; identité de l’exploitant mise à jour
+le 2026-09-07, sans nouvelle vérification des prestataires à cette date.
+
+Les services Nvbes sont exploités par Rayane Guemmoud EI (nom commercial
+OTAKIMI), identifié dans les [mentions légales](./site-legal-notice.md).
 
 ## Regles de publication
 

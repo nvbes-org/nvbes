@@ -2,7 +2,7 @@
 
 **Statut : projet d’information légale soumis à validation préalable à publication**
 
-**Version : 2026-08-12**
+**Version : 2026-09-07**
 
 **Date d’entrée en vigueur : `[À COMPLÉTER]`**
 
@@ -51,16 +51,18 @@ qui leur est attribué par l’article 4 du RGPD.
 
 Le responsable des traitements décrits par la présente politique est :
 
-- **Dénomination sociale :** nvbes Cloud SAS ;
-- **Forme sociale :** société par actions simplifiée ;
-- **Capital social :** `[À COMPLÉTER]` euros ;
-- **Siège social :** `[À COMPLÉTER]` ;
-- **Immatriculation :** `[SIREN ET RCS À COMPLÉTER]` ;
+- **Exploitant :** Rayane Guemmoud EI, entrepreneur individuel ;
+- **Nom commercial :** OTAKIMI ;
+- **Adresse professionnelle :** rue Auguste Renoir, 33400 Talence, France ;
 - **Contact relatif à la protection des données :** privacy@nvbes.cloud ;
 - **Délégué à la protection des données :** `[IDENTITÉ ET COORDONNÉES À
 COMPLÉTER, OU MENTION DE L’ABSENCE DE DÉSIGNATION]`.
 
-Dans le cadre B2C d’Account, nvbes détermine les finalités et les moyens des
+Dans cette politique, « nvbes » désigne Rayane Guemmoud EI lorsqu’il s’agit du
+responsable du traitement. Nvbes et nvbes Account sont des noms de services.
+Les coordonnées sont à confirmer selon les [mentions légales](./site-legal-notice.md).
+
+Dans le cadre B2C d’Account, Rayane Guemmoud EI détermine les finalités et les moyens des
 traitements nécessaires au fonctionnement, à la sécurité et à l’administration
 du compte et agit en qualité de responsable du traitement.
 

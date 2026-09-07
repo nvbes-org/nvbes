@@ -1,43 +1,50 @@
-# Mentions Legales du Site
+# Mentions légales — Nvbes
+
+**Version : 2026-09-07**
 
 ## Statut
 
-Template a completer avant publication.
+Projet à compléter avant publication. Adresse et identifiants à rapprocher
+du justificatif RNE à jour.
 
-Champs a remplacer:
+L'adresse a été abrégée à la demande de l'exploitant. Avant publication des
+documents, vérifier qu'elle permet de localiser l'établissement et d'y adresser
+effectivement un courrier ; rétablir les compléments indispensables si nécessaire.
+La diffusion partielle dans Sirene ne dispense pas des mentions d'adresse
+obligatoires. Cette version abrégée n'est pas validée comme minimum légal.
 
-- `[LEGAL_ENTITY_NAME]`
-- `[LEGAL_FORM]`
-- `[CAPITAL_AMOUNT]`
-- `[REGISTER_NUMBER]`
-- `[VAT_NUMBER]`
-- `[HEAD_OFFICE_ADDRESS]`
-- `[PHONE_NUMBER]`
-- `[CONTACT_EMAIL]`
-- `[PUBLICATION_DIRECTOR]`
-- `[HOST_NAME]`
-- `[HOST_ADDRESS]`
-- `[HOST_PHONE]`
+Restent à confirmer avant publication :
+
+- le régime et le numéro de TVA applicables ;
+- le téléphone professionnel et le contact juridique ;
+- l'hébergeur effectif du site et ses coordonnées ;
+- le fonctionnement et le suivi des adresses électroniques des documents.
 
 ## Éditeur
 
-- Dénomination sociale: **nvbes Cloud SAS**
-- Forme juridique: SAS au capital de 10 000€
-- Siège social: 10 Rue de la Paix, 75002 Paris, France
-- Numéro d'immatriculation: [SIREN] RCS Paris
-- Numéro de TVA intracommunautaire: [VAT]
-- Contact: legal@nvbes.cloud
-- Téléphone: [PHONE]
+Nvbes est un service édité et exploité par **Rayane Guemmoud EI**, exerçant
+sous le nom commercial **OTAKIMI**.
+
+- Adresse professionnelle : rue Auguste Renoir, 33400 Talence, France.
+- SIREN : **905 331 674**, inscrit au Registre national des entreprises (RNE).
+- TVA intracommunautaire : `[À CONFIRMER SELON LA SITUATION FISCALE]`.
+- Contact : legal@nvbes.cloud `[À CONFIRMER AVANT PUBLICATION]`.
+- Téléphone professionnel : `[À COMPLÉTER]`.
+
+Nvbes désigne le service et ses déclinaisons, notamment nvbes Account.
+OTAKIMI est le nom commercial de l'exploitant. Ces noms ne désignent pas des
+personnes morales distinctes. Les engagements du fournisseur sont pris par
+Rayane Guemmoud EI.
 
 ## Directeur de publication
 
-- `Shayn [NOM]` (Président)
+Rayane Guemmoud, entrepreneur individuel et éditeur du site.
 
 ## Hébergeur
 
-- Hébergeur: `Scaleway SAS`
-- Adresse: `8 rue de la Ville l'Evêque, 75008 Paris, France`
-- Téléphone: `+33 (0)1 84 13 00 00`
+- Hébergeur : `[HÉBERGEUR EFFECTIF DU SITE À CONFIRMER]`.
+- Adresse : `[À COMPLÉTER]`.
+- Téléphone : `[À COMPLÉTER]`.
 
 ## Donnees personnelles
 

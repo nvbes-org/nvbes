@@ -6,6 +6,12 @@
 > premier produit effectivement sélectionné, avec distinction B2C/B2B et revue
 > juridique/fiscale applicable.
 
+Dans ce modèle, « nvbes » désigne Rayane Guemmoud EI (nom commercial OTAKIMI)
+lorsqu’il s’agit du fournisseur. Nvbes est le nom du service. L’exploitant est
+identifié dans les [mentions légales](./site-legal-notice.md).
+Les factures doivent identifier Rayane Guemmoud EI, avec les mentions
+obligatoires applicables ; le nom et le logo Nvbes peuvent s’y ajouter.
+
 ## 1. Abonnements et Renouvellements
 
 ### 1.1 Cycle de facturation

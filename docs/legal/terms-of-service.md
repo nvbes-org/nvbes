@@ -1,6 +1,6 @@
 # Conditions générales d’utilisation de nvbes Account
 
-**Statut : projet contractuel soumis à validation préalable à publication — Version : 2026-07-30 — Date d’entrée en vigueur : `[À COMPLÉTER]`**
+**Statut : projet contractuel soumis à validation préalable à publication — Version : 2026-09-07 — Date d’entrée en vigueur : `[À COMPLÉTER]`**
 
 Les présentes conditions générales d’utilisation, ci-après les « **CGU** »,
 régissent exclusivement la fourniture de nvbes Account aux consommateurs.
@@ -13,16 +13,18 @@ contractualisation avant toute entrée en vigueur.
 
 Le service nvbes Account est fourni par :
 
-- **Dénomination sociale :** nvbes Cloud SAS ;
-- **Forme sociale :** société par actions simplifiée ;
-- **Capital social :** `[À COMPLÉTER]` euros ;
-- **Siège social :** `[À COMPLÉTER]` ;
-- **Immatriculation :** `[SIREN ET RCS À COMPLÉTER]` ;
+- **Exploitant :** Rayane Guemmoud EI, entrepreneur individuel ;
+- **Nom commercial :** OTAKIMI ;
+- **Adresse professionnelle :** rue Auguste Renoir, 33400 Talence, France ;
+- **Immatriculation au RNE :** SIREN 905 331 674 ;
 - **Numéro de TVA intracommunautaire :** `[À COMPLÉTER, LE CAS ÉCHÉANT]` ;
 - **Téléphone :** `[À COMPLÉTER]` ;
 - **Adresse électronique :** legal@nvbes.cloud.
 
-Cette société est ci-après désignée « **nvbes** ».
+Rayane Guemmoud EI est ci-après désigné « **nvbes** » lorsqu’il s’agit du
+fournisseur et de ses engagements. Nvbes et nvbes Account sont des noms de
+services, sans personnalité juridique distincte. Les coordonnées sont à
+confirmer selon les [mentions légales](./site-legal-notice.md).
 
 ## Article 2 — Définitions
 
@@ -371,7 +373,7 @@ exerçable au-delà de ce délai.
 
 ## Article 17 — Garanties légales
 
-Le professionnel répondant des garanties légales est nvbes Cloud SAS, aux
+Le professionnel répondant des garanties légales est Rayane Guemmoud EI, aux
 coordonnées postales, téléphoniques et électroniques indiquées à l’article 1.
 Toute demande de mise en conformité peut être adressée à
 support@nvbes.cloud.
