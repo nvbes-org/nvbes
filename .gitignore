@@ -52,6 +52,7 @@ rustc-ice-*.txt
 /out-tsc
 
 .nx/cache
+.nx/ci
 .nx/workspace-data
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md

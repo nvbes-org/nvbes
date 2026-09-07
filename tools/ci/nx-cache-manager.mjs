@@ -1,291 +1,109 @@
 #!/usr/bin/env node
+import { execFileSync } from 'node:child_process';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { createPlan, lanes } from './scope-plan.mjs';
+import { loadTerraformSources } from './scope-terraform.mjs';
+import { validateCommittedReport, validateRolloutPolicy } from './rollout-policy.mjs';
 
-import { execFileSync } from "node:child_process";
-import {
-	appendFileSync,
-	existsSync,
-	lstatSync,
-	mkdirSync,
-	readFileSync,
-	symlinkSync,
-} from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-	isContainerScopeAffected,
-	isDatabaseScopeAffected,
-	isDeliveryScopeAffected,
-	isRustToolchainRequired,
-	isRustWorkspaceAffected,
-	isTrustedPush,
-	isUsableCommitSha,
-	selectTypeScriptProjects,
-	terraformScopes,
-	trustedCacheDirectory,
-} from "./nx-cache-manager.core.mjs";
-
-const workspace = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-
-function requiredEnvironment(name) {
-	const value = process.env[name];
-	if (value === undefined || value.length === 0) {
-		throw new Error(`${name} must be set`);
-	}
-	return value;
+const preflight = JSON.parse(readFileSync('.nx/ci/preflight.json', 'utf8'));
+const git = (...args) =>
+  execFileSync('git', args, {
+    encoding: 'utf8',
+    maxBuffer: 20 * 1024 * 1024,
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+const nx = (...args) =>
+  JSON.parse(
+    execFileSync('pnpm', ['exec', 'nx', ...args], {
+      encoding: 'utf8',
+      maxBuffer: 20 * 1024 * 1024,
+      env: { ...process.env, NX_NO_CLOUD: 'true' },
+    }),
+  );
+let context;
+if (preflight.graphRequired) {
+  // A broken graph cannot enumerate validation targets: fail closed.
+  const nodes = nx('graph', '--print').graph.nodes;
+  for (const { data } of Object.values(nodes)) {
+    const database = data.targets?.['test:database'];
+    if (database && database.cache !== false)
+      throw new Error(`${data.root}: database tests must not be cacheable`);
+  }
+  let affected = Object.keys(nodes);
+  let graphFallback = false;
+  try {
+    if (!preflight.fallback)
+      affected = nx(
+        'show',
+        'projects',
+        '--affected',
+        `--base=${preflight.base}`,
+        `--head=${preflight.head}`,
+        '--json',
+      );
+  } catch {
+    graphFallback = true;
+  }
+  const revisions = [...new Set([preflight.base, preflight.head])];
+  const files = [
+    ...new Set(
+      revisions.flatMap((revision) =>
+        git('ls-tree', '-r', '--name-only', '-z', revision).split('\0').filter(Boolean),
+      ),
+    ),
+  ];
+  const readVersions = (path) =>
+    revisions.flatMap((revision) => {
+      try {
+        return [git('show', `${revision}:${path}`)];
+      } catch {
+        return [];
+      }
+    });
+  const read = (path) => readVersions(path).join('\n');
+  let globalConfigurationChanged = false;
+  if (preflight.paths.includes('package.json')) {
+    try {
+      const manifests = readVersions('package.json').map(JSON.parse);
+      const execution = (manifest) =>
+        JSON.stringify([manifest.scripts, manifest.engines, manifest.packageManager]);
+      globalConfigurationChanged =
+        manifests.length !== 2 || execution(manifests[0]) !== execution(manifests[1]);
+    } catch {
+      globalConfigurationChanged = true;
+    }
+  }
+  const terraformSources = preflight.paths.some((path) => path.startsWith('infrastructure/'))
+    ? await loadTerraformSources(files, readVersions)
+    : undefined;
+  context = { nodes, affected, terraformSources, read, graphFallback, globalConfigurationChanged };
 }
-
-function git(...arguments_) {
-	return execFileSync("git", arguments_, {
-		cwd: workspace,
-		encoding: "utf8",
-		stdio: ["ignore", "pipe", "inherit"],
-	}).trim();
-}
-
-function commitExists(sha) {
-	try {
-		git("cat-file", "-e", `${sha}^{commit}`);
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-function resolveBaseSha(candidate, eventName, headSha) {
-	if (isUsableCommitSha(candidate) && commitExists(candidate)) return candidate;
-
-	if (eventName !== "workflow_dispatch") {
-		const mergeBase = git("merge-base", headSha, "origin/main");
-		if (mergeBase !== headSha) return mergeBase;
-	}
-
-	const parent = `${headSha}^`;
-	return commitExists(parent) ? git("rev-parse", parent) : headSha;
-}
-
-function nxJson(...arguments_) {
-	const output = execFileSync("pnpm", ["exec", "nx", ...arguments_], {
-		cwd: workspace,
-		encoding: "utf8",
-		env: { ...process.env, NX_NO_CLOUD: "true" },
-		stdio: ["ignore", "pipe", "inherit"],
-	});
-	return JSON.parse(output);
-}
-
-function configureTrustedCache(environment) {
-	if (!isTrustedPush(environment.eventName, environment.ref)) {
-		return "ephemeral";
-	}
-
-	const packageJson = JSON.parse(
-		readFileSync(join(workspace, "package.json"), "utf8"),
-	);
-	const persistentDirectory = trustedCacheDirectory({
-		runnerToolCache: environment.runnerToolCache,
-		runnerOs: environment.runnerOs,
-		runnerArch: environment.runnerArch,
-		nxVersion: packageJson.devDependencies.nx,
-	});
-	const workspaceCache = join(workspace, ".nx", "cache");
-
-	mkdirSync(persistentDirectory, { recursive: true });
-	mkdirSync(dirname(workspaceCache), { recursive: true });
-	if (existsSync(workspaceCache)) {
-		const existing = lstatSync(workspaceCache);
-		if (!existing.isSymbolicLink()) {
-			throw new Error(`${workspaceCache} must not exist before cache setup`);
-		}
-		return "persistent-trusted";
-	}
-	symlinkSync(persistentDirectory, workspaceCache, "dir");
-	return "persistent-trusted";
-}
-
-const environment = {
-	eventName: requiredEnvironment("GITHUB_EVENT_NAME"),
-	ref: requiredEnvironment("GITHUB_REF"),
-	headSha: requiredEnvironment("GITHUB_SHA"),
-	runnerToolCache: requiredEnvironment("RUNNER_TOOL_CACHE"),
-	runnerOs: requiredEnvironment("RUNNER_OS"),
-	runnerArch: requiredEnvironment("RUNNER_ARCH"),
-};
-const baseSha = resolveBaseSha(
-	process.env.NVBES_CI_BASE_CANDIDATE ?? "",
-	environment.eventName,
-	environment.headSha,
+const policy = validateRolloutPolicy(
+  JSON.parse(readFileSync('tools/ci/rollout-policy.json', 'utf8')),
 );
-const cacheMode = configureTrustedCache(environment);
-const affectedProjects = nxJson(
-	"show",
-	"projects",
-	"--affected",
-	`--base=${baseSha}`,
-	`--head=${environment.headSha}`,
-	"--json",
-);
-const changedPaths = git(
-	"diff",
-	"--name-only",
-	"--diff-filter=ACMRD",
-	baseSha,
-	environment.headSha,
-)
-	.split("\n")
-	.filter(Boolean);
-const graph = nxJson("graph", "--print").graph.nodes;
-const typeScriptProjects = selectTypeScriptProjects(affectedProjects, graph);
-const rustAffected = isRustWorkspaceAffected(changedPaths);
-const deliveryScopes = {
-	email: isDeliveryScopeAffected(affectedProjects, changedPaths, {
-		projects: ["email-worker", "email-ui", "email-scaleway"],
-		paths: [
-			"apps/email-worker",
-			"libs/rust/email",
-			"infrastructure/environments/email-production",
-			"infrastructure/stacks/email",
-		],
-	}),
-	identity: isDeliveryScopeAffected(affectedProjects, changedPaths, {
-		projects: [
-			"identity-service",
-			"identity-sdk",
-			"identity-sdk-backend",
-			"identity-sdk-core",
-			"identity-sdk-web",
-			"identity-client",
-		],
-		paths: [
-			"apps/identity-service",
-			"contracts/protobuf/nvbes/identity",
-			"infrastructure/environments/identity-production",
-		],
-	}),
-	account: isDeliveryScopeAffected(affectedProjects, changedPaths, {
-		projects: ["account-service", "account-client"],
-		paths: [
-			"apps/account-service",
-			"contracts/protobuf/nvbes/account",
-			"infrastructure/environments/account-production",
-		],
-	}),
-	billing: isDeliveryScopeAffected(affectedProjects, changedPaths, {
-		projects: ["billing-service", "billing-client", "billing"],
-		paths: [
-			"apps/billing-service",
-			"libs/rust/billing",
-			"contracts/protobuf/nvbes/billing",
-			"infrastructure/environments/billing-production",
-		],
-	}),
-	trustRisk: isDeliveryScopeAffected(affectedProjects, changedPaths, {
-		projects: ["trust-risk-service", "trust-risk"],
-		paths: [
-			"apps/trust-risk-service",
-			"infrastructure/environments/trust-risk-production",
-		],
-	}),
-	platform: isDeliveryScopeAffected(affectedProjects, changedPaths, {
-		projects: ["platform-operations-service", "platform"],
-		paths: [
-			"apps/platform-operations-service",
-			"libs/rust/platform",
-			"infrastructure/environments/platform-operations-production",
-		],
-	}),
-};
-const databases = {
-	account: isDatabaseScopeAffected(changedPaths, "account"),
-	billing: isDatabaseScopeAffected(changedPaths, "billing"),
-	email: isDatabaseScopeAffected(changedPaths, "email"),
-	identity: isDatabaseScopeAffected(changedPaths, "identity"),
-	trustRisk: isDatabaseScopeAffected(changedPaths, "trust-risk"),
-};
-const databaseProjects = Object.entries({
-	account: "account-service",
-	billing: "billing-service",
-	email: "email-worker",
-	identity: "identity-service",
-	trustRisk: "trust-risk-service",
-})
-	.filter(([scope]) => databases[scope])
-	.map(([, project]) => project);
-const rustRequired = isRustToolchainRequired(rustAffected, databases);
-const containers = {
-	account: isContainerScopeAffected(changedPaths, "apps/account-service"),
-	billing: isContainerScopeAffected(changedPaths, "apps/billing-service"),
-	email: isContainerScopeAffected(changedPaths, "apps/email-worker"),
-	identity: isContainerScopeAffected(changedPaths, "apps/identity-service"),
-	platform: isContainerScopeAffected(
-		changedPaths,
-		"apps/platform-operations-service",
-	),
-	trustRisk: isContainerScopeAffected(changedPaths, "apps/trust-risk-service"),
-};
-const terraform = terraformScopes(changedPaths);
-const githubOutput = requiredEnvironment("GITHUB_OUTPUT");
-const githubEnvironment = requiredEnvironment("GITHUB_ENV");
-
-appendFileSync(
-	githubOutput,
-	[
-		`base-sha=${baseSha}`,
-		`projects=${JSON.stringify(affectedProjects)}`,
-		`typescript-projects=${typeScriptProjects.join(",")}`,
-		`rust-affected=${rustAffected}`,
-		`rust-required=${rustRequired}`,
-		`email-affected=${deliveryScopes.email}`,
-		`identity-affected=${deliveryScopes.identity}`,
-		`account-affected=${deliveryScopes.account}`,
-		`billing-affected=${deliveryScopes.billing}`,
-		`trust-risk-affected=${deliveryScopes.trustRisk}`,
-		`platform-affected=${deliveryScopes.platform}`,
-		`account-database-affected=${databases.account}`,
-		`billing-database-affected=${databases.billing}`,
-		`email-database-affected=${databases.email}`,
-		`identity-database-affected=${databases.identity}`,
-		`trust-risk-database-affected=${databases.trustRisk}`,
-		`database-affected=${databaseProjects.length > 0}`,
-		`database-projects=${databaseProjects.join(",")}`,
-		`account-container-affected=${containers.account}`,
-		`billing-container-affected=${containers.billing}`,
-		`email-container-affected=${containers.email}`,
-		`identity-container-affected=${containers.identity}`,
-		`platform-container-affected=${containers.platform}`,
-		`trust-risk-container-affected=${containers.trustRisk}`,
-		`terraform-scopes=${terraform.join(",")}`,
-		`terraform-affected=${terraform.length > 0}`,
-		...[
-			"account",
-			"billing",
-			"email",
-			"identity",
-			"platform-operations",
-			"trust-risk",
-			"email-stack",
-			"ci-cache-bootstrap",
-			"security-audit-archive",
-		].map(
-			(scope) => `${scope}-terraform-affected=${terraform.includes(scope)}`,
-		),
-		`cache-mode=${cacheMode}`,
-		"",
-	].join("\n"),
-);
-appendFileSync(githubEnvironment, `NVBES_CI_BASE_SHA=${baseSha}\n`);
-
+if (policy.mode === 'affected') {
+  const report = JSON.parse(
+    git('show', `${policy.activationEvidence.reportCommit}:docs/ci/affected-rollout-evidence.json`),
+  );
+  validateCommittedReport(policy, report);
+}
+const plan = createPlan(preflight, { ...context, rolloutMode: policy.mode });
 console.log(
-	JSON.stringify({
-		baseSha,
-		cacheMode,
-		affectedProjects,
-		typeScriptProjects,
-		rustAffected,
-		rustRequired,
-		deliveryScopes,
-		databases,
-		databaseProjects,
-		containers,
-		terraform,
-	}),
+  `CI_SCOPE ${JSON.stringify({ head: plan.head, base: plan.base, shadow: plan.shadow, fallbackFull: plan.fallbackFull, candidate: plan.candidate })}`,
+);
+writeFileSync('.nx/ci/plan.json', JSON.stringify(plan));
+const output = [
+  `plan=${JSON.stringify(plan)}`,
+  `base-sha=${plan.base}`,
+  `head-sha=${plan.head}`,
+  `docs-only=${plan.docsOnly}`,
+  `ci-only=${plan.ciOnly}`,
+  `fallback-full=${plan.fallbackFull}`,
+  `rust-mode=${plan.rustMode}`,
+  ...lanes.map((lane) => `${lane}-required=${plan.candidate[lane]}`),
+];
+appendFileSync(process.env.GITHUB_OUTPUT, `${output.join('\n')}\n`);
+appendFileSync(
+  process.env.GITHUB_STEP_SUMMARY,
+  `## CI scope\n\nBase: \`${plan.base}\` → head: \`${plan.head}\`\n\n${plan.reason}\n\nFallback full: **${plan.fallbackFull}**\n\n| Lane | Required |\n|---|---|\n${lanes.map((lane) => `| ${lane} | ${plan.candidate[lane]} |`).join('\n')}\n\nPlanning: ${Date.now() - preflight.startedAt} ms. Rust: **${plan.rustMode}**, scoped candidate recorded by the Rust lane.\n`,
 );

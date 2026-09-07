@@ -1,25 +1,30 @@
 name: continuous integration
-
 on:
   push:
-    branches: [main, dev, 'release/**']
+    branches: [main]
   pull_request:
-    branches: [main, dev]
+    branches: [main]
   workflow_dispatch:
-
+    inputs:
+      base_sha:
+        description: Optional full base SHA (otherwise last successful branch CI)
+        type: string
+        required: false
 concurrency:
-  group: continuous-integration-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: continuous-integration-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
 permissions:
   actions: read
   contents: read
   pull-requests: read
-
 defaults:
   run:
     shell: bash --noprofile --norc -euo pipefail {0}
-
+env:
+  CI: 'true'
+  NVBES_ENV: ci
+  NX_NO_CLOUD: 'true'
+  TF_PLUGIN_CACHE_DIR: /tmp/nvbes-terraform-plugin-cache
 jobs:
   authorize-cache:
     runs-on: ubuntu-latest
@@ -27,7 +32,7 @@ jobs:
     outputs:
       trusted: ${{ steps.authorize.outputs.trusted }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: github.event_name == 'pull_request'
         with:
           fetch-depth: 1
@@ -45,218 +50,297 @@ jobs:
             node trusted-base/tools/ci/authorize-pr-cache.mjs
           else
             printf '%s\n' 'trusted=false' >> "$GITHUB_OUTPUT"
-            echo 'Central cache disabled until the authorization gate is present on the base branch'
           fi
 
-  quality:
+  scope:
     needs: authorize-cache
     environment:
-      name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/release/')) && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
+      name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
     env:
-      CI: 'true'
-      CARGO_INCREMENTAL: '0'
-      RUSTFLAGS: '-C debuginfo=0'
-      RUSTC_WRAPPER: sccache
-      SCCACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
-      SCCACHE_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
-      SCCACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
-      SCCACHE_S3_USE_SSL: 'true'
-      SCCACHE_S3_ENABLE_VIRTUAL_HOST_STYLE: 'true'
-      TF_PLUGIN_CACHE_DIR: /tmp/nvbes-terraform-plugin-cache
-      NVBES_ENV: ci
+      SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
+      SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
+      SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+      contracts-required: ${{ steps.plan.outputs.contracts-required }}
+      typescript-required: ${{ steps.plan.outputs.typescript-required }}
+      rust-required: ${{ steps.plan.outputs.rust-required }}
+      database-required: ${{ steps.plan.outputs.database-required }}
+      terraform-required: ${{ steps.plan.outputs.terraform-required }}
+      containers-required: ${{ steps.plan.outputs.containers-required }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 24
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
-      - name: Enable pnpm
-        run: |-
-          corepack enable
-          corepack prepare pnpm@11.18.0 --activate
-      - name: Restore pnpm cache
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
-        run: node tools/ci/scaleway-cache-manager.mjs restore pnpm
-      - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Enforce FinOps contract
-        run: pnpm check:finops
       - name: Verify pushed branch revision
         if: github.event_name == 'push'
         run: |
           [[ "$GITHUB_EVENT_NAME" == "push" ]]
           [[ "$GITHUB_REF" == refs/heads/* ]]
           [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+      - name: Resolve last successful base and classify diff
+        id: preflight
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NVBES_CI_BASE_SHA: ${{ inputs.base_sha }}
+        run: node tools/ci/scope-preflight.mjs
+      - uses: ./.github/actions/ci-setup
+        if: steps.preflight.outputs.graph-required == 'true'
+        with:
+          caches: pnpm
+          cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
       - name: Configure affected scope
-        id: nx-scope
-        env:
-          NVBES_CI_BASE_CANDIDATE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        id: plan
         run: node tools/ci/nx-cache-manager.mjs
-      - name: Restore Nx task cache
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
-        run: node tools/ci/scaleway-cache-manager.mjs restore nx
-      - name: Restore scoped tool caches
-        if: steps.nx-scope.outputs.rust-required == 'true' || steps.nx-scope.outputs.terraform-affected == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
-        run: |
-          mkdir -p "$TF_PLUGIN_CACHE_DIR"
-          cache_kinds=()
-          [[ "${{ steps.nx-scope.outputs.rust-required }}" == "true" ]] && cache_kinds+=(cargo)
-          [[ "${{ steps.nx-scope.outputs.terraform-affected }}" == "true" ]] && cache_kinds+=(terraform)
-          node tools/ci/scaleway-cache-manager.mjs restore "${cache_kinds[@]}"
-      - name: Validate CI workflow contracts
-        run: pnpm nx run ci-contracts:test:ci-contract --outputStyle=static
-      - name: Validate global workspace contracts
-        run: |
-          pnpm exec vp fmt --check package.json pnpm-workspace.yaml vite.config.ts tsconfig.base.json nx.json
-          pnpm check:structure
-          pnpm check:nx-boundaries
-          pnpm check:secrets
-          pnpm check:web-runtime-guardrails
-          pnpm check:ajax-security
-      - name: Validate affected TypeScript projects
-        if: steps.nx-scope.outputs.typescript-projects != ''
-        run: >-
-          pnpm exec nx run-many
-          -t format:check,lint,typecheck,check,test
-          --projects="${{ steps.nx-scope.outputs.typescript-projects }}"
-          --parallel=4
-          --outputStyle=static
-      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
-        if: steps.nx-scope.outputs.rust-required == 'true'
+
+  contracts:
+    needs: [authorize-cache, scope]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.contracts-required == 'true' }}
+    environment:
+      name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
+      deployment: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
+      SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
+      SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
+      NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          toolchain: 1.91.1
-          components: rustfmt, clippy
-      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
-        if: steps.nx-scope.outputs.rust-required == 'true'
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
+      - uses: ./.github/actions/ci-setup
         with:
-          version: v0.17.0
-      - name: Select affected Rust packages
-        id: cargo-scope
-        if: steps.nx-scope.outputs.rust-affected == 'true'
-        run: node tools/ci/cargo-affected.mjs
-      - name: Configure Rust compilation cache
-        if: steps.nx-scope.outputs.rust-required == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
-          SCCACHE_S3_KEY_PREFIX: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/release/')) && 'trusted' || format('branches/{0}', github.ref_name) }}/rust/${{ runner.os }}-${{ runner.arch }}/rust-1.91.1
-        run: |
-          if [[ -z "$AWS_ACCESS_KEY_ID" || -z "$AWS_SECRET_ACCESS_KEY" || -z "$SCCACHE_BUCKET" ]]; then
-            unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
-            unset SCCACHE_BUCKET SCCACHE_ENDPOINT SCCACHE_REGION SCCACHE_S3_KEY_PREFIX
-            export SCCACHE_GHA_ENABLED=true
-          fi
-          sccache --start-server
-      - name: Test affected Rust workspace
-        if: steps.nx-scope.outputs.rust-affected == 'true'
-        run: |
-          sccache --zero-stats
-          cargo fmt --all --check
-          IFS=',' read -r -a cargo_packages <<< "${{ steps.cargo-scope.outputs.packages }}"
-          cargo_args=()
-          for package in "${cargo_packages[@]}"; do
-            cargo_args+=(--package "$package")
-          done
-          cargo test --locked "${cargo_args[@]}"
-          sccache --show-stats
-      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        if: steps.nx-scope.outputs.terraform-affected == 'true' || steps.nx-scope.outputs.email-affected == 'true'
-        with:
-          terraform_version: 1.15.8
-          terraform_wrapper: false
-      - name: Validate affected Terraform stacks
-        if: steps.nx-scope.outputs.terraform-affected == 'true'
-        run: >-
-          pnpm nx affected -t terraform:validate
-          --base="${{ steps.nx-scope.outputs.base-sha }}"
-          --head="$GITHUB_SHA"
-          --parallel=3
-          --outputStyle=static
-      - name: Test affected Terraform stacks
-        if: steps.nx-scope.outputs.email-stack-terraform-affected == 'true'
-        run: >-
-          pnpm nx affected -t terraform:test
-          --base="${{ steps.nx-scope.outputs.base-sha }}"
-          --head="$GITHUB_SHA"
-          --parallel=1
-          --outputStyle=static
-      - name: Validate affected deployment and container contracts
-        if: steps.nx-scope.outputs.email-affected == 'true'
-        run: pnpm nx run ci-contracts:test:contract --outputStyle=static
-      - name: Validate affected container contracts
-        run: >-
-          pnpm nx affected -t test:contract
-          --base="${{ steps.nx-scope.outputs.base-sha }}"
-          --head="$GITHUB_SHA"
-          --exclude=ci-contracts
-          --parallel=4
-          --outputStyle=static
-      - name: Start scoped PostgreSQL
-        if: steps.nx-scope.outputs.database-affected == 'true'
-        run: |
-          docker run --detach --name nvbes-ci-postgres \
-            --env POSTGRES_DB=nvbes_email_test \
-            --env POSTGRES_PASSWORD=postgres \
-            --env POSTGRES_USER=postgres \
-            --publish 127.0.0.1:5432:5432 \
-            postgres:17-alpine
-          for _attempt in {1..30}; do
-            docker exec nvbes-ci-postgres pg_isready --username postgres --dbname nvbes_email_test && exit 0
-            sleep 1
-          done
-          exit 1
-      - name: Configure scoped test databases
-        if: steps.nx-scope.outputs.database-affected == 'true'
-        run: |
-          for database in nvbes_account_test nvbes_billing_test nvbes_identity_test nvbes_trust_risk_test; do
-            docker exec nvbes-ci-postgres createdb --username postgres "$database"
-          done
-          {
-            printf '%s\n' 'NVBES_ACCOUNT_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_account_test'
-            printf '%s\n' 'NVBES_BILLING_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_billing_test'
-            printf '%s\n' 'NVBES_EMAIL_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_email_test'
-            printf '%s\n' 'NVBES_IDENTITY_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test'
-            printf '%s\n' 'NVBES_TRUST_RISK_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nvbes_trust_risk_test'
-          } >> "$GITHUB_ENV"
-      - name: Test affected database invariants
-        if: steps.nx-scope.outputs.database-affected == 'true'
-        run: >-
-          pnpm nx run-many -t test:database
-          --projects="${{ steps.nx-scope.outputs.database-projects }}"
-          --parallel=1
-          --outputStyle=static
-      - name: Stop scoped PostgreSQL
-        if: always() && steps.nx-scope.outputs.database-affected == 'true'
-        run: docker rm --force nvbes-ci-postgres
-      - name: Publish central pnpm and Nx caches
-        if: success() && github.event_name == 'push'
+          node: 'true'
+          rust: 'false'
+          terraform: 'false'
+          caches: pnpm nx
+          cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Enforce FinOps contract
+        run: pnpm check:finops
+      - name: Validate contracts
+        run: node tools/ci/run-lane.mjs contracts
+      - name: Publish successful protected lane caches
+        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
         run: node tools/ci/scaleway-cache-manager.mjs save pnpm nx
-      - name: Publish central Cargo cache
-        if: success() && github.event_name == 'push' && steps.nx-scope.outputs.rust-required == 'true'
+
+  typescript:
+    needs: [authorize-cache, scope]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.typescript-required == 'true' }}
+    environment:
+      name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
+      deployment: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
+      SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
+      SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
+      NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
+      - uses: ./.github/actions/ci-setup
+        with:
+          node: 'true'
+          rust: 'false'
+          terraform: 'false'
+          caches: pnpm nx
+          cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Validate typescript
+        run: node tools/ci/run-lane.mjs typescript
+      - name: Publish successful protected lane caches
+        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+        run: node tools/ci/scaleway-cache-manager.mjs save pnpm nx
+
+  rust:
+    needs: [authorize-cache, scope, contracts]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.contracts.result == 'success' && needs.scope.outputs.rust-required == 'true' }}
+    environment:
+      name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
+      deployment: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
+      SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
+      SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
+      NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
+      - uses: ./.github/actions/ci-setup
+        with:
+          node: 'false'
+          rust: 'true'
+          terraform: 'false'
+          caches: cargo
+          cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Validate rust
+        run: node tools/ci/run-rust.mjs
+      - name: Publish successful protected lane caches
+        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
         run: node tools/ci/scaleway-cache-manager.mjs save cargo
-      - name: Publish central Terraform cache
-        if: success() && github.event_name == 'push' && steps.nx-scope.outputs.terraform-affected == 'true'
+
+  database:
+    needs: [authorize-cache, scope, contracts]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.contracts.result == 'success' && needs.scope.outputs.database-required == 'true' }}
+    environment:
+      name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
+      deployment: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
+      SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
+      SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
+      NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
+      - uses: ./.github/actions/ci-setup
+        with:
+          node: 'true'
+          rust: 'true'
+          terraform: 'false'
+          caches: pnpm cargo
+          cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Start isolated PostgreSQL databases
+        run: node tools/ci/test-databases.mjs
+      - name: Validate database
+        run: node tools/ci/run-lane.mjs database
+      - name: Stop PostgreSQL
+        if: always()
+        run: node tools/ci/test-databases.mjs stop
+      - name: Publish successful protected lane caches
+        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
-        run: node tools/ci/scaleway-cache-manager.mjs save terraform
+        run: node tools/ci/scaleway-cache-manager.mjs save pnpm cargo
+
+  terraform:
+    needs: [authorize-cache, scope, contracts]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.contracts.result == 'success' && needs.scope.outputs.terraform-required == 'true' }}
+    environment:
+      name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
+      deployment: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
+      SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
+      SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
+      NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
+      - uses: ./.github/actions/ci-setup
+        with:
+          node: 'true'
+          rust: 'false'
+          terraform: 'true'
+          caches: pnpm terraform
+          cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Validate terraform
+        run: node tools/ci/run-lane.mjs terraform
+      - name: Publish successful protected lane caches
+        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+        run: node tools/ci/scaleway-cache-manager.mjs save pnpm terraform
+
+  containers:
+    needs: [authorize-cache, scope]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.containers-required == 'true' }}
+    environment:
+      name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
+      deployment: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
+      SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
+      SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
+      NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
+      - uses: ./.github/actions/ci-setup
+        with:
+          node: 'true'
+          rust: 'false'
+          terraform: 'false'
+          caches: pnpm nx
+          cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Validate containers
+        run: node tools/ci/run-lane.mjs containers
+      - name: Publish successful protected lane caches
+        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+        run: node tools/ci/scaleway-cache-manager.mjs save pnpm nx
+
+  ci-gate:
+    name: ci-gate
+    if: always()
+    needs: [authorize-cache, scope, contracts, typescript, rust, database, terraform, containers]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require every planned lane to succeed
+        env:
+          NVBES_CI_NEEDS: ${{ toJSON(needs) }}
+        run: node tools/ci/ci-gate.mjs
