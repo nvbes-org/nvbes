@@ -28,6 +28,7 @@ module "terraform_state" {
   bucket_name  = var.terraform_state_bucket
   state_stacks = local.state_stacks
   external_state_application_ids = {
+    account    = "fdcde0a1-e8f3-4a62-8a36-843b18dd515c"
     trust-risk = "4baaab67-b29e-4ba7-aed8-f8efce064a02"
   }
   tags = local.tags
