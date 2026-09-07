@@ -1,5 +1,8 @@
 # Inventaire des mécanismes Identity archivés
 
+L'implémentation demandée des lots A à D est suivie dans le
+[journal d'exécution](identity-protocol-implementation.work.md).
+
 ## Portée et méthode
 
 Relevé statique du 2026-09-07 sur la branche de préparation, runtime de base
