@@ -174,7 +174,7 @@ jobs:
           cargo test --locked "${cargo_args[@]}"
           sccache --show-stats
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        if: steps.nx-scope.outputs.terraform-affected == 'true'
+        if: steps.nx-scope.outputs.terraform-affected == 'true' || steps.nx-scope.outputs.email-affected == 'true'
         with:
           terraform_version: 1.15.8
           terraform_wrapper: false
