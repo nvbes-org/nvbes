@@ -92,15 +92,17 @@ resource "scaleway_object_bucket_policy" "terraform_state" {
     Version = "2023-04-17"
     Id      = "nvbes-${var.environment}-terraform-state"
     Statement = concat([
-      for stack, path in local.state_paths : {
-        Sid       = "List${replace(title(replace(stack, "-", " ")), " ", "")}StatePrefix"
-        Effect    = "Allow"
-        Principal = { SCW = "application_id:${local.state_application_ids[stack]}" }
-        Action    = ["s3:ListBucket"]
-        Resource  = [scaleway_object_bucket.terraform_state.name]
+      {
+        Sid    = "ListDeclaredStatePrefixes"
+        Effect = "Allow"
+        Principal = {
+          SCW = [for application_id in values(local.state_application_ids) : "application_id:${application_id}"]
+        }
+        Action   = ["s3:ListBucket"]
+        Resource = [scaleway_object_bucket.terraform_state.name]
         Condition = merge(local.tls_condition, {
           StringLike = {
-            "s3:prefix" = ["${var.environment}/${stack}/*"]
+            "s3:prefix" = [for stack in local.all_state_stacks : "${var.environment}/${stack}/*"]
           }
         })
       }
@@ -118,4 +120,11 @@ resource "scaleway_object_bucket_policy" "terraform_state" {
       }
     ])
   })
+
+  lifecycle {
+    precondition {
+      condition     = length(local.all_state_stacks) + 1 <= 10
+      error_message = "Scaleway allows at most 10 bucket policy statements; use a separate state bucket before adding more stacks."
+    }
+  }
 }

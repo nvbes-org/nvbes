@@ -153,6 +153,10 @@ fn optional(name: &str) -> Option<String> {
         .filter(|value| !value.trim().is_empty())
 }
 
+pub fn required_database_url() -> Result<String, ConfigError> {
+    required("NVBES_ACCOUNT_DATABASE_URL")
+}
+
 fn required(name: &'static str) -> Result<String, ConfigError> {
     optional(name).ok_or(ConfigError::Missing(name))
 }

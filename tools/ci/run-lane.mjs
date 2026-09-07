@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync } from 'node:fs';
 
 const plan = JSON.parse(process.env.NVBES_CI_PLAN);
 const lane = process.argv[2];
@@ -71,7 +71,10 @@ switch (lane) {
     selected('test:contract', plan.containers, plan.baseline.containers);
     break;
   case 'terraform':
-    selected('terraform:validate', plan.terraform, plan.baseline.terraform, 3);
+    if (process.env.TF_PLUGIN_CACHE_DIR)
+      mkdirSync(process.env.TF_PLUGIN_CACHE_DIR, { recursive: true });
+    // Terraform's shared provider cache does not support concurrent installers.
+    selected('terraform:validate', plan.terraform, plan.baseline.terraform, 1);
     selected('terraform:test', plan.terraform, plan.baseline.terraform, 1);
     if (
       (plan.shadow ? plan.baseline.terraform : plan.terraform).some((name) =>
