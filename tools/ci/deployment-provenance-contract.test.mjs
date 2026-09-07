@@ -4,6 +4,15 @@ import test from 'node:test';
 
 const deployableWorkflows = ['account', 'billing', 'email', 'identity', 'trust-risk'];
 
+test('state listing remains restricted to each stack prefix over TLS', () => {
+  const module = readFileSync('infrastructure/modules/terraform-state-backend/main.tf', 'utf8');
+  assert.match(module, /Action\s*= \["s3:ListBucket"\]/u);
+  assert.match(module, /Resource\s*= \[scaleway_object_bucket\.terraform_state\.name\]/u);
+  assert.match(module, /Condition = merge\(local\.tls_condition,/u);
+  assert.ok(module.includes('"s3:prefix" = ["${var.environment}/${stack}/*"]'));
+  assert.match(module, /"aws:SecureTransport" = "true"/u);
+});
+
 for (const service of deployableWorkflows) {
   const path = `.github/workflows/deploy-${service}.yml`;
   const workflow = readFileSync(path, 'utf8');
