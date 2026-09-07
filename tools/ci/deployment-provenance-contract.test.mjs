@@ -4,6 +4,14 @@ import test from 'node:test';
 
 const deployableWorkflows = ['account', 'billing', 'email', 'identity', 'trust-risk'];
 
+test('Terraform validation serializes shared provider installation on cold runners', () => {
+  const lane = readFileSync('tools/ci/run-lane.mjs', 'utf8');
+  assert.match(lane, /mkdirSync\(process\.env\.TF_PLUGIN_CACHE_DIR, \{ recursive: true \}\)/u);
+  assert.ok(
+    lane.includes("selected('terraform:validate', plan.terraform, plan.baseline.terraform, 1)"),
+  );
+});
+
 test('state policy fits Scaleway limits with shared listing and isolated object access', () => {
   const module = readFileSync('infrastructure/modules/terraform-state-backend/main.tf', 'utf8');
   assert.match(module, /Action\s*= \["s3:ListBucket"\]/u);
