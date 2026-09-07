@@ -30,6 +30,9 @@ mod reconciliation;
 mod subscriptions;
 #[path = "billing.synthetic.rs"]
 mod synthetic;
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.webhooks.tests.rs"]
+mod webhook_tests;
 #[path = "billing.webhooks.rs"]
 mod webhooks;
 

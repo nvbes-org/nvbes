@@ -1,441 +1,430 @@
 {
-	"schemaVersion": 1,
-	"source": "https://cheatsheetseries.owasp.org/cheatsheets/CI_CD_Security_Cheat_Sheet.html",
-	"reviewCadence": "At every workflow, release gate, CI secret, deployment, dependency installation, action integration, cache, artifact, or branch-protection policy change.",
-	"requirements": [
-		{
-			"id": "CICD_REQ_001",
-			"name": "Secure pipeline configuration",
-			"owasp": "Secure Configuration, Pipeline and Execution Environment",
-			"controls": [
-				{
-					"id": "CICD_CTRL_001",
-					"name": "Strict workflow execution baseline",
-					"description": "Run CI with bounded execution, cancellation, strict bash, and a self-checking security gate before dependency installation.",
-					"evidence": [
-						{
-							"path": ".github/workflows/ci.yml",
-							"includes": [
-								"concurrency:",
-								"cancel-in-progress: true",
-								"timeout-minutes: 30",
-								"bash --noprofile --norc -euo pipefail {0}",
-								"node tools/security/check-ci-cd-security.mjs"
-							]
-						},
-						{
-							"path": "tools/security/check-ci-cd-security.mjs",
-							"includes": [
-								"assertWorkflowBaseline",
-								"assertContinueOnError",
-								"allowedContinueOnError",
-								"CI/CD security controls",
-								"requiredWorkflowIncludes"
-							]
-						}
-					]
-				}
-			]
-		},
-		{
-			"id": "CICD_REQ_002",
-			"name": "Deny dangerous trust-boundary triggers",
-			"owasp": "Secure SCM Configuration, Pipeline and Execution Environment, Poisoned Pipeline Execution",
-			"controls": [
-				{
-					"id": "CICD_CTRL_002",
-					"name": "Untrusted-code trigger guard",
-					"description": "Block high-risk workflow triggers that can execute unreviewed code with elevated repository context.",
-					"evidence": [
-						{
-							"path": "tools/security/check-ci-cd-security.mjs",
-							"includes": [
-								"forbiddenWorkflowTriggers",
-								"pull_request_target",
-								"workflow_run",
-								"dangerous trigger"
-							]
-						},
-						{
-							"path": ".github/workflows/ci.yml",
-							"includes": ["pull_request:", "push:", "branches: ['main']"]
-						}
-					]
-				}
-			]
-		},
-		{
-			"id": "CICD_REQ_003",
-			"name": "Least-privilege CI token permissions",
-			"owasp": "IAM, Least Privilege",
-			"controls": [
-				{
-					"id": "CICD_CTRL_003",
-					"name": "Read-only default GITHUB_TOKEN",
-					"description": "Default workflow permissions are read-only and write scopes are denied unless explicitly approved in the registry.",
-					"evidence": [
-						{
-							"path": ".github/workflows/ci.yml",
-							"includes": ["permissions:", "actions: read", "contents: read"]
-						},
-						{
-							"path": "tools/security/check-ci-cd-security.mjs",
-							"includes": [
-								"forbiddenWritePermissions",
-								"permissions:",
-								"write permission"
-							]
-						}
-					]
-				}
-			]
-		},
-		{
-			"id": "CICD_REQ_004",
-			"name": "Protect credentials and secrets",
-			"owasp": "Secrets Management, Insufficient Credential Hygiene",
-			"controls": [
-				{
-					"id": "CICD_CTRL_004",
-					"name": "Secret usage and checkout credential guard",
-					"description": "Prevent persisted checkout credentials, require secrets to be allowlisted, and keep secret-bearing steps scoped to trusted push builds or explicitly validated protected-Environment workflows.",
-					"evidence": [
-						{
-							"path": ".github/workflows/deploy-web.yml",
-							"includes": [
-								"persist-credentials: false",
-								"SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}",
-								"POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}",
-								"GRAFANA_FARO_SOURCEMAP_API_KEY: ${{ secrets.GRAFANA_FARO_SOURCEMAP_API_KEY }}",
-								"if: github.event_name == 'push' && github.ref == 'refs/heads/main'"
-							]
-						},
-						{
-							"path": "tools/security/check-ci-cd-security.mjs",
-							"includes": [
-								"allowedSecrets",
-								"persist-credentials: false",
-								"secret-bearing step must be restricted"
-							]
-						},
-						{
-							"path": ".github/workflows-archive/dast.yml",
-							"includes": [
-								"node tools/security/validate-dast-targets.mjs",
-								"node tools/account-quality/check-dast-authentication.mjs",
-								"name: account-dast-staging",
-								"[[ \"$GITHUB_REF\" == \"refs/heads/main\" ]]",
-								"[[ \"$(git rev-parse HEAD)\" == \"$GITHUB_SHA\" ]]",
-								"ref: ${{ github.sha }}",
-								"DAST_EXPECTED_SUBJECT_ID: ${{ vars.DAST_EXPECTED_SUBJECT_ID }}",
-								"DAST_EXPECTED_TENANT_ID: ${{ vars.DAST_EXPECTED_TENANT_ID }}",
-								"${{ secrets.DAST_ACCOUNT_SESSION_COOKIE }}",
-								"${{ secrets.DAST_API_AUTHORIZATION }}",
-								"${{ secrets.DAST_BACKOFFICE_SESSION_COOKIE }}"
-							]
-						},
-						{
-							"path": "tools/account-quality/check-dast-authentication.mjs",
-							"includes": [
-								"/auth/me",
-								"/oauth/userinfo",
-								"/admin/users/{syntheticSubject}",
-								"redirect: 'manual'",
-								"response.status !== 200"
-							]
-						},
-						{
-							"path": ".github/workflows-archive/account-acceptance-source.yml",
-							"includes": [
-								"name: account-acceptance-source",
-								"verify-account-release-ref.mjs",
-								"ref: ${{ github.ref }}",
-								"Block candidate-controlled evidence import",
-								"externally pinned importer",
-								"exit 1"
-							]
-						},
-						{
-							"path": ".github/workflows-archive/account-acceptance-ingest.yml",
-							"includes": [
-								"run.path !== \".github/workflows/account-acceptance-source.yml\"",
-								"prepare-account-acceptance-publication.mjs",
-								"name: account-acceptance-${{ github.sha }}"
-							]
-						},
-						{
-							"path": ".github/workflows-archive/account-release.yml",
-							"includes": [
-								"name: production-account",
-								"verify-account-release-ref.mjs",
-								"ref: ${{ github.ref }}",
-								"ACCOUNT_PRODUCTION_DENIED_ORIGINS: ${{ vars.ACCOUNT_PRODUCTION_DENIED_ORIGINS }}",
-								"scripts/release-gate.sh production"
-							]
-						},
-						{
-							"path": ".github/workflows/deploy-email.yml",
-							"includes": [
-								"name: production-email",
-								"if: github.ref == 'refs/heads/main'",
-								"ref: ${{ github.sha }}",
-								"production/email/terraform.tfstate",
-								"cosign verify",
-								"email-runtime.tfplan"
-							]
-						},
-						{
-							"path": ".github/workflows/deploy-trust-risk.yml",
-							"includes": [
-								"name: production-trust-risk",
-								"if: github.ref == 'refs/heads/main'",
-								"ref: ${{ github.sha }}",
-								"production/trust-risk/terraform.tfstate",
-								"cosign verify",
-								"trust-risk-runtime.tfplan"
-							]
-						},
-						{
-							"path": ".github/workflows/deploy-identity.yml",
-							"includes": [
-								"name: production-identity",
-								"if: github.ref == 'refs/heads/main'",
-								"ref: ${{ github.sha }}",
-								"production/identity/terraform.tfstate",
-								"cosign verify",
-								"identity-runtime.tfplan"
-							]
-						},
-						{
-							"path": ".github/workflows/validate-identity-restore.yml",
-							"includes": [
-								"name: production-identity",
-								"if: github.ref == 'refs/heads/main'",
-								"ref: ${{ inputs.approved_sha }}",
-								"validate-identity-production-restore",
-								"expected_principal_id",
-								"DELETE_RESTORE_DATABASE=true"
-							]
-						},
-						{
-							"path": ".github/workflows/deploy-account.yml",
-							"includes": [
-								"name: production-account",
-								"if: github.ref == 'refs/heads/main'",
-								"ref: ${{ github.sha }}",
-								"production/account/terraform.tfstate",
-								"cosign verify",
-								"account-runtime.tfplan"
-							]
-						},
-						{
-							"path": ".github/workflows/validate-account-restore.yml",
-							"includes": [
-								"name: production-account",
-								"if: github.ref == 'refs/heads/main'",
-								"ref: ${{ inputs.approved_sha }}",
-								"validate-account-production-restore",
-								"expected_principal_id",
-								"DELETE_RESTORE_DATABASE=true"
-							]
-						}
-					]
-				}
-			]
-		},
-		{
-			"id": "CICD_REQ_005",
-			"name": "Manage third-party code and integrations",
-			"owasp": "Managing Third-Party Code, Dependency Management, Plug-In and Integration Management",
-			"controls": [
-				{
-					"id": "CICD_CTRL_005",
-					"name": "Action and dependency installation policy",
-					"description": "Require third-party workflow actions to be allowlisted and dependency installs to use lockfile-enforced commands.",
-					"evidence": [
-						{
-							"path": "tools/security/check-ci-cd-security.mjs",
-							"includes": [
-								"allowedActions",
-								"pnpm install --frozen-lockfile",
-								"unsafe dependency install"
-							]
-						},
-						{
-							"path": ".github/workflows/ci.yml",
-							"includes": [
-								"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-								"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
-								"pnpm install --frozen-lockfile --prefer-offline"
-							]
-						},
-						{
-							"path": ".github/workflows-archive/ci-applications.yml",
-							"includes": [
-								"Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
-								"cargo check --locked --package"
-							]
-						}
-					]
-				}
-			]
-		},
-		{
-			"id": "CICD_REQ_006",
-			"name": "Assure artifact and dependency integrity",
-			"owasp": "Integrity Assurance",
-			"controls": [
-				{
-					"id": "CICD_CTRL_006",
-					"name": "Repository security gates in CI",
-					"description": "Run supply-chain, secrets, authorization, bot, business-logic, C-toolchain, and CI/CD gates as part of the root check path.",
-					"evidence": [
-						{
-							"path": "package.json",
-							"includes": [
-								"check:secrets",
-								"check:supply-chain",
-								"check:c-toolchain-hardening",
-								"check:ci-cd-security"
-							]
-						},
-						{
-							"path": ".github/workflows/ci.yml",
-							"includes": [
-								"pnpm format:check",
-								"pnpm check:structure",
-								"pnpm check:nx-boundaries"
-							]
-						}
-					]
-				}
-			]
-		},
-		{
-			"id": "CICD_REQ_007",
-			"name": "Preserve visibility and auditability",
-			"owasp": "Visibility and Monitoring",
-			"controls": [
-				{
-					"id": "CICD_CTRL_007",
-					"name": "Machine-readable CI/CD security evidence",
-					"description": "Keep CI/CD controls, approved integrations, secrets, and evidence strings machine-readable so workflow drift is visible in every CI run.",
-					"evidence": [
-						{
-							"path": "docs/security/ci-cd-security.md",
-							"includes": [
-								"CI/CD Security",
-								"pnpm check:ci-cd-security",
-								"allowlisted"
-							]
-						},
-						{
-							"path": "tools/security/check-ci-cd-security.mjs",
-							"includes": ["console.log", "workflows", "evidence strings"]
-						}
-					]
-				}
-			]
-		}
-	],
-	"allowedActions": [
-		"EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25",
-		"Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
-		"actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a",
-		"actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34",
-		"actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
-		"actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
-		"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-		"actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
-		"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
-		"actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
-		"actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
-		"aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25",
-		"docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8",
-		"docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9",
-		"docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
-		"dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4",
-		"hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e",
-		"github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
-		"github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
-		"github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
-		"google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2",
-		"hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e",
-		"mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba",
-		"nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1",
-		"opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4",
-		"scaleway/action-scw@2e34a1eb35cf3cac627f24643a101fea269cbd83",
-		"sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac"
-	],
-	"allowedSecrets": [
-		"ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_PEM",
-		"ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_PEM",
-		"ACCOUNT_METRICS_TOKEN",
-		"ACCOUNT_SENTRY_DSN",
-		"ACCOUNT_TERRAFORM_STATE_ACCESS_KEY",
-		"ACCOUNT_TERRAFORM_STATE_SECRET_KEY",
-		"BILLING_METRICS_TOKEN",
-		"BILLING_OPERATOR_TOKEN",
-		"BILLING_SENTRY_DSN",
-		"BILLING_TERRAFORM_STATE_ACCESS_KEY",
-		"BILLING_TERRAFORM_STATE_SECRET_KEY",
-		"BOOTSTRAP_TERRAFORM_STATE_ACCESS_KEY",
-		"BOOTSTRAP_TERRAFORM_STATE_SECRET_KEY",
-		"CI_CACHE_GITHUB_TOKEN",
-		"DAST_ACCOUNT_SESSION_COOKIE",
-		"DAST_API_AUTHORIZATION",
-		"DAST_BACKOFFICE_SESSION_COOKIE",
-		"CLOUDFLARE_API_TOKEN",
-		"EMAIL_DATABASE_URL",
-		"EMAIL_DATA_ENCRYPTION_KEY",
-		"EMAIL_OBSERVABILITY_INTERNAL_TOKEN",
-		"EMAIL_PRODUCER_TOKENS",
-		"EMAIL_RECIPIENT_HMAC_KEY",
-		"EMAIL_SCALEWAY_SECRET_KEY",
-		"EMAIL_SENTRY_DSN",
-		"EMAIL_SNS_CA_BUNDLE_PEM",
-		"EMAIL_SYNTHETIC_PRODUCER_TOKEN",
-		"EMAIL_SYNTHETIC_RECIPIENT",
-		"EMAIL_TERRAFORM_STATE_ACCESS_KEY",
-		"EMAIL_TERRAFORM_STATE_SECRET_KEY",
-		"GRAFANA_FARO_SOURCEMAP_API_KEY",
-		"GRAFANA_OTLP_AUTHORIZATION_HEADER",
-		"GRAFANA_SERVICE_ACCOUNT_TOKEN",
-		"IDENTITY_MFA_ENCRYPTION_KEY",
-		"IDENTITY_METRICS_TOKEN",
-		"IDENTITY_SENTRY_DSN",
-		"IDENTITY_SYNTHETIC_PASSWORD",
-		"IDENTITY_SYNTHETIC_RECOVERED_PASSWORD",
-		"IDENTITY_TERRAFORM_STATE_ACCESS_KEY",
-		"IDENTITY_TERRAFORM_STATE_SECRET_KEY",
-		"IDENTITY_TOKEN_PUBLIC_KEY_PEM",
-		"NVBES_STAGING_ACCOUNT_PASSWORD",
-		"POSTHOG_CLI_API_KEY",
-		"SCALEWAY_EMAIL_SECRET_KEY",
-		"SCW_ACCESS_KEY",
-		"SCW_CI_CACHE_ACCESS_KEY",
-		"SCW_CI_CACHE_SECRET_KEY",
-		"SCW_SECRET_KEY",
-		"SENTRY_AUTH_TOKEN",
-		"STRIPE_SECRET_KEY",
-		"STRIPE_WEBHOOK_SECRET",
-		"TRUST_RISK_METRICS_TOKEN",
-		"TRUST_RISK_OPERATOR_TOKENS",
-		"TRUST_RISK_PRODUCER_POLICIES",
-		"TRUST_RISK_SENTRY_DSN",
-		"TRUST_RISK_TERRAFORM_STATE_ACCESS_KEY",
-		"TRUST_RISK_TERRAFORM_STATE_SECRET_KEY"
-	],
-	"allowedContinueOnError": [],
-	"allowedWritePermissions": ["id-token", "packages", "security-events"],
-	"requiredWorkflowIncludes": [
-		"permissions:",
-		"actions: read",
-		"contents: read",
-		"timeout-minutes:",
-		"concurrency:",
-		"cancel-in-progress:",
-		"persist-credentials: false",
-		"bash --noprofile --norc -euo pipefail {0}"
-	]
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/CI_CD_Security_Cheat_Sheet.html",
+  "reviewCadence": "At every workflow, release gate, CI secret, deployment, dependency installation, action integration, cache, artifact, or branch-protection policy change.",
+  "requirements": [
+    {
+      "id": "CICD_REQ_001",
+      "name": "Secure pipeline configuration",
+      "owasp": "Secure Configuration, Pipeline and Execution Environment",
+      "controls": [
+        {
+          "id": "CICD_CTRL_001",
+          "name": "Strict workflow execution baseline",
+          "description": "Run CI with bounded execution, cancellation, strict bash, and a self-checking security gate before dependency installation.",
+          "evidence": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": [
+                "concurrency:",
+                "cancel-in-progress: true",
+                "timeout-minutes: 30",
+                "bash --noprofile --norc -euo pipefail {0}",
+                "node tools/security/check-ci-cd-security.mjs"
+              ]
+            },
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": [
+                "assertWorkflowBaseline",
+                "assertContinueOnError",
+                "allowedContinueOnError",
+                "CI/CD security controls",
+                "requiredWorkflowIncludes"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_002",
+      "name": "Deny dangerous trust-boundary triggers",
+      "owasp": "Secure SCM Configuration, Pipeline and Execution Environment, Poisoned Pipeline Execution",
+      "controls": [
+        {
+          "id": "CICD_CTRL_002",
+          "name": "Untrusted-code trigger guard",
+          "description": "Block high-risk workflow triggers that can execute unreviewed code with elevated repository context.",
+          "evidence": [
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": [
+                "forbiddenWorkflowTriggers",
+                "pull_request_target",
+                "workflow_run",
+                "dangerous trigger"
+              ]
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": ["pull_request:", "push:", "branches: ['main']"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_003",
+      "name": "Least-privilege CI token permissions",
+      "owasp": "IAM, Least Privilege",
+      "controls": [
+        {
+          "id": "CICD_CTRL_003",
+          "name": "Read-only default GITHUB_TOKEN",
+          "description": "Default workflow permissions are read-only and write scopes are denied unless explicitly approved in the registry.",
+          "evidence": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": ["permissions:", "actions: read", "contents: read"]
+            },
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": ["forbiddenWritePermissions", "permissions:", "write permission"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_004",
+      "name": "Protect credentials and secrets",
+      "owasp": "Secrets Management, Insufficient Credential Hygiene",
+      "controls": [
+        {
+          "id": "CICD_CTRL_004",
+          "name": "Secret usage and checkout credential guard",
+          "description": "Prevent persisted checkout credentials, require secrets to be allowlisted, and keep secret-bearing steps scoped to trusted push builds or explicitly validated protected-Environment workflows.",
+          "evidence": [
+            {
+              "path": ".github/workflows/deploy-web.yml",
+              "includes": [
+                "persist-credentials: false",
+                "SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}",
+                "POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}",
+                "GRAFANA_FARO_SOURCEMAP_API_KEY: ${{ secrets.GRAFANA_FARO_SOURCEMAP_API_KEY }}",
+                "if: github.event_name == 'push' && github.ref == 'refs/heads/main'"
+              ]
+            },
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": [
+                "allowedSecrets",
+                "persist-credentials: false",
+                "secret-bearing step must be restricted"
+              ]
+            },
+            {
+              "path": ".github/workflows-archive/dast.yml",
+              "includes": [
+                "node tools/security/validate-dast-targets.mjs",
+                "node tools/account-quality/check-dast-authentication.mjs",
+                "name: account-dast-staging",
+                "[[ \"$GITHUB_REF\" == \"refs/heads/main\" ]]",
+                "[[ \"$(git rev-parse HEAD)\" == \"$GITHUB_SHA\" ]]",
+                "ref: ${{ github.sha }}",
+                "DAST_EXPECTED_SUBJECT_ID: ${{ vars.DAST_EXPECTED_SUBJECT_ID }}",
+                "DAST_EXPECTED_TENANT_ID: ${{ vars.DAST_EXPECTED_TENANT_ID }}",
+                "${{ secrets.DAST_ACCOUNT_SESSION_COOKIE }}",
+                "${{ secrets.DAST_API_AUTHORIZATION }}",
+                "${{ secrets.DAST_BACKOFFICE_SESSION_COOKIE }}"
+              ]
+            },
+            {
+              "path": "tools/account-quality/check-dast-authentication.mjs",
+              "includes": [
+                "/auth/me",
+                "/oauth/userinfo",
+                "/admin/users/{syntheticSubject}",
+                "redirect: 'manual'",
+                "response.status !== 200"
+              ]
+            },
+            {
+              "path": ".github/workflows-archive/account-acceptance-source.yml",
+              "includes": [
+                "name: account-acceptance-source",
+                "verify-account-release-ref.mjs",
+                "ref: ${{ github.ref }}",
+                "Block candidate-controlled evidence import",
+                "externally pinned importer",
+                "exit 1"
+              ]
+            },
+            {
+              "path": ".github/workflows-archive/account-acceptance-ingest.yml",
+              "includes": [
+                "run.path !== \".github/workflows/account-acceptance-source.yml\"",
+                "prepare-account-acceptance-publication.mjs",
+                "name: account-acceptance-${{ github.sha }}"
+              ]
+            },
+            {
+              "path": ".github/workflows-archive/account-release.yml",
+              "includes": [
+                "name: production-account",
+                "verify-account-release-ref.mjs",
+                "ref: ${{ github.ref }}",
+                "ACCOUNT_PRODUCTION_DENIED_ORIGINS: ${{ vars.ACCOUNT_PRODUCTION_DENIED_ORIGINS }}",
+                "scripts/release-gate.sh production"
+              ]
+            },
+            {
+              "path": ".github/workflows/deploy-email.yml",
+              "includes": [
+                "name: production-email",
+                "if: github.ref == 'refs/heads/main'",
+                "ref: ${{ github.sha }}",
+                "production/email/terraform.tfstate",
+                "cosign verify",
+                "email-runtime.tfplan"
+              ]
+            },
+            {
+              "path": ".github/workflows/deploy-trust-risk.yml",
+              "includes": [
+                "name: production-trust-risk",
+                "if: github.ref == 'refs/heads/main'",
+                "ref: ${{ github.sha }}",
+                "production/trust-risk/terraform.tfstate",
+                "cosign verify",
+                "trust-risk-runtime.tfplan"
+              ]
+            },
+            {
+              "path": ".github/workflows/deploy-identity.yml",
+              "includes": [
+                "name: production-identity",
+                "if: github.ref == 'refs/heads/main'",
+                "ref: ${{ github.sha }}",
+                "production/identity/terraform.tfstate",
+                "cosign verify",
+                "identity-runtime.tfplan"
+              ]
+            },
+            {
+              "path": ".github/workflows/validate-identity-restore.yml",
+              "includes": [
+                "name: production-identity",
+                "if: github.ref == 'refs/heads/main'",
+                "ref: ${{ inputs.approved_sha }}",
+                "validate-identity-production-restore",
+                "expected_principal_id",
+                "DELETE_RESTORE_DATABASE=true"
+              ]
+            },
+            {
+              "path": ".github/workflows/deploy-account.yml",
+              "includes": [
+                "name: production-account",
+                "if: github.ref == 'refs/heads/main'",
+                "ref: ${{ github.sha }}",
+                "production/account/terraform.tfstate",
+                "cosign verify",
+                "account-runtime.tfplan"
+              ]
+            },
+            {
+              "path": ".github/workflows/validate-account-restore.yml",
+              "includes": [
+                "name: production-account",
+                "if: github.ref == 'refs/heads/main'",
+                "ref: ${{ inputs.approved_sha }}",
+                "validate-account-production-restore",
+                "expected_principal_id",
+                "DELETE_RESTORE_DATABASE=true"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_005",
+      "name": "Manage third-party code and integrations",
+      "owasp": "Managing Third-Party Code, Dependency Management, Plug-In and Integration Management",
+      "controls": [
+        {
+          "id": "CICD_CTRL_005",
+          "name": "Action and dependency installation policy",
+          "description": "Require third-party workflow actions to be allowlisted and dependency installs to use lockfile-enforced commands.",
+          "evidence": [
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": [
+                "allowedActions",
+                "pnpm install --frozen-lockfile",
+                "unsafe dependency install"
+              ]
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": [
+                "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+                "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+                "pnpm install --frozen-lockfile --prefer-offline"
+              ]
+            },
+            {
+              "path": ".github/workflows-archive/ci-applications.yml",
+              "includes": [
+                "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+                "cargo check --locked --package"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_006",
+      "name": "Assure artifact and dependency integrity",
+      "owasp": "Integrity Assurance",
+      "controls": [
+        {
+          "id": "CICD_CTRL_006",
+          "name": "Repository security gates in CI",
+          "description": "Run supply-chain, secrets, authorization, bot, business-logic, C-toolchain, and CI/CD gates as part of the root check path.",
+          "evidence": [
+            {
+              "path": "package.json",
+              "includes": [
+                "check:secrets",
+                "check:supply-chain",
+                "check:c-toolchain-hardening",
+                "check:ci-cd-security"
+              ]
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": ["pnpm format:check", "pnpm check:structure", "pnpm check:nx-boundaries"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_007",
+      "name": "Preserve visibility and auditability",
+      "owasp": "Visibility and Monitoring",
+      "controls": [
+        {
+          "id": "CICD_CTRL_007",
+          "name": "Machine-readable CI/CD security evidence",
+          "description": "Keep CI/CD controls, approved integrations, secrets, and evidence strings machine-readable so workflow drift is visible in every CI run.",
+          "evidence": [
+            {
+              "path": "docs/security/ci-cd-security.md",
+              "includes": ["CI/CD Security", "pnpm check:ci-cd-security", "allowlisted"]
+            },
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": ["console.log", "workflows", "evidence strings"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "allowedActions": [
+    "EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25",
+    "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+    "actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a",
+    "actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34",
+    "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+    "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+    "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+    "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
+    "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25",
+    "docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8",
+    "docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9",
+    "docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+    "dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4",
+    "hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e",
+    "github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
+    "github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
+    "github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
+    "google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2",
+    "hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e",
+    "mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba",
+    "nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1",
+    "opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4",
+    "scaleway/action-scw@2e34a1eb35cf3cac627f24643a101fea269cbd83",
+    "sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac"
+  ],
+  "allowedSecrets": [
+    "ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_PEM",
+    "ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_PEM",
+    "ACCOUNT_METRICS_TOKEN",
+    "ACCOUNT_SENTRY_DSN",
+    "ACCOUNT_TERRAFORM_STATE_ACCESS_KEY",
+    "ACCOUNT_TERRAFORM_STATE_SECRET_KEY",
+    "BILLING_METRICS_TOKEN",
+    "BILLING_OPERATOR_TOKEN",
+    "BILLING_SENTRY_DSN",
+    "BILLING_TERRAFORM_STATE_ACCESS_KEY",
+    "BILLING_TERRAFORM_STATE_SECRET_KEY",
+    "BOOTSTRAP_TERRAFORM_STATE_ACCESS_KEY",
+    "BOOTSTRAP_TERRAFORM_STATE_SECRET_KEY",
+    "CI_CACHE_GITHUB_TOKEN",
+    "DAST_ACCOUNT_SESSION_COOKIE",
+    "DAST_API_AUTHORIZATION",
+    "DAST_BACKOFFICE_SESSION_COOKIE",
+    "CLOUDFLARE_API_TOKEN",
+    "EMAIL_DATABASE_URL",
+    "EMAIL_DATA_ENCRYPTION_KEY",
+    "EMAIL_OBSERVABILITY_INTERNAL_TOKEN",
+    "EMAIL_PRODUCER_TOKENS",
+    "EMAIL_RECIPIENT_HMAC_KEY",
+    "EMAIL_SCALEWAY_SECRET_KEY",
+    "EMAIL_SENTRY_DSN",
+    "EMAIL_SNS_CA_BUNDLE_PEM",
+    "EMAIL_SYNTHETIC_PRODUCER_TOKEN",
+    "EMAIL_SYNTHETIC_RECIPIENT",
+    "EMAIL_TERRAFORM_STATE_ACCESS_KEY",
+    "EMAIL_TERRAFORM_STATE_SECRET_KEY",
+    "GRAFANA_FARO_SOURCEMAP_API_KEY",
+    "GRAFANA_OTLP_AUTHORIZATION_HEADER",
+    "GRAFANA_SERVICE_ACCOUNT_TOKEN",
+    "IDENTITY_MFA_ENCRYPTION_KEY",
+    "IDENTITY_METRICS_TOKEN",
+    "IDENTITY_SENTRY_DSN",
+    "IDENTITY_SYNTHETIC_PASSWORD",
+    "IDENTITY_SYNTHETIC_RECOVERED_PASSWORD",
+    "IDENTITY_TERRAFORM_STATE_ACCESS_KEY",
+    "IDENTITY_TERRAFORM_STATE_SECRET_KEY",
+    "IDENTITY_TOKEN_PUBLIC_KEY_PEM",
+    "NVBES_STAGING_ACCOUNT_PASSWORD",
+    "POSTHOG_CLI_API_KEY",
+    "SCALEWAY_EMAIL_SECRET_KEY",
+    "SCW_ACCESS_KEY",
+    "SCW_CI_CACHE_ACCESS_KEY",
+    "SCW_CI_CACHE_SECRET_KEY",
+    "SCW_SECRET_KEY",
+    "SENTRY_AUTH_TOKEN",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_CI_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "TRUST_RISK_METRICS_TOKEN",
+    "TRUST_RISK_OPERATOR_TOKENS",
+    "TRUST_RISK_PRODUCER_POLICIES",
+    "TRUST_RISK_SENTRY_DSN",
+    "TRUST_RISK_TERRAFORM_STATE_ACCESS_KEY",
+    "TRUST_RISK_TERRAFORM_STATE_SECRET_KEY"
+  ],
+  "allowedContinueOnError": [],
+  "allowedWritePermissions": ["id-token", "packages", "security-events"],
+  "requiredWorkflowIncludes": [
+    "permissions:",
+    "actions: read",
+    "contents: read",
+    "timeout-minutes:",
+    "concurrency:",
+    "cancel-in-progress:",
+    "persist-credentials: false",
+    "bash --noprofile --norc -euo pipefail {0}"
+  ]
 }

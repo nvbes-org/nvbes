@@ -4,6 +4,7 @@ use axum::{
     http::HeaderMap,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -41,6 +42,16 @@ pub async fn create_checkout_handler(
         .and_then(|v| v.to_str().ok())
         .map(str::to_owned)
         .unwrap_or_else(|| format!("{}_{}_{}", workspace_id, payload.plan_code, Uuid::new_v4()));
+    if idempotency_key.len() > 255 || idempotency_key.is_empty() {
+        return Err(BillingError::Invalid("invalid_idempotency_key"));
+    }
+    let idempotency_key = format!(
+        "checkout_{:x}",
+        Sha256::digest(format!(
+            "{workspace_id}:{account_type}:{}:{idempotency_key}",
+            payload.plan_code
+        ))
+    );
 
     // Check existing idempotent checkout
     if let Some((url, session_id)) = get_existing_checkout(&state.db, &idempotency_key).await? {
@@ -74,6 +85,7 @@ pub async fn create_checkout_handler(
                 workspace_id,
                 &payload.plan_code,
                 &stripe_price_id,
+                &idempotency_key,
             )
             .await?
         };
@@ -82,7 +94,8 @@ pub async fn create_checkout_handler(
         r#"
         INSERT INTO billing_checkout_sessions
           (idempotency_key, account_id, account_type, plan_code, stripe_session_id, stripe_customer_id, checkout_url)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (idempotency_key) DO NOTHING
         "#,
     )
     .bind(&idempotency_key)
@@ -133,6 +146,7 @@ async fn create_stripe_checkout(
     account_id: Uuid,
     plan_code: &str,
     stripe_price_id: &str,
+    idempotency_key: &str,
 ) -> BillingResult<(String, String)> {
     let client = reqwest::Client::new();
     let url = format!(
@@ -166,6 +180,7 @@ async fn create_stripe_checkout(
     let response = client
         .post(&url)
         .bearer_auth(&state.config.stripe_secret_key)
+        .header("Idempotency-Key", idempotency_key)
         .form(&form)
         .send()
         .await

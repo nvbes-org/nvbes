@@ -1,0 +1,68 @@
+name: Stripe sandbox integration
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+concurrency:
+  group: stripe-sandbox-integration
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+jobs:
+  integration:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: stripe-ci
+      deployment: false
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nvbes_billing_test_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Verify trusted revision
+        run: |
+          [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/stripe-sandbox.yml
+      - name: Install locked workspace dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+          pnpm install --frozen-lockfile --prefer-offline
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+      - name: Compile Billing and run isolated regression tests
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/nvbes_billing_test_ci
+        run: |
+          node --test scripts/stripe-dev.test.mjs
+          pnpm nx run billing-service:test:database
+          cargo build --locked --manifest-path apps/billing-service/Cargo.toml
+      - name: Exercise the dedicated Stripe sandbox
+        env:
+          NVBES_STRIPE_SECRET_KEY: ${{ secrets.STRIPE_CI_SECRET_KEY }}
+          NVBES_STRIPE_ACCOUNT_ID: ${{ vars.STRIPE_ACCOUNT_ID }}
+          NVBES_BILLING_DATABASE_URL: postgres://postgres:postgres@localhost:5432/nvbes_billing_test_ci
+        run: node scripts/stripe-billing-smoke.mjs

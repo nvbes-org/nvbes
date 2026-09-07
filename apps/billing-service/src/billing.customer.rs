@@ -32,18 +32,19 @@ pub async fn get_or_create_customer(
         create_stripe_test_customer(config, account_id, account_type, email).await?
     };
 
-    sqlx::query(
+    let stripe_customer_id: String = sqlx::query_scalar(
         r#"
         INSERT INTO billing_customers (account_id, account_type, stripe_customer_id, email)
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (account_id, account_type) DO UPDATE SET updated_at = clock_timestamp()
+        RETURNING stripe_customer_id
         "#,
     )
     .bind(account_id)
     .bind(account_type)
     .bind(&stripe_customer_id)
     .bind(email)
-    .execute(db)
+    .fetch_one(db)
     .await?;
 
     Ok(stripe_customer_id)
@@ -75,6 +76,10 @@ async fn create_stripe_test_customer(
     let response = client
         .post(&url)
         .bearer_auth(&config.stripe_secret_key)
+        .header(
+            "Idempotency-Key",
+            format!("customer_{account_type}_{account_id}"),
+        )
         .form(&form)
         .send()
         .await

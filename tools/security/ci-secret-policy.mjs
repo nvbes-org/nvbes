@@ -6,6 +6,7 @@ export function assertSecrets(
 ) {
   const referencedSecrets = extractSecrets(text);
   const protectedSecretWorkflows = new Map([
+    ['STRIPE_CI_SECRET_KEY', new Set(['.github/workflows/stripe-sandbox.yml'])],
     [
       'ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_PEM',
       new Set([
@@ -78,6 +79,17 @@ export function assertSecrets(
 
   const secretIndex = text.indexOf('secrets.');
   if (secretIndex >= 0) {
+    const isValidatedStripeSandboxWorkflow =
+      path === '.github/workflows/stripe-sandbox.yml' &&
+      /^  workflow_dispatch:\s*$/mu.test(text) &&
+      !/^\s+(?:inputs|pull_request|push|schedule):/mu.test(text) &&
+      text.includes('name: stripe-ci') &&
+      text.includes("if: github.ref == 'refs/heads/main'") &&
+      text.includes('[[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]') &&
+      text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+      text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+      text.includes(`ref: ${githubExpression('github.sha')}`) &&
+      text.includes('run: node scripts/stripe-billing-smoke.mjs');
     const preceding = text.slice(Math.max(0, secretIndex - 500), secretIndex);
     const isValidatedDastWorkflow =
       path === '.github/workflows/dast.yml' &&
@@ -293,6 +305,7 @@ export function assertSecrets(
     if (
       !preceding.includes("if: github.event_name == 'push' && github.ref == 'refs/heads/main'") &&
       !isValidatedDastWorkflow &&
+      !isValidatedStripeSandboxWorkflow &&
       !isValidatedAccountReleaseWorkflow &&
       !isValidatedAcceptanceIngestWorkflow &&
       !isValidatedEmailDeploymentWorkflow &&

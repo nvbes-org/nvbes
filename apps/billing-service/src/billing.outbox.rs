@@ -1,11 +1,11 @@
 use serde_json::Value;
-use sqlx::PgPool;
+use sqlx::PgExecutor;
 use uuid::Uuid;
 
 use crate::error::BillingResult;
 
 pub async fn record_outbox_event(
-    db: &PgPool,
+    db: impl PgExecutor<'_>,
     event_type: &str,
     aggregate_id: Uuid,
     payload: &Value,

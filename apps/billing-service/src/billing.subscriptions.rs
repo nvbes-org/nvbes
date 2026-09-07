@@ -1,6 +1,6 @@
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::{Value, json};
-use sqlx::PgPool;
+use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::{
@@ -16,16 +16,45 @@ pub async fn apply_subscription_event(
     event_created: DateTime<Utc>,
     data: &Value,
 ) -> BillingResult<()> {
+    let mut transaction = db.begin().await?;
+    apply_subscription_event_on_connection(
+        &mut transaction,
+        event_id,
+        event_type,
+        event_created,
+        data,
+    )
+    .await?;
+    transaction.commit().await?;
+    Ok(())
+}
+
+pub async fn apply_subscription_event_on_connection(
+    db: &mut PgConnection,
+    event_id: &str,
+    event_type: &str,
+    event_created: DateTime<Utc>,
+    data: &Value,
+) -> BillingResult<()> {
     let sub_id = match data.get("id").and_then(Value::as_str) {
         Some(id) if id.starts_with("sub_") => id,
         _ => {
             // Might be an invoice event; check invoice.subscription
-            match data.get("subscription").and_then(Value::as_str) {
+            match data
+                .get("subscription")
+                .or_else(|| data.pointer("/parent/subscription_details/subscription"))
+                .and_then(Value::as_str)
+            {
                 Some(id) if id.starts_with("sub_") => id,
                 _ => return Ok(()),
             }
         }
     };
+
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+        .bind(sub_id)
+        .execute(&mut *db)
+        .await?;
 
     let customer_id = data
         .get("customer")
@@ -36,7 +65,7 @@ pub async fn apply_subscription_event(
         "SELECT account_id, account_type FROM billing_customers WHERE stripe_customer_id = $1",
     )
     .bind(customer_id)
-    .fetch_optional(db)
+    .fetch_optional(&mut *db)
     .await?;
 
     let (account_id, account_type) = match account_info {
@@ -58,7 +87,7 @@ pub async fn apply_subscription_event(
         "SELECT last_event_created, status FROM billing_subscriptions WHERE stripe_subscription_id = $1",
     )
     .bind(sub_id)
-    .fetch_optional(db)
+    .fetch_optional(&mut *db)
     .await?;
 
     if let Some((Some(last_created), _)) = existing {
@@ -71,6 +100,7 @@ pub async fn apply_subscription_event(
     let raw_status = match event_type {
         "customer.subscription.deleted" => "canceled",
         "invoice.payment_failed" => "past_due",
+        "invoice.paid" => "active",
         _ => data
             .get("status")
             .and_then(Value::as_str)
@@ -131,11 +161,11 @@ pub async fn apply_subscription_event(
     .bind(cancel_at_end)
     .bind(event_id)
     .bind(event_created)
-    .execute(db)
+    .execute(&mut *db)
     .await?;
 
     record_audit_event(
-        db,
+        &mut *db,
         account_id,
         "stripe_webhook",
         event_type,
@@ -148,7 +178,7 @@ pub async fn apply_subscription_event(
     .await?;
 
     record_outbox_event(
-        db,
+        &mut *db,
         "billing.subscription.changed.v1",
         account_id,
         &json!({

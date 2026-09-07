@@ -3,6 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+node "$SCRIPT_DIR/env.mjs" sync
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/test-env.sh"
 # shellcheck disable=SC1091
@@ -17,4 +18,4 @@ export NVBES_BILLING_BIND_ADDR="${NVBES_BILLING_BIND_ADDR:-127.0.0.1:3080}"
 
 cd "$ROOT_DIR"
 free_dev_port "${NVBES_BILLING_BIND_ADDR##*:}" "billing-service"
-exec cargo run --manifest-path apps/billing-service/Cargo.toml -- serve
+exec node "$SCRIPT_DIR/stripe-dev.mjs"

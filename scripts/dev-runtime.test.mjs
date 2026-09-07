@@ -45,10 +45,7 @@ void test('the root development launcher starts the complete V1 ecosystem', asyn
   assert.match(launcher, /cargo run --package nvbes-trust-risk-service -- migrate/);
   assert.match(launcher, /cargo run --package nvbes-identity-service -- migrate/);
   assert.match(launcher, /cargo run --package nvbes-account-service -- migrate/);
-  assert.match(
-    launcher,
-    /cargo run --manifest-path apps\/billing-service\/Cargo\.toml -- migrate/,
-  );
+  assert.match(launcher, /cargo run --manifest-path apps\/billing-service\/Cargo\.toml -- migrate/);
   assert.doesNotMatch(launcher, /dev-(cloud|enterprise|developer|backoffice)/);
 });
 
@@ -64,10 +61,7 @@ void test('local Identity consumers share one generated RSA public key', async (
   assert.match(keys, /NVBES_IDENTITY_PUBLIC_KEY_PEM/);
   assert.match(account, /load_dev_identity_keys/);
   assert.match(billing, /load_dev_identity_keys/);
-  assert.match(
-    billing,
-    /--manifest-path apps\/billing-service\/Cargo\.toml -- serve/,
-  );
+  assert.match(billing, /exec node "\$SCRIPT_DIR\/stripe-dev\.mjs"/);
 });
 
 void test('development environment loaders expose custom Node debugger names', async () => {

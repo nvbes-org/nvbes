@@ -39,6 +39,10 @@ async fn billing_lifecycle_is_isolated_deduplicated_and_audited() {
                 let customer_id = customer_id.clone();
                 async move {
                     assert_eq!(headers["authorization"], "Bearer sk_test_mock_for_db_tests");
+                    assert_eq!(
+                        headers["idempotency-key"],
+                        format!("customer_team_{workspace_id}")
+                    );
                     assert_eq!(form["metadata[account_id]"], workspace_id.to_string());
                     assert_eq!(form["metadata[account_type]"], "team");
                     assert_eq!(form["email"], "billing-synthetic@nvbes.test");
