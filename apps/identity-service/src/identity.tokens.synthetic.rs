@@ -1,7 +1,9 @@
 use crate::{auth, tokens::TokenService};
+use nvbes_identity_service::browser::BrowserSecurity;
 use nvbes_identity_service::oauth::{
     clients::ClientRegistry,
     codes::{self, CodeExchange},
+    consent, interactions,
     request::AuthorizationInput,
     store::{self, RequestKind},
 };
@@ -54,7 +56,32 @@ pub(crate) async fn issue_for_session(
     }
     .validate(&clients)?;
     let handle = store::create_request(db, &request, RequestKind::Authorization).await?;
-    let code = codes::authorize(db, &clients, &handle, session_token).await?;
+    let security = BrowserSecurity::new("https://synthetic.example.invalid", false)?;
+    let browser = security.browser_cookie();
+    let started =
+        interactions::begin(db, &clients, &handle, &browser.token, Some(session_token)).await?;
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert(
+        "origin",
+        axum::http::HeaderValue::from_static("https://synthetic.example.invalid"),
+    );
+    headers.insert(
+        "content-type",
+        axum::http::HeaderValue::from_static("application/json"),
+    );
+    headers.insert(
+        "x-csrf-token",
+        axum::http::HeaderValue::from_str(&started.csrf_token)?,
+    );
+    headers.insert(
+        "cookie",
+        axum::http::HeaderValue::from_str(&format!(
+            "__Host-nvbes-browser={}; __Host-nvbes-session={session_token}",
+            browser.token
+        ))?,
+    );
+    let proof = security.verify_mutation(&axum::http::Method::POST, &headers)?;
+    let code = consent::approve(db, &clients, &handle, &proof).await?;
     let grant = codes::exchange(
         db,
         &clients,

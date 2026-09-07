@@ -15,6 +15,10 @@ pub enum OAuthError {
     UnsupportedResponseType,
     #[error("access_denied")]
     AccessDenied,
+    #[error("login_required")]
+    LoginRequired,
+    #[error("consent_required")]
+    ConsentRequired,
     #[error("temporarily_unavailable")]
     Unavailable,
 }

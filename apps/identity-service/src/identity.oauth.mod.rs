@@ -2,10 +2,18 @@
 pub mod clients;
 #[path = "identity.oauth.codes.rs"]
 pub mod codes;
+#[path = "identity.oauth.consent.rs"]
+pub mod consent;
 #[path = "identity.oauth.error.rs"]
 pub mod error;
+#[path = "identity.oauth.interactions.rs"]
+pub mod interactions;
+#[path = "identity.oauth.maintenance.rs"]
+pub mod maintenance;
 #[path = "identity.oauth.pkce.rs"]
 pub mod pkce;
+#[path = "identity.oauth.session.rs"]
+mod session;
 #[path = "identity.oauth.store.rs"]
 pub mod store;
 

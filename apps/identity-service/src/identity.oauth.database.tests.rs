@@ -2,7 +2,7 @@ use super::{
     codes,
     store::{self, RequestKind},
 };
-use crate::test_fixtures::{clients, database, exchange, request, session};
+use crate::test_fixtures::{authorize, clients, database, exchange, request, session};
 
 #[tokio::test]
 async fn par_is_bound_to_client_and_consumed_once_under_concurrency() {
@@ -32,15 +32,11 @@ async fn exchange_binds_pkce_client_redirect_and_revokes_grant_on_valid_replay()
     let clients = clients();
     let handle = request(&db, &clients, RequestKind::Authorization).await;
     let (_, token) = session(&db).await;
-    let code = codes::authorize(&db, &clients, &handle, &token)
+    let code = authorize(&db, &clients, &handle, &token)
         .await
         .unwrap()
         .code;
-    assert!(
-        codes::authorize(&db, &clients, &handle, &token)
-            .await
-            .is_err()
-    );
+    assert!(authorize(&db, &clients, &handle, &token).await.is_err());
     let mut bad = exchange(&code);
     bad.verifier = "invalid";
     assert!(codes::exchange(&db, &clients, bad).await.is_err());
@@ -84,11 +80,7 @@ async fn expired_requests_and_revoked_sessions_cannot_authorize() {
         .execute(&db)
         .await
         .unwrap();
-    assert!(
-        codes::authorize(&db, &clients, &handle, &token)
-            .await
-            .is_err()
-    );
+    assert!(authorize(&db, &clients, &handle, &token).await.is_err());
     assert!(store::load_request(&db, &clients, &handle).await.is_ok());
 }
 
@@ -98,7 +90,7 @@ async fn concurrent_code_exchanges_issue_only_one_grant() {
     let clients = clients();
     let handle = request(&db, &clients, RequestKind::Authorization).await;
     let (_, token) = session(&db).await;
-    let code = codes::authorize(&db, &clients, &handle, &token)
+    let code = authorize(&db, &clients, &handle, &token)
         .await
         .unwrap()
         .code;

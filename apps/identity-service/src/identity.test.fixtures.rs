@@ -1,9 +1,11 @@
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
+use crate::browser::{BrowserProof, BrowserSecurity};
 use crate::oauth::{
     clients::ClientRegistry,
-    codes::CodeExchange,
+    codes::{AuthorizationCode, CodeExchange},
+    consent, interactions,
     request::AuthorizationInput,
     store::{self, RequestKind},
 };
@@ -42,7 +44,12 @@ pub fn clients() -> ClientRegistry {
 }
 
 pub async fn request(db: &PgPool, clients: &ClientRegistry, kind: RequestKind) -> String {
-    let input = AuthorizationInput {
+    let input = input().validate(clients).unwrap();
+    store::create_request(db, &input, kind).await.unwrap()
+}
+
+pub fn input() -> AuthorizationInput {
+    AuthorizationInput {
         client_id: "account-web".into(),
         redirect_uri: "https://account.example/callback".into(),
         response_type: "code".into(),
@@ -56,9 +63,6 @@ pub async fn request(db: &PgPool, clients: &ClientRegistry, kind: RequestKind) -
         max_age: None,
         prompt: None,
     }
-    .validate(clients)
-    .unwrap();
-    store::create_request(db, &input, kind).await.unwrap()
 }
 
 pub async fn session(db: &PgPool) -> (Uuid, String) {
@@ -83,4 +87,41 @@ pub fn exchange(code: &str) -> CodeExchange<'_> {
         verifier: VERIFIER,
         verified_dpop_jkt: None,
     }
+}
+
+pub fn browser_proof(browser: &str, csrf: &str, session: Option<&str>) -> BrowserProof {
+    use axum::http::{HeaderMap, HeaderValue, Method};
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        "origin",
+        HeaderValue::from_static("https://identity.example"),
+    );
+    headers.insert("content-type", HeaderValue::from_static("application/json"));
+    headers.insert("x-csrf-token", HeaderValue::from_str(csrf).unwrap());
+    let mut cookies = format!("__Host-nvbes-browser={browser}");
+    if let Some(session) = session {
+        cookies.push_str(&format!("; __Host-nvbes-session={session}"));
+    }
+    headers.insert("cookie", HeaderValue::from_str(&cookies).unwrap());
+    BrowserSecurity::new("https://identity.example", false)
+        .unwrap()
+        .verify_mutation(&Method::POST, &headers)
+        .unwrap()
+}
+
+pub async fn authorize(
+    db: &PgPool,
+    clients: &ClientRegistry,
+    handle: &str,
+    session: &str,
+) -> Result<AuthorizationCode, store::StoreError> {
+    let browser = store::random_secret();
+    let started = interactions::begin(db, clients, handle, &browser, Some(session)).await?;
+    consent::approve(
+        db,
+        clients,
+        handle,
+        &browser_proof(&browser, &started.csrf_token, Some(session)),
+    )
+    .await
 }

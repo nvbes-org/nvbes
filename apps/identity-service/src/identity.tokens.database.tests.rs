@@ -1,7 +1,7 @@
 use super::{TokenService, tests::config};
 use crate::{
     oauth::{codes, store::RequestKind},
-    test_fixtures::{clients, database, exchange, request, session},
+    test_fixtures::{authorize, clients, database, exchange, request, session},
 };
 
 #[tokio::test]
@@ -11,9 +11,7 @@ async fn replay_revocation_reaches_previously_issued_access_tokens() {
     let service = TokenService::new(config()).unwrap();
     let handle = request(&db, &clients, RequestKind::Authorization).await;
     let (_, session) = session(&db).await;
-    let code = codes::authorize(&db, &clients, &handle, &session)
-        .await
-        .unwrap();
+    let code = authorize(&db, &clients, &handle, &session).await.unwrap();
     let grant = codes::exchange(&db, &clients, exchange(&code.code))
         .await
         .unwrap();
@@ -57,9 +55,7 @@ async fn token_response_is_issued_once_even_with_concurrent_callers() {
     let service = TokenService::new(config()).unwrap();
     let handle = request(&db, &clients, RequestKind::Authorization).await;
     let (_, session) = session(&db).await;
-    let code = codes::authorize(&db, &clients, &handle, &session)
-        .await
-        .unwrap();
+    let code = authorize(&db, &clients, &handle, &session).await.unwrap();
     let grant = codes::exchange(&db, &clients, exchange(&code.code))
         .await
         .unwrap();
@@ -77,9 +73,7 @@ async fn authorization_snapshot_prevents_later_session_changes_from_elevating_a_
     let service = TokenService::new(config()).unwrap();
     let handle = request(&db, &clients, RequestKind::Authorization).await;
     let (session_id, session) = session(&db).await;
-    let code = codes::authorize(&db, &clients, &handle, &session)
-        .await
-        .unwrap();
+    let code = authorize(&db, &clients, &handle, &session).await.unwrap();
     sqlx::query("UPDATE identity_sessions SET step_up_method='webauthn',step_up_at=clock_timestamp(),step_up_expires_at=clock_timestamp()+interval '5 minutes' WHERE id=$1")
         .bind(session_id).execute(&db).await.unwrap();
     let grant = codes::exchange(&db, &clients, exchange(&code.code))
@@ -117,9 +111,7 @@ async fn revocation_before_signing_and_registration_removal_refuse_tokens() {
     let service = TokenService::new(config()).unwrap();
     let handle = request(&db, &clients, RequestKind::Authorization).await;
     let (session_id, session) = session(&db).await;
-    let code = codes::authorize(&db, &clients, &handle, &session)
-        .await
-        .unwrap();
+    let code = authorize(&db, &clients, &handle, &session).await.unwrap();
     let grant = codes::exchange(&db, &clients, exchange(&code.code))
         .await
         .unwrap();
