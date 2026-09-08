@@ -38,12 +38,11 @@ trust-boundary patterns.
 
 ## Email deployment trust boundary
 
-The production email exception applies only to
-`.github/workflows/deploy-email.yml`. It has no dispatch inputs, accepts only
-`refs/heads/main`, checks out the exact `github.sha`, and runs through the
-protected `production-email` GitHub Environment. The environment must require
-independent approval and contains only email-scoped provider, state, encryption,
-and delivery credentials.
+The production email exception applies to `.github/workflows/deploy.yml`
+(under the `deploy-email` job). It accepts only `refs/heads/main`, checks out
+the exact `github.sha`, and runs through the protected `production-email` GitHub
+Environment. The environment must require independent approval and contains only
+email-scoped provider, state, encryption, and delivery credentials.
 
 The workflow consumes only
 `ghcr.io/nvbes-org/nvbes-email-worker:<github.sha>`, resolves it to a digest, and

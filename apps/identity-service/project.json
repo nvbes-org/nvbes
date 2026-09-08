@@ -1,61 +1,61 @@
 {
-	"name": "identity-service",
-	"projectType": "application",
-	"root": "apps/identity-service",
-	"sourceRoot": "apps/identity-service/src",
-	"targets": {
-		"check": {
-			"executor": "nx:run-commands",
-			"cache": true,
-			"inputs": [
-				"{projectRoot}/**/*",
-				"{workspaceRoot}/Cargo.toml",
-				"{workspaceRoot}/Cargo.lock",
-				"{workspaceRoot}/libs/rust/observability/**/*"
-			],
-			"options": {
-				"command": "cargo check --locked --package nvbes-identity-service --all-targets",
-				"cwd": "."
-			}
-		},
-		"test": {
-			"executor": "nx:run-commands",
-			"cache": false,
-			"options": {
-				"command": "cargo test --locked --package nvbes-identity-service",
-				"cwd": "."
-			}
-		},
-		"test:contract": {
-			"executor": "nx:run-commands",
-			"cache": true,
-			"inputs": [
-				"{projectRoot}/Dockerfile",
-				"{projectRoot}/tests/**/*",
-				"{projectRoot}/Cargo.toml",
-				"{projectRoot}/src/main.rs",
-				"{projectRoot}/src/identity.error_reporting.rs",
-				"{projectRoot}/src/identity.health.rs",
-				"{workspaceRoot}/.github/workflows/deploy-identity.yml",
-				"{workspaceRoot}/.github/workflows/validate-identity-restore.yml",
-				"{workspaceRoot}/infrastructure/environments/identity-production/**/*",
-				"{workspaceRoot}/tools/deployment/prove-identity-synthetic-auth.sh",
-				"{workspaceRoot}/tools/deployment/prove-identity-public-runtime.sh"
-			],
-			"options": {
-				"command": "node --test apps/identity-service/tests/container-contract.test.mjs",
-				"cwd": "."
-			}
-		},
-		"test:database": {
-			"executor": "nx:run-commands",
-			"cache": false,
-			"parallelism": false,
-			"options": {
-				"command": "bash scripts/test-identity-service-database.sh",
-				"cwd": "."
-			}
-		}
-	},
-	"tags": ["scope:platform", "type:app", "domain:identity", "layer:app"]
+  "name": "identity-service",
+  "projectType": "application",
+  "root": "apps/identity-service",
+  "sourceRoot": "apps/identity-service/src",
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/libs/rust/observability/**/*"
+      ],
+      "options": {
+        "command": "cargo check --locked --package nvbes-identity-service --all-targets",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "cargo test --locked --package nvbes-identity-service",
+        "cwd": "."
+      }
+    },
+    "test:contract": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/Dockerfile",
+        "{projectRoot}/tests/**/*",
+        "{projectRoot}/Cargo.toml",
+        "{projectRoot}/src/main.rs",
+        "{projectRoot}/src/identity.error_reporting.rs",
+        "{projectRoot}/src/identity.health.rs",
+        "{workspaceRoot}/.github/workflows/deploy.yml",
+        "{workspaceRoot}/.github/workflows/validate-restore.yml",
+        "{workspaceRoot}/infrastructure/environments/identity-production/**/*",
+        "{workspaceRoot}/tools/deployment/prove-identity-synthetic-auth.sh",
+        "{workspaceRoot}/tools/deployment/prove-identity-public-runtime.sh"
+      ],
+      "options": {
+        "command": "node --test apps/identity-service/tests/container-contract.test.mjs",
+        "cwd": "."
+      }
+    },
+    "test:database": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": {
+        "command": "bash scripts/test-identity-service-database.sh",
+        "cwd": "."
+      }
+    }
+  },
+  "tags": ["scope:platform", "type:app", "domain:identity", "layer:app"]
 }

@@ -170,10 +170,10 @@
               ]
             },
             {
-              "path": ".github/workflows/deploy-email.yml",
+              "path": ".github/workflows/deploy.yml",
               "includes": [
                 "name: production-email",
-                "if: github.ref == 'refs/heads/main'",
+                "github.ref == 'refs/heads/main'",
                 "ref: ${{ github.sha }}",
                 "production/email/terraform.tfstate",
                 "cosign verify",
@@ -181,10 +181,10 @@
               ]
             },
             {
-              "path": ".github/workflows/deploy-trust-risk.yml",
+              "path": ".github/workflows/deploy.yml",
               "includes": [
                 "name: production-trust-risk",
-                "if: github.ref == 'refs/heads/main'",
+                "github.ref == 'refs/heads/main'",
                 "ref: ${{ github.sha }}",
                 "production/trust-risk/terraform.tfstate",
                 "cosign verify",
@@ -192,10 +192,10 @@
               ]
             },
             {
-              "path": ".github/workflows/deploy-identity.yml",
+              "path": ".github/workflows/deploy.yml",
               "includes": [
                 "name: production-identity",
-                "if: github.ref == 'refs/heads/main'",
+                "github.ref == 'refs/heads/main'",
                 "ref: ${{ github.sha }}",
                 "production/identity/terraform.tfstate",
                 "cosign verify",
@@ -203,10 +203,10 @@
               ]
             },
             {
-              "path": ".github/workflows/validate-identity-restore.yml",
+              "path": ".github/workflows/validate-restore.yml",
               "includes": [
                 "name: production-identity",
-                "if: github.ref == 'refs/heads/main'",
+                "github.ref == 'refs/heads/main'",
                 "ref: ${{ inputs.approved_sha }}",
                 "validate-identity-production-restore",
                 "expected_principal_id",
@@ -214,10 +214,10 @@
               ]
             },
             {
-              "path": ".github/workflows/deploy-account.yml",
+              "path": ".github/workflows/deploy.yml",
               "includes": [
                 "name: production-account",
-                "if: github.ref == 'refs/heads/main'",
+                "github.ref == 'refs/heads/main'",
                 "ref: ${{ github.sha }}",
                 "production/account/terraform.tfstate",
                 "cosign verify",
@@ -225,10 +225,10 @@
               ]
             },
             {
-              "path": ".github/workflows/validate-account-restore.yml",
+              "path": ".github/workflows/validate-restore.yml",
               "includes": [
                 "name: production-account",
-                "if: github.ref == 'refs/heads/main'",
+                "github.ref == 'refs/heads/main'",
                 "ref: ${{ inputs.approved_sha }}",
                 "validate-account-production-restore",
                 "expected_principal_id",
@@ -236,7 +236,7 @@
               ]
             },
             {
-              "path": ".github/workflows/validate-platform-operations-restore.yml",
+              "path": ".github/workflows/validate-restore.yml",
               "includes": [
                 "validate-platform-operations-restore",
                 "ref: ${{ inputs.approved_sha }}",

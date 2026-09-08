@@ -30,25 +30,26 @@ test('state policy fits Scaleway limits with shared listing and isolated object 
   assert.match(module, /"aws:SecureTransport" = "true"/u);
 });
 
-for (const service of deployableWorkflows) {
-  const path = `.github/workflows/deploy-${service}.yml`;
-  const workflow = readFileSync(path, 'utf8');
-  test(`${service} deployment promotes only an exactly validated main revision`, () => {
-    assert.match(workflow, /^  ci-provenance:\n/mu);
-    assert.match(workflow, /node tools\/ci\/verify-ci-provenance\.mjs/u);
-    assert.match(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
-    assert.match(workflow, /needs: \[ci-provenance\]/u);
-    assert.doesNotMatch(workflow, /^  ci-test-gate:/mu);
-  });
+const deployWorkflow = readFileSync('.github/workflows/deploy.yml', 'utf8');
 
-  test(`${service} deployment does not rebuild its CI gate`, () => {
-    const gate = workflow.slice(
-      workflow.indexOf('  ci-provenance:'),
-      workflow.indexOf('  build-scan-sign:'),
-    );
-    assert.doesNotMatch(gate, /pnpm install|cargo (?:check|test)|terraform .*validate/u);
+for (const service of deployableWorkflows) {
+  test(`${service} deployment promotes only an exactly validated main revision`, () => {
+    assert.match(deployWorkflow, /^  ci-provenance:\n/mu);
+    assert.match(deployWorkflow, /node tools\/ci\/verify-ci-provenance\.mjs/u);
+    assert.match(deployWorkflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
+    assert.ok(deployWorkflow.includes(`build-scan-sign-${service}:`));
+    assert.ok(deployWorkflow.includes(`deploy-${service}:`));
+    assert.doesNotMatch(deployWorkflow, /^  ci-test-gate:/mu);
   });
 }
+
+test('deployment does not rebuild its CI gate', () => {
+  const gate = deployWorkflow.slice(
+    deployWorkflow.indexOf('  ci-provenance:'),
+    deployWorkflow.indexOf('  build-scan-sign-account:'),
+  );
+  assert.doesNotMatch(gate, /pnpm install|cargo (?:check|test)|terraform .*validate/u);
+});
 
 for (const root of [
   'infrastructure/bootstrap/production',

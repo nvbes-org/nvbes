@@ -2,9 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const emailWorkflow = readFileSync('.github/workflows/deploy-email.yml', 'utf8');
-const trustRiskWorkflow = readFileSync('.github/workflows/deploy-trust-risk.yml', 'utf8');
-const billingWorkflow = readFileSync('.github/workflows/deploy-billing.yml', 'utf8');
+const deployWorkflow = readFileSync('.github/workflows/deploy.yml', 'utf8');
 const rotationWorkflow = readFileSync('.github/workflows/rotate-ci-cache-credentials.yml', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const cacheModule = readFileSync('infrastructure/modules/scaleway-ci-cache/main.tf', 'utf8');
@@ -14,27 +12,24 @@ const securityChecker =
   readFileSync('tools/security/check-ci-cd-security.mjs', 'utf8');
 
 test('deployment builds combine shared Rust and isolated Scaleway registry cache scopes', () => {
-  for (const [workflow, scope] of [
-    [emailWorkflow, 'email-worker'],
-    [trustRiskWorkflow, 'trust-risk-service'],
-    [billingWorkflow, 'billing-service'],
-  ]) {
-    assert.match(workflow, /name: production-ci-cache/u);
-    assert.match(workflow, /password: \$\{\{ secrets\.SCW_CI_CACHE_SECRET_KEY \}\}/u);
+  for (const scope of ['email-worker', 'trust-risk-service', 'billing-service']) {
+    assert.match(deployWorkflow, /name: production-ci-cache/u);
+    assert.match(deployWorkflow, /password: \$\{\{ secrets\.SCW_CI_CACHE_SECRET_KEY \}\}/u);
     assert.ok(
-      workflow.includes(`type=registry,ref=\${{ env.CI_CACHE_REGISTRY }}/${scope}:buildcache`),
+      deployWorkflow.includes(
+        `type=registry,ref=\${{ env.CI_CACHE_REGISTRY }}/${scope}:buildcache`,
+      ),
     );
     assert.ok(
-      workflow.includes(
+      deployWorkflow.includes(
         `type=registry,ref=\${{ env.CI_CACHE_REGISTRY }}/${scope}:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true`,
       ),
     );
-    assert.equal(
-      workflow.match(/rust-builder:rust-1\.91\.1-linux-amd64/gu)?.length,
-      2,
-      'each deploy build imports and exports the shared Linux Rust cache',
-    );
   }
+  assert.ok(
+    (deployWorkflow.match(/rust-builder:rust-1\.91\.1-linux-amd64/gu)?.length ?? 0) >= 6,
+    'each deploy build imports and exports the shared Linux Rust cache',
+  );
 });
 
 test('Rust Dockerfiles use stable, platform-scoped BuildKit cache mounts', () => {
