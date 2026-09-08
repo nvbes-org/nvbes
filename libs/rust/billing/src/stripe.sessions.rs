@@ -3,34 +3,26 @@ use uuid::Uuid;
 use super::{StripeProviderError, StripeSession};
 use nvbes_core::config::AppConfig;
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Stripe checkout field construction keeps explicit metadata inputs."
-)]
+#[derive(Debug, Clone)]
+pub struct StripeCheckoutSessionParams<'a> {
+    pub customer_id: &'a str,
+    pub owner_principal_id: Uuid,
+    pub workspace_id: Uuid,
+    pub plan_code: &'a str,
+    pub stripe_price_id: &'a str,
+    pub success_url: &'a str,
+    pub cancel_url: &'a str,
+    pub fraud_metadata: &'a [(String, String)],
+}
+
 pub async fn create_stripe_checkout_session(
     config: &AppConfig,
-    customer_id: &str,
-    owner_principal_id: Uuid,
-    workspace_id: Uuid,
-    plan_code: &str,
-    stripe_price_id: &str,
-    success_url: &str,
-    cancel_url: &str,
-    fraud_metadata: &[(String, String)],
+    params: StripeCheckoutSessionParams<'_>,
 ) -> Result<StripeSession, StripeProviderError> {
     let response = super::stripe_post_form(
         config,
         "/v1/checkout/sessions",
-        build_checkout_session_fields(
-            customer_id,
-            owner_principal_id,
-            workspace_id,
-            plan_code,
-            stripe_price_id,
-            success_url,
-            cancel_url,
-            fraud_metadata,
-        ),
+        build_checkout_session_fields(params),
     )
     .await?;
 
@@ -56,15 +48,18 @@ pub async fn create_stripe_portal_session(
 }
 
 pub fn build_checkout_session_fields(
-    customer_id: &str,
-    owner_principal_id: Uuid,
-    workspace_id: Uuid,
-    plan_code: &str,
-    stripe_price_id: &str,
-    success_url: &str,
-    cancel_url: &str,
-    fraud_metadata: &[(String, String)],
+    params: StripeCheckoutSessionParams<'_>,
 ) -> Vec<(String, String)> {
+    let StripeCheckoutSessionParams {
+        customer_id,
+        owner_principal_id,
+        workspace_id,
+        plan_code,
+        stripe_price_id,
+        success_url,
+        cancel_url,
+        fraud_metadata,
+    } = params;
     let mut fields = vec![
         ("mode".to_string(), "subscription".to_string()),
         ("customer".to_string(), customer_id.to_string()),

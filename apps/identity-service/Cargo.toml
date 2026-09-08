@@ -24,7 +24,9 @@ nvbes-email = { path = "../../libs/rust/email" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
 rand.workspace = true
 reqwest.workspace = true
-rsa = { version = "0.9.10", features = ["pem"] }
+pkcs1 = { version = "0.7.5", features = ["pkcs8"] }
+spki = { version = "0.7.3", features = ["pem"] }
+der = { version = "0.7.10", features = ["pem"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

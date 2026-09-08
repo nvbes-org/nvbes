@@ -18,7 +18,7 @@ for (const failBaseline of [false, true]) {
           dependencies: [],
         })),
       };
-      const cargo = `#!${process.execPath}\nconst fs=require('node:fs');const args=process.argv.slice(2);fs.appendFileSync(process.env.TEST_CALLS,JSON.stringify(args)+'\\n');if(args[0]==='metadata') console.log(process.env.TEST_METADATA);if(args.includes('--workspace')&&process.env.TEST_FAIL==='true')process.exit(1);`;
+      const cargo = `#!${process.execPath}\nconst fs=require('node:fs');const args=process.argv.slice(2);fs.appendFileSync(process.env.TEST_CALLS,JSON.stringify(args)+'\\n');if(args[0]==='metadata') console.log(process.env.TEST_METADATA);if(args[0]==='test'&&args.includes('--workspace')&&process.env.TEST_FAIL==='true')process.exit(1);`;
       writeFileSync(join(directory, 'cargo'), cargo, { mode: 0o755 });
       writeFileSync(join(directory, 'event.json'), '{}');
       const result = spawnSync(process.execPath, ['tools/ci/run-rust.mjs'], {

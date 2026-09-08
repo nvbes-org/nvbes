@@ -50,6 +50,7 @@ pub use provider_subscription_context::{
     ProviderSubscriptionContext, provider_subscription_context_tx,
 };
 pub use provider_subscriptions::{
+    ActivateMollieSubscriptionInput, UpsertProviderSubscriptionInput,
     activate_mollie_subscription_after_initial_payment_tx, upsert_provider_subscription_tx,
     workspace_id_for_provider_customer_code_tx, workspace_id_for_provider_subscription_tx,
 };

@@ -7,11 +7,7 @@ use nvbes_email::proto::nvbes::email::v1::{
     transactional_email_template::Template,
 };
 use nvbes_email::{EmailClient, EmailClientConfig};
-use rsa::{
-    RsaPrivateKey,
-    pkcs8::{EncodePrivateKey, EncodePublicKey},
-    rand_core::OsRng,
-};
+use crate::test_keys::{TEST_RSA_PUBLIC_KEY_PEM, test_rsa_private_key_pem};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{Request, Response, Status, transport::Server};
@@ -197,18 +193,13 @@ async fn access_token_introspection_tracks_session_revocation() {
         .await
         .expect("test database connects");
     migrate(&pool).await.expect("identity migrations apply");
-    let private = RsaPrivateKey::new(&mut OsRng, 2048).unwrap();
-    let public = private.to_public_key();
     let service = TokenService::new(
         TokenConfig::from_values(
             "test",
             "http://identity.test".into(),
             "identity-key-1".into(),
-            private
-                .to_pkcs8_pem(Default::default())
-                .unwrap()
-                .to_string(),
-            public.to_public_key_pem(Default::default()).unwrap(),
+            test_rsa_private_key_pem(),
+            TEST_RSA_PUBLIC_KEY_PEM.to_string(),
             "nvbes-account-service".into(),
         )
         .unwrap(),

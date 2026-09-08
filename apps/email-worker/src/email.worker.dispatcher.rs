@@ -117,7 +117,7 @@ async fn dispatch_claim(
         }
     };
 
-    if dispatch_db::expire_claim_if_due(&state.db, &claim).await? {
+    if dispatch_db::expire_claim_if_due(&state.db, claim).await? {
         return Ok(DispatchOutcome::Acknowledged);
     }
     let started_at = Instant::now();

@@ -38,9 +38,7 @@ impl HealthAggregator {
             probe.live && probe.ready && probe.latency_ms >= self.cold_start_threshold_ms;
         let status = if !probe.live {
             HealthStatus::Unavailable
-        } else if !probe.ready {
-            HealthStatus::Degraded
-        } else if is_cold_start {
+        } else if !probe.ready || is_cold_start {
             HealthStatus::Degraded
         } else {
             HealthStatus::Healthy

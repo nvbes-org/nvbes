@@ -22,6 +22,19 @@ if (!packages.length || packages.some((name) => !members.includes(name)))
   throw new Error('Invalid Rust candidate scope');
 if (spawnSync('cargo', ['fmt', '--all', '--check'], { stdio: 'inherit' }).status !== 0)
   throw new Error('Rust formatting failed');
+const clippyArgs = [
+  'clippy',
+  '--locked',
+  '--all-targets',
+  ...(plan.rustMode === 'scoped'
+    ? packages.flatMap((name) => ['--package', name])
+    : ['--workspace']),
+  '--',
+  '-D',
+  'warnings',
+];
+if (spawnSync('cargo', clippyArgs, { stdio: 'inherit' }).status !== 0)
+  throw new Error('Rust clippy linting failed');
 const started = Date.now();
 const scoped = spawnSync(
   'cargo',

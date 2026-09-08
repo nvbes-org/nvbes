@@ -3,7 +3,7 @@ use chrono::Utc;
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, decode_header, encode,
 };
-use rsa::{RsaPublicKey, pkcs8::DecodePublicKey, traits::PublicKeyParts};
+use der::Decode;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -67,15 +67,24 @@ impl TokenService {
     pub fn new(config: TokenConfig) -> anyhow::Result<Self> {
         let encoding_key = EncodingKey::from_rsa_pem(config.private_key_pem.as_bytes())?;
         let decoding_key = DecodingKey::from_rsa_pem(config.public_key_pem.as_bytes())?;
-        let public_key = RsaPublicKey::from_public_key_pem(&config.public_key_pem)?;
+        let (_label, der_bytes) = der::pem::decode_vec(config.public_key_pem.as_bytes())
+            .map_err(|e| anyhow::anyhow!("Failed to decode PEM: {e}"))?;
+        let spki = spki::SubjectPublicKeyInfoRef::from_der(&der_bytes)
+            .map_err(|e| anyhow::anyhow!("Failed to parse SPKI DER: {e}"))?;
+        let public_key = pkcs1::RsaPublicKey::from_der(spki.subject_public_key.raw_bytes())
+            .map_err(|e| anyhow::anyhow!("Failed to decode RSA public key DER: {e}"))?;
+        let n_bytes = public_key.modulus.as_bytes();
+        let n_trimmed = n_bytes.strip_prefix(&[0]).unwrap_or(n_bytes);
+        let e_bytes = public_key.public_exponent.as_bytes();
+        let e_trimmed = e_bytes.strip_prefix(&[0]).unwrap_or(e_bytes);
         let jwks = JsonWebKeySet {
             keys: vec![JsonWebKey {
                 kid: config.key_id.clone(),
                 kty: "RSA",
                 usage: "sig",
                 alg: "RS256",
-                n: URL_SAFE_NO_PAD.encode(public_key.n().to_bytes_be()),
-                e: URL_SAFE_NO_PAD.encode(public_key.e().to_bytes_be()),
+                n: URL_SAFE_NO_PAD.encode(n_trimmed),
+                e: URL_SAFE_NO_PAD.encode(e_trimmed),
             }],
         };
         Ok(Self {

@@ -50,93 +50,65 @@ pub fn checkout_session_response(checkout: CheckoutProviderResult) -> CheckoutSe
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Provider checkout creation keeps routing, URLs, and billing records explicit."
-)]
+pub struct CreateProviderCheckoutInput<'a> {
+    pub workspace_id: Uuid,
+    pub record: &'a BillingStateRecord,
+    pub target_plan: &'a PlanRecord,
+    pub checkout_country: Option<&'a str>,
+    pub checkout_amount_minor: i64,
+    pub success_url: &'a str,
+    pub cancel_url: &'a str,
+    pub provider: ProviderCode,
+    pub fraud_metadata: &'a [(String, String)],
+}
+
 pub async fn create_provider_checkout(
     tx: &mut sqlx::Transaction<'_, Postgres>,
     config: &AppConfig,
-    workspace_id: Uuid,
-    record: &BillingStateRecord,
-    target_plan: &PlanRecord,
-    checkout_country: Option<&str>,
-    checkout_amount_minor: i64,
-    success_url: &str,
-    cancel_url: &str,
-    provider: ProviderCode,
-    fraud_metadata: &[(String, String)],
+    input: CreateProviderCheckoutInput<'_>,
 ) -> Result<CheckoutProviderResult, CheckoutProviderError> {
-    match provider {
-        ProviderCode::Stripe => {
-            create_stripe_checkout(
-                tx,
-                config,
-                workspace_id,
-                record,
-                target_plan,
-                checkout_country,
-                success_url,
-                cancel_url,
-                fraud_metadata,
-            )
-            .await
-        }
-        ProviderCode::Mollie => {
-            create_mollie_checkout(
-                tx,
-                config,
-                workspace_id,
-                record,
-                target_plan,
-                checkout_amount_minor,
-                success_url,
-                cancel_url,
-                fraud_metadata,
-            )
-            .await
-        }
+    match input.provider {
+        ProviderCode::Stripe => create_stripe_checkout(tx, config, &input).await,
+        ProviderCode::Mollie => create_mollie_checkout(tx, config, &input).await,
         ProviderCode::Cb => Err(CheckoutProviderError::ProviderNotImplemented),
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Stripe checkout needs explicit billing record, plan, region, and redirect URLs."
-)]
 async fn create_stripe_checkout(
     tx: &mut sqlx::Transaction<'_, Postgres>,
     config: &AppConfig,
-    workspace_id: Uuid,
-    record: &BillingStateRecord,
-    target_plan: &PlanRecord,
-    checkout_country: Option<&str>,
-    success_url: &str,
-    cancel_url: &str,
-    fraud_metadata: &[(String, String)],
+    input: &CreateProviderCheckoutInput<'_>,
 ) -> Result<CheckoutProviderResult, CheckoutProviderError> {
-    let mapping = db::fetch_active_price_mapping_tx(tx, target_plan.plan_id, checkout_country)
-        .await?
-        .ok_or(CheckoutProviderError::MissingProviderPriceMapping)?;
-    let customer_id = match provider_customer_id_for(record, ProviderCode::Stripe) {
+    let mapping =
+        db::fetch_active_price_mapping_tx(tx, input.target_plan.plan_id, input.checkout_country)
+            .await?
+            .ok_or(CheckoutProviderError::MissingProviderPriceMapping)?;
+    let customer_id = match provider_customer_id_for(input.record, ProviderCode::Stripe) {
         Some(customer_id) => customer_id,
         None => {
-            let customer = stripe::create_stripe_customer(config, record).await?;
-            db::upsert_provider_customer_tx(tx, workspace_id, ProviderCode::Stripe, &customer.id)
-                .await?;
+            let customer = stripe::create_stripe_customer(config, input.record).await?;
+            db::upsert_provider_customer_tx(
+                tx,
+                input.workspace_id,
+                ProviderCode::Stripe,
+                &customer.id,
+            )
+            .await?;
             customer.id
         }
     };
     let session = stripe::create_stripe_checkout_session(
         config,
-        &customer_id,
-        record.owner_principal_id,
-        workspace_id,
-        &target_plan.code,
-        &mapping.stripe_price_id,
-        success_url,
-        cancel_url,
-        fraud_metadata,
+        stripe::StripeCheckoutSessionParams {
+            customer_id: &customer_id,
+            owner_principal_id: input.record.owner_principal_id,
+            workspace_id: input.workspace_id,
+            plan_code: &input.target_plan.code,
+            stripe_price_id: &mapping.stripe_price_id,
+            success_url: input.success_url,
+            cancel_url: input.cancel_url,
+            fraud_metadata: input.fraud_metadata,
+        },
     )
     .await?;
 
@@ -155,30 +127,20 @@ async fn create_stripe_checkout(
     })
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Mollie checkout needs explicit billing record, plan, amount, and redirect URLs."
-)]
 async fn create_mollie_checkout(
     tx: &mut sqlx::Transaction<'_, Postgres>,
     config: &AppConfig,
-    workspace_id: Uuid,
-    record: &BillingStateRecord,
-    target_plan: &PlanRecord,
-    checkout_amount_minor: i64,
-    success_url: &str,
-    cancel_url: &str,
-    fraud_metadata: &[(String, String)],
+    input: &CreateProviderCheckoutInput<'_>,
 ) -> Result<CheckoutProviderResult, CheckoutProviderError> {
-    let provider_customer_id = match provider_customer_id_for(record, ProviderCode::Mollie) {
+    let provider_customer_id = match provider_customer_id_for(input.record, ProviderCode::Mollie) {
         Some(provider_customer_id) => provider_customer_id,
         None => {
             let customer = mollie::create_mollie_customer(
                 config,
                 &ProviderCustomerInput {
-                    tenant_id: record.workspace_id.to_string(),
-                    email: Some(record.owner_email.clone()),
-                    name: Some(record.workspace_name.clone()),
+                    tenant_id: input.record.workspace_id.to_string(),
+                    email: Some(input.record.owner_email.clone()),
+                    name: Some(input.record.workspace_name.clone()),
                 },
             )
             .await?;
@@ -187,7 +149,7 @@ async fn create_mollie_checkout(
     };
     db::upsert_provider_customer_tx(
         tx,
-        workspace_id,
+        input.workspace_id,
         ProviderCode::Mollie,
         &provider_customer_id,
     )
@@ -195,18 +157,18 @@ async fn create_mollie_checkout(
     let payment = mollie::create_mollie_payment(
         config,
         &ProviderCheckoutInput {
-            tenant_id: record.workspace_id.to_string(),
+            tenant_id: input.record.workspace_id.to_string(),
             provider_customer_id: provider_customer_id.clone(),
-            plan_code: Some(target_plan.code.clone()),
-            amount_minor: checkout_amount_minor,
+            plan_code: Some(input.target_plan.code.clone()),
+            amount_minor: input.checkout_amount_minor,
             currency: "EUR".to_string(),
-            success_url: success_url.to_string(),
-            cancel_url: cancel_url.to_string(),
+            success_url: input.success_url.to_string(),
+            cancel_url: input.cancel_url.to_string(),
             webhook_url: Some(format!(
                 "{}/webhooks/mollie",
                 config.billing_api_base_url().trim_end_matches('/')
             )),
-            fraud_metadata: fraud_metadata.to_vec(),
+            fraud_metadata: input.fraud_metadata.to_vec(),
         },
     )
     .await?;

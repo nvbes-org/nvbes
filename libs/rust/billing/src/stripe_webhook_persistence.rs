@@ -47,29 +47,30 @@ pub async fn persist_stripe_payment_method_if_present(
     Ok(())
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Stripe webhook projection carries provider and period state."
-)]
+#[derive(Debug, Clone)]
+pub struct PersistStripeSubscriptionInput<'a> {
+    pub workspace_id: Uuid,
+    pub object: &'a Value,
+    pub provider_subscription_id: &'a str,
+    pub status: &'a str,
+    pub current_period_start: Option<chrono::DateTime<Utc>>,
+    pub current_period_end: Option<chrono::DateTime<Utc>>,
+    pub primary_for_subscription: bool,
+    pub event_name: &'a str,
+}
+
 pub async fn persist_stripe_subscription_if_present(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    workspace_id: Uuid,
-    object: &Value,
-    provider_subscription_id: &str,
-    status: &str,
-    current_period_start: Option<chrono::DateTime<Utc>>,
-    current_period_end: Option<chrono::DateTime<Utc>>,
-    primary_for_subscription: bool,
-    event_name: &str,
+    input: PersistStripeSubscriptionInput<'_>,
 ) -> BillingWebhookProcessingResult<()> {
-    let Some(customer_id) = crate::required_string(object, "customer") else {
+    let Some(customer_id) = crate::required_string(input.object, "customer") else {
         return Ok(());
     };
 
-    if primary_for_subscription {
+    if input.primary_for_subscription {
         crate::db::upsert_provider_customer_tx(
             tx,
-            workspace_id,
+            input.workspace_id,
             ProviderCode::Stripe,
             &customer_id,
         )
@@ -77,7 +78,7 @@ pub async fn persist_stripe_subscription_if_present(
     } else {
         crate::db::upsert_provider_customer_mapping_tx(
             tx,
-            workspace_id,
+            input.workspace_id,
             ProviderCode::Stripe,
             &customer_id,
         )
@@ -85,15 +86,17 @@ pub async fn persist_stripe_subscription_if_present(
     }
     crate::db::upsert_provider_subscription_tx(
         tx,
-        workspace_id,
-        ProviderCode::Stripe,
-        &customer_id,
-        provider_subscription_id,
-        status,
-        current_period_start,
-        current_period_end,
-        primary_for_subscription,
-        serde_json::json!({ "event": event_name }),
+        crate::db::UpsertProviderSubscriptionInput {
+            workspace_id: input.workspace_id,
+            provider: ProviderCode::Stripe,
+            provider_customer_id: &customer_id,
+            provider_subscription_id: input.provider_subscription_id,
+            status: input.status,
+            current_period_start: input.current_period_start,
+            current_period_end: input.current_period_end,
+            primary_for_subscription: input.primary_for_subscription,
+            metadata: serde_json::json!({ "event": input.event_name }),
+        },
     )
     .await?;
     Ok(())

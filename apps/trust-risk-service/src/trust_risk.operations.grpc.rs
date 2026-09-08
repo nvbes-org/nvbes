@@ -11,7 +11,7 @@ use crate::{
     app::TrustRiskState,
     auth, labels_db,
     operations_types::{
-        evaluation, label_kind_name, map_label, map_review, map_rule, review_case, review_case_row,
+        evaluation, EvaluationParams, label_kind_name, map_label, map_review, map_rule, review_case, review_case_row,
         review_state, review_state_name, rule_receipt, unavailable, uuid,
     },
     review_db, rules_db,
@@ -56,9 +56,17 @@ impl TrustRiskOperationsService for OperationsService {
         ).bind(id).fetch_optional(&self.state.db).await.map_err(unavailable)?
             .and_then(label_kind_name).map(str::to_string);
         Ok(Response::new(pb::RiskEvaluationDetail {
-            evaluation: Some(evaluation(
-                id, row.2, &row.3, &row.4, reasons, &row.5, &row.6, row.7, row.8,
-            )),
+            evaluation: Some(evaluation(EvaluationParams {
+                id,
+                score: row.2,
+                band: &row.3,
+                recommendation: &row.4,
+                reasons,
+                feature_version: &row.5,
+                rule_version: &row.6,
+                evaluated_at: row.7,
+                expires_at: row.8,
+            })),
             producer: row.0,
             operation_class: row.1,
             features: features

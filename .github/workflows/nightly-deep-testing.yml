@@ -1,0 +1,83 @@
+name: nightly deep testing
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-deep-testing-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  fuzzing:
+    name: continuous fuzzing
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/nightly-deep-testing.yml
+      - uses: ./.github/actions/ci-setup
+        with:
+          node: 'false'
+          rust: 'true'
+          terraform: 'false'
+          caches: cargo
+      - name: Install cargo-fuzz
+        run: cargo install --locked cargo-fuzz
+      - name: Fuzz critical parsing targets
+        run: |
+          cargo fuzz run dpop_proof -- -max_total_time=120
+          cargo fuzz run oauth_authorization_details -- -max_total_time=120
+          cargo fuzz run upload_inputs -- -max_total_time=120
+
+  sca-audit:
+    name: security advisories and license check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/nightly-deep-testing.yml
+      - name: Enforce Rust advisory, license, ban and source policy
+        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25
+        with:
+          command: check
+          arguments: --all-features
+
+  mutation-testing:
+    name: mutation testing (core & billing)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/nightly-deep-testing.yml
+      - uses: ./.github/actions/ci-setup
+        with:
+          node: 'false'
+          rust: 'true'
+          terraform: 'false'
+          caches: cargo
+      - name: Install cargo-mutants
+        run: cargo install --locked cargo-mutants
+      - name: Mutate critical core libraries
+        run: cargo mutants --package nvbes-core --package nvbes-billing --timeout 60
