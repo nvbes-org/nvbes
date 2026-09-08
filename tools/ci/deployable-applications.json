@@ -1,6 +1,24 @@
 {
   "rust": [
     {
+      "project": "account-service",
+      "package": "nvbes-account-service",
+      "image": "nvbes-account-service",
+      "dockerfile": "apps/account-service/Dockerfile",
+      "binary": "nvbes-account-service",
+      "appRoot": "apps/account-service",
+      "contract": "apps/account-service/tests/container-contract.test.mjs"
+    },
+    {
+      "project": "billing-service",
+      "package": "nvbes-billing-service",
+      "image": "nvbes-billing-service",
+      "dockerfile": "apps/billing-service/Dockerfile",
+      "binary": "nvbes-billing-service",
+      "appRoot": "apps/billing-service",
+      "contract": "apps/billing-service/tests/container-contract.test.mjs"
+    },
+    {
       "project": "email-worker",
       "package": "nvbes-email-worker",
       "image": "nvbes-email-worker",
@@ -8,6 +26,24 @@
       "binary": "nvbes-email-worker",
       "appRoot": "apps/email-worker",
       "contract": "apps/email-worker/tests/container-contract.test.mjs"
+    },
+    {
+      "project": "identity-service",
+      "package": "nvbes-identity-service",
+      "image": "nvbes-identity-service",
+      "dockerfile": "apps/identity-service/Dockerfile",
+      "binary": "nvbes-identity-service",
+      "appRoot": "apps/identity-service",
+      "contract": "apps/identity-service/tests/container-contract.test.mjs"
+    },
+    {
+      "project": "trust-risk-service",
+      "package": "nvbes-trust-risk-service",
+      "image": "nvbes-trust-risk-service",
+      "dockerfile": "apps/trust-risk-service/Dockerfile",
+      "binary": "nvbes-trust-risk-service",
+      "appRoot": "apps/trust-risk-service",
+      "contract": "apps/trust-risk-service/tests/container-contract.test.mjs"
     }
   ],
   "web": []

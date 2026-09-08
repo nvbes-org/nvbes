@@ -234,6 +234,15 @@
                 "expected_principal_id",
                 "DELETE_RESTORE_DATABASE=true"
               ]
+            },
+            {
+              "path": ".github/workflows/validate-platform-operations-restore.yml",
+              "includes": [
+                "validate-platform-operations-restore",
+                "ref: ${{ inputs.approved_sha }}",
+                "check-ci-cd-security.mjs",
+                "node tools/security/check-ci-cd-security.mjs"
+              ]
             }
           ]
         }

@@ -33,6 +33,10 @@ jobs:
         with:
           ref: ${{ inputs.approved_sha }}
           persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/validate-platform-operations-restore.yml
       - name: Enforce recovery approval contract
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
