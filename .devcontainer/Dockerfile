@@ -62,6 +62,8 @@ RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs \
 
 RUN cargo install sqlx-cli --locked --no-default-features --features postgres \
   && cargo install cargo-watch --locked \
+  && cargo install systemfd --locked \
+  && cargo install watchexec-cli --locked \
   && chmod -R a+w "${CARGO_HOME}"
 
 RUN curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o /tmp/install-opentofu.sh \

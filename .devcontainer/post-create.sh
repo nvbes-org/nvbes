@@ -123,6 +123,13 @@ if ! command -v pnpm >/dev/null 2>&1; then
   npm install -g pnpm@11.1.3
 fi
 pnpm install --frozen-lockfile --prefer-offline
-pnpm dlx lefthook install
+  pnpm dlx lefthook install
 
-printf '\nDev container ready. Run: pnpm db:migrate && pnpm dev\n'
+  # Verify hotreload tools
+  for tool in cargo-watch systemfd watchexec; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      echo "Warning: $tool not found in PATH" >&2
+    fi
+  done
+
+  printf '\nDev container ready. Run: pnpm db:migrate && pnpm dev:hot\n'
