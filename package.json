@@ -5,6 +5,7 @@
   "license": "AGPL-3.0-only",
   "scripts": {
     "dev": "bash scripts/dev.sh",
+    "dev:hot": "bash scripts/dev-hot.sh",
     "dev:account-service": "bash scripts/dev-account-service.sh",
     "dev:billing-service": "bash scripts/dev-billing-service.sh",
     "dev:email-worker": "bash scripts/dev-email-worker.sh",
@@ -104,7 +105,7 @@
     "test:post-deploy": "bash scripts/test-smoke.sh",
     "test:unit": "bash scripts/test-unit.sh",
     "test:integration": "bash scripts/test-integration.sh",
-    "test:email:coverage": "bash scripts/test-email-coverage.sh",
+    "test:rust:coverage": "bash scripts/test-workspace-coverage.sh",
     "test:e2e:critical": "bash scripts/test-e2e-critical.sh",
     "test:e2e:critical:local": "pnpm exec nx run identity-web:test:e2e:critical:local",
     "test:smoke:contract": "bash scripts/test-openapi-contract.sh",
