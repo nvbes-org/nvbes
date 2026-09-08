@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import { selectAffectedCargoPackages } from './cargo-affected.core.mjs';
+import { checkOomExit, startMemoryWatchdog, stopMemoryWatchdog } from './memory-guard.mjs';
 
 const plan = JSON.parse(process.env.NVBES_CI_PLAN);
 const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
@@ -22,18 +23,24 @@ if (!packages.length || packages.some((name) => !members.includes(name)))
   throw new Error('Invalid Rust candidate scope');
 if (spawnSync('cargo', ['fmt', '--all', '--check'], { stdio: 'inherit' }).status !== 0)
   throw new Error('Rust formatting failed');
+startMemoryWatchdog({ intervalMs: 2000, thresholdMb: 500 });
 const started = Date.now();
 const scoped = spawnSync(
   'cargo',
   ['test', '--locked', ...packages.flatMap((name) => ['--package', name])],
   { stdio: 'inherit' },
 );
+checkOomExit(scoped.status, scoped.signal, 'cargo test scoped');
 // Avoid an identical second execution for global changes. For smaller scopes,
 // run the full baseline even when the candidate fails so divergence is visible.
 const full =
   plan.rustMode === 'scoped' || packages.length === members.length
     ? scoped
     : spawnSync('cargo', ['test', '--workspace', '--locked'], { stdio: 'inherit' });
+if (full !== scoped) {
+  checkOomExit(full.status, full.signal, 'cargo test workspace');
+}
+const memoryStats = stopMemoryWatchdog();
 const evidence = {
   version: 1,
   runId: process.env.GITHUB_RUN_ID,
@@ -50,6 +57,9 @@ const evidence = {
   baselineExecuted: plan.rustMode === 'workspace',
   divergence: (scoped.status === 0) !== (full.status === 0),
   durationMs: Date.now() - started,
+  minMemoryAvailableMb: Number.isFinite(memoryStats.minAvailableMbSeen)
+    ? memoryStats.minAvailableMbSeen
+    : null,
 };
 console.log(`CI_RUST_EVIDENCE ${JSON.stringify(evidence)}`);
 appendFileSync(
