@@ -114,10 +114,13 @@ Un test d'intégration transfère le cache entre deux dossiers indépendants
 et vérifie la restitution du résultat par le moteur Nx installé.
 
 Aucun service payant, abonnement ou stockage supplémentaire n'est créé.
-Le gate FinOps conserve le plafond global de 30 EUR TTC/mois et précède les
-lanes Rust, DB et Terraform. Le shadow mode coûte volontairement plus que le
-mode affected : son coût est visible dans le rapport et doit être pris en
-compte dans l'enveloppe existante. Le workflow n'active aucun dépassement payant.
+Le gate FinOps conserve le plafond global de 30 EUR TTC/mois et est exécuté
+directement dans le job `scope` dès que le graphe est requis, précédant ainsi
+toutes les exécutions de lanes. Les six lanes (`contracts`, `typescript`,
+`rust`, `database`, `terraform`, `containers`) s'exécutent ensuite en parallèle
+direct et simultané. Le mode `affected` est actif par défaut, avec possibilité
+de sélectionner `shadow` lors d'un déclenchement manuel. Le workflow n'active
+aucun dépassement payant.
 
 ## Protection de main
 

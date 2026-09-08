@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, mkdirSync } from 'node:fs';
+import {
+  checkOomExit,
+  recommendedParallelism,
+  startMemoryWatchdog,
+  stopMemoryWatchdog,
+} from './memory-guard.mjs';
+
+startMemoryWatchdog({ intervalMs: 2000, thresholdMb: 500 });
 
 const plan = JSON.parse(process.env.NVBES_CI_PLAN);
 const lane = process.argv[2];
@@ -23,20 +31,23 @@ function run(binary, args, capture = false) {
       cache.total += Number(match[2]);
     }
   }
-  if (result.status !== 0) throw new Error(`${binary} failed (${result.status})`);
+  if (result.status !== 0) {
+    checkOomExit(result.status, result.signal, `${binary} ${args.join(' ')}`);
+    throw new Error(`${binary} failed (${result.status})`);
+  }
 }
 function nx(target, projects, parallel = 4) {
   if (!projects.length) return;
   if (!projects.every((project) => /^[a-zA-Z0-9@/_.-]+$/u.test(project)))
     throw new Error('Invalid project name');
+  const targetArgs = Array.isArray(target) ? target.flatMap((t) => ['-t', t]) : ['-t', target];
   run(
     'pnpm',
     [
       'exec',
       'nx',
       'run-many',
-      '-t',
-      target,
+      ...targetArgs,
       `--projects=${projects.join(',')}`,
       `--parallel=${parallel}`,
       '--outputStyle=static',
@@ -60,13 +71,19 @@ function selected(target, projects, baseline, parallel = 4) {
   }
 }
 switch (lane) {
-  case 'typescript':
-    for (const [target, projects] of Object.entries(plan.targets))
-      selected(target, projects, plan.baseline.targets[target]);
+  case 'typescript': {
+    const tsParallel = recommendedParallelism({ maxParallel: 4, memoryPerWorkerMb: 1536 });
+    for (const [target, projects] of Object.entries(plan.targets)) {
+      const targetParallel = target === 'typecheck' ? Math.min(tsParallel, 2) : tsParallel;
+      selected(target, projects, plan.baseline.targets[target], targetParallel);
+    }
     break;
-  case 'database':
-    selected('test:database', plan.databases, plan.baseline.databases, 1);
+  }
+  case 'database': {
+    const dbParallel = recommendedParallelism({ maxParallel: 2, memoryPerWorkerMb: 1024 });
+    selected('test:database', plan.databases, plan.baseline.databases, dbParallel);
     break;
+  }
   case 'containers':
     selected('test:contract', plan.containers, plan.baseline.containers);
     break;
@@ -84,8 +101,7 @@ switch (lane) {
       nx('test:contract', ['ci-contracts'], 1);
     break;
   case 'contracts':
-    nx('test:ci-contract', ['ci-contracts'], 1);
-    nx('test:lockfile-integration', ['ci-contracts'], 1);
+    nx(['test:ci-contract', 'test:lockfile-integration'], ['ci-contracts'], 2);
     if (!plan.ciOnly) {
       run('pnpm', [
         'exec',
@@ -111,6 +127,7 @@ switch (lane) {
   default:
     throw new Error(`Unknown lane ${lane}`);
 }
+const memoryStats = stopMemoryWatchdog();
 const metric = {
   lane,
   durationMs: Date.now() - started,
@@ -118,6 +135,9 @@ const metric = {
   fallbackFull: plan.fallbackFull,
   shadow: plan.shadow,
   nxCache: cache.total ? cache : null,
+  minMemoryAvailableMb: Number.isFinite(memoryStats.minAvailableMbSeen)
+    ? memoryStats.minAvailableMbSeen
+    : null,
 };
 console.log(`CI_METRIC ${JSON.stringify(metric)}`);
 appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\nCI_METRIC ${JSON.stringify(metric)}\n`);
