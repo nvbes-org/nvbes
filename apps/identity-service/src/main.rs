@@ -22,13 +22,13 @@ mod mfa_crypto;
 mod mfa_rotation;
 #[path = "identity.synthetic.rs"]
 mod synthetic;
+#[cfg(test)]
+#[path = "identity.test_keys.rs"]
+mod test_keys;
 #[path = "identity.tokens.rs"]
 mod tokens;
 #[path = "identity.tokens.config.rs"]
 mod tokens_config;
-#[cfg(test)]
-#[path = "identity.test_keys.rs"]
-mod test_keys;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

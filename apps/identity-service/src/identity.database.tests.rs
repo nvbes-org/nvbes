@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use crate::test_keys::{TEST_RSA_PUBLIC_KEY_PEM, test_rsa_private_key_pem};
 use chrono::{Duration, Utc};
 use nvbes_email::proto::nvbes::email::v1::{
     EmailReceipt, SubmitEmailRequest,
@@ -7,7 +8,6 @@ use nvbes_email::proto::nvbes::email::v1::{
     transactional_email_template::Template,
 };
 use nvbes_email::{EmailClient, EmailClientConfig};
-use crate::test_keys::{TEST_RSA_PUBLIC_KEY_PEM, test_rsa_private_key_pem};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{Request, Response, Status, transport::Server};
