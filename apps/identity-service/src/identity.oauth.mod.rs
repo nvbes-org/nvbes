@@ -10,6 +10,8 @@ pub mod error;
 pub mod interactions;
 #[path = "identity.oauth.maintenance.rs"]
 pub mod maintenance;
+#[path = "identity.oauth.metadata.rs"]
+pub mod metadata;
 #[path = "identity.oauth.pkce.rs"]
 pub mod pkce;
 #[path = "identity.oauth.session.rs"]
