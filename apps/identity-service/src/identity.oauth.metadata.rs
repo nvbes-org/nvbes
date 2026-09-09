@@ -27,7 +27,7 @@ pub fn provider_metadata(issuer: &str) -> ProviderMetadata {
         jwks_uri: format!("{issuer}oauth/jwks"),
         response_types_supported: vec!["code"],
         response_modes_supported: vec!["query"],
-        grant_types_supported: vec!["authorization_code"],
+        grant_types_supported: vec!["authorization_code", "refresh_token"],
         code_challenge_methods_supported: vec!["S256"],
         subject_types_supported: vec!["public"],
         id_token_signing_alg_values_supported: vec!["RS256"],

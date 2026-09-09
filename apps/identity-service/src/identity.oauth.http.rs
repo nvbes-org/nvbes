@@ -58,10 +58,11 @@ struct LoginForm {
 #[derive(Debug, Deserialize)]
 struct TokenForm {
     grant_type: String,
-    code: String,
-    client_id: String,
-    redirect_uri: String,
-    code_verifier: String,
+    code: Option<String>,
+    client_id: Option<String>,
+    redirect_uri: Option<String>,
+    code_verifier: Option<String>,
+    refresh_token: Option<String>,
 }
 
 pub fn token_router(
@@ -360,11 +361,24 @@ async fn token(
     headers: HeaderMap,
     Form(form): Form<TokenForm>,
 ) -> Result<impl IntoResponse, ProtocolError> {
+    if form.grant_type == "refresh_token" {
+        let refresh_token = form
+            .refresh_token
+            .as_deref()
+            .filter(|value| !value.is_empty())
+            .ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+        let response = state
+            .tokens
+            .refresh(&state.db, &state.clients, refresh_token)
+            .await
+            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidGrant))?;
+        return Ok(Json(response));
+    }
     if form.grant_type != "authorization_code"
-        || form.code.is_empty()
-        || form.client_id.is_empty()
-        || form.redirect_uri.is_empty()
-        || form.code_verifier.is_empty()
+        || form.code.as_deref().is_none_or(str::is_empty)
+        || form.client_id.as_deref().is_none_or(str::is_empty)
+        || form.redirect_uri.as_deref().is_none_or(str::is_empty)
+        || form.code_verifier.as_deref().is_none_or(str::is_empty)
     {
         return Err(ProtocolError::OAuth(OAuthError::InvalidRequest));
     }
@@ -380,10 +394,10 @@ async fn token(
         &state.db,
         &state.clients,
         CodeExchange {
-            code: &form.code,
-            client_id: &form.client_id,
-            redirect_uri: &form.redirect_uri,
-            verifier: &form.code_verifier,
+            code: form.code.as_deref().unwrap_or_default(),
+            client_id: form.client_id.as_deref().unwrap_or_default(),
+            redirect_uri: form.redirect_uri.as_deref().unwrap_or_default(),
+            verifier: form.code_verifier.as_deref().unwrap_or_default(),
             verified_dpop_jkt: verified_dpop_jkt.as_deref(),
         },
     )
