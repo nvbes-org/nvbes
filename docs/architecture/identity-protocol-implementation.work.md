@@ -33,7 +33,7 @@ dans la bibliothèque du package Identity, pas dans une application archivée.
 | C — refresh rotation, familles, concurrence et détection de rejeu                        | Familles PostgreSQL hashées et rotation atomique implémentées ; rejeu révoque famille/grant ; routes HTTP et logout restent à monter                                                             |
 | C — introspection/révocation, rotation JWKS et logout intersites                         | Introspection du grant/session/principal et registre courant testée ; rotation de clés avec échéances testée ; HTTP/logout restants                                                              |
 | D — PAR HTTP et consommation atomique                                                    | Consommation PostgreSQL testée ; exposition HTTP restante                                                                                                                                        |
-| D — DPoP AS + SDK + serveurs de ressources                                               | À implémenter ; la validation actuelle de jkt ne vérifie pas encore une preuve DPoP                                                                                                              |
+| D — DPoP AS + SDK + serveurs de ressources                                               | Preuve ES256, `htm`/`htu`/iat et thumbprint vérifiés ; consommation anti-rejeu PostgreSQL ajoutée ; raccordement route token et resource servers restant                                         |
 | D — délégation machine si nécessaire                                                     | À statuer selon façade sécurité ; pas de reprise du Token Exchange Cloud                                                                                                                         |
 | Gates — contrats, vrais parcours, caches, panne, migration et budget                     | À compléter avant clôture ; aucune ressource payante ajoutée                                                                                                                                     |
 
@@ -66,11 +66,11 @@ hashées. Voir le
 ## Validation effectuée
 
 - `cargo check --workspace` : succès dans le worktree isolé.
-- Cible Nx `identity-service:test:database` : 36 tests de bibliothèque OAuth,
+- Cible Nx `identity-service:test:database` : 40 tests de bibliothèque OAuth,
   navigateur, consentement, limite et tokens, 22 tests du binaire, plus 3 tests
   du garde de base de données réussis.
 - Base dédiée `nvbes_identity_test_protocol`, PostgreSQL local sur port 15433 ;
-  migrations 0001–0010 appliquées. Aucun test sur les bases applicatives.
+  migrations 0001–0011 appliquées. Aucun test sur les bases applicatives.
 - Tests PostgreSQL de concurrence PAR, échange de code et émission ; rejeu
   invalidant un jeton déjà émis ; suspension avant signature ; retrait du client
   et preuves MFA capturées avant une modification ultérieure de la session.
@@ -86,6 +86,8 @@ hashées. Voir le
 - Tests de rotation refresh sur PostgreSQL : un seul secret actif à la fois,
   rotation vers une nouvelle valeur opaque, rejeu de l'ancienne valeur et
   invalidation de la famille et du grant.
+- Tests DPoP : signature ES256, méthode/URL incorrectes et consommation unique
+  du `jti` pour une même clé sur la base PostgreSQL.
 - Cible Nx `identity-service:test:contract` : 11 tests réussis ; ce contrat
   confirme pour l'instant que le runtime public reste fermé.
 - Les routes publiques, facteurs WebAuthn, refresh et DPoP complets restent à
