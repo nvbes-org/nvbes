@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use rand::RngCore;
 use reqwest::Url;
 use webauthn_rs::{Webauthn, WebauthnBuilder};
 
@@ -31,6 +32,16 @@ pub fn challenge_is_live(expires_at: DateTime<Utc>, now: DateTime<Utc>) -> bool 
     expires_at > now
 }
 
+pub fn generate_challenge() -> [u8; 32] {
+    let mut challenge = [0_u8; 32];
+    rand::rng().fill_bytes(&mut challenge);
+    challenge
+}
+
+pub fn valid_credential_label(label: &str) -> bool {
+    (1..=128).contains(&label.chars().count()) && label.chars().all(|value| !value.is_control())
+}
+
 /// WebAuthn authenticators may report zero permanently. Once a non-zero
 /// counter has been stored, a decrease is a rollback signal and is rejected.
 pub fn next_sign_count(previous: u32, reported: u32) -> Result<u32, ()> {
@@ -60,5 +71,13 @@ mod tests {
         assert_eq!(next_sign_count(4, 5), Ok(5));
         assert_eq!(next_sign_count(4, 4), Err(()));
         assert_eq!(next_sign_count(4, 3), Err(()));
+    }
+
+    #[test]
+    fn credential_labels_are_bounded_and_printable() {
+        assert!(super::valid_credential_label("MacBook passkey"));
+        assert!(!super::valid_credential_label(""));
+        assert!(!super::valid_credential_label("bad\nlabel"));
+        assert!(!super::valid_credential_label(&"x".repeat(129)));
     }
 }
