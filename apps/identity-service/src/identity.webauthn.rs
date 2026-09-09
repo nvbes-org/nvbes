@@ -5,7 +5,9 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use webauthn_rs::{
     Webauthn, WebauthnBuilder,
-    prelude::{CreationChallengeResponse, PasskeyRegistration},
+    prelude::{
+        CreationChallengeResponse, Passkey, PasskeyRegistration, RegisterPublicKeyCredential,
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,6 +59,20 @@ pub fn start_passkey_registration(
     server
         .start_passkey_registration(principal_id, user_name, display_name, None)
         .map_err(|_| "WebAuthn registration could not start".to_owned())
+}
+
+pub fn finish_passkey_registration(
+    server: &Webauthn,
+    response: serde_json::Value,
+    ceremony_state: serde_json::Value,
+) -> Result<Passkey, String> {
+    let response: RegisterPublicKeyCredential = serde_json::from_value(response)
+        .map_err(|_| "invalid WebAuthn registration response".to_owned())?;
+    let state: PasskeyRegistration = serde_json::from_value(ceremony_state)
+        .map_err(|_| "invalid WebAuthn ceremony state".to_owned())?;
+    server
+        .finish_passkey_registration(&response, &state)
+        .map_err(|_| "WebAuthn registration verification failed".to_owned())
 }
 
 impl ChallengePurpose {
