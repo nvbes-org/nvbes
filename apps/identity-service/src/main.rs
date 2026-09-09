@@ -196,10 +196,27 @@ async fn main() -> anyhow::Result<()> {
         Ok(token_config) => {
             let token_service = tokens::TokenService::new(token_config)?;
             let issuer = token_service.issuer().to_owned();
+            let token_service = Arc::new(token_service);
             router = router.merge(nvbes_identity_service::oauth::http::router(
                 &issuer,
-                Arc::new(token_service),
+                Arc::clone(&token_service),
             ));
+            if let Ok(registry_json) = std::env::var("NVBES_IDENTITY_OAUTH_CLIENTS_JSON") {
+                let clients = nvbes_identity_service::oauth::clients::ClientRegistry::from_json(
+                    &registry_json,
+                    config.environment == "development" || config.environment == "test",
+                )
+                .map_err(|_| anyhow::anyhow!("invalid OIDC client registry"))?;
+                router = router.merge(nvbes_identity_service::oauth::http::token_router(
+                    &issuer,
+                    db.clone(),
+                    Arc::new(clients),
+                    token_service,
+                ));
+                tracing::info!("OAuth authorization-code token endpoint enabled");
+            } else {
+                tracing::warn!("OAuth token endpoint remains disabled: client registry is absent");
+            }
             tracing::info!("OIDC discovery and JWKS endpoints enabled");
         }
         Err(error) if config.environment == "development" || config.environment == "test" => {

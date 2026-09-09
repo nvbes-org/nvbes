@@ -1,15 +1,123 @@
 use std::sync::Arc;
 
-use axum::{Json, Router, extract::State, routing::get};
+use axum::{
+    Form, Json, Router,
+    extract::State,
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
+    routing::{get, post},
+};
+use serde::Deserialize;
+use sqlx::PgPool;
 
 use crate::{
-    oauth::metadata::provider_metadata, tokens::TokenService, tokens_claims::JsonWebKeySet,
+    oauth::{
+        clients::ClientRegistry, codes::CodeExchange, dpop::verify_and_consume_code_proof,
+        error::OAuthError, metadata::provider_metadata,
+    },
+    tokens::TokenService,
+    tokens_claims::JsonWebKeySet,
 };
 
 #[derive(Clone)]
 struct PublicProtocolState {
     issuer: String,
     tokens: Arc<TokenService>,
+}
+
+#[derive(Clone)]
+struct TokenState {
+    db: PgPool,
+    clients: Arc<ClientRegistry>,
+    tokens: Arc<TokenService>,
+    endpoint: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenForm {
+    grant_type: String,
+    code: String,
+    client_id: String,
+    redirect_uri: String,
+    code_verifier: String,
+}
+
+pub fn token_router(
+    issuer: &str,
+    db: PgPool,
+    clients: Arc<ClientRegistry>,
+    tokens: Arc<TokenService>,
+) -> Router {
+    Router::new()
+        .route("/oauth/token", post(token))
+        .with_state(TokenState {
+            db,
+            clients,
+            tokens,
+            endpoint: format!("{issuer}oauth/token"),
+        })
+}
+
+async fn token(
+    State(state): State<TokenState>,
+    headers: HeaderMap,
+    Form(form): Form<TokenForm>,
+) -> Result<impl IntoResponse, ProtocolError> {
+    if form.grant_type != "authorization_code"
+        || form.code.is_empty()
+        || form.client_id.is_empty()
+        || form.redirect_uri.is_empty()
+        || form.code_verifier.is_empty()
+    {
+        return Err(ProtocolError::OAuth(OAuthError::InvalidRequest));
+    }
+    let verified_dpop_jkt = match headers.get("dpop").and_then(|value| value.to_str().ok()) {
+        Some(proof) => Some(
+            verify_and_consume_code_proof(&state.db, proof, "POST", &state.endpoint)
+                .await
+                .map_err(ProtocolError::OAuth)?,
+        ),
+        None => None,
+    };
+    let grant = crate::oauth::codes::exchange(
+        &state.db,
+        &state.clients,
+        CodeExchange {
+            code: &form.code,
+            client_id: &form.client_id,
+            redirect_uri: &form.redirect_uri,
+            verifier: &form.code_verifier,
+            verified_dpop_jkt: verified_dpop_jkt.as_deref(),
+        },
+    )
+    .await
+    .map_err(|error| match error {
+        crate::oauth::store::StoreError::Protocol(error) => ProtocolError::OAuth(error),
+        _ => ProtocolError::OAuth(OAuthError::Unavailable),
+    })?;
+    Ok(Json(
+        state
+            .tokens
+            .issue_grant(&state.db, &state.clients, &grant)
+            .await
+            .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?,
+    ))
+}
+
+#[derive(Debug)]
+enum ProtocolError {
+    OAuth(OAuthError),
+}
+
+impl IntoResponse for ProtocolError {
+    fn into_response(self) -> axum::response::Response {
+        let ProtocolError::OAuth(error) = self;
+        (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": error.to_string()})),
+        )
+            .into_response()
+    }
 }
 
 /// Safe read-only protocol endpoints. Authorization and token mutations are
