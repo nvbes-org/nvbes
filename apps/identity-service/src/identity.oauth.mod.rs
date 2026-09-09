@@ -8,6 +8,8 @@ pub mod consent;
 pub mod dpop;
 #[path = "identity.oauth.error.rs"]
 pub mod error;
+#[path = "identity.oauth.http.rs"]
+pub mod http;
 #[path = "identity.oauth.interactions.rs"]
 pub mod interactions;
 #[path = "identity.oauth.maintenance.rs"]
