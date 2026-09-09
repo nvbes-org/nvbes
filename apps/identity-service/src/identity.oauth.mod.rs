@@ -4,6 +4,8 @@ pub mod clients;
 pub mod codes;
 #[path = "identity.oauth.consent.rs"]
 pub mod consent;
+#[path = "identity.oauth.dpop.rs"]
+pub mod dpop;
 #[path = "identity.oauth.error.rs"]
 pub mod error;
 #[path = "identity.oauth.interactions.rs"]

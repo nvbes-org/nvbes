@@ -3253,6 +3253,7 @@ dependencies = [
  "jsonwebtoken",
  "metrics-exporter-prometheus",
  "nvbes-core",
+ "nvbes-dpop",
  "nvbes-email",
  "nvbes-observability",
  "prost-types",
