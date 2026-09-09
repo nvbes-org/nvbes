@@ -96,6 +96,37 @@ pub fn passkey_record(passkey: &Passkey) -> Result<(Vec<u8>, serde_json::Value),
     Ok((credential_id, public_key))
 }
 
+pub async fn persist_passkey_registration(
+    db: &PgPool,
+    principal_id: Uuid,
+    challenge: &[u8; 32],
+    passkey: &Passkey,
+    label: &str,
+) -> Result<Uuid, String> {
+    if !valid_credential_label(label) {
+        return Err("WebAuthn credential label is invalid".to_owned());
+    }
+    let (credential_id, public_key) = passkey_record(passkey)?;
+    let mut tx = db
+        .begin()
+        .await
+        .map_err(|_| "WebAuthn persistence unavailable".to_owned())?;
+    let consumed: Option<Uuid> = sqlx::query_scalar("UPDATE identity_webauthn_challenges SET consumed_at=clock_timestamp() WHERE challenge=$1 AND purpose='registration' AND principal_id=$2 AND consumed_at IS NULL AND expires_at>clock_timestamp() RETURNING id")
+        .bind(challenge.as_slice()).bind(principal_id).fetch_optional(&mut *tx).await
+        .map_err(|_| "WebAuthn challenge persistence failed".to_owned())?;
+    if consumed.is_none() {
+        return Err("WebAuthn registration challenge is invalid or already consumed".to_owned());
+    }
+    let credential_row = Uuid::new_v4();
+    sqlx::query("INSERT INTO identity_webauthn_credentials(id,principal_id,credential_id,public_key,label) VALUES($1,$2,$3,$4,$5)")
+        .bind(credential_row).bind(principal_id).bind(credential_id).bind(public_key).bind(label)
+        .execute(&mut *tx).await.map_err(|_| "WebAuthn credential already exists or cannot be stored".to_owned())?;
+    tx.commit()
+        .await
+        .map_err(|_| "WebAuthn persistence unavailable".to_owned())?;
+    Ok(credential_row)
+}
+
 impl ChallengePurpose {
     pub fn as_str(self) -> &'static str {
         match self {
