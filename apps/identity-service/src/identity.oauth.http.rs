@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::{
@@ -199,11 +200,31 @@ fn redirect_with_result(
 async fn authorize(
     State(state): State<AuthorizationState>,
     headers: HeaderMap,
-    Query(input): Query<AuthorizationInput>,
+    Query(query): Query<HashMap<String, String>>,
 ) -> Result<impl IntoResponse, ProtocolError> {
-    let request = input
-        .validate(&state.clients)
-        .map_err(ProtocolError::OAuth)?;
+    let client_id = query
+        .get("client_id")
+        .ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    let request = if let Some(uri) = query.get("request_uri") {
+        let prefix = "urn:ietf:params:oauth:request_uri:";
+        let handle = uri
+            .strip_prefix(prefix)
+            .ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+        let handle = store::consume_par(&state.db, &state.clients, handle, client_id)
+            .await
+            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+        store::load_request(&state.db, &state.clients, &handle)
+            .await
+            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?
+    } else {
+        let value = serde_json::to_value(&query)
+            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+        let input: AuthorizationInput = serde_json::from_value(value)
+            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+        input
+            .validate(&state.clients)
+            .map_err(ProtocolError::OAuth)?
+    };
     let handle = store::create_request(&state.db, &request, RequestKind::Authorization)
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
