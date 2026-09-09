@@ -116,7 +116,9 @@ async fn confirm_enrollment(
     Ok(expires_at)
 }
 
-async fn grant_step_up(
+/// Grants a fresh TOTP step-up after atomically checking the active session and
+/// rejecting a counter that has already been accepted for the factor.
+pub(crate) async fn grant_step_up(
     db: &PgPool,
     crypto: &MfaCrypto,
     session_token: &str,
