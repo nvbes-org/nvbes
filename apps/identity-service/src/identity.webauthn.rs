@@ -44,6 +44,10 @@ pub fn valid_credential_label(label: &str) -> bool {
     (1..=128).contains(&label.chars().count()) && label.chars().all(|value| !value.is_control())
 }
 
+pub fn valid_credential_id(credential_id: &[u8]) -> bool {
+    (16..=1024).contains(&credential_id.len())
+}
+
 pub async fn store_challenge(
     db: &PgPool,
     principal_id: Option<Uuid>,
@@ -107,5 +111,13 @@ mod tests {
         assert!(!super::valid_credential_label(""));
         assert!(!super::valid_credential_label("bad\nlabel"));
         assert!(!super::valid_credential_label(&"x".repeat(129)));
+    }
+
+    #[test]
+    fn credential_ids_are_bounded() {
+        assert!(!super::valid_credential_id(&[0; 15]));
+        assert!(super::valid_credential_id(&[0; 16]));
+        assert!(super::valid_credential_id(&[0; 1024]));
+        assert!(!super::valid_credential_id(&[0; 1025]));
     }
 }
