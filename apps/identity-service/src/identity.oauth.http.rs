@@ -5,7 +5,7 @@ use axum::{
     Form, Json, Router,
     extract::{Query, State},
     http::{HeaderMap, StatusCode},
-    response::{IntoResponse, Redirect},
+    response::{IntoResponse, Redirect, Response},
     routing::{get, post},
 };
 use serde::Deserialize;
@@ -201,7 +201,7 @@ async fn authorize(
     State(state): State<AuthorizationState>,
     headers: HeaderMap,
     Query(query): Query<HashMap<String, String>>,
-) -> Result<impl IntoResponse, ProtocolError> {
+) -> Result<Response, ProtocolError> {
     let client_id = query
         .get("client_id")
         .ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))?;
@@ -242,6 +242,54 @@ async fn authorize(
     )
     .await
     .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    if started.request.prompt.as_deref() == Some("none") {
+        let Some(session) = session.as_deref() else {
+            return Ok(redirect_with_result(
+                started.request.redirect_uri(),
+                "error",
+                "login_required",
+                &started.request.state,
+            )?
+            .into_response());
+        };
+        match crate::oauth::consent::silent(
+            &state.db,
+            &state.clients,
+            &handle,
+            &cookie.token,
+            Some(session),
+        )
+        .await
+        {
+            Ok(code) => {
+                return Ok(redirect_with_result(
+                    code.request.redirect_uri(),
+                    "code",
+                    &code.code,
+                    &code.request.state,
+                )?
+                .into_response());
+            }
+            Err(crate::oauth::store::StoreError::Protocol(OAuthError::ConsentRequired)) => {
+                return Ok(redirect_with_result(
+                    started.request.redirect_uri(),
+                    "error",
+                    "consent_required",
+                    &started.request.state,
+                )?
+                .into_response());
+            }
+            Err(_) => {
+                return Ok(redirect_with_result(
+                    started.request.redirect_uri(),
+                    "error",
+                    "login_required",
+                    &started.request.state,
+                )?
+                .into_response());
+            }
+        }
+    }
     Ok((
         [
             ("set-cookie", cookie.header),
@@ -254,7 +302,8 @@ async fn authorize(
             "client_id": started.request.client_id(),
             "scope": started.request.scope(),
         })),
-    ))
+    )
+        .into_response())
 }
 
 async fn par(
