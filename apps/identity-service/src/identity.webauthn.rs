@@ -101,6 +101,21 @@ pub async fn store_challenge(
     Ok((challenge, id))
 }
 
+pub async fn store_ceremony_state(
+    db: &PgPool,
+    challenge_id: Uuid,
+    state: serde_json::Value,
+) -> Result<(), sqlx::Error> {
+    if !state.is_object() {
+        return Err(sqlx::Error::Protocol(
+            "WebAuthn ceremony state must be an object".into(),
+        ));
+    }
+    sqlx::query("UPDATE identity_webauthn_challenges SET ceremony_state=$1 WHERE id=$2 AND consumed_at IS NULL")
+        .bind(state).bind(challenge_id).execute(db).await?;
+    Ok(())
+}
+
 pub async fn consume_challenge(
     db: &PgPool,
     challenge: &[u8; 32],
