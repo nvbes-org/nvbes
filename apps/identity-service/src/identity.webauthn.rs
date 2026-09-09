@@ -12,6 +12,28 @@ pub enum ChallengePurpose {
     StepUp,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuthenticatorAssurance {
+    UserVerified,
+    UserVerifiedWithBackupSignals,
+}
+
+/// Backup eligibility or discoverability are recorded as signals only. They do
+/// not, on their own, prove a higher assurance level.
+pub fn assurance_from_signals(
+    user_verified: bool,
+    backed_up: bool,
+) -> Option<AuthenticatorAssurance> {
+    if !user_verified {
+        return None;
+    }
+    Some(if backed_up {
+        AuthenticatorAssurance::UserVerifiedWithBackupSignals
+    } else {
+        AuthenticatorAssurance::UserVerified
+    })
+}
+
 pub fn build_server(rp_id: &str, rp_origin: &str) -> Result<Webauthn, String> {
     let origin = Url::parse(rp_origin).map_err(|_| "invalid WebAuthn RP origin".to_owned())?;
     WebauthnBuilder::new(rp_id, &origin)
@@ -119,5 +141,14 @@ mod tests {
         assert!(super::valid_credential_id(&[0; 16]));
         assert!(super::valid_credential_id(&[0; 1024]));
         assert!(!super::valid_credential_id(&[0; 1025]));
+    }
+
+    #[test]
+    fn backup_signals_do_not_become_an_aal_claim() {
+        assert_eq!(super::assurance_from_signals(false, true), None);
+        assert_eq!(
+            super::assurance_from_signals(true, true),
+            Some(super::AuthenticatorAssurance::UserVerifiedWithBackupSignals)
+        );
     }
 }
