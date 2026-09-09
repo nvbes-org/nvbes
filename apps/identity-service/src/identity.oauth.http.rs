@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     Form, Json, Router,
-    extract::State,
+    extract::{Query, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
@@ -11,11 +11,13 @@ use serde::Deserialize;
 use sqlx::PgPool;
 
 use crate::{
+    browser::BrowserSecurity,
     oauth::{
         clients::ClientRegistry,
         codes::CodeExchange,
         dpop::verify_and_consume_code_proof,
         error::OAuthError,
+        interactions,
         metadata::provider_metadata,
         request::AuthorizationInput,
         store::{self, RequestKind},
@@ -36,6 +38,13 @@ struct TokenState {
     clients: Arc<ClientRegistry>,
     tokens: Arc<TokenService>,
     endpoint: String,
+}
+
+#[derive(Clone)]
+struct AuthorizationState {
+    db: PgPool,
+    clients: Arc<ClientRegistry>,
+    browser: BrowserSecurity,
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,6 +71,63 @@ pub fn token_router(
             tokens,
             endpoint: format!("{issuer}oauth/token"),
         })
+}
+
+/// Starts a direct authorization transaction and hands it to the hosted UI.
+/// The browser cookie is issued here because this endpoint is reached through
+/// a cross-site top-level navigation and therefore cannot use CSRF headers.
+pub fn authorization_router(
+    db: PgPool,
+    clients: Arc<ClientRegistry>,
+    browser: BrowserSecurity,
+) -> Router {
+    Router::new()
+        .route("/oauth/authorize", get(authorize))
+        .with_state(AuthorizationState {
+            db,
+            clients,
+            browser,
+        })
+}
+
+async fn authorize(
+    State(state): State<AuthorizationState>,
+    headers: HeaderMap,
+    Query(input): Query<AuthorizationInput>,
+) -> Result<impl IntoResponse, ProtocolError> {
+    let request = input
+        .validate(&state.clients)
+        .map_err(ProtocolError::OAuth)?;
+    let handle = store::create_request(&state.db, &request, RequestKind::Authorization)
+        .await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    let cookie = state.browser.browser_cookie();
+    let session = state
+        .browser
+        .session_token(&headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    let started = interactions::begin(
+        &state.db,
+        &state.clients,
+        &handle,
+        &cookie.token,
+        session.as_deref(),
+    )
+    .await
+    .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    Ok((
+        [
+            ("set-cookie", cookie.header),
+            ("cache-control", "no-store".parse().unwrap()),
+        ],
+        Json(serde_json::json!({
+            "interaction": handle,
+            "csrf_token": started.csrf_token,
+            "needs_login": started.needs_login,
+            "client_id": started.request.client_id(),
+            "scope": started.request.scope(),
+        })),
+    ))
 }
 
 async fn par(

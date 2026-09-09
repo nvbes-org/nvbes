@@ -211,8 +211,28 @@ async fn main() -> anyhow::Result<()> {
                     &issuer,
                     db.clone(),
                     Arc::new(clients),
-                    token_service,
+                    Arc::clone(&token_service),
                 ));
+                if let Ok(origin) = std::env::var("NVBES_IDENTITY_BROWSER_ORIGIN") {
+                    let browser = nvbes_identity_service::browser::BrowserSecurity::new(
+                        &origin,
+                        config.environment == "development" || config.environment == "test",
+                    )
+                    .map_err(|_| anyhow::anyhow!("invalid Identity browser origin"))?;
+                    let clients =
+                        nvbes_identity_service::oauth::clients::ClientRegistry::from_json(
+                            &registry_json,
+                            config.environment == "development" || config.environment == "test",
+                        )
+                        .map_err(|_| anyhow::anyhow!("invalid OIDC client registry"))?;
+                    router =
+                        router.merge(nvbes_identity_service::oauth::http::authorization_router(
+                            db.clone(),
+                            Arc::new(clients),
+                            browser,
+                        ));
+                    tracing::info!("OAuth authorization interaction endpoint enabled");
+                }
                 tracing::info!("OAuth authorization-code token endpoint enabled");
             } else {
                 tracing::warn!("OAuth token endpoint remains disabled: client registry is absent");
