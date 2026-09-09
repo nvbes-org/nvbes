@@ -128,6 +128,18 @@ pub async fn consume_challenge(
     id.ok_or(sqlx::Error::RowNotFound)
 }
 
+pub async fn load_ceremony_state(
+    db: &PgPool,
+    challenge: &[u8; 32],
+    expected_purpose: ChallengePurpose,
+    principal_id: Option<Uuid>,
+) -> Result<(Uuid, serde_json::Value), sqlx::Error> {
+    let row: Option<(Uuid, serde_json::Value)> = sqlx::query_as("SELECT id,ceremony_state FROM identity_webauthn_challenges WHERE challenge=$1 AND purpose=$2 AND consumed_at IS NULL AND expires_at>clock_timestamp() AND (principal_id IS NOT DISTINCT FROM $3) FOR UPDATE")
+        .bind(challenge.as_slice()).bind(expected_purpose.as_str()).bind(principal_id)
+        .fetch_optional(db).await?;
+    row.ok_or(sqlx::Error::RowNotFound)
+}
+
 /// WebAuthn authenticators may report zero permanently. Once a non-zero
 /// counter has been stored, a decrease is a rollback signal and is rejected.
 pub fn next_sign_count(previous: u32, reported: u32) -> Result<u32, ()> {
