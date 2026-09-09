@@ -127,3 +127,48 @@ async fn revocation_before_signing_and_registration_removal_refuse_tokens() {
         .bind(session_id).execute(&db).await.unwrap();
     assert!(service.issue_grant(&db, &clients, &grant).await.is_err());
 }
+
+#[tokio::test]
+async fn refresh_rotation_rejects_replay_and_revokes_the_family() {
+    let db = database().await;
+    let clients = clients();
+    let service = TokenService::new(config()).unwrap();
+    let mut input = crate::test_fixtures::input();
+    input.scope.push_str(" offline_access");
+    let validated = input.validate(&clients).unwrap();
+    let handle = crate::oauth::store::create_request(&db, &validated, RequestKind::Authorization)
+        .await
+        .unwrap();
+    let (_, session) = session(&db).await;
+    let code = authorize(&db, &clients, &handle, &session).await.unwrap();
+    let grant = codes::exchange(&db, &clients, exchange(&code.code))
+        .await
+        .unwrap();
+    let first = service.issue_grant(&db, &clients, &grant).await.unwrap();
+    let first_refresh = first.refresh_token.clone().unwrap();
+    let second = service
+        .refresh(&db, &clients, &first_refresh)
+        .await
+        .unwrap();
+    let second_refresh = second.refresh_token.clone().unwrap();
+    assert_ne!(first_refresh, second_refresh);
+    assert!(
+        service
+            .refresh(&db, &clients, &first_refresh)
+            .await
+            .is_err()
+    );
+    assert!(
+        service
+            .refresh(&db, &clients, &second_refresh)
+            .await
+            .is_err()
+    );
+    assert!(
+        service
+            .introspect(&db, &clients, &first.access_token, "nvbes-account-service")
+            .await
+            .unwrap()
+            .is_none()
+    );
+}

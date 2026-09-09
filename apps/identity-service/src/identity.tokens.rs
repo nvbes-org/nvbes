@@ -54,6 +54,7 @@ impl TokenService {
         if active.token_issued_at.is_some() {
             return Err(TokenError::InactiveGrant);
         }
+        let request = &active.request;
         let response = self.sign_grant(&active)?;
         sqlx::query(
             "UPDATE identity_oauth_grants SET token_issued_at=clock_timestamp() WHERE id=$1",
@@ -61,10 +62,76 @@ impl TokenService {
         .bind(active.id)
         .execute(&mut *tx)
         .await?;
+        let refresh_token = if request_allows_refresh(request) {
+            let value = crate::oauth::store::random_secret();
+            let family_id = Uuid::new_v4();
+            sqlx::query("INSERT INTO identity_oauth_refresh_tokens(token_hash,family_id,grant_id,principal_id,client_id) VALUES($1,$2,$3,$4,$5)")
+                .bind(Sha256::digest(value.as_bytes()).to_vec())
+                .bind(family_id)
+                .bind(active.id)
+                .bind(active.principal_id)
+                .bind(request.client_id())
+                .execute(&mut *tx)
+                .await?;
+            Some(value)
+        } else {
+            None
+        };
         crate::oauth::store::audit(&mut tx, active.principal_id, "identity.oauth.tokens_issued")
             .await?;
         tx.commit().await?;
-        Ok(response)
+        Ok(TokenSet {
+            refresh_token,
+            ..response
+        })
+    }
+
+    /// Rotates one refresh secret. Reusing a rotated secret revokes its family.
+    pub async fn refresh(
+        &self,
+        db: &PgPool,
+        clients: &ClientRegistry,
+        refresh_token: &str,
+    ) -> Result<TokenSet, TokenError> {
+        if refresh_token.is_empty() || refresh_token.len() > 4096 {
+            return Err(TokenError::InactiveGrant);
+        }
+        let hash = Sha256::digest(refresh_token.as_bytes()).to_vec();
+        let mut tx = db.begin().await?;
+        let row: Option<(Uuid, Uuid, bool)> = sqlx::query_as(
+            "SELECT family_id,grant_id,(rotated_at IS NOT NULL OR revoked_at IS NOT NULL) FROM identity_oauth_refresh_tokens WHERE token_hash=$1 FOR UPDATE",
+        )
+        .bind(&hash)
+        .fetch_optional(&mut *tx)
+        .await?;
+        let Some((family_id, grant_id, already_used)) = row else {
+            return Err(TokenError::InactiveGrant);
+        };
+        if already_used {
+            sqlx::query("UPDATE identity_oauth_refresh_tokens SET revoked_at=clock_timestamp() WHERE family_id=$1 AND revoked_at IS NULL")
+                .bind(family_id).execute(&mut *tx).await?;
+            sqlx::query("UPDATE identity_oauth_grants SET revoked_at=clock_timestamp() WHERE id=$1 AND revoked_at IS NULL")
+                .bind(grant_id).execute(&mut *tx).await?;
+            tx.commit().await?;
+            return Err(TokenError::InactiveGrant);
+        }
+        let active = tokens_grants::load(&mut tx, clients, grant_id).await?;
+        if !request_allows_refresh(&active.request) {
+            return Err(TokenError::InactiveGrant);
+        }
+        let response = self.sign_grant(&active)?;
+        let next = crate::oauth::store::random_secret();
+        sqlx::query("UPDATE identity_oauth_refresh_tokens SET rotated_at=clock_timestamp() WHERE token_hash=$1")
+            .bind(&hash).execute(&mut *tx).await?;
+        sqlx::query("INSERT INTO identity_oauth_refresh_tokens(token_hash,family_id,grant_id,principal_id,client_id) VALUES($1,$2,$3,$4,$5)")
+            .bind(Sha256::digest(next.as_bytes()).to_vec())
+            .bind(family_id).bind(grant_id).bind(active.principal_id)
+            .bind(active.request.client_id()).execute(&mut *tx).await?;
+        tx.commit().await?;
+        Ok(TokenSet {
+            refresh_token: Some(next),
+            ..response
+        })
     }
 
     pub(crate) fn sign_grant(&self, grant: &ActiveGrant) -> Result<TokenSet, TokenError> {
@@ -137,6 +204,7 @@ impl TokenService {
             },
             expires_in: expires_at - issued_at,
             scope: request.scope().into(),
+            refresh_token: None,
         })
     }
 
@@ -221,6 +289,13 @@ impl TokenService {
         tx.commit().await?;
         Ok(active.then_some(claims))
     }
+}
+
+fn request_allows_refresh(request: &crate::oauth::request::AuthorizationRequest) -> bool {
+    request
+        .scope()
+        .split(' ')
+        .any(|scope| scope == "offline_access")
 }
 
 #[cfg(test)]

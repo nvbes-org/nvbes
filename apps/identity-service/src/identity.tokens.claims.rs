@@ -53,6 +53,8 @@ pub struct TokenSet {
     pub token_type: &'static str,
     pub expires_in: u64,
     pub scope: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
