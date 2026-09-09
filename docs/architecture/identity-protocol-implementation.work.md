@@ -30,7 +30,7 @@ dans la bibliothèque du package Identity, pas dans une application archivée.
 | B — passkeys, clés de sécurité et enrollment                                             | À implémenter avec webauthn-rs, sans attribution automatique AAL3                                                                                                                                |
 | B — récupération, facteurs supplémentaires et politique opérateur                        | À implémenter ; ne pas confondre reset mot de passe et récupération MFA                                                                                                                          |
 | B — step-up frais / AMR exact / TOTP HTTP                                                | Méthode primaire et dates de preuve enregistrées ; AMR issu du snapshot d'autorisation, passkeys sans pwd possibles ; HTTP restant                                                               |
-| C — refresh rotation, familles, concurrence et détection de rejeu                        | À implémenter sur PostgreSQL, sans Redis obligatoire                                                                                                                                             |
+| C — refresh rotation, familles, concurrence et détection de rejeu                        | Familles PostgreSQL hashées et rotation atomique implémentées ; rejeu révoque famille/grant ; routes HTTP et logout restent à monter                                                             |
 | C — introspection/révocation, rotation JWKS et logout intersites                         | Introspection du grant/session/principal et registre courant testée ; rotation de clés avec échéances testée ; HTTP/logout restants                                                              |
 | D — PAR HTTP et consommation atomique                                                    | Consommation PostgreSQL testée ; exposition HTTP restante                                                                                                                                        |
 | D — DPoP AS + SDK + serveurs de ressources                                               | À implémenter ; la validation actuelle de jkt ne vérifie pas encore une preuve DPoP                                                                                                              |
@@ -59,17 +59,18 @@ signature. Le diagnostic synthétique traverse désormais le vrai grant OAuth.
 La migration 0008 ajoute les preuves primaires, les dates de step-up, le snapshot
 d'autorisation et la consommation unique de l'émission. La migration 0009 ajoute
 la liaison navigateur/CSRF/session des interactions, les consentements exacts et
-les buckets de limite fixes. Voir le
+les buckets de limite fixes. La migration 0010 ajoute les familles de refresh
+hashées. Voir le
 [cycle des jetons et la procédure de rotation](identity-token-lifecycle.md).
 
 ## Validation effectuée
 
 - `cargo check --workspace` : succès dans le worktree isolé.
-- Cible Nx `identity-service:test:database` : 35 tests de bibliothèque OAuth,
+- Cible Nx `identity-service:test:database` : 36 tests de bibliothèque OAuth,
   navigateur, consentement, limite et tokens, 22 tests du binaire, plus 3 tests
   du garde de base de données réussis.
 - Base dédiée `nvbes_identity_test_protocol`, PostgreSQL local sur port 15433 ;
-  migrations 0001–0009 appliquées. Aucun test sur les bases applicatives.
+  migrations 0001–0010 appliquées. Aucun test sur les bases applicatives.
 - Tests PostgreSQL de concurrence PAR, échange de code et émission ; rejeu
   invalidant un jeton déjà émis ; suspension avant signature ; retrait du client
   et preuves MFA capturées avant une modification ultérieure de la session.
@@ -82,6 +83,9 @@ les buckets de limite fixes. Voir le
   session révoquée, registre modifié, consentement expiré et mode silencieux sont
   couverts. Les limites utilisent 4096 buckets HMAC par catégorie et leur
   nettoyage ne supprime pas les preuves nécessaires au rejet de rejeu.
+- Tests de rotation refresh sur PostgreSQL : un seul secret actif à la fois,
+  rotation vers une nouvelle valeur opaque, rejeu de l'ancienne valeur et
+  invalidation de la famille et du grant.
 - Cible Nx `identity-service:test:contract` : 11 tests réussis ; ce contrat
   confirme pour l'instant que le runtime public reste fermé.
 - Les routes publiques, facteurs WebAuthn, refresh et DPoP complets restent à
