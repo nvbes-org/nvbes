@@ -12,8 +12,13 @@ use sqlx::PgPool;
 
 use crate::{
     oauth::{
-        clients::ClientRegistry, codes::CodeExchange, dpop::verify_and_consume_code_proof,
-        error::OAuthError, metadata::provider_metadata,
+        clients::ClientRegistry,
+        codes::CodeExchange,
+        dpop::verify_and_consume_code_proof,
+        error::OAuthError,
+        metadata::provider_metadata,
+        request::AuthorizationInput,
+        store::{self, RequestKind},
     },
     tokens::TokenService,
     tokens_claims::JsonWebKeySet,
@@ -50,12 +55,32 @@ pub fn token_router(
 ) -> Router {
     Router::new()
         .route("/oauth/token", post(token))
+        .route("/oauth/par", post(par))
         .with_state(TokenState {
             db,
             clients,
             tokens,
             endpoint: format!("{issuer}oauth/token"),
         })
+}
+
+async fn par(
+    State(state): State<TokenState>,
+    Form(input): Form<AuthorizationInput>,
+) -> Result<impl IntoResponse, ProtocolError> {
+    let request = input
+        .validate(&state.clients)
+        .map_err(ProtocolError::OAuth)?;
+    let request_uri = store::create_request(&state.db, &request, RequestKind::Par)
+        .await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    Ok((
+        [("cache-control", "no-store"), ("pragma", "no-cache")],
+        Json(serde_json::json!({
+            "request_uri": format!("urn:ietf:params:oauth:request_uri:{request_uri}"),
+            "expires_in": 300
+        })),
+    ))
 }
 
 async fn token(
