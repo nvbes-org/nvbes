@@ -4,7 +4,7 @@ use axum::{
     Form, Json, Router,
     extract::{Query, State},
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Redirect},
     routing::{get, post},
 };
 use serde::Deserialize;
@@ -91,6 +91,8 @@ pub fn authorization_router(
     Router::new()
         .route("/oauth/authorize", get(authorize))
         .route("/oauth/authorize/login", post(login))
+        .route("/oauth/authorize/approve", post(approve))
+        .route("/oauth/authorize/deny", post(deny))
         .with_state(AuthorizationState {
             db,
             clients,
@@ -133,6 +135,65 @@ async fn login(
             "csrf_token": csrf
         })),
     ))
+}
+
+#[derive(Debug, Deserialize)]
+struct InteractionForm {
+    interaction: String,
+}
+
+async fn approve(
+    State(state): State<AuthorizationState>,
+    headers: HeaderMap,
+    Json(form): Json<InteractionForm>,
+) -> Result<Redirect, ProtocolError> {
+    let proof = state
+        .browser
+        .verify_mutation(&axum::http::Method::POST, &headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    let code = crate::oauth::consent::approve(&state.db, &state.clients, &form.interaction, &proof)
+        .await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    Ok(redirect_with_result(
+        &code.request.redirect_uri,
+        "code",
+        &code.code,
+        &code.request.state,
+    )?)
+}
+
+async fn deny(
+    State(state): State<AuthorizationState>,
+    headers: HeaderMap,
+    Json(form): Json<InteractionForm>,
+) -> Result<Redirect, ProtocolError> {
+    let proof = state
+        .browser
+        .verify_mutation(&axum::http::Method::POST, &headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    let request = crate::oauth::consent::deny(&state.db, &state.clients, &form.interaction, &proof)
+        .await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    Ok(redirect_with_result(
+        &request.redirect_uri,
+        "error",
+        "access_denied",
+        &request.state,
+    )?)
+}
+
+fn redirect_with_result(
+    redirect_uri: &str,
+    key: &str,
+    value: &str,
+    state: &str,
+) -> Result<Redirect, ProtocolError> {
+    let mut url = reqwest::Url::parse(redirect_uri)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    url.query_pairs_mut()
+        .append_pair(key, value)
+        .append_pair("state", state);
+    Ok(Redirect::temporary(url.as_str()))
 }
 
 async fn authorize(
