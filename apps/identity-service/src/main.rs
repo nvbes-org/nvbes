@@ -27,6 +27,7 @@ mod synthetic;
 #[path = "identity.tokens.synthetic.rs"]
 mod tokens_synthetic;
 use nvbes_identity_service::{tokens, tokens_config};
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -185,12 +186,27 @@ async fn main() -> anyhow::Result<()> {
     let http_metrics = nvbes_observability::metrics::HttpMetrics {
         handle: state.metrics.clone(),
     };
-    let router = health::router(state.clone())
+    let mut router = health::router(state.clone())
         .merge(metrics::router(state))
         .layer(axum::middleware::from_fn_with_state(
             http_metrics,
             nvbes_observability::middleware::observe_request,
         ));
+    match tokens_config::TokenConfig::from_env(&config.environment) {
+        Ok(token_config) => {
+            let token_service = tokens::TokenService::new(token_config)?;
+            let issuer = token_service.issuer().to_owned();
+            router = router.merge(nvbes_identity_service::oauth::http::router(
+                &issuer,
+                Arc::new(token_service),
+            ));
+            tracing::info!("OIDC discovery and JWKS endpoints enabled");
+        }
+        Err(error) if config.environment == "development" || config.environment == "test" => {
+            tracing::warn!(%error, "OIDC discovery and JWKS endpoints remain disabled: token configuration is absent");
+        }
+        Err(error) => return Err(error.into()),
+    }
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
     tracing::info!(bind_addr = %config.bind_addr, environment = %config.environment, "starting closed identity foundation");
 
