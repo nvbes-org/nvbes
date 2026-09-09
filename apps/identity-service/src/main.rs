@@ -219,6 +219,13 @@ async fn main() -> anyhow::Result<()> {
                         config.environment == "development" || config.environment == "test",
                     )
                     .map_err(|_| anyhow::anyhow!("invalid Identity browser origin"))?;
+                    let mfa = nvbes_identity_service::mfa_crypto::MfaCrypto::with_rotation(
+                        config.mfa_key_version,
+                        config.mfa_encryption_key,
+                        config
+                            .mfa_previous_key_version
+                            .zip(config.mfa_previous_encryption_key),
+                    )?;
                     let clients =
                         nvbes_identity_service::oauth::clients::ClientRegistry::from_json(
                             &registry_json,
@@ -230,6 +237,7 @@ async fn main() -> anyhow::Result<()> {
                             db.clone(),
                             Arc::new(clients),
                             browser,
+                            Arc::new(mfa),
                         ));
                     tracing::info!("OAuth authorization interaction endpoint enabled");
                 }

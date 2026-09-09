@@ -7,6 +7,10 @@ pub mod oauth;
 pub mod auth;
 #[path = "identity.browser.rs"]
 pub mod browser;
+#[path = "identity.mfa.rs"]
+pub mod mfa;
+#[path = "identity.mfa.crypto.rs"]
+pub mod mfa_crypto;
 #[path = "identity.rate_limits.rs"]
 pub mod rate_limits;
 

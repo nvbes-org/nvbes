@@ -46,6 +46,7 @@ struct AuthorizationState {
     db: PgPool,
     clients: Arc<ClientRegistry>,
     browser: BrowserSecurity,
+    mfa: Arc<crate::mfa_crypto::MfaCrypto>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -90,6 +91,7 @@ pub fn authorization_router(
     db: PgPool,
     clients: Arc<ClientRegistry>,
     browser: BrowserSecurity,
+    mfa: Arc<crate::mfa_crypto::MfaCrypto>,
 ) -> Router {
     Router::new()
         .route("/oauth/authorize", get(authorize))
@@ -97,10 +99,12 @@ pub fn authorization_router(
         .route("/oauth/authorize/approve", post(approve))
         .route("/oauth/authorize/deny", post(deny))
         .route("/oauth/logout", post(logout))
+        .route("/oauth/session/step-up/totp", post(step_up_totp))
         .with_state(AuthorizationState {
             db,
             clients,
             browser,
+            mfa,
         })
 }
 
@@ -144,6 +148,11 @@ async fn login(
 #[derive(Debug, Deserialize)]
 struct InteractionForm {
     interaction: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct StepUpForm {
+    code: String,
 }
 
 async fn approve(
@@ -211,6 +220,38 @@ async fn logout(
             ("cache-control", "no-store".parse().unwrap()),
         ],
         Json(serde_json::json!({"logged_out": true})),
+    ))
+}
+
+async fn step_up_totp(
+    State(state): State<AuthorizationState>,
+    headers: HeaderMap,
+    Json(form): Json<StepUpForm>,
+) -> Result<impl IntoResponse, ProtocolError> {
+    state
+        .browser
+        .verify_mutation(&axum::http::Method::POST, &headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    let session = state
+        .browser
+        .session_token(&headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?
+        .ok_or(ProtocolError::OAuth(OAuthError::LoginRequired))?;
+    if form.code.len() != 6 || !form.code.bytes().all(|value| value.is_ascii_digit()) {
+        return Err(ProtocolError::OAuth(OAuthError::InvalidRequest));
+    }
+    let expires_at = crate::mfa::grant_step_up(
+        &state.db,
+        &state.mfa,
+        &session,
+        &form.code,
+        chrono::Utc::now(),
+    )
+    .await
+    .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    Ok((
+        [("cache-control", "no-store")],
+        Json(serde_json::json!({"step_up": true, "expires_at": expires_at})),
     ))
 }
 
