@@ -19,8 +19,11 @@ fn discovery_uses_the_exact_issuer_and_only_mounted_capabilities() {
 }
 
 #[test]
-fn discovery_does_not_claim_unimplemented_userinfo_or_federation() {
+fn discovery_claims_userinfo_but_not_federation() {
     let value = serde_json::to_value(provider_metadata("https://identity.example/")).unwrap();
-    assert!(value.get("userinfo_endpoint").is_none());
+    assert_eq!(
+        value.get("userinfo_endpoint").and_then(|v| v.as_str()),
+        Some("https://identity.example/oauth/userinfo")
+    );
     assert!(value.get("federation_registration_endpoint").is_none());
 }
