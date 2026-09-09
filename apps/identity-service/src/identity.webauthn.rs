@@ -1,3 +1,4 @@
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::{DateTime, Utc};
 use rand::RngCore;
 use reqwest::Url;
@@ -77,6 +78,22 @@ pub fn finish_passkey_registration(
 
 pub fn serialize_passkey(passkey: &Passkey) -> Result<serde_json::Value, String> {
     serde_json::to_value(passkey).map_err(|_| "WebAuthn credential serialization failed".to_owned())
+}
+
+pub fn passkey_record(passkey: &Passkey) -> Result<(Vec<u8>, serde_json::Value), String> {
+    let encoded = serde_json::to_value(passkey.cred_id())
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .ok_or_else(|| "WebAuthn credential id serialization failed".to_owned())?;
+    let credential_id = URL_SAFE_NO_PAD
+        .decode(encoded)
+        .map_err(|_| "WebAuthn credential id encoding is invalid".to_owned())?;
+    if !valid_credential_id(&credential_id) {
+        return Err("WebAuthn credential id length is invalid".to_owned());
+    }
+    let public_key = serde_json::to_value(passkey.get_public_key())
+        .map_err(|_| "WebAuthn public key serialization failed".to_owned())?;
+    Ok((credential_id, public_key))
 }
 
 impl ChallengePurpose {
