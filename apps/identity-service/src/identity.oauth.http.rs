@@ -95,6 +95,7 @@ pub fn authorization_router(
         .route("/oauth/authorize/login", post(login))
         .route("/oauth/authorize/approve", post(approve))
         .route("/oauth/authorize/deny", post(deny))
+        .route("/oauth/logout", post(logout))
         .with_state(AuthorizationState {
             db,
             clients,
@@ -182,6 +183,34 @@ async fn deny(
         "access_denied",
         &request.state,
     )?)
+}
+
+async fn logout(
+    State(state): State<AuthorizationState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, ProtocolError> {
+    state
+        .browser
+        .verify_mutation(&axum::http::Method::POST, &headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    if let Some(session) = state
+        .browser
+        .session_token(&headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?
+    {
+        sqlx::query("UPDATE identity_sessions SET revoked_at=clock_timestamp() WHERE token_hash=$1 AND revoked_at IS NULL")
+            .bind(crate::oauth::store::hash(&session))
+            .execute(&state.db)
+            .await
+            .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    }
+    Ok((
+        [
+            ("set-cookie", state.browser.clear_session_cookie()),
+            ("cache-control", "no-store".parse().unwrap()),
+        ],
+        Json(serde_json::json!({"logged_out": true})),
+    ))
 }
 
 fn redirect_with_result(
