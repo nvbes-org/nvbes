@@ -3,7 +3,10 @@ use rand::RngCore;
 use reqwest::Url;
 use sqlx::PgPool;
 use uuid::Uuid;
-use webauthn_rs::{Webauthn, WebauthnBuilder};
+use webauthn_rs::{
+    Webauthn, WebauthnBuilder,
+    prelude::{CreationChallengeResponse, PasskeyRegistration},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChallengePurpose {
@@ -40,6 +43,20 @@ pub fn build_server(rp_id: &str, rp_origin: &str) -> Result<Webauthn, String> {
         .map_err(|_| "invalid WebAuthn RP configuration".to_owned())?
         .build()
         .map_err(|_| "invalid WebAuthn RP configuration".to_owned())
+}
+
+pub fn start_passkey_registration(
+    server: &Webauthn,
+    principal_id: Uuid,
+    user_name: &str,
+    display_name: &str,
+) -> Result<(CreationChallengeResponse, PasskeyRegistration), String> {
+    if user_name.is_empty() || display_name.is_empty() {
+        return Err("WebAuthn user identity is required".to_owned());
+    }
+    server
+        .start_passkey_registration(principal_id, user_name, display_name, None)
+        .map_err(|_| "WebAuthn registration could not start".to_owned())
 }
 
 impl ChallengePurpose {
