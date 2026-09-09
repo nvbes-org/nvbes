@@ -35,6 +35,7 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 uuid.workspace = true
+webauthn-rs.workspace = true
 
 [dev-dependencies]
 prost-types = "0.14"

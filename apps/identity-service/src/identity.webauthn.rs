@@ -1,10 +1,20 @@
 use chrono::{DateTime, Utc};
+use reqwest::Url;
+use webauthn_rs::{Webauthn, WebauthnBuilder};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChallengePurpose {
     Registration,
     Authentication,
     StepUp,
+}
+
+pub fn build_server(rp_id: &str, rp_origin: &str) -> Result<Webauthn, String> {
+    let origin = Url::parse(rp_origin).map_err(|_| "invalid WebAuthn RP origin".to_owned())?;
+    WebauthnBuilder::new(rp_id, &origin)
+        .map_err(|_| "invalid WebAuthn RP configuration".to_owned())?
+        .build()
+        .map_err(|_| "invalid WebAuthn RP configuration".to_owned())
 }
 
 impl ChallengePurpose {
