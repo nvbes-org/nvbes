@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use rand::RngCore;
 use reqwest::Url;
+use sqlx::PgPool;
+use uuid::Uuid;
 use webauthn_rs::{Webauthn, WebauthnBuilder};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +42,32 @@ pub fn generate_challenge() -> [u8; 32] {
 
 pub fn valid_credential_label(label: &str) -> bool {
     (1..=128).contains(&label.chars().count()) && label.chars().all(|value| !value.is_control())
+}
+
+pub async fn store_challenge(
+    db: &PgPool,
+    principal_id: Option<Uuid>,
+    purpose: ChallengePurpose,
+    expires_at: DateTime<Utc>,
+) -> Result<([u8; 32], Uuid), sqlx::Error> {
+    let challenge = generate_challenge();
+    let id = Uuid::new_v4();
+    sqlx::query("INSERT INTO identity_webauthn_challenges(id,principal_id,challenge,purpose,expires_at) VALUES($1,$2,$3,$4,$5)")
+        .bind(id).bind(principal_id).bind(challenge.as_slice())
+        .bind(purpose.as_str()).bind(expires_at).execute(db).await?;
+    Ok((challenge, id))
+}
+
+pub async fn consume_challenge(
+    db: &PgPool,
+    challenge: &[u8; 32],
+    expected_purpose: ChallengePurpose,
+    principal_id: Option<Uuid>,
+) -> Result<Uuid, sqlx::Error> {
+    let id: Option<Uuid> = sqlx::query_scalar("UPDATE identity_webauthn_challenges SET consumed_at=clock_timestamp() WHERE challenge=$1 AND purpose=$2 AND consumed_at IS NULL AND expires_at>clock_timestamp() AND (principal_id IS NOT DISTINCT FROM $3) RETURNING id")
+        .bind(challenge.as_slice()).bind(expected_purpose.as_str()).bind(principal_id)
+        .fetch_optional(db).await?;
+    id.ok_or(sqlx::Error::RowNotFound)
 }
 
 /// WebAuthn authenticators may report zero permanently. Once a non-zero
