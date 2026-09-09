@@ -75,6 +75,10 @@ pub fn finish_passkey_registration(
         .map_err(|_| "WebAuthn registration verification failed".to_owned())
 }
 
+pub fn serialize_passkey(passkey: &Passkey) -> Result<serde_json::Value, String> {
+    serde_json::to_value(passkey).map_err(|_| "WebAuthn credential serialization failed".to_owned())
+}
+
 impl ChallengePurpose {
     pub fn as_str(self) -> &'static str {
         match self {
