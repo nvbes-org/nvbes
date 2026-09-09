@@ -48,6 +48,13 @@ struct AuthorizationState {
 }
 
 #[derive(Debug, Deserialize)]
+struct LoginForm {
+    interaction: String,
+    email: String,
+    password: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct TokenForm {
     grant_type: String,
     code: String,
@@ -83,11 +90,49 @@ pub fn authorization_router(
 ) -> Router {
     Router::new()
         .route("/oauth/authorize", get(authorize))
+        .route("/oauth/authorize/login", post(login))
         .with_state(AuthorizationState {
             db,
             clients,
             browser,
         })
+}
+
+async fn login(
+    State(state): State<AuthorizationState>,
+    headers: HeaderMap,
+    Json(form): Json<LoginForm>,
+) -> Result<impl IntoResponse, ProtocolError> {
+    let proof = state
+        .browser
+        .verify_mutation(&axum::http::Method::POST, &headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    let session = crate::auth::authenticate(&state.db, &form.email, &form.password)
+        .await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    let csrf = interactions::attach_authenticated_session(
+        &state.db,
+        &state.clients,
+        &form.interaction,
+        &proof,
+        &session,
+    )
+    .await
+    .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    let session_cookie = state
+        .browser
+        .session_cookie(&session)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    Ok((
+        [
+            ("set-cookie", session_cookie),
+            ("cache-control", "no-store".parse().unwrap()),
+        ],
+        Json(serde_json::json!({
+            "interaction": form.interaction,
+            "csrf_token": csrf
+        })),
+    ))
 }
 
 async fn authorize(

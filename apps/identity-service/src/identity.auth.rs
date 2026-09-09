@@ -72,7 +72,7 @@ pub(super) async fn create_active_human(
     Ok(principal_id)
 }
 
-pub(super) async fn authenticate(
+pub(crate) async fn authenticate(
     db: &PgPool,
     email: &str,
     password: &str,

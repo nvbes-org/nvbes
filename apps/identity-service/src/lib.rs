@@ -3,6 +3,8 @@
 #[path = "identity.oauth.mod.rs"]
 pub mod oauth;
 
+#[path = "identity.auth.rs"]
+pub mod auth;
 #[path = "identity.browser.rs"]
 pub mod browser;
 #[path = "identity.rate_limits.rs"]
