@@ -36,23 +36,11 @@ export function oauthClient({ origins, clientId, redirect, email, password }) {
       },
       body: JSON.stringify(body),
     });
-  const issue = async (service, needsLogin, scope = `${service}:read`, dpopKey) => {
-    const verifier = secret();
-    const state = secret();
-    const query = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirect,
-      response_type: 'code',
-      scope: `openid ${scope}`,
-      resource: origins[service],
-      state,
-      nonce: secret(),
-      code_challenge: createHash('sha256').update(verifier).digest('base64url'),
-      code_challenge_method: 'S256',
-    });
-    if (dpopKey) query.set('dpop_jkt', dpopKey.jkt);
-    const authorization = await request(`/oauth/authorize?${query}`);
-    assert.equal(authorization.status, 200, `${service} authorization`);
+  const authorize = async (url, needsLogin) => {
+    const parsed = new URL(url);
+    assert.equal(parsed.origin, origins.identity);
+    const authorization = await request(`${parsed.pathname}${parsed.search}`);
+    assert.equal(authorization.status, 200, 'hosted authorization');
     const interaction = await authorization.json();
     assert.equal(interaction.needs_login, needsLogin);
     let csrf = interaction.csrf_token;
@@ -75,6 +63,24 @@ export function oauthClient({ origins, clientId, redirect, email, password }) {
     assert.equal(approval.status, 303, 'consent redirect');
     const callback = new URL(approval.headers.get('location'));
     assert.equal(callback.origin, origins.account);
+    return callback;
+  };
+  const issue = async (service, needsLogin, scope = `${service}:read`, dpopKey) => {
+    const verifier = secret();
+    const state = secret();
+    const query = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirect,
+      response_type: 'code',
+      scope: `openid ${scope}`,
+      resource: origins[service],
+      state,
+      nonce: secret(),
+      code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+      code_challenge_method: 'S256',
+    });
+    if (dpopKey) query.set('dpop_jkt', dpopKey.jkt);
+    const callback = await authorize(`${origins.identity}/oauth/authorize?${query}`, needsLogin);
     assert.equal(callback.searchParams.get('state'), state);
     const exchange = await request('/oauth/token', {
       method: 'POST',
@@ -93,5 +99,5 @@ export function oauthClient({ origins, clientId, redirect, email, password }) {
     assert.equal(typeof tokens.access_token, 'string');
     return tokens.access_token;
   };
-  return { issue, logout: () => post('/oauth/logout', {}, sessionCsrf) };
+  return { issue, authorize, logout: () => post('/oauth/logout', {}, sessionCsrf) };
 }

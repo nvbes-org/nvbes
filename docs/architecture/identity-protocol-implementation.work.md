@@ -13,6 +13,31 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Refresh SDK et intégration aux trois services — 2026-09-10
+
+`OAuthSession` conserve les jetons en mémoire avec la clé DPoP issue du callback.
+Un seul échange est lancé pour les appels de refresh simultanés ; chaque rotation
+utilise le nouveau secret, conserve la clé et génère un nouveau `jti`. Une réponse
+Bearer, une extension de scopes, une rotation absente ou une durée invalide sont
+refusées. Une erreur invalide la session locale sans nouvelle tentative : le
+serveur peut avoir déjà consommé le secret. Délai réseau de dix secondes ; aucun
+cookie ni redirection. Une réponse tardive ne réactive pas une session effacée.
+
+La cible des vrais runtimes charge désormais le SDK TypeScript via tsx avec son
+tsconfig explicite. Pour Account puis Billing : PAR signé par le SDK, interaction
+hébergée réelle, échange de code SDK, refresh concurrent mutualisé, seconde
+rotation, appel métier DPoP accepté et refresh refusé après logout. Les migrations
+et données sont dans les trois bases du conteneur éphémère habituel. Le stockage
+de clé est injecté en mémoire dans Node ; aucune validation CORS/HTTPS navigateur
+n'est déduite de ce scénario.
+
+Validation : 81 tests SDK, lint et typecheck réussis ; les 17 tests DPoP Rust,
+compilations des trois binaires et scénario réel étendu passent. Les tests couvrent
+aussi panne transport, downgrade, scope modifié et effacement pendant le refresh.
+Aucun code Rust modifié ; la suite PostgreSQL Identity complète n'est pas relancée.
+Restent notamment validation OIDC des ID tokens, parcours navigateur HTTPS,
+interfaces hébergées, récupération MFA, logout intersites et gates FinOps.
+
 ## Clé DPoP du SDK à travers la redirection — 2026-09-10
 
 Le SDK utilise DPoP par défaut avec une clé WebCrypto non exportable par

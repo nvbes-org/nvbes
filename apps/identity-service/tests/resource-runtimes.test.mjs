@@ -6,6 +6,7 @@ import { command, RuntimeFixture, runtimeEnvironment, unusedPort } from './runti
 import { verifyBillingAuthorization } from './runtime-billing-authorization.mjs';
 import { verifyResourceDpop } from './runtime-resource-dpop.mjs';
 import { oauthClient } from './runtime-oauth-client.mjs';
+import { verifySdkRefresh } from './runtime-sdk-refresh.mjs';
 
 const secret = () => randomBytes(32).toString('base64url');
 
@@ -57,7 +58,7 @@ test(
             },
           ]),
         ),
-        allow_refresh: false,
+        allow_refresh: true,
         require_dpop: false,
       },
     ];
@@ -186,9 +187,20 @@ test(
         else billingRuntime = runtime;
       },
     });
+    const sdkSessions = await verifySdkRefresh({
+      origins,
+      endpoints,
+      browser,
+      clientId: clients[0].client_id,
+      redirect,
+    });
     const logout = await browser.logout();
     assert.equal(logout.status, 200);
     await logout.arrayBuffer();
+    for (const session of sdkSessions) {
+      await assert.rejects(session.refresh(), /refresh failed/);
+      assert.equal(session.snapshot(), null);
+    }
     await access('account', account, 401);
     await access('billing', billing, 401);
     for (const { service, token, key } of boundTokens) {

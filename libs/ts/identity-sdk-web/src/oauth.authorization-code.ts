@@ -94,7 +94,9 @@ export async function exchangeAuthorizationCode(
   return { ...tokens, returnTo: transaction.returnTo, ...(key ? { dpopKey: key } : {}) };
 }
 
-function parseTokenResponse(payload: unknown): Omit<AuthorizationCodeTokenResponse, 'returnTo'> {
+export function parseTokenResponse(
+  payload: unknown,
+): Omit<AuthorizationCodeTokenResponse, 'returnTo'> {
   if (!isRecord(payload)) {
     throw new Error('Identity returned an invalid OAuth token response.');
   }
@@ -103,7 +105,7 @@ function parseTokenResponse(payload: unknown): Omit<AuthorizationCodeTokenRespon
   const tokenType = requiredString(payload, 'token_type');
   const scope = requiredString(payload, 'scope');
   const expiresIn = payload.expires_in;
-  if (typeof expiresIn !== 'number' || !Number.isFinite(expiresIn) || expiresIn <= 0) {
+  if (typeof expiresIn !== 'number' || !Number.isSafeInteger(expiresIn) || expiresIn <= 0) {
     throw new Error('Identity returned an invalid OAuth token lifetime.');
   }
 

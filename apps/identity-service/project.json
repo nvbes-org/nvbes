@@ -13,7 +13,7 @@
           "cargo test --locked --package nvbes-dpop --features resource-server",
           "cargo build --locked --package nvbes-identity-service --package nvbes-account-service --bins --target-dir target",
           "cargo build --locked --manifest-path apps/billing-service/Cargo.toml --bin nvbes-billing-service --target-dir apps/billing-service/target",
-          "node --test apps/identity-service/tests/resource-runtimes.test.mjs"
+          "pnpm exec tsx --tsconfig libs/ts/identity-sdk-web/tsconfig.json --test apps/identity-service/tests/resource-runtimes.test.mjs"
         ],
         "parallel": false,
         "cwd": "."

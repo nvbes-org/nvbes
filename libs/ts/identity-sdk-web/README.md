@@ -36,8 +36,35 @@ interrompt le démarrage sans fallback Bearer. `dpop: false` désactive explicit
 la liaison pour un client dont le registre le permet. `dpopStore` permet d'injecter
 un stockage respectant le contrat `DpopTransactionStore` pour les tests.
 La persistance de clé a été vérifiée après rechargement dans Chromium ; les
-échanges OAuth de cette preuve utilisent des réponses simulées. Refresh DPoP,
-validation complète OIDC et parcours contre les vrais services restent à valider.
+échanges OAuth de cette preuve utilisent des réponses simulées. La validation
+complète OIDC et le parcours navigateur HTTPS restent à valider.
+
+## Renouvellement en mémoire
+
+Après `exchangeAuthorizationCode`, construire un seul `OAuthSession` par famille
+de jetons. Sa méthode `refresh()` mutualise les appels simultanés, remplace le
+refresh token après chaque rotation et réutilise la même clé DPoP. Le client doit
+être enregistré avec refresh autorisé et demander `offline_access` à l'autorisation.
+
+```typescript
+import { OAuthSession } from '@nvbes/identity-sdk-web';
+
+const session = new OAuthSession({ baseUrl, clientId }, tokens);
+const rotated = await session.refresh();
+// Utiliser rotated.accessToken et rotated.dpopKey pour la prochaine requête API.
+```
+
+Les requêtes ont un délai de dix secondes, sans cookies, redirections ou nouvelle
+tentative automatique. Toute erreur de rotation invalide l'état local : même si
+la réponse est perdue, le serveur peut avoir consommé l'ancien secret. Une
+reconnexion est alors nécessaire. `clear()` efface seulement l'état local et ne
+remplace pas le logout serveur. Un résultat tardif ne réactive pas une session
+effacée. Ne pas créer plusieurs instances à partir du même refresh token.
+
+La cible `identity-service:test:resource-runtimes` traverse le vrai SDK TypeScript,
+Identity, Account et Billing : PAR, code, rotations, accès API et refus après
+logout. Elle utilise Node et un stockage de clé injecté ; les politiques CORS,
+cookies intersites et IndexedDB sous HTTPS requièrent encore les tests navigateur.
 
 ```typescript
 import { NvbesIdentityWeb } from '@nvbes/identity-sdk-web';

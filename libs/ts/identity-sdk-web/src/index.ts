@@ -11,6 +11,7 @@ export * from './identity-web.client';
 export * from './mfa';
 export * from './oauth.authorization-code';
 export * from './oauth.authorization-request';
+export * from './oauth.session';
 export * from './pkce';
 export * from './pow';
 export * from './storage';
