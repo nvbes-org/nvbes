@@ -47,7 +47,7 @@ function fixture(t) {
       repository: 'nvbes-org/nvbes',
       workflows: [run.path],
       getRun: () => run,
-      units: [{ name: 'fixture-rust', language: 'rust' }],
+      units: [{ name: 'signature-boundary-fixture', language: 'fixture' }],
     },
     directory,
     run,
@@ -59,6 +59,19 @@ function fixture(t) {
 test('verifies signature, artifact and GitHub run provenance', (t) => {
   const { input } = fixture(t);
   assert.equal(verifyBundle(input).sha, 'a'.repeat(40));
+});
+
+test('a valid signature cannot bypass missing Rust raw measurements', (t) => {
+  const { input } = fixture(t);
+  input.units = [
+    {
+      name: 'nvbes-example',
+      language: 'rust',
+      sourceRoot: 'libs/rust/example',
+      sources: ['libs/rust/example/src/lib.rs'],
+    },
+  ];
+  assert.throws(() => verifyBundle(input), /Missing or duplicate measurement/u);
 });
 
 for (const [name, mutate] of [

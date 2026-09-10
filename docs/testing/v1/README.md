@@ -86,6 +86,29 @@ détecté. Les compteurs ignorés, incomplets ou sans métrique applicable
 bloquent la validation ; leur éventuelle non-applicabilité nécessite encore
 une décision contrôlée, jamais une conversion automatique en 100 %.
 
+Pour Rust, `reports` doit référencer `llvm-lines`, `llvm-branches` et
+`cargo-mutants`. Les exports LLVM fusionnés 3.0.1/3.1.0 sont lus par fichier
+et attribués aux crates du catalogue Cargo, y compris Billing autonome.
+L'inventaire comprend `src/**/*.rs` et les fichiers Rust à la racine de la
+crate (dont `build.rs`). Les fichiers `.tests.rs` et `.test_support.rs` ne
+contribuent pas aux scores. Les chemins inconnus dans une crate, doublons,
+compteurs invalides et branches absentes bloquent la validation. Les régions
+ne remplacent jamais les branches ; des compteurs nuls ne valent pas 100 %.
+
+Le lecteur cargo-mutants 27.1.0 exige une baseline réussie, des dates de
+début/fin, autant de résultats que de mutants annoncés et des phases
+Build/Test cohérentes avec chaque statut. Les mutations identiques sont
+refusées. Le score est `caught / (caught + missed + timeout)` ; seuls les
+builds non viables sortent du dénominateur. Les trois scores déclarés doivent
+égaler les valeurs recalculées sans arrondi.
+
+Ces contrôles ne prouvent pas encore l'exhaustivité de l'instrumentation
+Rust ni celle des sites de mutation. LLVM ne contient pas le texte source :
+la liaison de son contenu au SHA exige toujours la collecte CI authentifiée.
+Un export dont des fichiers entiers auraient été omis doit être détecté par
+le futur contrôle de complétude de campagne, pas par une comparaison naïve
+avec tous les modules Rust (certains n'ont aucun compteur applicable).
+
 ## Limites à fermer avant tout candidat
 
 1. Relier chaque ID de cas à un test réellement exécuté ; terminer le
@@ -93,9 +116,9 @@ une décision contrôlée, jamais une conversion automatique en 100 %.
    consommateurs Account ensemble. Les IDs actuels sont des obligations,
    pas des assertions d'exécution.
 2. Produire les enveloppes depuis les runners CI, lier les artefacts à leurs
-   producteurs et recalculer aussi les mesures Rust depuis les rapports
-   bruts. Le recalcul TypeScript est intégré ; l'authentification de la
-   collecte CI, l'intégralité des sites de mutation et la vérification du
+   producteurs. Les recalculs TypeScript et Rust sont intégrés ;
+   l'authentification de la collecte CI, l'exhaustivité de l'instrumentation
+   et des sites de mutation et la vérification du
    contenu métier des preuves de suites/opérations restent à terminer.
    La signature du paquet et la vérification d'un run ne prouvent pas à
    elles seules que GitHub a produit ces artefacts.

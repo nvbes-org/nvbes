@@ -3,6 +3,7 @@ import { createHash, createPublicKey, verify } from 'node:crypto';
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { verifyTypescriptMeasurements } from './v1-typescript-measurements.mjs';
+import { verifyRustMeasurements } from './v1-rust-measurements.mjs';
 
 export const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -77,5 +78,6 @@ export function verifyBundle({
     assert(['push', 'workflow_dispatch'].includes(run.event), 'Untrusted workflow event');
   }
   verifyTypescriptMeasurements(bundle, units, artifacts);
+  verifyRustMeasurements(bundle, units, artifacts);
   return bundle;
 }

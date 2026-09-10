@@ -93,6 +93,7 @@ export function productionUnits(root, domains, cwd) {
     name,
     language: 'rust',
     thresholds: thresholds[name] ?? {},
+    ...rustSources(packages.find((pkg) => pkg.name === name).manifest_path, cwd),
   }));
   const manifests = execFileSync('rg', ['--files', 'libs/ts', '-g', 'package.json'], {
     cwd,
@@ -135,4 +136,19 @@ export function productionUnits(root, domains, cwd) {
       });
   }
   return units.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function rustSources(manifest, cwd) {
+  const directory = path.dirname(manifest);
+  const sourceRoot = path.relative(cwd, directory).replaceAll(path.sep, '/');
+  assert(sourceRoot && !sourceRoot.split('/').includes('..'), 'Rust crate outside candidate');
+  const sources = readdirSync(path.join(directory, 'src'), { recursive: true })
+    .filter((file) => file.endsWith('.rs'))
+    .map((file) => `${sourceRoot}/src/${file.replaceAll(path.sep, '/')}`);
+  sources.push(
+    ...readdirSync(directory)
+      .filter((file) => file.endsWith('.rs'))
+      .map((file) => `${sourceRoot}/${file}`),
+  );
+  return { sourceRoot, sources };
 }
