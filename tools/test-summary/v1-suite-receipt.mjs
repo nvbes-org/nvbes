@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadV1 } from './v1-release.mjs';
+import { loadV1 } from './v1-context.mjs';
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 export const suiteCommand = (target) => ['pnpm', 'exec', 'nx', 'run', target];

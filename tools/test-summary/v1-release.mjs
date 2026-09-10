@@ -2,23 +2,13 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { confinedRead, sha256, verifyBundle } from './v1-bundle-verification.mjs';
+import { confinedRead, verifyBundle } from './v1-bundle-verification.mjs';
 import { productionUnits } from './v1-catalogue.mjs';
+import { loadV1 } from './v1-context.mjs';
 import { evaluateV1 } from './v1-evidence.mjs';
-import { validateManifest } from './v1-manifest.mjs';
 import { githubArtifactReader } from './v1-ci-artifacts.mjs';
 
-export function loadV1(cwd) {
-  const rootBytes = confinedRead(cwd, 'docs/testing/v1/manifest.json');
-  const root = JSON.parse(rootBytes);
-  const domainBytes = Object.entries(root.domains)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, file]) => confinedRead(cwd, file));
-  const domains = domainBytes.map((bytes) => JSON.parse(bytes));
-  validateManifest(root, domains);
-  const manifestDigest = sha256(JSON.stringify([rootBytes.toString(), ...domainBytes.map(String)]));
-  return { root, domains, manifestDigest };
-}
+export { loadV1 } from './v1-context.mjs';
 
 export function renderV1(result, sha) {
   const safe = (text) => String(text).replace(/[|\r\n]/gu, ' ');

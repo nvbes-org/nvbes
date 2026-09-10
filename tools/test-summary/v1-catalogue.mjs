@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 
@@ -95,12 +95,12 @@ export function productionUnits(root, domains, cwd) {
     thresholds: thresholds[name] ?? {},
     ...rustSources(packages.find((pkg) => pkg.name === name).manifest_path, cwd),
   }));
-  const manifests = execFileSync('rg', ['--files', 'libs/ts', '-g', 'package.json'], {
-    cwd,
-    encoding: 'utf8',
-  })
-    .trim()
-    .split('\n');
+  const typescriptRoot = path.join(cwd, 'libs/ts');
+  const manifests = readdirSync(typescriptRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => `libs/ts/${entry.name}/package.json`)
+    .filter((manifest) => existsSync(path.join(cwd, manifest)))
+    .sort((a, b) => a.localeCompare(b));
   for (const manifest of manifests) {
     const location = path.dirname(path.join(cwd, manifest));
     const pkg = JSON.parse(readFileSync(path.join(location, 'package.json'), 'utf8'));
