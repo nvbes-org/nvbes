@@ -7,6 +7,8 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+#[path = "identity.oauth.http.authentication_status.rs"]
+mod authentication_status;
 #[path = "identity.oauth.http.cors.rs"]
 mod cors;
 #[path = "identity.oauth.http.introspection.rs"]
@@ -154,6 +156,10 @@ pub fn authorization_router(
         ));
     Router::new()
         .route("/oauth/authorize/login", post(login))
+        .route(
+            "/oauth/authorize/authentication",
+            post(authentication_status::read).layer(axum::extract::DefaultBodyLimit::max(4096)),
+        )
         .route("/oauth/authorize/approve", post(approve))
         .route("/oauth/authorize/deny", post(deny))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -225,7 +231,7 @@ async fn approve(
 ) -> Result<Response, ProtocolError> {
     let code = crate::oauth::consent::approve(&state.db, &state.clients, &form.interaction, &proof)
         .await
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+        .map_err(protocol_store_error)?;
     Ok(navigation::interaction_result(
         &headers,
         &code.request.redirect_uri,

@@ -28,6 +28,21 @@ session primaire existe ; cela ne certifie pas que la politique forte est rempli
 Le choix et l'affichage du facteur dans l'interface restent à raccorder avant
 d'activer ces profils sur un site destiné au public.
 
+`POST /oauth/authorize/authentication` reçoit uniquement un objet `interaction`,
+avec les cookies et le CSRF de cette interaction sur l'origine Identity. Sa
+réponse non cachable fournit `minimum_authentication`, `needs_login`,
+`needs_step_up` et `proof_expires_at` (null si aucune preuve forte actuelle).
+Cette lecture ne consomme pas l'interaction, ne produit aucun code, ne rafraîchit
+aucune preuve et ne pose aucun cookie. Le corps est limité à 4 KiB ; les champs
+dupliqués/inconnus et tableaux sont refusés. La limite source OAuth s'applique.
+
+Le SDK expose `getHostedAuthenticationStatus(transport, interaction)` et
+`NvbesIdentityWeb.getAuthenticationStatus(interaction)`. Les interfaces relisent
+cet état après login/step-up et avant affichage du consentement. Le statut ne
+constitue pas un droit durable : le consentement relit les mêmes conditions.
+Une session différente de celle liée à l'interaction demande un nouveau login.
+Les erreurs réseau/stockage ne deviennent jamais un statut satisfait.
+
 Les codes conservent le snapshot des preuves au consentement. L'émission, le
 refresh, UserInfo et l'introspection relisent le registre actuel et vérifient
 ce snapshot. Un step-up ultérieur dans la session ne rehausse pas un ancien

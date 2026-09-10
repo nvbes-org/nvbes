@@ -1,5 +1,9 @@
 import { logoutHostedSession } from './hosted.client';
 import {
+  getHostedAuthenticationStatus,
+  type HostedAuthenticationStatus,
+} from './hosted.authentication';
+import {
   generateHostedRecoveryCodes,
   redeemHostedRecoveryCode,
   completeHostedMfaRecovery,
@@ -118,6 +122,10 @@ export class NvbesIdentityWeb {
 
   startTotpEnrollment(sessionCsrf: string): Promise<HostedTotpEnrollment> {
     return startHostedTotpEnrollment({ baseUrl: this.config.baseUrl }, sessionCsrf);
+  }
+
+  getAuthenticationStatus(interaction: HostedInteraction): Promise<HostedAuthenticationStatus> {
+    return getHostedAuthenticationStatus({ baseUrl: this.config.baseUrl }, interaction);
   }
 
   listTotpFactors(sessionCsrf: string): Promise<HostedTotpFactor[]> {

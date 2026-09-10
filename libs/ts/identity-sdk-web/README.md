@@ -205,6 +205,22 @@ Le mode `verifyBrowserTotp(browser, clientOrigin, true)` sur une fixture neuve
 teste la gestion : liste, refus du dernier facteur, ajout d'une passkey virtuelle,
 révocation TOTP puis refus de la session et du jeton Account déjà émis.
 
+### Lire l'exigence MFA du client OAuth
+
+`getAuthenticationStatus(interaction)` relit la politique serveur actuelle et la
+preuve de la session liée à l'interaction. La fonction autonome
+`getHostedAuthenticationStatus(transport, interaction)` est exportée depuis les
+entrées principale et `./oauth`. Elle utilise le CSRF d'interaction, pas celui
+de la session ; le statut n'est pas stocké automatiquement.
+
+Le résultat fournit `minimumAuthentication` (`primary`, `recent_mfa` ou
+`recent_webauthn`), `needsLogin`, `needsStepUp` et `proofExpiresAt`.
+Si `needsLogin`, effectuer le login et conserver l'interaction retournée avec
+son CSRF renouvelé. Si `needsStepUp`, proposer WebAuthn ; TOTP convient aussi
+pour recent_mfa. Relire le statut après la cérémonie. Un statut satisfait peut
+expirer : `completeHostedConsent` reste l'autorité serveur. Ne pas transformer
+un échec de lecture en autorisation locale. L'affichage graphique reste à livrer.
+
 ### Migration des méthodes MFA génériques
 
 Les méthodes et fonctions `listMfaFactors`, `removeMfaFactor`, `stepUp` et

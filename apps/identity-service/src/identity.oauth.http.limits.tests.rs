@@ -66,6 +66,7 @@ async fn every_protocol_route_rejects_exhausted_sources_before_parsing() {
         ("GET", "/oauth/authorize"),
         ("POST", "/oauth/authorize/login"),
         ("POST", "/oauth/authorize/approve"),
+        ("POST", "/oauth/authorize/authentication"),
         ("POST", "/oauth/authorize/deny"),
         ("POST", "/oauth/logout"),
         ("POST", "/oauth/session/step-up/totp"),

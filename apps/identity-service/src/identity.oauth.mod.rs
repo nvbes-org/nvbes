@@ -1,5 +1,7 @@
 #[path = "identity.oauth.authentication_policy.rs"]
 pub mod authentication_policy;
+#[path = "identity.oauth.authentication_status.rs"]
+pub mod authentication_status;
 #[path = "identity.oauth.clients.rs"]
 pub mod clients;
 #[path = "identity.oauth.codes.rs"]

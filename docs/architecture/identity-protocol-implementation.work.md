@@ -13,6 +13,30 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Lecture de l'exigence MFA pour le site Identity — 2026-09-10
+
+POST oauth/authorize/authentication relit la politique courante et la preuve
+de la session liée à l'interaction. Le CSRF d'interaction, l'origine exacte,
+le JSON objet strict, la limite de corps et le quota source sont requis.
+Le statut distingue login, step-up et preuve satisfaite avec échéance, sans
+consommer l'interaction ni créer de code/cookie. Le consentement revalide tout.
+Le handler approve conserve maintenant access_denied et temporarily_unavailable
+au lieu de les masquer sous invalid_request.
+
+Le SDK expose getHostedAuthenticationStatus et getAuthenticationStatus sur la
+classe. Les réponses incohérentes/échéances invalides sont refusées ; aucune
+erreur ne devient une autorisation locale. Le contrat et le README décrivent
+l'usage après login/step-up et la rotation du CSRF d'interaction.
+
+Validation : cargo check --workspace ; suite PostgreSQL complète avec 203 tests
+bibliothèque, 24 runtime et trois gardes réussis ; 110 tests SDK et les cibles
+Nx typecheck/lint/build passent. Le garde des quotas est aussi relancé isolément
+après ajout de la nouvelle route à sa matrice. Conteneur PostgreSQL 17 local
+nvbes-identity-status-tests (512 MiB, shm 256 MiB, port 15434), supprimé après
+validation. Un test graphique reste ignoré dans Cargo ; aucun parcours graphique
+de sélection du facteur n'est revendiqué. Les sites et les autres gates A à D
+restent à livrer.
+
 ## Exigence forte dans le registre OAuth — 2026-09-10
 
 Le champ serveur minimum_authentication distingue primary, recent_mfa et
