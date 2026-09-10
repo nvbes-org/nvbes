@@ -13,6 +13,30 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Navigation après consentement hébergé — 2026-09-10
+
+La préparation du parcours navigateur a identifié un écart : approve/deny
+attendaient un POST JSON mais renvoyaient toujours 303. Un fetch en mode manual
+ne fournit pas Location pour une navigation cliente ; suivre automatiquement
+la redirection ne navigue pas la page et traverse la frontière CORS.
+
+Les deux routes acceptent désormais explicitement `Accept: application/json`
+pour retourner une destination JSON, puis laisser l'interface Identity effectuer
+la navigation de premier niveau. Les appels existants et l'autorisation silencieuse
+gardent la redirection 303. La destination reste construite à partir du registre
+et de l'interaction serveur, jamais du corps soumis au consentement. Les réponses
+restent non cachables, sans referrer, avec Vary Accept.
+
+Les tests couvrent acceptation/refus, encodage du callback, state, rejet
+Origin/CSRF et rejeu après consommation. Le scénario des trois services utilise
+JSON pour le SDK et conserve les redirections pour les échanges directs.
+Cette correction prépare l'interface ; elle ne constitue pas encore la preuve
+du parcours navigateur HTTPS ni la livraison des sites.
+
+Validation : `cargo check --workspace`, suite Nx PostgreSQL Identity (154 tests
+librairie, 24 runtime et 3 gardes ; un test navigateur interactif ignoré), cible
+des trois services et 17 tests DPoP, lint/format JavaScript réussis.
+
 ## CORS des API Account et Billing — 2026-09-10
 
 Les services acceptent chacun une liste explicite `NVBES_*_BROWSER_ORIGINS_JSON`,

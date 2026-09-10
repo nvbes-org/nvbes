@@ -4,7 +4,7 @@ use axum::{
     Extension, Form, Json, Router,
     extract::{RawQuery, State},
     http::{HeaderMap, StatusCode},
-    response::{IntoResponse, Redirect, Response},
+    response::{IntoResponse, Response},
     routing::{get, post},
 };
 #[path = "identity.oauth.http.cors.rs"]
@@ -19,6 +19,9 @@ mod passkey_login;
 pub use passkey_login::router as passkey_login_router;
 #[path = "identity.oauth.http.login_response.rs"]
 mod login_response;
+#[path = "identity.oauth.http.navigation.rs"]
+mod navigation;
+use navigation::redirect_with_result;
 #[path = "identity.oauth.http.query.rs"]
 mod query;
 #[path = "identity.oauth.http.session.rs"]
@@ -194,12 +197,14 @@ struct StepUpForm {
 async fn approve(
     State(state): State<AuthorizationState>,
     Extension(proof): Extension<BrowserProof>,
+    headers: HeaderMap,
     Json(form): Json<InteractionForm>,
 ) -> Result<Response, ProtocolError> {
     let code = crate::oauth::consent::approve(&state.db, &state.clients, &form.interaction, &proof)
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    Ok(redirect_with_result(
+    Ok(navigation::interaction_result(
+        &headers,
         &code.request.redirect_uri,
         "code",
         &code.code,
@@ -210,40 +215,19 @@ async fn approve(
 async fn deny(
     State(state): State<AuthorizationState>,
     Extension(proof): Extension<BrowserProof>,
+    headers: HeaderMap,
     Json(form): Json<InteractionForm>,
 ) -> Result<Response, ProtocolError> {
     let request = crate::oauth::consent::deny(&state.db, &state.clients, &form.interaction, &proof)
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    Ok(redirect_with_result(
+    Ok(navigation::interaction_result(
+        &headers,
         &request.redirect_uri,
         "error",
         "access_denied",
         &request.state,
     )?)
-}
-
-fn redirect_with_result(
-    redirect_uri: &str,
-    key: &str,
-    value: &str,
-    state: &str,
-) -> Result<Response, ProtocolError> {
-    let mut url = reqwest::Url::parse(redirect_uri)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    url.query_pairs_mut()
-        .append_pair(key, value)
-        .append_pair("state", state);
-    // RFC 9700 section 4.12: never forward a hosted POST body to the client.
-    Ok((
-        [
-            ("cache-control", "no-store"),
-            ("pragma", "no-cache"),
-            ("referrer-policy", "no-referrer"),
-        ],
-        Redirect::to(url.as_str()),
-    )
-        .into_response())
 }
 
 async fn authorize(

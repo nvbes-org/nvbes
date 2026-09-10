@@ -20,6 +20,8 @@ mod authorization_tests;
 mod limits_tests;
 #[path = "identity.oauth.http.login.tests.rs"]
 mod login_tests;
+#[path = "identity.oauth.http.navigation.tests.rs"]
+mod navigation_tests;
 
 struct Fixture {
     db: PgPool,

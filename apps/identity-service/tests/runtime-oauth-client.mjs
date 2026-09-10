@@ -26,17 +26,18 @@ export function oauthClient({ origins, clientId, redirect, email, password }) {
     }
     return response;
   };
-  const post = (path, body, csrf) =>
+  const post = (path, body, csrf, json = false) =>
     request(path, {
       method: 'POST',
       headers: {
         origin: origins.identity,
         'content-type': 'application/json',
         'x-csrf-token': csrf,
+        ...(json ? { accept: 'application/json' } : {}),
       },
       body: JSON.stringify(body),
     });
-  const authorize = async (url, needsLogin) => {
+  const authorize = async (url, needsLogin, json = true) => {
     const parsed = new URL(url);
     assert.equal(parsed.origin, origins.identity);
     const authorization = await request(`${parsed.pathname}${parsed.search}`);
@@ -59,9 +60,12 @@ export function oauthClient({ origins, clientId, redirect, email, password }) {
       '/oauth/authorize/approve',
       { interaction: interaction.interaction },
       csrf,
+      json,
     );
-    assert.equal(approval.status, 303, 'consent redirect');
-    const callback = new URL(approval.headers.get('location'));
+    assert.equal(approval.status, json ? 200 : 303, 'consent navigation');
+    const callback = new URL(
+      json ? (await approval.json()).redirect_uri : approval.headers.get('location'),
+    );
     assert.equal(callback.origin, origins.account);
     return callback;
   };
@@ -80,7 +84,11 @@ export function oauthClient({ origins, clientId, redirect, email, password }) {
       code_challenge_method: 'S256',
     });
     if (dpopKey) query.set('dpop_jkt', dpopKey.jkt);
-    const callback = await authorize(`${origins.identity}/oauth/authorize?${query}`, needsLogin);
+    const callback = await authorize(
+      `${origins.identity}/oauth/authorize?${query}`,
+      needsLogin,
+      false,
+    );
     assert.equal(callback.searchParams.get('state'), state);
     const exchange = await request('/oauth/token', {
       method: 'POST',

@@ -58,6 +58,15 @@ origine, sans credentials. Les routes de session, login et introspection ne
 reçoivent pas cette politique CORS. Cela ne remplace aucune vérification de
 client, de jeton, de preuve DPoP ou de CSRF.
 
+Pour terminer le consentement depuis l'interface Identity, les POST JSON vers
+`/oauth/authorize/approve` et `/oauth/authorize/deny` acceptent le header exact
+`Accept: application/json`. Ils répondent alors 200 avec `{ "redirect_uri": "…" }`,
+que l'interface utilise pour une navigation de premier niveau. Sans cette
+demande explicite, la réponse reste une redirection 303. La destination provient
+uniquement de l'interaction validée côté serveur ; les contrôles Origin, CSRF,
+session et consommation unique sont identiques. La réponse est `no-store`.
+Cette surface est réservée à l'origine Identity, sans CORS vers les sites clients.
+
 ```bash
 pnpm nx run identity-service:check
 pnpm nx run identity-service:test
