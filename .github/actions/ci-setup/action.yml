@@ -10,6 +10,9 @@ inputs:
   terraform:
     description: Install Terraform
     default: 'false'
+  coverage:
+    description: Install cargo-llvm-cov for coverage validation
+    default: 'false'
   caches:
     description: Space-separated cache kinds
     default: 'pnpm nx'
@@ -49,7 +52,11 @@ runs:
       if: inputs.rust == 'true'
       with:
         toolchain: 1.91.1
-        components: rustfmt, clippy
+        components: rustfmt, clippy, llvm-tools-preview
+    - name: Install cargo-llvm-cov
+      if: inputs.rust == 'true' && inputs.coverage == 'true'
+      shell: bash --noprofile --norc -euo pipefail {0}
+      run: cargo install cargo-llvm-cov --locked --version 0.8.7
     - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
       if: inputs.rust == 'true'
       with:

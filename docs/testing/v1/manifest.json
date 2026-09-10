@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "domains": {
+    "identity": "docs/testing/v1/identity.json",
+    "account": "docs/testing/v1/account.json",
+    "billing": "docs/testing/v1/billing.json",
+    "email": "docs/testing/v1/email.json",
+    "trust-risk": "docs/testing/v1/trust-risk.json",
+    "platform": "docs/testing/v1/platform.json"
+  },
+  "thresholds": {
+    "lines": 90,
+    "branches": 90,
+    "mutation": 90
+  },
+  "policy": {
+    "silentSkipsAllowed": false,
+    "retryCanMakeGateGreen": false,
+    "testDataMustBeSynthetic": true,
+    "productionLoadTestingAllowed": false
+  },
+  "cargoManifests": ["Cargo.toml", "apps/billing-service/Cargo.toml"],
+  "sharedCargoPackages": [
+    "nvbes-audit",
+    "nvbes-billing",
+    "nvbes-dpop",
+    "nvbes-identity-sdk",
+    "nvbes-ports",
+    "nvbes-product-account",
+    "nvbes-product-identity",
+    "nvbes-region",
+    "nvbes-tenancy",
+    "nvbes-analytics-posthog"
+  ],
+  "typescriptExclusions": {
+    "@nvbes/identity-sdk-core": "OpenAPI and generated declarations only; contract tests remain mandatory.",
+    "@nvbes/backoffice-service-sdk-core": "Archived Backoffice OpenAPI and generated declarations; no V1 runtime."
+  }
+}

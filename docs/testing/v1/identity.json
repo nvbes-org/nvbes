@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "domain": "identity",
+  "project": "identity-service",
+  "cargoPackage": "nvbes-identity-service",
+  "suites": [
+    {
+      "id": "identity.unit",
+      "requirement": "identity: unit behavior",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "identity-service:test",
+      "cases": ["identity.unit.complete-run"]
+    },
+    {
+      "id": "identity.check",
+      "requirement": "identity: compilation",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "identity-service:check",
+      "cases": ["identity.check.complete-run"]
+    },
+    {
+      "id": "identity.database",
+      "requirement": "identity: persistent business invariants",
+      "risk": "Unauthorized access, corrupted state or lost events",
+      "execution": "automated",
+      "target": "identity-service:test:database",
+      "cases": [
+        "identity.authentication",
+        "identity.mfa-replay",
+        "identity.token-expiration-revocation",
+        "identity.recovery"
+      ]
+    },
+    {
+      "id": "identity.contract",
+      "requirement": "identity: deployable runtime contract",
+      "risk": "Invalid runtime or exposed unsupported interface",
+      "execution": "automated",
+      "target": "identity-service:test:contract",
+      "cases": ["identity.runtime-contract"]
+    },
+    {
+      "id": "identity.acceptance",
+      "requirement": "identity: operator acceptance in isolated environment",
+      "risk": "An automated assertion does not prove the operational procedure",
+      "execution": "human",
+      "target": "docs/operations/platform-operations-manual-runbook.md",
+      "cases": ["identity.operator-acceptance"]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "identity.complete-candidate-evidence",
+      "owner": "nvbes solo operator",
+      "risk": "Current commands and historical reports do not prove every case on the final candidate",
+      "reviewDate": "2026-09-17",
+      "closure": "Execute every declared case, link actual test identifiers and verified artifacts, reach all 90% gates and complete operator acceptance.",
+      "status": "open"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "domain": "trust-risk",
+  "project": "trust-risk-service",
+  "cargoPackage": "nvbes-trust-risk-service",
+  "suites": [
+    {
+      "id": "trust-risk.unit",
+      "requirement": "trust-risk: unit behavior",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "trust-risk-service:test",
+      "cases": ["trust-risk.unit.complete-run"]
+    },
+    {
+      "id": "trust-risk.check",
+      "requirement": "trust-risk: compilation",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "trust-risk-service:check",
+      "cases": ["trust-risk.check.complete-run"]
+    },
+    {
+      "id": "trust-risk.database",
+      "requirement": "trust-risk: persistent business invariants",
+      "risk": "Unauthorized access, corrupted state or lost events",
+      "execution": "automated",
+      "target": "trust-risk-service:test:database",
+      "cases": [
+        "trust-risk.signals",
+        "trust-risk.shadow-decision",
+        "trust-risk.unavailability",
+        "trust-risk.erase-subject"
+      ]
+    },
+    {
+      "id": "trust-risk.contract",
+      "requirement": "trust-risk: deployable runtime contract",
+      "risk": "Invalid runtime or exposed unsupported interface",
+      "execution": "automated",
+      "target": "trust-risk-service:test:contract",
+      "cases": ["trust-risk.runtime-contract"]
+    },
+    {
+      "id": "trust-risk.acceptance",
+      "requirement": "trust-risk: operator acceptance in isolated environment",
+      "risk": "An automated assertion does not prove the operational procedure",
+      "execution": "human",
+      "target": "docs/operations/platform-operations-manual-runbook.md",
+      "cases": ["trust-risk.operator-acceptance"]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "trust-risk.complete-candidate-evidence",
+      "owner": "nvbes solo operator",
+      "risk": "Current commands and historical reports do not prove every case on the final candidate",
+      "reviewDate": "2026-09-17",
+      "closure": "Execute every declared case, link actual test identifiers and verified artifacts, reach all 90% gates and complete operator acceptance.",
+      "status": "open"
+    }
+  ]
+}

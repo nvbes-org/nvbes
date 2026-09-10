@@ -197,7 +197,20 @@ jobs:
       deployment: false
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    services:
+      redis:
+        image: redis@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+        ports:
+          - 127.0.0.1::6379
+        options: >-
+          --memory=128m
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
+      NVBES_ENV: test
+      NVBES_REDIS_URL: redis://127.0.0.1:${{ job.services.redis.ports[6379] }}/0
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
       SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
@@ -213,12 +226,23 @@ jobs:
         with:
           node: 'false'
           rust: 'true'
+          coverage: 'true'
           terraform: 'false'
           caches: cargo
           cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
       - name: Validate rust
         run: node tools/ci/run-rust.mjs
+      - name: Validate rust coverage
+        run: bash scripts/test-workspace-coverage.sh
+      - name: Upload rust coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rust-coverage-workspace
+          path: .temp/rust/coverage-workspace.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Publish successful protected lane caches
         if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
         env:

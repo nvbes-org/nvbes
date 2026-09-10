@@ -66,24 +66,6 @@
         "command": "node --test apps/identity-worker/tests/container-contract.test.mjs",
         "cwd": "."
       }
-    },
-    "coverage": {
-      "executor": "nx:run-commands",
-      "cache": false,
-      "parallelism": false,
-      "inputs": [
-        "rustSources",
-        "{workspaceRoot}/scripts/test-identity-worker-coverage.sh",
-        "{workspaceRoot}/scripts/lib/test-env.sh",
-        "{workspaceRoot}/scripts/lib/workspace-env.sh",
-        "{workspaceRoot}/scripts/lib/validate-destructive-test-database.mjs",
-        "{workspaceRoot}/scripts/lib/validate-test-redis-target.mjs"
-      ],
-      "outputs": [],
-      "options": {
-        "command": "bash scripts/test-identity-worker-coverage.sh",
-        "cwd": "."
-      }
     }
   }
 }

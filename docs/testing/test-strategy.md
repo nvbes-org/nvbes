@@ -138,12 +138,14 @@ Declencheurs:
 Scripts executables:
 
 - `pnpm test:unit`: typecheck web et tests unitaires Rust.
+- `pnpm test:rust:coverage`: couverture `cargo llvm-cov` sur tout le workspace Rust avec seuils par crate (`docs/testing/rust-coverage-thresholds.json`).
 - `pnpm test:rust:mutation`: mutation testing `cargo-mutants` sur les crates Rust incluses avec seuils versionnés (`docs/testing/rust-mutation-thresholds.json`).
+- `pnpm test:rust:condition`: branches instrumentées via `cargo llvm-cov --branch` (nightly épinglé), diagnostic historique hors CI ; ne prouve ni MC/DC ni les seuils V1.
 - `pnpm test:integration`: tests d'integration Rust et validation IaC development/staging.
 - `pnpm test:e2e:critical`: E2E critiques contre `NVBES_WEB_BASE_URL` et `NVBES_API_BASE_URL`.
 - `pnpm test:smoke`: smoke tests contre `NVBES_WEB_BASE_URL` et `NVBES_API_BASE_URL`.
 - `pnpm test:smoke:staging`: wrapper staging pour smoke + E2E critiques avec les URLs staging.
-- `pnpm release:gate:staging`: gate complet avant ou apres deploiement staging selon pipeline, incluant build, preflight Stripe, smoke et E2E critiques.
+- `pnpm release:gate:staging`: décision V1 fondée sur le paquet de preuves vérifié, identique au Test Summary V1 ; échoue si une suite obligatoire manque. Ne déploie pas et ne remplace pas les campagnes.
 - `pnpm release:gate:production`: gate post-déploiement avec approval explicite,
   preuves d'acceptation signées et smoke production obligatoire.
 

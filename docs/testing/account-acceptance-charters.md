@@ -51,13 +51,20 @@ Alpha, Beta, UAT, pentest, conformité et les autres validations humaines resten
 release-blocking jusqu'à l'ajout de signatures détachées par rapport et d'allowlists de
 key IDs/organisations propres à chaque catégorie, avec une trust root pentest distincte.
 
-Le fichier JSON exact est signé hors dépôt avec une clé Ed25519 :
+Le fichier JSON exact est signé hors dépôt avec une clé Ed25519, via
+`sign-acceptance-evidence.mjs` et la commande `pnpm sign:account-acceptance-evidence`
+(voir §7 de `iso-29119/03-documentation.md`) :
 
 ```bash
-openssl pkeyutl -sign -rawin \
-  -inkey account-acceptance-private.pem \
-  -in acceptance-evidence.json \
-  -out acceptance-evidence.sig
+pnpm sign:account-acceptance-evidence \
+  --evidence-root <dossier-paquet> \
+  --private-key account-acceptance-private.pem \
+  --release <SHA-immuable> \
+  --signer-key-id <key-id-release-board> \
+  --deployment-key-id <control-plane-key-id> \
+  --signed-by "Alpha Owner@acceptance-alpha" \
+  --signed-by "Beta Owner@acceptance-beta" \
+  --public-key account-acceptance-public.pem
 ```
 
 La clé privée ne doit jamais entrer dans le dépôt ou un runner de vérification. Les

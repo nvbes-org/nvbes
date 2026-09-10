@@ -288,9 +288,10 @@ et fausse.
 
 **nvbes implémentation** :
 
-La couverture de condition est mesurée comme la métrique `branches` de
-`cargo llvm-cov --branch` : chaque sous-condition (V et F) d'un `&&`, `||`,
-`if`, `match`, `?` ou ternaire est instrumentée ; le rapport agrégé
+La métrique `branches` de `cargo llvm-cov --branch` mesure les branches
+effectivement instrumentées, et non une preuve générale de couverture de
+chaque condition. Elle ne démontre pas MC/DC (effet indépendant de chaque
+condition sur la décision). L'étalonnage booléen reste à exécuter ; le rapport
 `.temp/rust/coverage-condition-workspace.json` porte par fichier
 `summary.branches { count, covered }`. Le score d'une crate = branches couvertes
 / branches instrumentées × 100.
@@ -299,16 +300,17 @@ La couverture de condition est mesurée comme la métrique `branches` de
 > n'émet la métrique branches **que sous un toolchain nightly**.
 > `RUSTC_BOOTSTRAP=1` sur stable compile le flag mais produit 0 branche (aucune
 > branch region émise), et une release stable rejette `-Z`. Le gate applique
-> donc une vérification de disponibilité du toolchain configurable
-> (`NVBES_CONDITION_TOOLCHAIN`, défaut `nightly`) et bascule l'exécution dessus
+> donc une vérification du toolchain épinglé `nightly-2026-09-09`
+> et bascule l'exécution dessus
 > via `rustup run`. Out-of-band : le gate n'est pas exécuté en CI (lane rust
 > pinnée sur stable 1.91.1), il est lancé explicitement en local.
 
-Le gate est piloté par `docs/testing/rust-condition-thresholds.json`, calqué
-sur le gate mutation : chaque crate de périmètre a un seuil (baseline mesurée
-le 2026-09-09, commit `6af12ea1`, toolchain nightly 1.100.0 − 5 points
-arrondis à l'inférieur), les crates sous le plancher d'inclusion de 50 % sont
-exclues avec raison explicite et baseline conservée pour suivre la régression.
+Le script historique lit `docs/testing/rust-condition-thresholds.json`.
+Les seuils ci-dessous sont des baselines de diagnostic, **pas les critères
+V1** : la release impose `max(90 %, seuil supérieur existant)` sur chaque
+dépendance de production. Exclure une crate parce que son score est faible
+est interdit. La migration du collecteur historique reste ouverte dans
+[le dossier V1](../v1/README.md).
 
 | Crate                   | Seuil branches | Outil                             | Commande                   |
 | ----------------------- | -------------- | --------------------------------- | -------------------------- |

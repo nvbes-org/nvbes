@@ -33,6 +33,12 @@
     "production": ["default"]
   },
   "targets": {
+    "format": {
+      "executor": "nx:run-commands",
+      "options": { "command": "cargo fmt --all -- --check" },
+      "cache": true,
+      "inputs": ["default"]
+    },
     "build": {
       "executor": "nx:run-commands",
       "inputs": ["production"],
@@ -61,7 +67,7 @@
       "inputs": ["production"],
       "outputs": [],
       "options": {
-        "command": "cargo check --workspace --locked"
+        "command": "cargo clippy --workspace --all-targets --locked -- -D warnings"
       },
       "configurations": {},
       "parallelism": true,
@@ -76,6 +82,37 @@
       },
       "configurations": {},
       "parallelism": true,
+      "cache": false
+    },
+    "coverage": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "production",
+        "{workspaceRoot}/docs/testing/rust-coverage-thresholds.json",
+        "{workspaceRoot}/tools/rust-workspace/check-coverage.mjs"
+      ],
+      "outputs": ["{workspaceRoot}/.temp/rust"],
+      "options": {
+        "command": "bash scripts/test-workspace-coverage.sh"
+      },
+      "configurations": {},
+      "parallelism": false,
+      "cache": false
+    },
+    "condition": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/docs/testing/rust-condition-thresholds.json",
+        "{workspaceRoot}/tools/rust-workspace/check-coverage.mjs",
+        "{workspaceRoot}/tools/rust-workspace/check-condition.mjs"
+      ],
+      "outputs": ["{workspaceRoot}/.temp/rust"],
+      "options": {
+        "command": "bash scripts/test-workspace-condition.sh"
+      },
+      "configurations": {},
+      "parallelism": false,
       "cache": false
     },
     "mutation": {

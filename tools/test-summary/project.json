@@ -1,0 +1,59 @@
+{
+  "name": "test-summary",
+  "projectType": "library",
+  "root": "tools/test-summary",
+  "sourceRoot": "tools/test-summary",
+  "tags": ["scope:oss", "type:workspace", "domain:shared", "layer:tooling"],
+  "implicitDependencies": ["rust-workspace"],
+  "namedInputs": {
+    "default": [
+      "{projectRoot}/**/*",
+      "{workspaceRoot}/docs/testing/v1/**/*",
+      "{workspaceRoot}/docs/testing/account-test-manifest.json",
+      "{workspaceRoot}/docs/testing/rust-coverage-thresholds.json",
+      "{workspaceRoot}/tools/rust-workspace/check-coverage.mjs",
+      "{workspaceRoot}/tools/account-quality/check-account-release-readiness.mjs"
+    ],
+    "production": ["default"]
+  },
+  "targets": {
+    "mutation:typescript": {
+      "executor": "nx:run-commands",
+      "options": { "command": "node tools/test-summary/run-typescript-mutation.mjs" },
+      "cache": false,
+      "parallelism": false
+    },
+    "catalogue": {
+      "executor": "nx:run-commands",
+      "options": { "command": "node tools/test-summary/v1-release.mjs --catalogue" },
+      "cache": false
+    },
+    "release": {
+      "executor": "nx:run-commands",
+      "options": { "command": "node tools/test-summary/v1-release.mjs" },
+      "cache": false
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "outputs": [],
+      "options": {
+        "command": "node --test tools/test-summary/*.test.mjs"
+      },
+      "configurations": {},
+      "parallelism": false,
+      "cache": true
+    },
+    "generate": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "{workspaceRoot}/.temp/rust/coverage-workspace.json"],
+      "outputs": ["{workspaceRoot}/.temp/test-summary"],
+      "options": {
+        "command": "node tools/test-summary/generate-test-summary-report.mjs docs/testing/account-test-manifest.json .temp/rust/coverage-workspace.json docs/testing/rust-coverage-thresholds.json .temp/test-summary/test-summary-report.md"
+      },
+      "configurations": {},
+      "parallelism": false,
+      "cache": false
+    }
+  }
+}
