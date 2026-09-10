@@ -15,11 +15,15 @@ pub mod mfa_crypto;
 pub mod rate_limits;
 #[path = "identity.sessions.lock.rs"]
 mod session_locks;
+#[path = "identity.totp.rs"]
+pub mod totp;
 #[path = "identity.webauthn.rs"]
 pub mod webauthn;
 
 #[path = "identity.authentication.rs"]
 mod authentication;
+#[path = "identity.authentication.enrollment.rs"]
+mod enrollment_policy;
 #[path = "identity.tokens.rs"]
 pub mod tokens;
 #[path = "identity.tokens.claims.rs"]

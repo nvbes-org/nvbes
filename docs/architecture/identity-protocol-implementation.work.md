@@ -13,6 +13,30 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Enrôlement TOTP lié à la session — 2026-09-10
+
+Les routes `/oauth/session/totp/enrollment/start|confirm` utilisent le cookie et
+CSRF de session, des corps JSON objet bornés à 4096 octets et les quotas actifs.
+Le nouveau [contrat](identity-totp-enrollment.md) décrit les erreurs, le secret
+de provisioning, la conservation bornée et les limites restantes.
+
+La migration 0021 lie le pending à la session et à une expiration de cinq minutes.
+Le secret est chiffré avec les primitives actives. Un redémarrage invalide l'ancien
+pending ; un facteur actif n'est jamais remplacé. Confirmation, consommation du
+compteur, step-up et audits sont atomiques. La politique d'authentification fraîche
+est extraite et partagée avec WebAuthn, sans changer sa sémantique.
+
+Validation : `cargo check --workspace` sans avertissement, suite Nx PostgreSQL
+Identity (164 tests bibliothèque, 24 runtime, trois gardes ; un test interactif
+ignoré). Les neuf nouveaux tests couvrent les routes et la persistance, dont
+concurrence et rollback. Ils ont détecté l'acceptation de tableaux par Serde ;
+les routes imposent désormais des objets avec refus des doublons et champs inconnus.
+Le parcours Chromium WebAuthn complet passe après extraction de la politique.
+
+SDK/interface TOTP, gestion/récupération MFA, notifications, politique opérateur,
+logout intersites et gates d'exploitation restent ouverts. Aucun lot A à D n'est
+déclaré complet, aucune ouverture publique ou infrastructure nouvelle n'est livrée.
+
 ## Remplacement des anciens appels WebAuthn du client — 2026-09-10
 
 `NvbesIdentityWeb` expose désormais register/login/step-up/list/rename/revoke

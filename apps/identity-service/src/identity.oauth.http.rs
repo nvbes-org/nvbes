@@ -28,6 +28,8 @@ mod query;
 mod session;
 #[path = "identity.oauth.http.token.rs"]
 mod token;
+#[path = "identity.oauth.http.totp.rs"]
+mod totp;
 #[path = "identity.oauth.http.userinfo.rs"]
 mod userinfo;
 #[path = "identity.oauth.http.webauthn.rs"]
@@ -125,6 +127,14 @@ pub fn authorization_router(
     let sessions = Router::new()
         .route("/oauth/logout", post(logout))
         .route("/oauth/session/step-up/totp", post(step_up_totp))
+        .route(
+            "/oauth/session/totp/enrollment/start",
+            post(totp::start).layer(axum::extract::DefaultBodyLimit::max(4096)),
+        )
+        .route(
+            "/oauth/session/totp/enrollment/confirm",
+            post(totp::confirm).layer(axum::extract::DefaultBodyLimit::max(4096)),
+        )
         .route_layer(axum::middleware::from_fn_with_state(
             browser.clone(),
             protect_session_mutation,

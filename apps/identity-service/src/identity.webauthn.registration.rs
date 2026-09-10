@@ -1,6 +1,6 @@
 use super::{WebauthnError, valid_credential_label};
 use crate::oauth::store;
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::PgPool;
 use uuid::Uuid;
 use webauthn_rs::{Webauthn, prelude::*};
 
@@ -17,7 +17,9 @@ pub async fn start(
     session_token: &str,
 ) -> Result<RegistrationOptions, WebauthnError> {
     let mut tx = db.begin().await?;
-    let (session, principal) = enrollment_session(&mut tx, session_token).await?;
+    let (session, principal) = crate::enrollment_policy::owner(&mut tx, session_token)
+        .await?
+        .ok_or(WebauthnError::InvalidSession)?;
     let credentials: Vec<Vec<u8>> = sqlx::query_scalar(
         "SELECT credential_id FROM identity_webauthn_credentials WHERE principal_id=$1 AND revoked_at IS NULL",
     )
@@ -74,7 +76,9 @@ pub async fn finish(
         return Err(WebauthnError::InvalidCeremony);
     }
     let mut tx = db.begin().await?;
-    let (session, principal) = enrollment_session(&mut tx, session_token).await?;
+    let (session, principal) = crate::enrollment_policy::owner(&mut tx, session_token)
+        .await?
+        .ok_or(WebauthnError::InvalidSession)?;
     let state: Option<serde_json::Value> = sqlx::query_scalar("SELECT ceremony_state FROM identity_webauthn_challenges WHERE id=$1 AND session_id=$2 AND principal_id=$3 AND purpose='registration' AND consumed_at IS NULL AND expires_at>clock_timestamp() AND ceremony_state IS NOT NULL FOR UPDATE")
         .bind(ceremony_id).bind(session).bind(principal).fetch_optional(&mut *tx).await?;
     let state: PasskeyRegistration =
@@ -105,24 +109,6 @@ pub async fn finish(
     store::audit(&mut tx, principal, "identity.webauthn.enrolled").await?;
     tx.commit().await?;
     Ok(id)
-}
-
-async fn enrollment_session(
-    tx: &mut Transaction<'_, Postgres>,
-    token: &str,
-) -> Result<(Uuid, Uuid), WebauthnError> {
-    crate::session_locks::session(tx, token).await?;
-    // Lock the principal as well: the per-account credential cap holds across
-    // simultaneous enrollments from different sessions.
-    let row: Option<(Uuid, Uuid, bool)> = sqlx::query_as("SELECT s.id,s.principal_id,COALESCE((s.primary_amr='webauthn' AND s.authenticated_at>clock_timestamp()-interval '5 minutes') OR (s.step_up_method IN ('totp','webauthn') AND s.step_up_at>clock_timestamp()-interval '5 minutes' AND s.step_up_expires_at>clock_timestamp()),false) FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' AND (s.authenticated_at>clock_timestamp()-interval '5 minutes' OR (s.step_up_at>clock_timestamp()-interval '5 minutes' AND s.step_up_expires_at>clock_timestamp())) FOR UPDATE OF s,p")
-        .bind(store::hash(token)).fetch_optional(&mut **tx).await?;
-    let (session, principal, strong) = row.ok_or(WebauthnError::InvalidSession)?;
-    let has_factor: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM identity_webauthn_credentials WHERE principal_id=$1 AND revoked_at IS NULL) OR EXISTS(SELECT 1 FROM identity_auth_factors WHERE principal_id=$1 AND state='active')")
-        .bind(principal).fetch_one(&mut **tx).await?;
-    if has_factor && !strong {
-        return Err(WebauthnError::InvalidSession);
-    }
-    Ok((session, principal))
 }
 
 #[cfg(all(test, feature = "database-tests"))]
