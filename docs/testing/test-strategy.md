@@ -138,6 +138,7 @@ Declencheurs:
 Scripts executables:
 
 - `pnpm test:unit`: typecheck web et tests unitaires Rust.
+- `pnpm test:rust:mutation`: mutation testing `cargo-mutants` sur les crates Rust incluses avec seuils versionnés (`docs/testing/rust-mutation-thresholds.json`).
 - `pnpm test:integration`: tests d'integration Rust et validation IaC development/staging.
 - `pnpm test:e2e:critical`: E2E critiques contre `NVBES_WEB_BASE_URL` et `NVBES_API_BASE_URL`.
 - `pnpm test:smoke`: smoke tests contre `NVBES_WEB_BASE_URL` et `NVBES_API_BASE_URL`.

@@ -106,6 +106,7 @@
     "test:unit": "bash scripts/test-unit.sh",
     "test:integration": "bash scripts/test-integration.sh",
     "test:rust:coverage": "bash scripts/test-workspace-coverage.sh",
+    "test:rust:mutation": "bash scripts/test-workspace-mutation.sh",
     "test:e2e:critical": "bash scripts/test-e2e-critical.sh",
     "test:e2e:critical:local": "pnpm exec nx run identity-web:test:e2e:critical:local",
     "test:smoke:contract": "bash scripts/test-openapi-contract.sh",

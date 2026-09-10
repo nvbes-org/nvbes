@@ -12,6 +12,13 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 ## Tests executables
 
 - `test-unit.sh`: typecheck web et tests unitaires Rust.
+- `test-workspace-mutation.sh`: mutation testing `cargo-mutants` des crates
+  gated puis validation des seuils par crate
+  (`docs/testing/rust-mutation-thresholds.json`). Exige `cargo-mutants`
+  (`cargo install cargo-mutants --locked --version 27.1.0`);
+  `NVBES_MUTATION_TIMEOUT` regle le
+  timeout mutant par defaut 600s et `NVBES_MUTATION_JOBS` permet de borner le
+  parallelisme (par defaut, cargo-mutants choisit sa strategie d'execution).
 - `test-integration.sh`: tests d'integration Rust et validation IaC development/staging.
 - `test-account-portfolio.sh`: portefeuille bloquant Account complet (applications,
   bibliotheques TS associees, contrats, migrations, securite, worker, image et

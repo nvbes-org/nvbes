@@ -77,6 +77,21 @@
       "configurations": {},
       "parallelism": true,
       "cache": false
+    },
+    "mutation": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/docs/testing/rust-mutation-thresholds.json",
+        "{workspaceRoot}/tools/rust-workspace/check-mutation.mjs"
+      ],
+      "outputs": ["{workspaceRoot}/.temp/rust"],
+      "options": {
+        "command": "bash scripts/test-workspace-mutation.sh"
+      },
+      "configurations": {},
+      "parallelism": false,
+      "cache": false
     }
   }
 }
