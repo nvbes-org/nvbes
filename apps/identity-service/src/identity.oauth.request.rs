@@ -26,6 +26,7 @@ pub struct AuthorizationInput {
 /// Persistence and handlers must use this type rather than the untrusted input.
 #[derive(Clone, Serialize)]
 pub struct AuthorizationRequest {
+    pub(crate) minimum_authentication: super::authentication_policy::AuthenticationPolicy,
     pub(crate) client_id: String,
     pub(crate) redirect_uri: String,
     pub(crate) scope: String,
@@ -87,6 +88,7 @@ impl AuthorizationInput {
             return Err(OAuthError::InvalidRequest);
         }
         Ok(AuthorizationRequest {
+            minimum_authentication: client.minimum_authentication,
             client_id: self.client_id,
             redirect_uri: self.redirect_uri,
             scope: scopes.into_iter().collect::<Vec<_>>().join(" "),

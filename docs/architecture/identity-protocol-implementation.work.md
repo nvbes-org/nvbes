@@ -13,6 +13,28 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Exigence forte dans le registre OAuth — 2026-09-10
+
+Le champ serveur minimum_authentication distingue primary, recent_mfa et
+recent_webauthn. La politique actuelle s'applique aux consentements explicites
+et silencieux, aux échanges, refresh, UserInfo et introspections. La preuve
+du grant reste le snapshot du consentement ; un step-up ultérieur ne rehausse
+pas les anciens codes. La signature borne l'expiration à la fraîcheur de la
+preuve forte. Aucun paramètre navigateur ne remplace la configuration serveur.
+
+Le [contrat des profils](identity-client-authentication-policy.md) décrit les
+refus, reprises, changements de registre et limites d'exploitation. Les tests
+utilisent une confirmation TOTP réelle, des migrations et des refus après
+durcissement du registre. Aucun client déployé n'est reconfiguré ; l'interface
+de sélection du facteur et la politique d'opérateur restent à compléter.
+
+Validation finale : cargo check --workspace sans avertissement ; 201 tests
+bibliothèque, 24 runtime et trois gardes de base réussissent sur PostgreSQL 17
+neuf (conteneur nvbes-identity-policy-tests, loopback 15434, mémoire 512 MiB,
+shm 256 MiB). Le conteneur est supprimé après validation. Un test navigateur
+interactif reste ignoré dans Cargo ; aucun SDK ou frontend n'est modifié et
+aucune nouvelle preuve graphique n'est revendiquée pour ces profils.
+
 ## Validation commune des preuves de gestion MFA — 2026-09-10
 
 La politique d'enrôlement, la gestion des facteurs et la consommation des codes

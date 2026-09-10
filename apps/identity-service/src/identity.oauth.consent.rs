@@ -113,6 +113,10 @@ async fn authenticated(
     {
         return Err(OAuthError::LoginRequired.into());
     }
+    request
+        .minimum_authentication
+        .deadline(&session.authentication, chrono::Utc::now())
+        .map_err(|_| OAuthError::AccessDenied)?;
     Ok(session)
 }
 
@@ -141,5 +145,13 @@ async fn consume(tx: &mut Transaction<'_, Postgres>, handle: &str) -> Result<(),
 }
 
 fn policy_hash(request: &AuthorizationRequest) -> Vec<u8> {
-    hash(&serde_json::json!([request.resource, request.audience, request.scope]).to_string())
+    hash(
+        &serde_json::json!([
+            request.resource,
+            request.audience,
+            request.scope,
+            request.minimum_authentication
+        ])
+        .to_string(),
+    )
 }

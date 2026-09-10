@@ -111,8 +111,15 @@ impl TokenService {
     pub(crate) fn sign_grant(&self, grant: &ActiveGrant) -> Result<TokenSet, TokenError> {
         let now = Utc::now();
         let issued_at = now.timestamp() as u64;
-        let expires_at =
+        let mut expires_at =
             (issued_at + ACCESS_TOKEN_TTL_SECONDS).min(grant.session_expires_at.timestamp() as u64);
+        if let Some(deadline) = grant
+            .request
+            .minimum_authentication
+            .deadline(&grant.authentication, now)?
+        {
+            expires_at = expires_at.min(deadline.timestamp() as u64);
+        }
         if expires_at <= issued_at {
             return Err(TokenError::InactiveGrant);
         }

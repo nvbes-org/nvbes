@@ -48,7 +48,9 @@ pub(crate) async fn load(
             .ok_or(TokenError::InvalidAuthentication)?,
     )
     .map_err(|_| TokenError::InvalidAuthentication)?;
-    authentication.validate(Utc::now())?;
+    request
+        .minimum_authentication
+        .deadline(&authentication, Utc::now())?;
     Ok(ActiveGrant {
         id,
         session_id: stored.session_id,

@@ -20,6 +20,8 @@ pub struct PublicClient {
     pub resources: BTreeMap<String, ResourcePolicy>,
     pub allow_refresh: bool,
     pub require_dpop: bool,
+    #[serde(default)]
+    pub minimum_authentication: super::authentication_policy::AuthenticationPolicy,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
