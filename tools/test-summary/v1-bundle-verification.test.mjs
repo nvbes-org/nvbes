@@ -89,6 +89,14 @@ for (const [name, mutate] of [
     },
   ],
   [
+    'incomplete draft',
+    ({ bundle, input, privateKey }) => {
+      bundle.incomplete = true;
+      input.bytes = Buffer.from(JSON.stringify(bundle));
+      input.signature = sign(null, input.bytes, privateKey);
+    },
+  ],
+  [
     'wrong trusted key',
     ({ input }) => {
       input.publicKeyDigest = '0'.repeat(64);

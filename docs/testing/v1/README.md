@@ -108,6 +108,26 @@ ni une preuve réutilisable depuis une exécution PR. L'assemblage ultérieur du
 paquet doit télécharger ce reçu, lui ajouter la référence d'artefact GitHub et
 vérifier le run complet avec le gate commun.
 
+Après un run manuel terminé, l'opérateur peut construire un brouillon local :
+
+```sh
+pnpm exec nx run test-summary:assemble-receipts --runId=<trusted-run-id>
+```
+
+La commande écrit `.temp/v1-drafts/<run-id>/draft.json` et les reçus exacts
+téléchargés. Elle accepte uniquement un premier essai réussi d'un workflow
+autorisé, déclenché par `push` ou `workflow_dispatch` dans le dépôt canonique,
+et dont la liste complète contient au plus 100 artefacts. Les artefacts nommés
+comme des reçus V1 sont vérifiés intégralement ; un nom, un reçu ou une suite
+invalide bloque tout l'assemblage. Les autres artefacts sont ignorés.
+
+Ce résultat porte `incomplete: true`, ne contient ni mesures ni opérations et
+n'est pas un paquet de release. Le validateur refuse explicitement un tel
+brouillon, même signé : l'opérateur doit d'abord compléter toutes les suites,
+les mesures et les preuves manuelles exigées, puis construire le paquet final
+selon le schéma commun. Un réassemblage vers le même répertoire est refusé afin
+de ne pas écraser silencieusement une collecte existante.
+
 Les mesures identifient `unit`, `sha`, `completedAt`, `artifacts`, `lines`,
 `branches`, `mutation`. `operations` contient `rpoHours`, `rtoHours`,
 `targetMonthlyEurTtc`, `maximumMonthlyEurTtc` (limites 24, 8, 20, 30).
@@ -159,13 +179,14 @@ avec tous les modules Rust (certains n'ont aucun compteur applicable).
    classement de toutes les exigences historiques et migrer les
    consommateurs Account ensemble. Les IDs actuels sont des obligations,
    pas des assertions d'exécution.
-2. Produire les enveloppes depuis les runners CI. Les recalculs TypeScript
+2. Étendre la production et l'assemblage des reçus CI à toutes les suites.
+   Le premier reçu mono-cas, l'assemblage incomplet, les recalculs TypeScript
    et Rust et la comparaison avec les artefacts GitHub sont intégrés et
-   testés sur fixtures ; aucun paquet candidat réel complet n'a encore
-   été vérifié. L'exhaustivité de l'instrumentation et des sites de mutation,
-   ainsi que la vérification du contenu métier des preuves de suites et
-   d'opérations, restent à terminer. Publier un fichier dans un run réussi
-   ne prouve pas à lui seul que les cas annoncés ont réellement été exécutés.
+   testés sur fixtures ; aucun paquet candidat réel complet n'a encore été
+   vérifié. L'exhaustivité de l'instrumentation et des sites de mutation, ainsi
+   que la vérification du contenu métier des preuves de suites et d'opérations,
+   restent à terminer. Publier un fichier dans un run réussi ne prouve pas à
+   lui seul que les cas annoncés ont réellement été exécutés.
 3. Étalonner nightly (épinglé à `nightly-2026-09-09`) ; étendre les mesures Rust/TypeScript et
    atteindre effectivement 90 % partout. `llvm-cov --branch` mesure les
    branches ; ce n'est pas une preuve MC/DC ni une couverture indépendante

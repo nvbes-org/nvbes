@@ -7,6 +7,8 @@ import { pathToFileURL } from 'node:url';
 import { loadV1 } from './v1-release.mjs';
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
+export const suiteCommand = (target) => ['pnpm', 'exec', 'nx', 'run', target];
+export const suiteCommandDigest = (target) => sha256(JSON.stringify(suiteCommand(target)));
 const canonicalDate = (value) => new Date(value).toISOString();
 
 export function ciContext(env) {
@@ -59,7 +61,7 @@ export function produceSuiteReceipt({ domains, suiteId, context, execute, clock,
       Object.values(tools).every((value) => typeof value === 'string' && value.trim().length > 0),
     'Tool versions required',
   );
-  const command = ['pnpm', 'exec', 'nx', 'run', selected.suite.target];
+  const command = suiteCommand(selected.suite.target);
   const startedAt = canonicalDate(clock());
   const execution = execute(command);
   const completedAt = canonicalDate(clock());
@@ -77,7 +79,7 @@ export function produceSuiteReceipt({ domains, suiteId, context, execute, clock,
     attempt: 1,
     tools,
     target: selected.suite.target,
-    commandSha256: sha256(JSON.stringify(command)),
+    commandSha256: suiteCommandDigest(selected.suite.target),
     producer: context.producer,
     cases: selected.suite.cases.map((id) => ({ id, status: passed ? 'passed' : 'failed' })),
   };
@@ -100,8 +102,9 @@ function outputPath(cwd, suiteId) {
 }
 
 function main() {
-  const suiteId = process.argv[2];
-  assert(suiteId && process.argv.length === 3, 'usage: v1-suite-receipt.mjs <suite-id>');
+  assert(process.argv.length === 3, 'usage: v1-suite-receipt.mjs --suite=<suite-id>');
+  assert(process.argv[2].startsWith('--suite='), 'Suite must be a named argument');
+  const suiteId = process.argv[2].slice('--suite='.length);
   const cwd = process.cwd();
   const { domains } = loadV1(cwd);
   const { result, passed } = produceSuiteReceipt({

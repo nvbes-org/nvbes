@@ -236,12 +236,12 @@ jobs:
         run: node tools/ci/run-rust.mjs
       - name: Produce V1 workspace check receipt
         if: github.event_name == 'workflow_dispatch'
-        run: node tools/test-summary/v1-suite-receipt.mjs platform.workspace-check
+        run: node tools/test-summary/v1-suite-receipt.mjs --suite=platform.workspace-check
       - name: Upload V1 workspace check receipt
         if: always() && github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: v1-platform-workspace-check-${{ github.sha }}
+          name: v1-receipt-platform.workspace-check-${{ github.sha }}
           path: .temp/v1-receipts/platform.workspace-check.json
           if-no-files-found: error
           retention-days: 7

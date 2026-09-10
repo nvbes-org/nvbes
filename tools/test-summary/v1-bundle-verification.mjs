@@ -37,6 +37,7 @@ export function verifyBundle({
   assert.equal(key.asymmetricKeyType, 'ed25519', 'Ed25519 evidence key required');
   assert(verify(null, bytes, key, signature), 'Invalid evidence signature');
   const bundle = JSON.parse(bytes.toString('utf8'));
+  assert(bundle.incomplete !== true, 'Incomplete evidence draft cannot be released');
   assert(Array.isArray(bundle.results) && bundle.results.length > 0, 'Missing results');
   assert(
     Array.isArray(bundle.artifacts) && bundle.artifacts.length > 0,

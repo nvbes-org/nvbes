@@ -38,7 +38,13 @@
       "executor": "nx:run-commands",
       "cache": false,
       "parallelism": false,
-      "options": { "command": "node tools/test-summary/v1-suite-receipt.mjs {args.suite}" }
+      "options": { "command": "node tools/test-summary/v1-suite-receipt.mjs" }
+    },
+    "assemble-receipts": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": { "command": "node tools/test-summary/v1-receipt-assembly.mjs" }
     },
     "test": {
       "executor": "nx:run-commands",

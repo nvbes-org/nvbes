@@ -148,12 +148,12 @@ test('manual trusted CI publishes the exact generated receipt with bounded reten
   assert.equal(produce.if, "github.event_name == 'workflow_dispatch'");
   assert.equal(
     produce.run,
-    'node tools/test-summary/v1-suite-receipt.mjs platform.workspace-check',
+    'node tools/test-summary/v1-suite-receipt.mjs --suite=platform.workspace-check',
   );
   assert.equal(upload.if, "always() && github.event_name == 'workflow_dispatch'");
   assert.equal(upload.uses, 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02');
   assert.deepEqual(upload.with, {
-    name: 'v1-platform-workspace-check-${{ github.sha }}',
+    name: 'v1-receipt-platform.workspace-check-${{ github.sha }}',
     path: '.temp/v1-receipts/platform.workspace-check.json',
     'if-no-files-found': 'error',
     'retention-days': 7,
