@@ -84,6 +84,30 @@ locaux, 32 archives/runs, 256 fichiers locaux ; 30 s par requête GitHub et
 Les preuves opérateur n'ont pas de référence `ci` et restent dans leur
 stockage confidentiel ; elles ne peuvent pas remplacer les mesures CI.
 
+## Reçus produits par les suites CI
+
+`test-summary:receipt` exécute lui-même la cible Nx déclarée dans le manifeste
+et écrit `.temp/v1-receipts/<suite>.json`. Le reçu contient le SHA, les dates,
+les versions Node/pnpm/Nx, le domaine, la suite, le cas, le statut, la cible,
+une empreinte de la commande déterministe et le producteur GitHub. Les
+arguments de commande ne sont pas sérialisés, afin de ne pas recopier de
+secrets éventuels. Une sortie non nulle, un signal ou une erreur de lancement
+produit un statut `failed` et fait échouer l'étape.
+
+Le producteur refuse les PR, forks, reruns, workflows inconnus et contextes
+GitHub incomplets. Il accepte seulement les suites automatisées avec une cible
+Nx et un unique cas `<suite>.complete-run`. Une suite métier multi-cas ne peut
+pas devenir `passed` à partir du seul code retour de sa cible : elle devra
+fournir un résultat vérifiable pour chaque cas avant son intégration.
+
+Le workflow CI produit actuellement un premier reçu
+`platform.workspace-check` lors d'un `workflow_dispatch`, en rejouant la cible
+complète `rust-workspace:check`, puis le publie sept jours. Cette tranche
+valide le chemin de production ; elle ne constitue ni la campagne V1 complète
+ni une preuve réutilisable depuis une exécution PR. L'assemblage ultérieur du
+paquet doit télécharger ce reçu, lui ajouter la référence d'artefact GitHub et
+vérifier le run complet avec le gate commun.
+
 Les mesures identifient `unit`, `sha`, `completedAt`, `artifacts`, `lines`,
 `branches`, `mutation`. `operations` contient `rpoHours`, `rtoHours`,
 `targetMonthlyEurTtc`, `maximumMonthlyEurTtc` (limites 24, 8, 20, 30).

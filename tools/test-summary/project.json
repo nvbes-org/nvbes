@@ -11,6 +11,7 @@
       "{workspaceRoot}/docs/testing/v1/**/*",
       "{workspaceRoot}/docs/testing/account-test-manifest.json",
       "{workspaceRoot}/docs/testing/rust-coverage-thresholds.json",
+      "{workspaceRoot}/.github/workflows/ci.yml",
       "{workspaceRoot}/tools/rust-workspace/check-coverage.mjs",
       "{workspaceRoot}/tools/account-quality/check-account-release-readiness.mjs"
     ],
@@ -32,6 +33,12 @@
       "executor": "nx:run-commands",
       "options": { "command": "node tools/test-summary/v1-release.mjs" },
       "cache": false
+    },
+    "receipt": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": { "command": "node tools/test-summary/v1-suite-receipt.mjs {args.suite}" }
     },
     "test": {
       "executor": "nx:run-commands",
