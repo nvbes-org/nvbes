@@ -107,7 +107,7 @@ export function evaluateCoverage(report, packages, config) {
 
   const uncovered = [...memberNames]
     .filter((name) => !configuredNames.has(name) && !excludedNames.has(name))
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   for (const name of uncovered) {
     failures.push(`${name}: workspace member without configured threshold or explicit exclusion`);
   }

@@ -128,7 +128,9 @@ export function validateTestManifest(manifest, qualityProject, workflowSource) {
   assert(unexpected.length === 0, `unexpected categories: ${unexpected.join(', ')}`);
   validateKnownGaps(manifest.knownGaps, categoryContracts);
   const derivedBlockers = deriveReleaseBlockingCategories(manifest);
-  const declaredBlockers = [...(manifest.releaseReadiness.blockingCategories ?? [])].sort();
+  const declaredBlockers = [...(manifest.releaseReadiness.blockingCategories ?? [])].sort((a, b) =>
+    a.localeCompare(b),
+  );
   assert(
     JSON.stringify(declaredBlockers) === JSON.stringify(derivedBlockers),
     'releaseReadiness.blockingCategories must exactly match gaps, limitations and blocking known gaps',

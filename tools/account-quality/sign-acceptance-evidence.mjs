@@ -10,7 +10,6 @@ import {
 
 const MANIFEST_NAME = 'acceptance-evidence.json';
 const MANIFEST_SIGNATURE_NAME = 'acceptance-evidence.sig';
-const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MAX_REPORT_BYTES = 100 * 1024 * 1024;
 const MAX_SIGNATURE_BYTES = 4096;
 const MAX_KEY_BYTES = 16_384;
@@ -18,7 +17,6 @@ const MAX_VALIDITY_MS = 31 * 24 * 60 * 60 * 1000;
 const DEFAULT_VALIDITY_MS = 30 * 24 * 60 * 60 * 1000;
 const CLOCK_SKEW_MS = 5 * 60 * 1000;
 const RELEASE_PATTERN = /^[a-f0-9]{40,64}$/u;
-const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const SIGNER_KEY_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{2,127}$/u;
 
 export async function signAcceptanceEvidence({
@@ -328,7 +326,8 @@ function parseFlags(argv) {
       index += 1;
     }
     if (name === 'signed-by' || name === 'report-path') {
-      repeated.has(name) ? repeated.get(name).push(value) : repeated.set(name, [value]);
+      if (repeated.has(name)) repeated.get(name).push(value);
+      else repeated.set(name, [value]);
     } else {
       flags.set(name, value);
     }
