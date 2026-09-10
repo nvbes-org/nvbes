@@ -118,18 +118,21 @@ async fn login(
     Extension(proof): Extension<BrowserProof>,
     Json(form): Json<LoginForm>,
 ) -> Result<impl IntoResponse, ProtocolError> {
-    let session = crate::auth::authenticate(&state.db, &form.email, &form.password)
-        .await
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    let csrf = interactions::attach_authenticated_session(
+    let authenticated = crate::oauth::login::authenticate(
         &state.db,
         &state.clients,
         &form.interaction,
         &proof,
-        &session,
+        &form.email,
+        &form.password,
     )
     .await
-    .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    .map_err(|error| match error {
+        store::StoreError::Protocol(error) => ProtocolError::OAuth(error),
+        _ => ProtocolError::OAuth(OAuthError::Unavailable),
+    })?;
+    let session = authenticated.token;
+    let csrf = authenticated.csrf;
     let session_cookie = state
         .browser
         .session_cookie(&session)

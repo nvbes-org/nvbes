@@ -76,11 +76,31 @@ pub(crate) async fn authenticate(
     email: &str,
     password: &str,
 ) -> anyhow::Result<String> {
+    let verified = verify_credentials(db, email, password).await?;
+    let mut tx = db.begin().await?;
+    let token = create_verified_session(&mut tx, verified).await?;
+    tx.commit().await?;
+    Ok(token)
+}
+
+/// Ephemeral evidence; no raw password, serialization, clone or caller-settable fields.
+pub(crate) struct VerifiedPassword {
+    principal_id: Uuid,
+    password_hash: String,
+    upgraded_hash: Option<String>,
+    email: String,
+}
+
+pub(crate) async fn verify_credentials(
+    db: &PgPool,
+    email: &str,
+    password: &str,
+) -> anyhow::Result<VerifiedPassword> {
     let email = normalize_email(email)?;
     let credential = sqlx::query_as::<_, (Uuid, String)>(
         "SELECT p.id, c.password_hash FROM identity_principals p JOIN identity_login_identifiers i ON i.principal_id = p.id JOIN identity_password_credentials c ON c.principal_id = p.id WHERE i.kind = 'email' AND i.normalized_value = $1 AND p.status = 'active'",
     )
-    .bind(email)
+    .bind(&email)
     .fetch_optional(db)
     .await?;
     let Some((principal_id, password_hash)) = credential else {
@@ -91,28 +111,50 @@ pub(crate) async fn authenticate(
     if !password_valid {
         anyhow::bail!("authentication failed");
     }
+    let upgraded_hash = if needs_rehash {
+        Some(hash_current_password(password).await?)
+    } else {
+        None
+    };
+    Ok(VerifiedPassword {
+        principal_id,
+        password_hash,
+        upgraded_hash,
+        email,
+    })
+}
+
+pub(crate) async fn create_verified_session(
+    tx: &mut Transaction<'_, Postgres>,
+    verified: VerifiedPassword,
+) -> anyhow::Result<String> {
+    let VerifiedPassword {
+        principal_id,
+        password_hash,
+        upgraded_hash,
+        email,
+    } = verified;
     let token = random_token();
-    let mut tx = db.begin().await?;
     let unchanged = sqlx::query_scalar::<_, bool>(
-        "SELECT p.status = 'active' AND c.password_hash = $2 FROM identity_principals p JOIN identity_password_credentials c ON c.principal_id = p.id WHERE p.id = $1 FOR UPDATE OF p,c",
+        "SELECT p.status = 'active' AND c.password_hash = $2 FROM identity_principals p JOIN identity_password_credentials c ON c.principal_id = p.id JOIN identity_login_identifiers i ON i.principal_id=p.id WHERE p.id = $1 AND i.kind='email' AND i.normalized_value=$3 FOR UPDATE OF p,c,i",
     )
     .bind(principal_id)
     .bind(&password_hash)
-    .fetch_optional(&mut *tx)
+    .bind(email)
+    .fetch_optional(&mut **tx)
     .await?
     .unwrap_or(false);
     if !unchanged {
         anyhow::bail!("authentication failed");
     }
-    if needs_rehash {
-        let upgraded_hash = hash_current_password(password).await?;
+    if let Some(upgraded_hash) = upgraded_hash {
         sqlx::query(
             "UPDATE identity_password_credentials SET password_hash=$1,changed_at=clock_timestamp() WHERE principal_id=$2 AND password_hash=$3",
         )
         .bind(upgraded_hash)
         .bind(principal_id)
         .bind(&password_hash)
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
     }
     sqlx::query(
@@ -122,10 +164,9 @@ pub(crate) async fn authenticate(
     .bind(principal_id)
     .bind(hash_token(&token))
     .bind(Utc::now() + Duration::hours(SESSION_TTL_HOURS))
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await?;
-    audit(&mut tx, principal_id, "identity.authenticated").await?;
-    tx.commit().await?;
+    audit(tx, principal_id, "identity.authenticated").await?;
     Ok(token)
 }
 

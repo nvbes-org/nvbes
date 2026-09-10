@@ -14,6 +14,9 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use tower::ServiceExt;
 
+#[path = "identity.oauth.http.login.tests.rs"]
+mod login_tests;
+
 struct Fixture {
     db: PgPool,
     app: Router,

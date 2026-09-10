@@ -57,6 +57,13 @@ La liaison du refresh à la clé suit la [RFC 9449, section 5](https://www.rfc-e
 
 ## Preuve CSRF des sessions hébergées
 
+La création de session du login hébergé et sa liaison à l'interaction OAuth
+forment une transaction unique avec l'audit et la rotation CSRF. Le mot de passe
+est vérifié auparavant, sans transaction longue ; ses données de référence et
+le statut du principal sont revérifiés sous verrou avant la création. Une
+interaction refusée, rejouée ou une panne lors de sa liaison ne laisse pas de
+session authentifiée orpheline.
+
 Les réponses JSON de l'autorisation avec session active et du login fournissent
 `session_csrf_token`. Le frontend Identity le renvoie dans `X-CSRF-Token`
 pour POST `/oauth/logout` et POST `/oauth/session/step-up/totp`. Le champ

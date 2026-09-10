@@ -67,18 +67,24 @@ pub async fn attach_authenticated_session(
     new_session_token: &str,
 ) -> Result<String, StoreError> {
     let mut tx = db.begin().await?;
-    let stored = lock(
-        &mut tx,
-        handle,
-        &proof.browser_token,
-        Some(&proof.csrf_token),
-    )
-    .await?;
+    let csrf = attach_session(&mut tx, clients, handle, proof, new_session_token).await?;
+    tx.commit().await?;
+    Ok(csrf)
+}
+
+pub(super) async fn attach_session(
+    tx: &mut Transaction<'_, Postgres>,
+    clients: &ClientRegistry,
+    handle: &str,
+    proof: &BrowserProof,
+    new_session_token: &str,
+) -> Result<String, StoreError> {
+    let stored = lock(tx, handle, &proof.browser_token, Some(&proof.csrf_token)).await?;
     let request = AuthorizationRequest::restore(stored.parameters, clients)?;
     if request.prompt.as_deref() == Some("none") {
         return Err(OAuthError::InvalidRequest.into());
     }
-    let session = session::load(&mut tx, Some(new_session_token))
+    let session = session::load(tx, Some(new_session_token))
         .await?
         .ok_or(OAuthError::LoginRequired)?;
     if session.authentication.authenticated_at < stored.created_at
@@ -93,9 +99,8 @@ pub async fn attach_authenticated_session(
     .bind(hash(handle))
     .bind(session.id)
     .bind(hash(&csrf))
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await?;
-    tx.commit().await?;
     Ok(csrf)
 }
 

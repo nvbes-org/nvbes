@@ -13,6 +13,26 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Login hébergé atomique — 2026-09-10
+
+Le login contrôle l'interaction et son CSRF avant le calcul de mot de passe.
+Argon2 et le calcul éventuel du nouveau hash s'exécutent sans transaction ouverte.
+La transaction finale revérifie l'interaction, le registre, le statut du principal,
+l'identifiant et le hash du mot de passe. Elle crée la session, écrit l'audit,
+lie l'interaction et renouvelle le CSRF avant un unique commit.
+
+Les tests HTTP/PostgreSQL vérifient l'absence de session orpheline sur mauvais
+CSRF, les soumissions concurrentes et la permutation de session affichée. Un
+trigger d'échec dans le schéma de test prouve le retour arrière de la session,
+de l'audit et du CSRF lors d'un échec de liaison, puis la possibilité de réessayer.
+Un autre test modifie les identifiants ou suspend le principal après vérification
+du mot de passe et confirme que la création de session est refusée.
+
+Validation : `cargo check --workspace` sans avertissement ; la cible Nx
+`identity-service:test:database` passe avec 75 tests de bibliothèque, 22 tests
+du runtime et 3 contrôles de base isolée. Ces preuves HTTP/PostgreSQL ne couvrent
+pas encore les parcours de navigateur graphique.
+
 ## Sessions navigateur — 2026-09-10
 
 Logout et step-up TOTP exigent une preuve CSRF liée par HMAC à la session,
@@ -35,8 +55,8 @@ Validation : `cargo check --workspace` sans avertissement ;
 du runtime et 3 contrôles de base isolée. Les tests exécutent les routes Axum
 et PostgreSQL ; aucun parcours de navigateur graphique n'est encore attesté.
 
-Les limites de tentatives HTTP, l'atomicité complète du login hébergé et
-le logout intersites restent à terminer avant ouverture publique.
+Les limites de tentatives HTTP et le logout intersites restent à terminer avant
+ouverture publique.
 
 ## Renouvellement et DPoP — 2026-09-10
 
