@@ -1,15 +1,27 @@
-use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::{DateTime, Utc};
 use rand::RngCore;
 use reqwest::Url;
-use sqlx::PgPool;
-use uuid::Uuid;
 use webauthn_rs::{
     Webauthn, WebauthnBuilder,
-    prelude::{
-        CreationChallengeResponse, Passkey, PasskeyRegistration, RegisterPublicKeyCredential,
-    },
+    prelude::{Passkey, PasskeyAuthentication, RequestChallengeResponse},
 };
+
+#[path = "identity.webauthn.registration.rs"]
+pub mod registration;
+
+#[derive(Debug, thiserror::Error)]
+pub enum WebauthnError {
+    #[error("invalid or expired WebAuthn ceremony")]
+    InvalidCeremony,
+    #[error("fresh active session required")]
+    InvalidSession,
+    #[error("credential limit reached")]
+    Limit,
+    #[error("WebAuthn persistence unavailable")]
+    Database(#[from] sqlx::Error),
+    #[error("invalid stored WebAuthn state")]
+    Serialization(#[from] serde_json::Error),
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChallengePurpose {
@@ -48,83 +60,18 @@ pub fn build_server(rp_id: &str, rp_origin: &str) -> Result<Webauthn, String> {
         .map_err(|_| "invalid WebAuthn RP configuration".to_owned())
 }
 
-pub fn start_passkey_registration(
+pub fn start_passkey_authentication(
     server: &Webauthn,
-    principal_id: Uuid,
-    user_name: &str,
-    display_name: &str,
-) -> Result<(CreationChallengeResponse, PasskeyRegistration), String> {
-    if user_name.is_empty() || display_name.is_empty() {
-        return Err("WebAuthn user identity is required".to_owned());
+    credentials: serde_json::Value,
+) -> Result<(RequestChallengeResponse, PasskeyAuthentication), String> {
+    let credentials: Vec<Passkey> = serde_json::from_value(credentials)
+        .map_err(|_| "invalid stored WebAuthn credentials".to_owned())?;
+    if credentials.is_empty() {
+        return Err("no WebAuthn credentials are registered".to_owned());
     }
     server
-        .start_passkey_registration(principal_id, user_name, display_name, None)
-        .map_err(|_| "WebAuthn registration could not start".to_owned())
-}
-
-pub fn finish_passkey_registration(
-    server: &Webauthn,
-    response: serde_json::Value,
-    ceremony_state: serde_json::Value,
-) -> Result<Passkey, String> {
-    let response: RegisterPublicKeyCredential = serde_json::from_value(response)
-        .map_err(|_| "invalid WebAuthn registration response".to_owned())?;
-    let state: PasskeyRegistration = serde_json::from_value(ceremony_state)
-        .map_err(|_| "invalid WebAuthn ceremony state".to_owned())?;
-    server
-        .finish_passkey_registration(&response, &state)
-        .map_err(|_| "WebAuthn registration verification failed".to_owned())
-}
-
-pub fn serialize_passkey(passkey: &Passkey) -> Result<serde_json::Value, String> {
-    serde_json::to_value(passkey).map_err(|_| "WebAuthn credential serialization failed".to_owned())
-}
-
-pub fn passkey_record(passkey: &Passkey) -> Result<(Vec<u8>, serde_json::Value), String> {
-    let encoded = serde_json::to_value(passkey.cred_id())
-        .ok()
-        .and_then(|value| value.as_str().map(str::to_owned))
-        .ok_or_else(|| "WebAuthn credential id serialization failed".to_owned())?;
-    let credential_id = URL_SAFE_NO_PAD
-        .decode(encoded)
-        .map_err(|_| "WebAuthn credential id encoding is invalid".to_owned())?;
-    if !valid_credential_id(&credential_id) {
-        return Err("WebAuthn credential id length is invalid".to_owned());
-    }
-    let public_key = serde_json::to_value(passkey.get_public_key())
-        .map_err(|_| "WebAuthn public key serialization failed".to_owned())?;
-    Ok((credential_id, public_key))
-}
-
-pub async fn persist_passkey_registration(
-    db: &PgPool,
-    principal_id: Uuid,
-    challenge: &[u8; 32],
-    passkey: &Passkey,
-    label: &str,
-) -> Result<Uuid, String> {
-    if !valid_credential_label(label) {
-        return Err("WebAuthn credential label is invalid".to_owned());
-    }
-    let (credential_id, public_key) = passkey_record(passkey)?;
-    let mut tx = db
-        .begin()
-        .await
-        .map_err(|_| "WebAuthn persistence unavailable".to_owned())?;
-    let consumed: Option<Uuid> = sqlx::query_scalar("UPDATE identity_webauthn_challenges SET consumed_at=clock_timestamp() WHERE challenge=$1 AND purpose='registration' AND principal_id=$2 AND consumed_at IS NULL AND expires_at>clock_timestamp() RETURNING id")
-        .bind(challenge.as_slice()).bind(principal_id).fetch_optional(&mut *tx).await
-        .map_err(|_| "WebAuthn challenge persistence failed".to_owned())?;
-    if consumed.is_none() {
-        return Err("WebAuthn registration challenge is invalid or already consumed".to_owned());
-    }
-    let credential_row = Uuid::new_v4();
-    sqlx::query("INSERT INTO identity_webauthn_credentials(id,principal_id,credential_id,public_key,label) VALUES($1,$2,$3,$4,$5)")
-        .bind(credential_row).bind(principal_id).bind(credential_id).bind(public_key).bind(label)
-        .execute(&mut *tx).await.map_err(|_| "WebAuthn credential already exists or cannot be stored".to_owned())?;
-    tx.commit()
-        .await
-        .map_err(|_| "WebAuthn persistence unavailable".to_owned())?;
-    Ok(credential_row)
+        .start_passkey_authentication(&credentials)
+        .map_err(|_| "WebAuthn authentication could not start".to_owned())
 }
 
 impl ChallengePurpose {
@@ -153,59 +100,6 @@ pub fn valid_credential_label(label: &str) -> bool {
 
 pub fn valid_credential_id(credential_id: &[u8]) -> bool {
     (16..=1024).contains(&credential_id.len())
-}
-
-pub async fn store_challenge(
-    db: &PgPool,
-    principal_id: Option<Uuid>,
-    purpose: ChallengePurpose,
-    expires_at: DateTime<Utc>,
-) -> Result<([u8; 32], Uuid), sqlx::Error> {
-    let challenge = generate_challenge();
-    let id = Uuid::new_v4();
-    sqlx::query("INSERT INTO identity_webauthn_challenges(id,principal_id,challenge,purpose,expires_at) VALUES($1,$2,$3,$4,$5)")
-        .bind(id).bind(principal_id).bind(challenge.as_slice())
-        .bind(purpose.as_str()).bind(expires_at).execute(db).await?;
-    Ok((challenge, id))
-}
-
-pub async fn store_ceremony_state(
-    db: &PgPool,
-    challenge_id: Uuid,
-    state: serde_json::Value,
-) -> Result<(), sqlx::Error> {
-    if !state.is_object() {
-        return Err(sqlx::Error::Protocol(
-            "WebAuthn ceremony state must be an object".into(),
-        ));
-    }
-    sqlx::query("UPDATE identity_webauthn_challenges SET ceremony_state=$1 WHERE id=$2 AND consumed_at IS NULL")
-        .bind(state).bind(challenge_id).execute(db).await?;
-    Ok(())
-}
-
-pub async fn consume_challenge(
-    db: &PgPool,
-    challenge: &[u8; 32],
-    expected_purpose: ChallengePurpose,
-    principal_id: Option<Uuid>,
-) -> Result<Uuid, sqlx::Error> {
-    let id: Option<Uuid> = sqlx::query_scalar("UPDATE identity_webauthn_challenges SET consumed_at=clock_timestamp() WHERE challenge=$1 AND purpose=$2 AND consumed_at IS NULL AND expires_at>clock_timestamp() AND (principal_id IS NOT DISTINCT FROM $3) RETURNING id")
-        .bind(challenge.as_slice()).bind(expected_purpose.as_str()).bind(principal_id)
-        .fetch_optional(db).await?;
-    id.ok_or(sqlx::Error::RowNotFound)
-}
-
-pub async fn load_ceremony_state(
-    db: &PgPool,
-    challenge: &[u8; 32],
-    expected_purpose: ChallengePurpose,
-    principal_id: Option<Uuid>,
-) -> Result<(Uuid, serde_json::Value), sqlx::Error> {
-    let row: Option<(Uuid, serde_json::Value)> = sqlx::query_as("SELECT id,ceremony_state FROM identity_webauthn_challenges WHERE challenge=$1 AND purpose=$2 AND consumed_at IS NULL AND expires_at>clock_timestamp() AND (principal_id IS NOT DISTINCT FROM $3) FOR UPDATE")
-        .bind(challenge.as_slice()).bind(expected_purpose.as_str()).bind(principal_id)
-        .fetch_optional(db).await?;
-    row.ok_or(sqlx::Error::RowNotFound)
 }
 
 /// WebAuthn authenticators may report zero permanently. Once a non-zero

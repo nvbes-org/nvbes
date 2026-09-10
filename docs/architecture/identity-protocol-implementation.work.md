@@ -13,6 +13,45 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Enrollment WebAuthn transactionnel — 2026-09-10
+
+Les anciens helpers publics qui séparaient challenge aléatoire, état de
+cérémonie, vérification et persistance ont été remplacés par `registration::start`
+et `registration::finish`. Le challenge stocké est exactement celui généré par
+webauthn-rs, avec son état complet, son principal et sa session. Une nouvelle
+demande remplace la précédente pour cette session ; la durée est de cinq minutes.
+
+Le début et la fin exigent une session active et une authentification récente.
+Si le compte a déjà une passkey ou un MFA actif, une preuve récente WebAuthn ou
+un step-up TOTP/WebAuthn est exigé. Le principal est verrouillé pour sérialiser
+les ajouts depuis plusieurs sessions et borner les credentials à dix par compte.
+La fin vérifie la réponse contre l'état serveur, puis écrit le Passkey complet,
+consomme la cérémonie et audite dans une transaction unique.
+
+La migration 0015 ajoute la liaison de session et le credential sérialisé.
+Les anciennes lignes ne contenant qu'une clé publique ne sont pas transformées
+en Passkey par supposition : elles nécessitent un nouvel enrollment. Le signal
+discoverable reste inconnu (`NULL`) au lieu d'être affirmé par défaut. Le Passkey
+complet est la source des compteurs, flags et règles de vérification ; les
+anciennes colonnes isolées ne suffisent pas à authentifier.
+
+Les tests PostgreSQL utilisent un authentificateur logiciel de la bibliothèque,
+exclusivement en dépendance de développement. Ils produisent de vraies réponses
+signées et vérifient une assertion après relecture du credential. Ils couvrent
+origine incorrecte, absence d'UV, substitution de challenge, autre session,
+expiration, révocation, rejeu, concurrence, facteur existant et panne d'écriture.
+L'authentificateur de test simule l'UV ; il ne démontre aucune propriété matérielle.
+
+Validation : `cargo check --workspace` sans avertissement ; cible Nx
+`identity-service:test:database` avec 111 tests de bibliothèque et 24 tests du
+runtime réussis, sur PostgreSQL isolé avec la migration 0015.
+
+Cette tranche ne monte pas encore de routes WebAuthn : l'adaptateur HTTP doit
+vérifier Origin et CSRF de session et appliquer les quotas avant ces opérations.
+Restent le login/step-up transactionnel, les credentials découvrables, les
+routes d'enrollment et de gestion, la récupération et les parcours navigateur.
+Elle ne clôt donc pas le lot B ni les lots A–D.
+
 ## UserInfo et construction des endpoints — 2026-09-10
 
 UserInfo dispose d'une audience dédiée, exige `openid` et ne retourne l'email
