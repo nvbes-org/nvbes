@@ -28,7 +28,13 @@ Deux fixtures HTTPS neuves ont validé les écrans compilés avec Chromium
 Account HTTP 200 avec le bon sujet. TOTP couvre un abandon suivi d'une nouvelle
 clé, conformément au remplacement serveur du facteur pending. Les facteurs
 sont synthétiques ; aucune préparation SDK ne les crée dans ces deux scénarios.
-Les 22 tests du site, typecheck, lint, format et build passent. Aucun Rust changé.
+Les 23 tests du site, typecheck, lint, format et build passent. Aucun Rust changé.
+Le scénario de connexion existant a révélé des lectures de facteurs inutiles
+après preuve forte, épuisant les quotas lors des parcours successifs. Le site
+cesse ces lectures quand le statut serveur indique une preuve forte satisfaite ;
+les quotas serveur restent inchangés et un test couvre cette économie de requêtes.
+Une nouvelle fixture valide ensuite les quatre parcours existants : mot de passe,
+mot de passe avec TOTP ou WebAuthn, et passkey directe, tous jusqu'à Account 200.
 
 La gestion des facteurs supplémentaires, la récupération, la réauthentification
 explicite d'une session SSO trop ancienne, Account Web et les autres gates A–D

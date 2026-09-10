@@ -134,3 +134,17 @@ it('does not offer first enrollment when factors already exist', async () => {
   expect(test.register).not.toHaveBeenCalled();
   expect(test.startTotp).not.toHaveBeenCalled();
 });
+
+it('does not spend factor-list quotas after the server confirms fresh strong proof', async () => {
+  const test = setup();
+  test.status.mockResolvedValue({
+    minimumAuthentication: 'recent_mfa',
+    needsLogin: false,
+    needsStepUp: false,
+    proofExpiresAt: '2030-01-01T00:00:00Z',
+  });
+  await test.controller.start('authorization');
+  expect(test.hasFactors).not.toHaveBeenCalled();
+  expect(test.controller.snapshot().stage).toBe('consent');
+  expect(test.controller.snapshot().firstEnrollmentAvailable).toBe(false);
+});

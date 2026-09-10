@@ -88,6 +88,7 @@ export class AuthorizationController {
     if (this.disposed) return;
     const firstEnrollmentAvailable =
       !authentication.needsLogin &&
+      authentication.proofExpiresAt === null &&
       interaction.sessionCsrfToken !== null &&
       !(await this.gateway.hasFactors(interaction.sessionCsrfToken));
     if (this.disposed) return;

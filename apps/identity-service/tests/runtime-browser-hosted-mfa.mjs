@@ -27,6 +27,11 @@ export async function verifyHostedMfa(browser, clientOrigin) {
     const factors = await prepareHostedFactors(page, config);
     const results = [];
     const errors = [];
+    const refused = [];
+    page.on('response', (response) => {
+      if (response.status() >= 400)
+        refused.push({ path: new URL(response.url()).pathname, status: response.status() });
+    });
     page.on('pageerror', (error) => errors.push(error.name));
     for (const method of ['totp', 'webauthn_step_up', 'passkey_login']) {
       const client = {
@@ -91,7 +96,11 @@ export async function verifyHostedMfa(browser, clientOrigin) {
           await page.getByRole('button', { name: 'Vérifier avec une passkey' }).click();
         }
       }
-      await page.getByRole('heading', { name: 'Accès demandés' }).waitFor();
+      try {
+        await page.getByRole('heading', { name: 'Accès demandés' }).waitFor();
+      } catch {
+        throw new Error(JSON.stringify({ method, refused, error: 'Consent not reached' }));
+      }
       await page.getByRole('button', { name: 'Autoriser et continuer' }).click();
       results.push({ method, ...(await confirmHostedAccount(page, client)) });
       await logoutHostedUi(page, config, csrf);
