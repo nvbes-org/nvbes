@@ -80,7 +80,7 @@ test('refuses a raw score below the applicable threshold', () => {
   );
 });
 
-test('manual trusted CI publishes a bounded HTTP client measurement artifact', () => {
+test('manual trusted CI publishes bounded TypeScript measurement artifacts', () => {
   const workflow = parse(readFileSync('.github/workflows/v1-testing.yml', 'utf8'));
   assert.deepEqual(workflow.on, { workflow_dispatch: null });
   assert.equal(workflow.concurrency['cancel-in-progress'], true);
@@ -88,14 +88,28 @@ test('manual trusted CI publishes a bounded HTTP client measurement artifact', (
   const job = workflow.jobs['typescript-measurement'];
   assert.equal(job['timeout-minutes'], 40);
   assert.equal(job.environment.name, 'ci-no-secrets');
+  assert.deepEqual(job.strategy, {
+    'fail-fast': false,
+    'max-parallel': 1,
+    matrix: {
+      include: [
+        { package: 'http-client', unit: '@nvbes/http-client' },
+        { package: 'billing-client', unit: '@nvbes/billing-client' },
+      ],
+    },
+  });
+  assert.deepEqual(job.env, {
+    NVBES_COVERAGE_PACKAGE: '${{ matrix.package }}',
+    NVBES_MUTATION_PACKAGE: '${{ matrix.package }}',
+  });
   const security = job.steps.findIndex((step) => step.name === 'CI/CD security gate');
   const setup = job.steps.findIndex((step) => step.uses === './.github/actions/ci-setup');
   assert.ok(security >= 0 && security < setup);
-  const upload = job.steps.find((step) => step.name === 'Publish HTTP client measurement');
+  const upload = job.steps.find((step) => step.name === 'Publish TypeScript measurement');
   assert.equal(upload.uses, 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02');
   assert.deepEqual(upload.with, {
-    name: 'v1-measurement-typescript-http-client-${{ github.sha }}',
-    path: '.temp/v1-measurements/typescript-http-client',
+    name: 'v1-measurement-typescript-${{ matrix.package }}-${{ github.sha }}',
+    path: '.temp/v1-measurements/typescript-${{ matrix.package }}',
     'if-no-files-found': 'error',
     'retention-days': 7,
   });
