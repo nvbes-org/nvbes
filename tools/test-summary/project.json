@@ -12,12 +12,22 @@
       "{workspaceRoot}/docs/testing/account-test-manifest.json",
       "{workspaceRoot}/docs/testing/rust-coverage-thresholds.json",
       "{workspaceRoot}/.github/workflows/ci.yml",
+      "{workspaceRoot}/.github/workflows/v1-testing.yml",
+      "{workspaceRoot}/libs/ts/**/src/**/*",
+      "{workspaceRoot}/libs/ts/*/package.json",
+      "{workspaceRoot}/patches/*.patch",
       "{workspaceRoot}/tools/rust-workspace/check-coverage.mjs",
       "{workspaceRoot}/tools/account-quality/check-account-release-readiness.mjs"
     ],
     "production": ["default"]
   },
   "targets": {
+    "campaign:typescript": {
+      "executor": "nx:run-commands",
+      "options": { "command": "node tools/test-summary/typescript-campaign.mjs" },
+      "cache": false,
+      "parallelism": false
+    },
     "mutation:typescript": {
       "executor": "nx:run-commands",
       "options": { "command": "node tools/test-summary/run-typescript-mutation.mjs" },

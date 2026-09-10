@@ -20,6 +20,10 @@ export function typescriptSources(location, relativeRoot) {
       sha256: createHash('sha256').update(source).digest('hex'),
       runtime: emitted !== '' && emitted !== 'export {};',
     };
+    const ast = ts.createSourceFile(file, emitted, ts.ScriptTarget.Latest, true);
+    if (ast.statements.length > 0 && ast.statements.every(ts.isExportDeclaration)) {
+      sources[`${relativeRoot}/src/${file.replaceAll(path.sep, '/')}`].forwardingOnly = true;
+    }
   }
   return sources;
 }
@@ -95,6 +99,11 @@ export function productionUnits(root, domains, cwd) {
     thresholds: thresholds[name] ?? {},
     ...rustSources(packages.find((pkg) => pkg.name === name).manifest_path, cwd),
   }));
+  return [...units, ...typescriptUnits(root, cwd)].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function typescriptUnits(root, cwd) {
+  const units = [];
   const typescriptRoot = path.join(cwd, 'libs/ts');
   const manifests = readdirSync(typescriptRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())

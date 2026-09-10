@@ -108,15 +108,19 @@ ni une preuve réutilisable depuis une exécution PR. L'assemblage ultérieur du
 paquet doit télécharger ce reçu, lui ajouter la référence d'artefact GitHub et
 vérifier le run complet avec le gate commun.
 
-Le workflow manuel dédié `v1-testing.yml` mesure `@nvbes/http-client` dans une
-lane isolée, avec une concurrence distincte de la CI de PR :
+Le workflow manuel dédié `v1-testing.yml` mesure les neuf packages TypeScript
+applicables dans des lanes isolées, exécutées une à une, avec une concurrence
+distincte de la CI de PR et une limite de 40 minutes par lane :
 Vitest/V8 produit les compteurs de lignes et branches, puis Stryker produit les
 mutants avec les timeouts comptés comme non détectés. Le reçu et les deux
 rapports bruts sont publiés ensemble pendant sept jours sous le nom
-`v1-measurement-typescript-http-client-<sha>`. L'assembleur recalcule les trois
+`v1-measurement-typescript-<package>-<sha>`. L'assembleur recalcule les trois
 scores depuis ces membres GitHub exacts avant de les ajouter au brouillon.
-Cette première unité démontre la chaîne de mesure ; les huit autres packages
-TypeScript et toutes les crates Rust restent obligatoires.
+La mutation s'exécute même après un échec de couverture, sans convertir cet
+échec en succès. Les rapports disponibles sont aussi conservés sept jours sous
+`v1-diagnostic-typescript-<package>-<sha>` ; ces diagnostics ne sont pas des
+reçus acceptés par l'assembleur. La matrice exhaustive ne prouve pas que ses
+seuils sont atteints. Toutes les crates Rust restent également obligatoires.
 
 Après un run manuel terminé, l'opérateur peut construire un brouillon local :
 
@@ -151,6 +155,10 @@ leur empreinte et la présence de code émis. Les rapports doivent inclure
 chaque source runtime ; aucun fichier étranger ou dupliqué n'est accepté.
 Le texte source embarqué par Stryker doit correspondre exactement au candidat.
 Les types sans code émis peuvent être absents, ou avoir des compteurs nuls.
+Les barrels constitués uniquement de déclarations de réexport après
+transpilation sont également sans compteur obligatoire : leur inventaire et
+leur empreinte restent contrôlés. Un import à effet de bord ou une expression
+exécutable ne bénéficie pas de cette classification.
 
 Les scores déclarés doivent égaler les scores recalculés, sans arrondi :
 couverture depuis les compteurs entiers par fichier (pas `pct` ni le total
@@ -228,5 +236,24 @@ NVBES_MUTATION_PACKAGE=http-client pnpm exec nx run test-summary:mutation:typesc
 Stryker est épinglé, utilise le runner de commandes avec Vite+ et un seul
 worker. Le budget est de 30 minutes par package. Le rapport JSON est évalué
 séparément, car Stryker compte normalement les timeouts comme détectés.
-Un rapport incomplet, vide, ignoré ou sous 90 % échoue. Ce target n'est pas
-encore une campagne exhaustive de tous les packages.
+Un rapport incomplet, vide, ignoré ou sous le maximum de 90 % et du seuil
+historique échoue. Couverture, mutation et reçu partagent le même validateur
+des sources et des compteurs ; la simple production d'un fichier ne suffit pas.
+
+L'instrumenter Stryker 10.0.0 est patché via pnpm : les assertions TypeScript
+(`as const`, `as boolean`) ne doivent pas masquer leurs expressions exécutables.
+Un étalonnage teste les mutations de littéraux et de booléens avant chaque
+campagne et vérifie que les types seuls restent exclus.
+
+```sh
+pnpm exec nx run test-summary:campaign:typescript
+pnpm exec nx run test-summary:campaign:typescript --coverage-only
+```
+
+La campagne locale parcourt les neuf unités sans abandonner les suivantes à
+la première erreur, avec 10 minutes pour la couverture et 30 pour la mutation
+de chacune. Elle conserve SHA, état du checkout, inventaire et statuts dans
+`.temp/typescript-campaign/<date>/summary.json`. Le mode couverture seule
+laisse les mutations `not-run` et échoue donc à la clôture de campagne. Ces
+rapports locaux restent diagnostiques (`NO-GO`), même si tous les seuils passent :
+ils ne remplacent ni la provenance CI au SHA final ni les preuves opérateur.

@@ -59,3 +59,6 @@ minimumReleaseAgeExclude:
   - '@hono/node-server@2.0.12'
 
 nodeLinker: hoisted
+
+patchedDependencies:
+  '@stryker-mutator/instrumenter@10.0.0': patches/@stryker-mutator__instrumenter@10.0.0.patch

@@ -37,6 +37,16 @@ jobs:
             unit: '@nvbes/account-client'
           - package: identity-sdk
             unit: '@nvbes/identity-sdk'
+          - package: identity-client
+            unit: '@nvbes/identity-client'
+          - package: identity-sdk-web
+            unit: '@nvbes/identity-sdk-web'
+          - package: web-runtime
+            unit: '@nvbes/web-runtime'
+          - package: web-ui
+            unit: '@nvbes/web-ui'
+          - package: email-ui
+            unit: '@nvbes/email-ui'
     env:
       NVBES_COVERAGE_PACKAGE: ${{ matrix.package }}
       NVBES_MUTATION_PACKAGE: ${{ matrix.package }}
@@ -50,14 +60,18 @@ jobs:
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/v1-testing.yml
       - uses: ./.github/actions/ci-setup
+        id: setup
         with:
           node: 'true'
           rust: 'false'
           terraform: 'false'
           caches: pnpm
       - name: Measure TypeScript coverage
+        id: coverage
         run: ./node_modules/.bin/nx run test-summary:coverage:typescript
       - name: Measure TypeScript mutations
+        id: mutation
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: ./node_modules/.bin/nx run test-summary:mutation:typescript
       - name: Produce TypeScript measurement receipt
         run: >-
@@ -70,5 +84,15 @@ jobs:
         with:
           name: v1-measurement-typescript-${{ matrix.package }}-${{ github.sha }}
           path: .temp/v1-measurements/typescript-${{ matrix.package }}
+          if-no-files-found: error
+          retention-days: 7
+      - name: Publish TypeScript diagnostics
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: v1-diagnostic-typescript-${{ matrix.package }}-${{ github.sha }}
+          path: |
+            .temp/typescript/${{ matrix.package }}/coverage/coverage-summary.json
+            .temp/typescript/${{ matrix.package }}/mutation.json
           if-no-files-found: error
           retention-days: 7

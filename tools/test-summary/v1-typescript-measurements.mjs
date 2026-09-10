@@ -20,12 +20,13 @@ function filesInScope(files, unit, summary = false) {
     mapped.set(file, value);
   }
   for (const [file, source] of Object.entries(unit.sourceFiles)) {
-    if (source.runtime) assert(mapped.has(file), `Missing runtime source: ${file}`);
+    if (source.runtime && !source.forwardingOnly)
+      assert(mapped.has(file), `Missing runtime source: ${file}`);
   }
   return mapped;
 }
 
-export function typescriptMeasurements(unit, coverage, mutation) {
+export function typescriptCoverage(unit, coverage) {
   assert(
     unit.sourceFiles && Object.keys(unit.sourceFiles).length,
     'Missing candidate source inventory',
@@ -49,7 +50,11 @@ export function typescriptMeasurements(unit, coverage, mutation) {
       );
       if (!unit.sourceFiles[file].runtime)
         assert.equal(count.total, 0, `Declarative source has counters: ${file}`);
-      if (unit.sourceFiles[file].runtime && metric === 'lines')
+      if (
+        unit.sourceFiles[file].runtime &&
+        !unit.sourceFiles[file].forwardingOnly &&
+        metric === 'lines'
+      )
         assert(count.total > 0, `Runtime source has no lines: ${file}`);
       total += count.total;
       covered += count.covered;
@@ -57,6 +62,10 @@ export function typescriptMeasurements(unit, coverage, mutation) {
     assert(Number.isSafeInteger(total) && total > 0, `No applicable ${metric} counters`);
     scores[metric] = (100 * covered) / total;
   }
+  return scores;
+}
+
+export function typescriptMutation(unit, mutation) {
   assert.equal(mutation.schemaVersion, '1.0', 'Unsupported Stryker report version');
   for (const [file, result] of filesInScope(mutation.files, unit)) {
     assert(typeof result.source === 'string', `Missing mutation source: ${file}`);
@@ -68,8 +77,11 @@ export function typescriptMeasurements(unit, coverage, mutation) {
     if (!unit.sourceFiles[file].runtime)
       assert.equal(result.mutants?.length, 0, `Declarative source has mutants: ${file}`);
   }
-  scores.mutation = mutationScore(mutation).score;
-  return scores;
+  return mutationScore(mutation).score;
+}
+
+export function typescriptMeasurements(unit, coverage, mutation) {
+  return { ...typescriptCoverage(unit, coverage), mutation: typescriptMutation(unit, mutation) };
 }
 
 // These bytes have passed signature/digest verification. CI collection still

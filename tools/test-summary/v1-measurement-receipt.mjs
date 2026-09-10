@@ -3,7 +3,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { confinedRead } from './v1-bundle-verification.mjs';
-import { productionUnits } from './v1-catalogue.mjs';
+import { typescriptUnits } from './v1-catalogue.mjs';
+import { enforceTypescriptThresholds } from './typescript-quality-gate.mjs';
 import { loadV1 } from './v1-release.mjs';
 import { ciContext } from './v1-suite-receipt.mjs';
 import { typescriptMeasurements } from './v1-typescript-measurements.mjs';
@@ -35,13 +36,11 @@ export function produceTypescriptMeasurement({
   const coverage = JSON.parse(coverageBytes.toString('utf8'));
   const mutation = JSON.parse(mutationBytes.toString('utf8'));
   const scores = typescriptMeasurements(unit, coverage, mutation);
-  for (const metric of ['lines', 'branches', 'mutation']) {
-    const threshold = Math.max(thresholds?.[metric] ?? 90, unit.thresholds?.[metric] ?? 0);
-    assert(
-      scores[metric] >= threshold,
-      `${unit.name} ${metric} ${scores[metric]}% < ${threshold}%`,
-    );
-  }
+  enforceTypescriptThresholds(
+    unit,
+    thresholds ?? { lines: 90, branches: 90, mutation: 90 },
+    scores,
+  );
   return {
     measurementVersion: 1,
     language: 'typescript',
@@ -84,8 +83,8 @@ function toolVersions() {
 function main() {
   const options = argumentsByName(process.argv.slice(2));
   const cwd = process.cwd();
-  const { root, domains } = loadV1(cwd);
-  const units = productionUnits(root, domains, cwd);
+  const { root } = loadV1(cwd);
+  const units = typescriptUnits(root, cwd);
   const unit = units.find((entry) => entry.name === options.get('unit'));
   assert(unit, 'Unknown candidate measurement unit');
   const context = ciContext(process.env);

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { parse } from 'yaml';
+import { typescriptUnits } from './v1-catalogue.mjs';
 import {
   produceTypescriptMeasurement,
   typescriptMeasurementSlug,
@@ -76,7 +77,7 @@ test('refuses a raw score below the applicable threshold', () => {
   belowThreshold.thresholds.lines = 90.01;
   assert.throws(
     () => produceTypescriptMeasurement(belowThreshold),
-    /@nvbes\/example lines 90% < 90.01%/u,
+    /@nvbes\/example: lines 90% < 90.01%/u,
   );
 });
 
@@ -97,6 +98,11 @@ test('manual trusted CI publishes bounded TypeScript measurement artifacts', () 
         { package: 'billing-client', unit: '@nvbes/billing-client' },
         { package: 'account-client', unit: '@nvbes/account-client' },
         { package: 'identity-sdk', unit: '@nvbes/identity-sdk' },
+        { package: 'identity-client', unit: '@nvbes/identity-client' },
+        { package: 'identity-sdk-web', unit: '@nvbes/identity-sdk-web' },
+        { package: 'web-runtime', unit: '@nvbes/web-runtime' },
+        { package: 'web-ui', unit: '@nvbes/web-ui' },
+        { package: 'email-ui', unit: '@nvbes/email-ui' },
       ],
     },
   });
@@ -104,6 +110,25 @@ test('manual trusted CI publishes bounded TypeScript measurement artifacts', () 
     NVBES_COVERAGE_PACKAGE: '${{ matrix.package }}',
     NVBES_MUTATION_PACKAGE: '${{ matrix.package }}',
   });
+  const manifest = JSON.parse(readFileSync('docs/testing/v1/manifest.json', 'utf8'));
+  assert.deepEqual(
+    job.strategy.matrix.include.map((entry) => entry.unit).sort(),
+    typescriptUnits(manifest, process.cwd())
+      .map((entry) => entry.name)
+      .sort(),
+    'The CI campaign must include every applicable production package',
+  );
+  const mutations = job.steps.find((step) => step.id === 'mutation');
+  assert.equal(mutations.if, "${{ !cancelled() && steps.setup.outcome == 'success' }}");
+  const diagnostics = job.steps.find((step) => step.name === 'Publish TypeScript diagnostics');
+  assert.equal(diagnostics.if, mutations.if);
+  assert.equal(diagnostics.with['retention-days'], 7);
+  assert.match(diagnostics.with.name, /^v1-diagnostic-/u);
+  assert.equal(
+    job.steps.find((step) => step.name === 'Produce TypeScript measurement receipt').if,
+    undefined,
+  );
+  assert(job.steps.every((step) => step['continue-on-error'] !== true));
   const security = job.steps.findIndex((step) => step.name === 'CI/CD security gate');
   const setup = job.steps.findIndex((step) => step.uses === './.github/actions/ci-setup');
   assert.ok(security >= 0 && security < setup);
