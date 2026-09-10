@@ -13,6 +13,28 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Preuve réseau des notifications MFA — 2026-09-10
+
+La cible Nx identity-service:test:email-runtime compile et lance le vrai worker
+Email avec environnement explicitement isolé, gRPC sur loopback, schéma Email
+distinct du schéma Identity et fournisseur test-capture. Une génération MFA
+réelle produit la notification. Après acceptation Email sans règlement côté
+Identity, le worker est tué puis redémarré : le dispatcher retrouve le même reçu,
+sans second message ni seconde tentative fournisseur. Le mauvais jeton producteur
+échoue sans capture supplémentaire. La capture est rapprochée de son registre
+et ne contient ni code de récupération, ni token de session, ni secret TOTP.
+
+Le premier lancement a identifié une configuration de fixture incomplète :
+le jeton d'observabilité requis en environnement test est désormais fourni avec
+une valeur exclusivement synthétique. Le scénario passe avec cette configuration.
+Cette preuve locale ne valide pas une livraison externe ni la cadence opérateur.
+Les interfaces, politiques et autres exigences A à D restent ouvertes.
+
+Validation finale : cible Nx identity-service:test:email-runtime réussie et
+cargo check --workspace sans avertissement. Les suites PostgreSQL générales et
+navigateur ne sont pas relancées : cette tranche ajoute une fixture et son test,
+sans modifier la logique métier ni le SDK.
+
 ## File durable et dispatcher des notifications MFA — 2026-09-10
 
 La migration 0023 et les modules queue/dispatch figent les destinataires vérifiés

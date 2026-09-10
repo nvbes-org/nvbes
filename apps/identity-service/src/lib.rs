@@ -15,10 +15,14 @@ pub mod mfa_crypto;
 pub mod mfa_recovery;
 #[path = "identity.notifications.command.rs"]
 pub mod notification_command;
-#[path = "identity.notifications.queue.rs"]
-mod notification_queue;
 #[path = "identity.notifications.dispatch.rs"]
 pub mod notification_dispatch;
+#[path = "identity.notifications.queue.rs"]
+mod notification_queue;
+
+#[cfg(all(test, feature = "email-integration-tests"))]
+#[path = "identity.notifications.runtime.tests.rs"]
+mod notification_runtime_tests;
 #[path = "identity.rate_limits.rs"]
 pub mod rate_limits;
 #[path = "identity.sessions.lock.rs"]

@@ -4,6 +4,15 @@
   "root": "apps/identity-service",
   "sourceRoot": "apps/identity-service/src",
   "targets": {
+    "test:email-runtime": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": {
+        "command": "bash scripts/test-identity-email-runtime.sh",
+        "cwd": "."
+      }
+    },
     "test:resource-runtimes": {
       "executor": "nx:run-commands",
       "cache": false,

@@ -6,6 +6,7 @@ version.workspace = true
 
 [features]
 database-tests = []
+email-integration-tests = ["database-tests"]
 
 [[bin]]
 name = "nvbes-identity-service"

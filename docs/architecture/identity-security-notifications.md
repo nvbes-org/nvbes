@@ -67,9 +67,18 @@ reçus incohérents, absence d'adresse, expiration et épuisement sont couverts.
 Une vraie génération/consommation MFA vérifie l'enqueue et le rollback de toute
 la mutation quand la file échoue. La rétention conserve l'audit métier.
 
-Le raccordement réseau Identity → Email et sa livraison via le fournisseur
-doivent encore être validés dans une fixture locale, puis dans les gates de mise
-en service autorisés. Aucun email réel ou déploiement n'est effectué ici. La
+La cible Nx `identity-service:test:email-runtime` utilise un worker Email réel,
+gRPC, deux schémas PostgreSQL isolés et le fournisseur local test-capture.
+Une génération MFA réelle traverse la file ; une acceptation dont Identity perd
+le reçu est rejouée après redémarrage forcé d'Email. Le même reçu est retrouvé,
+avec un seul message, une seule tentative fournisseur et une capture rapprochée
+du registre Email. Le refus d'un mauvais jeton producteur et l'absence des secrets
+MFA dans le contenu sont vérifiés. Le processus enfant n'hérite d'aucune variable
+du fournisseur réel ; son arrêt et la suppression des captures sont automatiques.
+
+La capture prouve `provider_accepted`, pas `delivered` dans une boîte réelle.
+La livraison fournisseur externe reste à valider dans les gates de mise en
+service autorisés. Aucun email réel ou déploiement n'est effectué ici. La
 cadence d'exploitation et la preuve FinOps globale restent à finaliser avant
 ouverture publique ; les limites par invocation ne prouvent pas à elles seules
 le plafond de 30 EUR TTC par mois.
