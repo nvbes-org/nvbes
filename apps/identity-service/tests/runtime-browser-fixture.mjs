@@ -4,6 +4,7 @@ import { createServer } from 'vite-plus';
 import { command, RuntimeFixture, runtimeEnvironment, unusedPort } from './runtime-processes.mjs';
 import { testCertificates, tlsEndpoint } from './runtime-browser-tls.mjs';
 import { identityWebBuild } from './runtime-browser-web-ui.mjs';
+import { verifyHostedReauthentication } from './runtime-browser-hosted-reauth.mjs';
 
 const fixture = new RuntimeFixture();
 let closed = false;
@@ -30,6 +31,8 @@ process.once('SIGINT', () => {
 
 try {
   const web = process.env.NVBES_IDENTITY_TEST_WEB_UI === '1' ? await identityWebBuild() : undefined;
+  if (process.env.NVBES_IDENTITY_TEST_WEB_REAUTH === '1' && !web)
+    throw new Error('Reauthentication verification requires the built Identity UI');
   const tls = await testCertificates(fixture);
   const databases = await fixture.database();
   const vite = await createServer({
@@ -178,6 +181,10 @@ try {
     );
   // Only public test URLs are printed. Keys and synthetic credentials stay inside the fixture.
   console.log(JSON.stringify({ client: origins.client, pid: process.pid, expiresInSeconds: 600 }));
+  if (process.env.NVBES_IDENTITY_TEST_WEB_REAUTH === '1') {
+    console.log(JSON.stringify(await verifyHostedReauthentication(fixture, origins.client)));
+    await close();
+  }
 } catch (error) {
   await close();
   throw error;

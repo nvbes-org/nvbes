@@ -49,6 +49,17 @@ export function EnrollmentForm({
 
   return (
     <div className="flex flex-col gap-6">
+      <p className="text-sm text-muted-foreground">
+        La configuration nécessite une authentification récente. Si votre session est ancienne,
+        reconnectez-vous avant de continuer.
+      </p>
+      <Button
+        variant="ghost"
+        disabled={state.busy}
+        onClick={() => controller.beginReauthentication()}
+      >
+        Me reconnecter avant la configuration
+      </Button>
       {enrollment ? (
         <form onSubmit={confirm}>
           <FieldGroup>

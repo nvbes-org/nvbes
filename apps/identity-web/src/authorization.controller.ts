@@ -142,6 +142,7 @@ export class AuthorizationController {
         try {
           await this.refresh(this.state.interaction ?? interaction);
           this.publish({
+            ...(stage === 'reauthenticate' ? { stage: 'reauthenticate' as const } : {}),
             error:
               'La vérification n’a pas abouti. Vérifiez vos informations ou utilisez une autre méthode. En cas de demandes répétées, patientez avant de réessayer.',
           });
@@ -158,17 +159,17 @@ export class AuthorizationController {
   }
 
   password(email: string, password: string) {
-    if (this.state.stage !== 'login') return Promise.resolve();
+    if (!['login', 'reauthenticate'].includes(this.state.stage)) return Promise.resolve();
     return this.mutate(async (interaction) => {
       await this.refresh(await this.gateway.password(interaction, email, password));
     });
   }
 
   passkey() {
-    if (!['login', 'step-up', 'security-step-up'].includes(this.state.stage))
+    if (!['login', 'reauthenticate', 'step-up', 'security-step-up'].includes(this.state.stage))
       return Promise.resolve();
     return this.mutate(async (interaction) => {
-      if (this.state.stage === 'login') {
+      if (this.state.stage === 'login' || this.state.stage === 'reauthenticate') {
         await this.refresh(await this.gateway.passkey(interaction));
       } else {
         if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
@@ -310,6 +311,23 @@ export class AuthorizationController {
   beginSecurityStepUp() {
     if (this.state.stage === 'consent' && !this.state.busy && !this.state.firstEnrollmentAvailable)
       this.publish({ stage: 'security-step-up', error: null });
+  }
+
+  beginReauthentication() {
+    if (this.state.stage === 'enrollment' && !this.state.busy)
+      this.publish({
+        stage: 'reauthenticate',
+        totpEnrollment: null,
+        recoveryCodes: null,
+        managementExpiresAt: null,
+        hasTotp: false,
+        error: null,
+      });
+  }
+
+  cancelReauthentication() {
+    if (this.state.stage !== 'reauthenticate') return Promise.resolve();
+    return this.mutate((interaction) => this.refresh(interaction));
   }
 
   expireSecurityAccess() {

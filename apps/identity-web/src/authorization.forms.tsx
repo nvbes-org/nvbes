@@ -31,7 +31,7 @@ export function AuthenticationForms({
     form.reset();
     if (typeof code === 'string') void controller.totp(code);
   }
-  const login = state.stage === 'login';
+  const login = state.stage === 'login' || state.stage === 'reauthenticate';
   return (
     <div className="flex flex-col gap-6">
       <Button
@@ -106,6 +106,15 @@ export function AuthenticationForms({
         </p>
       )}
       {state.stage === 'step-up' && <RecoveryRequest controller={controller} busy={state.busy} />}
+      {state.stage === 'reauthenticate' && (
+        <Button
+          variant="ghost"
+          disabled={state.busy}
+          onClick={() => void controller.cancelReauthentication()}
+        >
+          Revenir à la connexion en cours
+        </Button>
+      )}
       {state.stage === 'security-step-up' && (
         <Button
           variant="ghost"

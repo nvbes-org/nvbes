@@ -13,6 +13,7 @@ import type { AuthorizationController } from './authorization.controller';
 const titles = {
   loading: 'Préparation de votre connexion',
   login: 'Votre espace commence ici.',
+  reauthenticate: 'Reconnectez-vous pour continuer.',
   'step-up': 'Confirmez que c’est vous.',
   'security-step-up': 'Confirmez votre accès à la sécurité.',
   enrollment: 'Protégez votre compte.',
@@ -104,7 +105,7 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
                 <AlertDescription>{state.error}</AlertDescription>
               </Alert>
             )}
-            {['login', 'step-up', 'security-step-up'].includes(state.stage) && (
+            {['login', 'reauthenticate', 'step-up', 'security-step-up'].includes(state.stage) && (
               <AuthenticationForms controller={controller} state={state} />
             )}
             {state.stage === 'enrollment' && (

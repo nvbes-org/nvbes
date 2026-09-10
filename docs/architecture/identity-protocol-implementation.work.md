@@ -13,6 +13,24 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Identity : reconnexion primaire avant enrollment — 2026-09-10
+
+L'écran de configuration peut désormais demander une reconnexion explicite sur
+l'interaction OAuth en cours. Le serveur existant vérifie la continuité du
+navigateur, authentifie les nouvelles données puis rattache une nouvelle session
+avec rotation CSRF. Le site retire le matériel TOTP et les preuves de gestion
+avant la reconnexion ; il conserve le formulaire après un refus connu et ferme
+le parcours en cas de réponse incertaine. Aucune session n'est rajeunie côté UI.
+
+Validation : 52 tests du site et checks typecheck/lint/format/build réussis.
+La fixture HTTPS a vieilli de six minutes ses seules sessions de test et vérifié
+le refus serveur d'un premier TOTP. Après un mot de passe incorrect puis correct
+saisi dans l'écran, la même interaction permet l'enrollment TOTP et le callback
+OIDC/DPoP jusqu'à Account HTTP 200 avec le bon sujet. Chromium 153, services réels,
+authentificateur TOTP synthétique. La variante de fixture se ferme automatiquement
+et n'expose aucune commande de vieillissement par HTTP. Aucun Rust modifié.
+Account Web, logout intersites et les autres gates A–D restent ouverts.
+
 ## Site Identity : confirmation MFA volontaire — 2026-09-10
 
 Un client à politique primary peut maintenant demander une confirmation MFA

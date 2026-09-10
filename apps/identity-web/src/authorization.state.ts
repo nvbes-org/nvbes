@@ -8,6 +8,7 @@ export interface AuthorizationState {
   stage:
     | 'loading'
     | 'login'
+    | 'reauthenticate'
     | 'step-up'
     | 'security-step-up'
     | 'enrollment'

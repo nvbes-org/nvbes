@@ -31,6 +31,12 @@ dernier facteur ne peut pas être supprimé. Toute révocation réussie interrom
 ce parcours OAuth pour demander une nouvelle connexion avec un facteur conservé.
 Le site Account reste à construire.
 
+Depuis la configuration d'un facteur, « Me reconnecter avant la configuration »
+permet une authentification fraîche sur l'interaction en cours, notamment si une
+ancienne session sans MFA ne peut plus ajouter son premier facteur. Le serveur
+renouvelle la session et le CSRF ; le site abandonne les secrets de configuration
+et les preuves de gestion précédents. Un mot de passe refusé conserve le formulaire.
+
 Un client à politique `primary` peut également proposer une confirmation MFA
 volontaire depuis le consentement. TOTP ou passkey ouvre les actions de sécurité
 avec une preuve de gestion distincte, bornée à cinq minutes au maximum. La
@@ -129,6 +135,17 @@ Les suites `security-totp` et `security-passkey` vérifient un client `primary`,
 la confirmation MFA volontaire, l'accès aux facteurs et codes de secours, puis
 le callback OIDC/DPoP. Elles vérifient que le statut OAuth conserve sa politique
 initiale. Chaque suite utilise une fixture neuve.
+
+Pour vérifier une ancienne session sans attendre son vieillissement :
+
+```sh
+NVBES_IDENTITY_TEST_WEB_UI=1 NVBES_IDENTITY_TEST_WEB_REAUTH=1 pnpm nx run identity-service:test:https-browser-fixture
+```
+
+Cette variante exécute elle-même Chromium puis ferme sa fixture. Elle vieillit
+la session uniquement dans sa base PostgreSQL dédiée, vérifie le refus d'enrollment,
+puis une reconnexion via l'écran, la configuration TOTP et Account HTTP 200.
+Elle n'ajoute aucune route HTTP permettant de modifier l'âge d'une session.
 
 ## Composants et exploitation
 

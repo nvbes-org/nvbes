@@ -65,6 +65,36 @@ function setup() {
 }
 
 describe('hosted authorization orchestration', () => {
+  it('reauthenticates a bound session and retains the rotated interaction proof', async () => {
+    const { gateway, controller } = setup();
+    gateway.load.mockResolvedValue(loggedIn);
+    gateway.status.mockResolvedValue({
+      ...anonymous,
+      minimumAuthentication: 'primary',
+      needsLogin: false,
+    });
+    gateway.hasFactors.mockResolvedValue(false);
+    await controller.start('authorization');
+    await controller.beginEnrollment();
+    controller.beginReauthentication();
+    expect(controller.snapshot().stage).toBe('reauthenticate');
+    gateway.password.mockRejectedValueOnce(new HostedIdentityError(400));
+    await controller.password('email', 'wrong');
+    expect(controller.snapshot().stage).toBe('reauthenticate');
+    gateway.password.mockResolvedValue({
+      ...loggedIn,
+      csrfToken: 'new-csrf',
+      sessionCsrfToken: 'new-session',
+    });
+    await controller.password('email', 'correct');
+    expect(controller.snapshot().stage).toBe('consent');
+    expect(controller.snapshot().interaction?.csrfToken).toBe('new-csrf');
+    expect(controller.snapshot().interaction?.sessionCsrfToken).toBe('new-session');
+    await controller.beginEnrollment();
+    await controller.startTotp();
+    expect(gateway.startTotp).toHaveBeenCalledExactlyOnceWith('new-session');
+  });
+
   it('abandons OAuth after recovery redemption and never approves the old interaction', async () => {
     const { gateway, controller, navigate } = setup();
     await controller.start('authorization');
