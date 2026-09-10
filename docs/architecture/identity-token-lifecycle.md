@@ -327,7 +327,30 @@ vérifie prépublication, bascule, coexistence et retrait automatique avec refus
 des anciens jetons encore non expirés. La rotation possède sa propre fixture
 pour respecter les quotas de consentement sans modifier leur configuration.
 Cette preuve utilise des redémarrages contrôlés ; elle ne démontre pas une
-rotation sans interruption, un rollback ni la distribution des secrets en production.
+rotation sans interruption ni la distribution des secrets en production.
+
+### Retour arrière pendant la transition
+
+Un retour à l'ancien signataire est possible tant que sa paire reste disponible,
+non compromise et autorisée. Conserver la nouvelle clé publique en transition :
+des jetons ont déjà été émis avec elle. Préparer une échéance couvrant leur durée
+de vie restante, la marge d'horloge et le temps de déploiement. Restaurer la paire
+active précédente dans Identity, puis son identifiant et sa clé publique dans
+Account et Billing, sans supprimer la nouvelle clé de leurs tableaux. Vérifier
+les accès des deux générations après chaque redémarrage et l'émission effective
+avec l'ancien identifiant. Un incident de compromission ne doit pas suivre ce
+retour arrière : une clé compromise ne redevient pas fiable après rotation.
+
+Pour reprendre la bascule, restaurer la nouvelle paire dans Identity et conserver
+l'ancienne clé publique jusqu'à expiration des jetons émis avant **et pendant**
+le rollback. Promouvoir ensuite les consommateurs avec la même échéance. Les
+clés de transition doivent rester acceptées pendant toutes ces étapes.
+
+La fixture réelle couvre ce retour après promotion des trois services, contrôle
+les deux générations après chaque redémarrage, obtient de nouveaux jetons avec
+l'ancien signataire, puis rebascule et vérifie leur refus au retrait de la clé.
+Les horloges de la fixture partagent le même hôte ; la tolérance à une dérive
+d'horloge distribuée et l'orchestration du déploiement restent à valider.
 
 Ces capacités utilisent la base Identity existante et des clés injectées dans
 le runtime. Aucun Redis, KMS ni abonnement supplémentaire n'a été ajouté.

@@ -13,6 +13,29 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Rotation des clés : retour arrière et reprise vérifiés — 2026-09-10
+
+La fixture de rotation promeut désormais la nouvelle clé dans les trois services,
+puis restaure l'ancienne paire Identity et les anciennes clés actives Account et
+Billing. Après chaque redémarrage, les deux générations de jetons gardent leurs
+accès HTTP 200. Identity émet ensuite des jetons portant effectivement l'ancien
+identifiant ; ils fonctionnent sur les deux API. Une nouvelle bascule conserve
+ces grants jusqu'à l'échéance de retrait, puis les refuse alors qu'ils ne sont
+pas encore expirés. Les grants de la nouvelle clé restent utilisables.
+
+La cible Nx `identity-service:test:resource-runtimes` passe : deux scénarios,
+aucun échec, environ 42 secondes avec les builds. Le parcours autorisation,
+logout et panne existant reste exécuté indépendamment. Le guide de rotation
+décrit le retour arrière, la conservation des deux clés et la prise en compte
+des jetons émis pendant le rollback dans l'échéance finale. Une clé compromise
+ne peut pas être réhabilitée par cette procédure.
+
+Aucun Rust modifié dans cette tranche : pas de nouveau `cargo check --workspace`
+nécessaire ; les binaires sont reconstruits par la cible Nx. Les tests utilisent
+des redémarrages contrôlés et l'horloge d'un seul hôte. La distribution de secrets,
+l'orchestration sans interruption et les dérives d'horloge restent des preuves
+d'exploitation ouvertes, ainsi que les autres exigences des lots A–D.
+
 ## Rotation des clés : consommateurs Account et Billing — 2026-09-10
 
 Les deux API acceptent désormais un ensemble borné de clés publiques épinglées,

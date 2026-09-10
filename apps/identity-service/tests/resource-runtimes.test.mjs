@@ -178,7 +178,7 @@ for (const scenario of ['resource authorization, logout and outage', 'signing ke
         },
       });
       t.diagnostic(
-        'Signing rotation: prepublication, overlapping old/new grants and timed retirement verified on Identity, Account and Billing.',
+        'Signing rotation: prepublication, overlap, rollback, forward recovery and timed retirement verified on Identity, Account and Billing.',
       );
       return;
     }
