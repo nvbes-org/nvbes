@@ -2,7 +2,9 @@ import {
   authorizationFor,
   authenticatorCode,
   confirmHostedAccount,
+  logoutHostedUi,
 } from './runtime-browser-hosted-auth.mjs';
+import { verifyRecoveryFromUi } from './runtime-browser-hosted-recovery.mjs';
 
 /** Fresh fixture per method: neither factor is seeded through the SDK. */
 export async function verifyHostedEnrollment(browser, clientOrigin, method) {
@@ -10,11 +12,12 @@ export async function verifyHostedEnrollment(browser, clientOrigin, method) {
   try {
     const page = await context.newPage();
     const errors = [];
+    let oldAuthenticator;
     page.on('pageerror', (error) => errors.push(error.name));
     if (method === 'passkey') {
       const cdp = await context.newCDPSession(page);
       await cdp.send('WebAuthn.enable');
-      await cdp.send('WebAuthn.addVirtualAuthenticator', {
+      const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
         options: {
           protocol: 'ctap2',
           transport: 'internal',
@@ -24,6 +27,7 @@ export async function verifyHostedEnrollment(browser, clientOrigin, method) {
           automaticPresenceSimulation: true,
         },
       });
+      oldAuthenticator = { cdp, authenticatorId };
     }
     await page.goto(clientOrigin);
     const config = await page.evaluate(async () => (await fetch('/__fixture/config')).json());
@@ -34,7 +38,13 @@ export async function verifyHostedEnrollment(browser, clientOrigin, method) {
     await page.goto(await authorizationFor(page, client));
     await page.getByLabel('Adresse email').fill(config.email);
     await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
+    const loginResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/oauth/authorize/login' &&
+        response.request().method() === 'POST',
+    );
     await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+    const { session_csrf_token: csrf } = await (await loginResponse).json();
     await page.getByRole('heading', { name: 'Protégez votre compte.' }).waitFor();
     if (await page.getByRole('button', { name: 'Autoriser et continuer' }).count())
       throw new Error('Consent appeared before first-factor confirmation');
@@ -73,6 +83,7 @@ export async function verifyHostedEnrollment(browser, clientOrigin, method) {
     await page.getByRole('button', { name: 'Générer des codes de secours' }).click();
     const codes = page.getByRole('list', { name: 'Codes de secours' });
     await codes.waitFor();
+    const recoveryCode = await codes.getByRole('listitem').first().innerText();
     if ((await codes.getByRole('listitem').count()) !== 10)
       throw new Error('Recovery codes were not displayed');
     if (await page.getByRole('button', { name: 'Autoriser et continuer' }).count())
@@ -86,10 +97,17 @@ export async function verifyHostedEnrollment(browser, clientOrigin, method) {
     if (await codes.count()) throw new Error('Recovery codes remained after acknowledgement');
     await page.getByRole('button', { name: 'Autoriser et continuer' }).click();
     const result = await confirmHostedAccount(page, client);
+    await logoutHostedUi(page, config, csrf);
+    if (oldAuthenticator)
+      await oldAuthenticator.cdp.send('WebAuthn.removeVirtualAuthenticator', {
+        authenticatorId: oldAuthenticator.authenticatorId,
+      });
+    const recovered = await verifyRecoveryFromUi(page, context, client, recoveryCode);
     if (errors.length) throw new Error('Enrollment emitted JavaScript errors');
     return {
       builtUiEnrollment: method,
       recoveryCodesDisplayed: true,
+      recovered,
       ...result,
       syntheticAuthenticator: true,
     };

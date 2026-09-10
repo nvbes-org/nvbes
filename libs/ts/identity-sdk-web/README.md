@@ -14,6 +14,16 @@ SDK navigateur pour les parcours nvbes Identity et les clients OAuth publics.
 
 ## Client OAuth public
 
+Après abandon d'un parcours (par exemple une récupération MFA qui révoque la
+session Identity), une nouvelle connexion explicite doit d'abord appeler
+`discardAuthorizationRequest({ storage, dpopStore? })`, exporté par l'entrée
+`@nvbes/identity-sdk-web/oauth`. Cette opération efface la transaction locale et
+supprime sa clé DPoP en attente, sans révoquer un grant serveur ni effacer une
+transaction créée entre-temps pendant la suppression de clé. Elle ne doit pas
+être appelée automatiquement pour contourner le refus « transaction pending ».
+Une erreur de suppression de clé est remontée au client ; l'ancienne transaction
+n'est pas restaurée. Le stockage est celui de l'origine cliente, distinct d'Identity.
+
 La primitive `dpopFetch` refuse les erreurs de signature et de transport sans
 nouvelle tentative implicite. Elle interdit les redirections et omet les cookies.
 Les clés privées WebCrypto sont non exportables. Les helpers de nonce exigent

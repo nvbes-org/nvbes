@@ -13,6 +13,29 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Identity : récupération MFA hébergée — 2026-09-10
+
+Le step-up permet de consommer un code de secours après connexion primaire.
+Le succès détruit l'état OAuth du document avant navigation vers `/recovery`.
+Un contrôleur distinct reprend la session de récupération par cookie et CSRF,
+permet la création d'une passkey de remplacement ou l'annulation et ne délivre
+jamais de consentement ni de jeton OAuth. Le site explique les révocations
+serveur et la nécessité d'une nouvelle connexion. Expiration et pagehide
+retirent la preuve active ; une réponse incertaine ne relance aucune mutation.
+
+Le SDK client fournit `discardAuthorizationRequest` pour abandonner explicitement
+la transaction et sa clé DPoP lors du redémarrage depuis l'application. Un premier
+test avait correctement refusé une seconde autorisation tant que l'ancienne
+transaction cliente était présente ; le client utilise désormais cette opération,
+sans tentative d'effacement interorigine par Identity.
+
+Validation locale : 35 tests du site, 112 tests SDK, typecheck/lint/build réussis.
+Les parcours HTTPS après perte TOTP et passkey créent leurs codes via les écrans,
+les utilisent, rechargent la récupération, reprennent après annulation WebAuthn et atteignent Account
+HTTP 200 avec le bon sujet après une nouvelle connexion passkey. Authentificateur
+synthétique, services réels. Aucun Rust modifié ; l'ouverture publique, le site
+Account, les facteurs supplémentaires et les autres gates A–D restent ouverts.
+
 ## Site Identity : préparation des codes de secours — 2026-09-10
 
 Le consentement permet de générer les dix codes de secours lorsque le statut

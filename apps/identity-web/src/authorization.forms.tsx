@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel, FieldSeparator } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import type { AuthorizationController, AuthorizationState } from './authorization.controller';
+import { RecoveryRequest } from './recovery.request';
 
 export function AuthenticationForms({
   controller,
@@ -102,6 +103,7 @@ export function AuthenticationForms({
           utilisateur.
         </p>
       )}
+      {!login && <RecoveryRequest controller={controller} busy={state.busy} />}
     </div>
   );
 }

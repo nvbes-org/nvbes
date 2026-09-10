@@ -8,8 +8,16 @@ import {
 import { useState } from 'react';
 import { AuthorizationPage } from './authorization.page';
 import type { AuthorizationController } from './authorization.controller';
+import type { RecoveryController } from './recovery.controller';
+import { RecoveryPage } from './recovery.page';
 
-export function App({ controller }: { controller: AuthorizationController }) {
+export function App({
+  controller,
+  recovery,
+}: {
+  controller: AuthorizationController;
+  recovery: RecoveryController;
+}) {
   const [router] = useState(() => {
     const root = createRootRoute({ component: Outlet, notFoundComponent: StartPage });
     const authorization = createRoute({
@@ -18,7 +26,12 @@ export function App({ controller }: { controller: AuthorizationController }) {
       component: () => <AuthorizationPage controller={controller} />,
     });
     const home = createRoute({ getParentRoute: () => root, path: '/', component: StartPage });
-    return createRouter({ routeTree: root.addChildren([authorization, home]) });
+    const recoveryRoute = createRoute({
+      getParentRoute: () => root,
+      path: '/recovery',
+      component: () => <RecoveryPage controller={recovery} />,
+    });
+    return createRouter({ routeTree: root.addChildren([authorization, recoveryRoute, home]) });
   });
   return <RouterProvider router={router} />;
 }

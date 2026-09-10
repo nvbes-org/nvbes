@@ -230,6 +230,18 @@ export class AuthorizationController {
     });
   }
 
+  recover(code: string) {
+    if (this.state.stage !== 'step-up') return Promise.resolve();
+    return this.mutate(async (interaction) => {
+      if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
+      await this.gateway.redeemRecovery(interaction.sessionCsrfToken, code);
+      if (this.disposed) return;
+      // Redemption revokes ordinary sessions. Never resume this OAuth transaction.
+      this.dispose();
+      this.navigate('/recovery');
+    });
+  }
+
   dismissRecoveryCodes() {
     if (this.state.stage !== 'recovery-codes') return Promise.resolve();
     return this.mutate(async (interaction) => {

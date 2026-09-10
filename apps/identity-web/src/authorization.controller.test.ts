@@ -43,6 +43,7 @@ function setup() {
     passkey: vi.fn<IdentityGateway['passkey']>().mockResolvedValue(loggedIn),
     hasFactors: vi.fn<IdentityGateway['hasFactors']>().mockResolvedValue(true),
     recoveryCodes: vi.fn<IdentityGateway['recoveryCodes']>(),
+    redeemRecovery: vi.fn<IdentityGateway['redeemRecovery']>(),
     registerPasskey: vi.fn<IdentityGateway['registerPasskey']>(),
     startTotp: vi.fn<IdentityGateway['startTotp']>(),
     confirmTotp: vi.fn<IdentityGateway['confirmTotp']>(),
@@ -63,6 +64,25 @@ function setup() {
 }
 
 describe('hosted authorization orchestration', () => {
+  it('abandons OAuth after recovery redemption and never approves the old interaction', async () => {
+    const { gateway, controller, navigate } = setup();
+    await controller.start('authorization');
+    await controller.recover('code');
+    expect(gateway.redeemRecovery).not.toHaveBeenCalled();
+    gateway.status.mockResolvedValue(stepUp);
+    await controller.password('email', 'password');
+    gateway.redeemRecovery.mockResolvedValue({
+      csrfToken: 'recovery-proof',
+      expiresAt: '2030-01-01T00:00:00Z',
+    });
+    await controller.recover('code');
+    expect(gateway.redeemRecovery).toHaveBeenCalledExactlyOnceWith('session-csrf', 'code');
+    expect(controller.snapshot().interaction).toBeNull();
+    expect(navigate).toHaveBeenCalledExactlyOnceWith('/recovery');
+    await controller.consent('approve');
+    expect(gateway.consent).not.toHaveBeenCalled();
+  });
+
   it.each([
     'webauthn_not_allowed',
     'webauthn_timeout',

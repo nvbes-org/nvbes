@@ -20,16 +20,21 @@ L'ajout du premier facteur dispose d'écrans : création puis assertion passkey,
 ou clé TOTP à saisir manuellement puis confirmation par code. Les secrets restent
 en mémoire et sont retirés à expiration, annulation, confirmation ou sortie de page.
 Les listes de facteurs orientent l'écran ; le serveur revérifie la fraîcheur de
-l'authentification et l'autorisation à chaque mutation. La récupération, la gestion
-des facteurs supplémentaires et le site Account restent à raccorder à des écrans.
+l'authentification et l'autorisation à chaque mutation. La gestion des facteurs
+supplémentaires et le site Account restent à raccorder à des écrans.
 Aucun lien d'inscription publique n'est exposé.
 
 Lorsqu'une politique OAuth exige une preuve forte fraîche et que le serveur la
 confirme, le consentement propose de générer dix codes de secours. Un avertissement
 précède la génération, qui remplace les anciens codes. L'affichage reste uniquement
 en mémoire jusqu'à confirmation, expiration de la preuve ou sortie de page.
-Le parcours de consommation d'un code et de remplacement du facteur reste à
-raccorder à l'interface ; générer les codes ne termine pas cette récupération.
+Après connexion par mot de passe, l'écran de step-up propose un code de secours
+en cas de perte des facteurs. Sa consommation abandonne l'interaction OAuth et
+ouvre `/recovery`, qui reprend uniquement la session de récupération. Cette page
+permet de remplacer les facteurs par une passkey ou d'annuler, sans restaurer les
+sessions révoquées. Une nouvelle connexion depuis l'application est obligatoire.
+Le client doit abandonner sa transaction locale via `discardAuthorizationRequest`
+avant de recommencer ; Identity ne peut pas effacer le stockage d'un autre site.
 
 ## Développement
 
@@ -92,6 +97,10 @@ d'une nouvelle configuration avec une nouvelle clé. Les authentificateurs reste
 synthétiques et les services HTTP réels.
 Ils génèrent également les dix codes de secours depuis l'écran, vérifient leur
 retrait après confirmation et l'absence de stockage navigateur sur Identity.
+Ils utilisent ensuite un code depuis l'écran de step-up, rechargent `/recovery`,
+annulent une première fenêtre de création puis enregistrent une passkey de
+remplacement. Une nouvelle connexion avec cette passkey atteint Account ; les
+anciennes transactions clientes sont abandonnées explicitement avec le SDK.
 
 ## Composants et exploitation
 
