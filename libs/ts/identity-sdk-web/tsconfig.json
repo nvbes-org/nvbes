@@ -11,10 +11,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "ignoreDeprecations": "6.0",
     "types": ["node"],
     "paths": {
-      "@nvbes/http-client": ["../http-client/src/index.ts"]
+      "@nvbes/http-client": ["../http-client/src/index.ts"],
+      "@nvbes/identity-sdk-core/src/types": ["../identity-sdk-core/src/types.ts"]
     }
   },
   "include": ["src"],

@@ -13,6 +13,25 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Primitive DPoP navigateur — 2026-09-10
+
+Suppression du fallback réseau de `dpopFetch` : un échec crypto n'envoie aucune
+requête, un échec transport n'entraîne aucune répétition implicite. Les requêtes
+DPoP omettent les cookies et refusent les redirections. Les clés privées WebCrypto
+ne sont plus exportables ; les nonces sont isolés par origine avec cache borné.
+Les preuves normalisent `htu` sans query ni fragment.
+
+Les tests vérifient le refus d'export, l'isolation des nonces et l'absence de
+fallback après erreur de signature ou de transport. Les 72 tests SDK passent,
+ainsi que lint et typecheck ciblés. Le chemin des types OpenAPI est explicite
+dans le tsconfig du SDK et une option de suppression de dépréciation incompatible
+avec le compilateur installé a été retirée.
+
+Le parcours OAuth utilise encore son ancien contrat `audience` et des scopes
+à réaligner. La clé DPoP est encore en mémoire : stockage non exportable au
+retour de redirection, raccordement PAR/token/refresh/API et vrais tests navigateur
+restent à réaliser. Aucun parcours complet n'est revendiqué par cette tranche.
+
 ## Header DPoP sur PAR — 2026-09-10
 
 Le endpoint PAR accepte une preuve ES256 liée à POST et à l'URL de l'issuer

@@ -14,6 +14,17 @@ SDK navigateur pour les parcours nvbes Identity et les clients OAuth publics.
 
 ## Client OAuth public
 
+La primitive `dpopFetch` refuse les erreurs de signature et de transport sans
+nouvelle tentative implicite. Elle interdit les redirections et omet les cookies.
+Les clés privées WebCrypto sont non exportables. Les helpers de nonce exigent
+désormais l'URL du serveur en dernier argument ; le cache est isolé par origine,
+limité à 32 entrées et 1 024 caractères par nonce. Les preuves excluent query et
+fragment de `htu`. Le mode worker conserve le contrat de son fournisseur crypto.
+
+Cette primitive reste à raccorder au parcours OAuth ci-dessous. La conservation
+de la clé au retour de redirection et l'alignement des paramètres/scopes avec le
+service actif restent à terminer ; cet exemple ne prouve pas ce parcours complet.
+
 ```typescript
 import { NvbesIdentityWeb } from '@nvbes/identity-sdk-web';
 
