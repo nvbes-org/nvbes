@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 #[derive(Clone, PartialEq)]
 pub struct AccountConfig {
+    pub public_origin: Option<String>,
     pub billing_authorization_secret: Option<String>,
     pub environment: String,
     pub database_url: String,
@@ -79,6 +80,7 @@ impl AccountConfig {
             &metrics_token,
         )?;
         Ok(Self {
+            public_origin: optional("NVBES_ACCOUNT_PUBLIC_ORIGIN"),
             billing_authorization_secret,
             environment,
             database_url,

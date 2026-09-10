@@ -38,6 +38,10 @@ Service Billing V1 minimal, opérant exclusivement avec Stripe en mode test.
 - Le client borne les consultations à 16 simultanées, 2,5 secondes et 16 Kio de
   réponse. Il refuse les redirections et exige que toutes les claims attendues
   correspondent au token vérifié. Les jetons liés à DPoP restent refusés en Bearer.
+- DPoP est accepté avec `NVBES_BILLING_PUBLIC_ORIGIN`, une preuve ES256 liée au
+  jeton et la migration 0002 du registre anti-rejeu local. L'introspection Identity
+  et l'autorisation Account restent obligatoires. Voir le
+  [contrat DPoP des API](../../docs/architecture/identity-resource-dpop.md).
 - Après Identity, chaque opération consulte Account pour vérifier le propriétaire
   du compte personnel ou de l'équipe. Configurer `NVBES_BILLING_ACCOUNT_ORIGIN`
   et `NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET`, partagé avec Account et distinct

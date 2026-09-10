@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
-import { createHash, generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
+import { generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { command, RuntimeFixture, runtimeEnvironment, unusedPort } from './runtime-processes.mjs';
 import { verifyBillingAuthorization } from './runtime-billing-authorization.mjs';
+import { verifyResourceDpop } from './runtime-resource-dpop.mjs';
+import { oauthClient } from './runtime-oauth-client.mjs';
 
 const secret = () => randomBytes(32).toString('base64url');
 
@@ -65,6 +67,7 @@ test(
         ...runtimeEnvironment(),
         [`${prefix}_DATABASE_URL`]: databases[service],
         [`${prefix}_BIND_ADDR`]: `127.0.0.1:${new URL(origins[service]).port}`,
+        [`${prefix}_PUBLIC_ORIGIN`]: origins[service],
         NVBES_IDENTITY_TOKEN_ISSUER: origins.identity,
         NVBES_IDENTITY_TOKEN_KEY_ID: 'runtime-test-key',
         NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM: publicKey,
@@ -109,102 +112,27 @@ test(
       origins.identity,
       '/health/ready',
     );
-    const accountRuntime = await fixture.start(
+    let accountRuntime = await fixture.start(
       binaries.account,
       environments.account,
       origins.account,
       '/health/ready',
     );
-    await fixture.start(binaries.billing, environments.billing, origins.billing, '/health/ready');
+    let billingRuntime = await fixture.start(
+      binaries.billing,
+      environments.billing,
+      origins.billing,
+      '/health/ready',
+    );
 
-    // Explicit cookie jar models the hosted HTTP exchange; browser policy is tested separately.
-    const cookies = new Map();
-    const request = async (path, options = {}) => {
-      const response = await fetch(`${origins.identity}${path}`, {
-        ...options,
-        redirect: 'manual',
-        signal: AbortSignal.timeout(5000),
-        headers: {
-          cookie: [...cookies].map(([key, value]) => `${key}=${value}`).join('; '),
-          ...options.headers,
-        },
-      });
-      for (const cookie of response.headers.getSetCookie()) {
-        const pair = cookie.split(';')[0];
-        const separator = pair.indexOf('=');
-        const name = pair.slice(0, separator);
-        const value = pair.slice(separator + 1);
-        if (value) cookies.set(name, value);
-        else cookies.delete(name);
-      }
-      return response;
-    };
-    const post = (path, body, csrf) =>
-      request(path, {
-        method: 'POST',
-        headers: {
-          origin: origins.identity,
-          'content-type': 'application/json',
-          'x-csrf-token': csrf,
-        },
-        body: JSON.stringify(body),
-      });
-    let sessionCsrf;
-    const issue = async (service, needsLogin, scope = `${service}:read`) => {
-      const verifier = secret();
-      const state = secret();
-      const query = new URLSearchParams({
-        client_id: clients[0].client_id,
-        redirect_uri: redirect,
-        response_type: 'code',
-        scope: `openid ${scope}`,
-        resource: origins[service],
-        state,
-        nonce: secret(),
-        code_challenge: createHash('sha256').update(verifier).digest('base64url'),
-        code_challenge_method: 'S256',
-      });
-      const authorization = await request(`/oauth/authorize?${query}`);
-      assert.equal(authorization.status, 200, `${service} authorization`);
-      const interaction = await authorization.json();
-      assert.equal(interaction.needs_login, needsLogin);
-      let csrf = interaction.csrf_token;
-      if (needsLogin) {
-        const login = await post(
-          '/oauth/authorize/login',
-          { interaction: interaction.interaction, email, password },
-          csrf,
-        );
-        assert.equal(login.status, 200, 'hosted password login');
-        const authenticated = await login.json();
-        csrf = authenticated.csrf_token;
-        sessionCsrf = authenticated.session_csrf_token;
-      }
-      const approval = await post(
-        '/oauth/authorize/approve',
-        { interaction: interaction.interaction },
-        csrf,
-      );
-      assert.equal(approval.status, 303, 'consent redirect');
-      const callback = new URL(approval.headers.get('location'));
-      assert.equal(callback.origin, origins.account);
-      assert.equal(callback.searchParams.get('state'), state);
-      const exchange = await request('/oauth/token', {
-        method: 'POST',
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code: callback.searchParams.get('code'),
-          client_id: clients[0].client_id,
-          redirect_uri: redirect,
-          code_verifier: verifier,
-        }),
-      });
-      assert.equal(exchange.status, 200, `${service} token exchange`);
-      const tokens = await exchange.json();
-      assert.equal(tokens.token_type, 'Bearer');
-      assert.equal(typeof tokens.access_token, 'string');
-      return tokens.access_token;
-    };
+    const browser = oauthClient({
+      origins,
+      clientId: clients[0].client_id,
+      redirect,
+      email,
+      password,
+    });
+    const { issue } = browser;
     const endpoints = {
       account: `${origins.account}/api/v1/profile`,
       billing: `${origins.billing}/accounts/principal/${seed.principal_id}/billing/overview`,
@@ -235,13 +163,45 @@ test(
     });
     await accountRuntime.stop();
     await access('billing', billing, 503);
-    await fixture.start(binaries.account, environments.account, origins.account, '/health/ready');
+    accountRuntime = await fixture.start(
+      binaries.account,
+      environments.account,
+      origins.account,
+      '/health/ready',
+    );
     await access('billing', billing, 200);
-    const logout = await post('/oauth/logout', {}, sessionCsrf);
+    const boundTokens = await verifyResourceDpop({
+      fixture,
+      endpoints,
+      issue,
+      restart: async (service) => {
+        await (service === 'account' ? accountRuntime : billingRuntime).stop();
+        const runtime = await fixture.start(
+          binaries[service],
+          environments[service],
+          origins[service],
+          '/health/ready',
+        );
+        if (service === 'account') accountRuntime = runtime;
+        else billingRuntime = runtime;
+      },
+    });
+    const logout = await browser.logout();
     assert.equal(logout.status, 200);
     await logout.arrayBuffer();
     await access('account', account, 401);
     await access('billing', billing, 401);
+    for (const { service, token, key } of boundTokens) {
+      const response = await fetch(endpoints[service], {
+        headers: {
+          authorization: `DPoP ${token}`,
+          dpop: key.proof('GET', endpoints[service], token),
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      assert.equal(response.status, 401, 'logout revokes bound resource tokens');
+      await response.arrayBuffer();
+    }
 
     const nextAccount = await issue('account', true);
     const nextBilling = await issue('billing', false);

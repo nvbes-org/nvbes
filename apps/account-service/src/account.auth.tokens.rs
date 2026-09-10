@@ -1,6 +1,7 @@
 use super::Principal;
 use crate::{config::AccountConfig, error::AccountError};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use nvbes_dpop::resource::{Credentials, ResourceVerifier, binding};
 use nvbes_identity_sdk::introspection::{ExpectedToken, IntrospectionClient};
 use serde::Deserialize;
 use std::collections::BTreeSet;
@@ -21,6 +22,7 @@ pub struct TokenVerifier {
     issuer: String,
     key_id: String,
     introspection: IntrospectionClient,
+    dpop: Option<ResourceVerifier>,
 }
 
 impl TokenVerifier {
@@ -30,6 +32,11 @@ impl TokenVerifier {
             "invalid Account token audience"
         );
         Ok(Self {
+            dpop: config
+                .public_origin
+                .as_deref()
+                .map(ResourceVerifier::new)
+                .transpose()?,
             key: DecodingKey::from_rsa_pem(config.token_public_key_pem.as_bytes())?,
             issuer: config.token_issuer.clone(),
             key_id: config.token_key_id.clone(),
@@ -41,13 +48,34 @@ impl TokenVerifier {
         })
     }
 
-    pub(super) async fn authenticate(&self, token: &str) -> Result<Principal, AccountError> {
-        let (principal, expected) = self.validated(token)?;
-        match self.introspection.is_active(token, &expected).await {
-            Ok(true) => Ok(principal),
-            Ok(false) => Err(AccountError::Unauthorized),
-            Err(_) => Err(AccountError::IdentityUnavailable),
+    pub(super) async fn authenticate(
+        &self,
+        credentials: &Credentials<'_>,
+        method: &axum::http::Method,
+        uri: &axum::http::Uri,
+        db: &sqlx::PgPool,
+    ) -> Result<Principal, AccountError> {
+        let (principal, expected) = self.validated(credentials.token)?;
+        let proof = ResourceVerifier::verify(
+            self.dpop.as_ref(),
+            credentials,
+            binding(expected.cnf.as_ref())?,
+            method,
+            uri,
+        )?;
+        match self
+            .introspection
+            .is_active(credentials.token, &expected)
+            .await
+        {
+            Ok(true) => {}
+            Ok(false) => return Err(AccountError::Unauthorized),
+            Err(_) => return Err(AccountError::IdentityUnavailable),
         }
+        if let Some(proof) = proof {
+            proof.consume(db, expected.exp).await?;
+        }
+        Ok(principal)
     }
 
     fn validated(&self, token: &str) -> Result<(Principal, ExpectedToken), AccountError> {
@@ -86,7 +114,6 @@ impl TokenVerifier {
             || expected.exp <= expected.iat
             || expected.exp - expected.iat > 900
             || claims.auth_time > expected.iat
-            || expected.cnf.is_some()
         {
             return Err(invalid());
         }
@@ -149,7 +176,15 @@ impl TokenVerifier {
             .chain(primary)
             .max()
             .map(|until| until.min(expected.exp));
-        expected.token_type = "Bearer".into();
+        expected.token_type = if binding(expected.cnf.as_ref())
+            .map_err(|_| invalid())?
+            .is_some()
+        {
+            "DPoP"
+        } else {
+            "Bearer"
+        }
+        .into();
         Ok((
             Principal {
                 id,

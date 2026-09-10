@@ -9,7 +9,9 @@ son slash final), l'audience `nvbes-account-service`, les scopes et les dates,
 puis consultent l'introspection Identity via le SDK Rust partagé. Un token
 inactif donne 401 ; une panne ou une réponse incohérente donne 503. Aucun cache
 positif ni repli sur la seule signature n'est utilisé. Les tokens liés à DPoP
-restent refusés en Bearer jusqu'à l'intégration de la vérification des preuves.
+exigent une preuve et `NVBES_ACCOUNT_PUBLIC_ORIGIN`. Ils restent refusés en Bearer.
+La migration 0002 ajoute le registre anti-rejeu PostgreSQL local, partagé entre
+répliques et borné. Voir le [contrat DPoP des API](../../docs/architecture/identity-resource-dpop.md).
 
 Outre la clé publique, l'issuer et le key ID, configurer
 `NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID` et

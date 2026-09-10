@@ -13,6 +13,31 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## DPoP dans les API ressources — 2026-09-10
+
+Account et Billing acceptent maintenant les tokens liés à DPoP avec preuve
+ES256, tout en interdisant leur consommation en Bearer. La primitive partagée
+vérifie la liaison cryptographique à la clé, la méthode, l'URL publique configurée,
+la date et le hash du jeton. Elle refuse aussi les clés privées et courbes
+incohérentes dans les preuves, y compris sur les endpoints Identity existants.
+
+Chaque API conserve les marqueurs anti-rejeu dans sa propre base (migration
+0002), avec verrouillage partagé entre répliques, 64 compartiments et au plus
+256 lignes par compartiment. Le nettoyage a lieu à la consommation, sans Redis
+ni tâche récurrente. Les saturations et pannes refusent l'accès. Le
+[contrat](identity-resource-dpop.md) précise les horloges, limites et variables.
+
+La preuve réelle des trois runtimes couvre émission Identity, erreurs de liaison,
+rejeu concurrent, redémarrage, panne du store, saturation de 16 384 lignes,
+nettoyage des places expirées et logout. Les preuves sont signées par Node avec
+une clé P-256 éphémère. Aucun déploiement, paiement réel ou trafic externe.
+
+Validation : 17 tests de la primitive DPoP, 173 tests Identity avec PostgreSQL
+(un test navigateur interactif ignoré), cinq tests Account et dix tests Billing
+avec PostgreSQL, compilation workspace et check Billing réussis. Le test réel
+des trois runtimes passe également. SDK navigateur, header DPoP de PAR, logout
+intersites, interfaces hébergées et gates charge/FinOps restent ouverts.
+
 ## Autorisation des comptes facturés — 2026-09-10
 
 Les handlers Billing consultent désormais l'autorité Account après validation

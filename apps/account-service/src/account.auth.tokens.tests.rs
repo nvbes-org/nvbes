@@ -22,6 +22,7 @@ fn keys() -> &'static (String, String) {
 }
 fn config() -> AccountConfig {
     AccountConfig {
+        public_origin: None,
         billing_authorization_secret: None,
         environment: "test".into(),
         database_url: "postgres://unused:unused@127.0.0.1/unused".into(),

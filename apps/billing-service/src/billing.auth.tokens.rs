@@ -1,6 +1,7 @@
 use super::BillingPrincipal;
 use crate::{config::BillingConfig, error::BillingError};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use nvbes_dpop::resource::{Credentials, ResourceVerifier, binding};
 use nvbes_identity_sdk::introspection::{ExpectedToken, IntrospectionClient};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -34,6 +35,7 @@ struct ConfiguredVerifier {
     issuer: String,
     key_id: String,
     introspection: IntrospectionClient,
+    dpop: Option<ResourceVerifier>,
 }
 
 #[derive(Clone)]
@@ -74,6 +76,11 @@ impl TokenVerifier {
                     "invalid Identity key identifier"
                 );
                 Ok(Self(Some(ConfiguredVerifier {
+                    dpop: config
+                        .public_origin
+                        .as_deref()
+                        .map(ResourceVerifier::new)
+                        .transpose()?,
                     key: DecodingKey::from_rsa_pem(pem.as_bytes())?,
                     issuer: issuer.clone(),
                     key_id: key_id.clone(),
@@ -86,14 +93,35 @@ impl TokenVerifier {
         }
     }
 
-    pub async fn authenticate(&self, token: &str) -> Result<BillingPrincipal, BillingError> {
-        let (principal, expected) = self.validated(token)?;
+    pub async fn authenticate(
+        &self,
+        credentials: &Credentials<'_>,
+        method: &axum::http::Method,
+        uri: &axum::http::Uri,
+        db: &sqlx::PgPool,
+    ) -> Result<BillingPrincipal, BillingError> {
+        let (principal, expected) = self.validated(credentials.token)?;
         let verifier = self.0.as_ref().ok_or(BillingError::Unauthorized)?;
-        match verifier.introspection.is_active(token, &expected).await {
-            Ok(true) => Ok(principal),
-            Ok(false) => Err(BillingError::Unauthorized),
-            Err(_) => Err(BillingError::IdentityUnavailable),
+        let proof = ResourceVerifier::verify(
+            verifier.dpop.as_ref(),
+            credentials,
+            binding(expected.cnf.as_ref())?,
+            method,
+            uri,
+        )?;
+        match verifier
+            .introspection
+            .is_active(credentials.token, &expected)
+            .await
+        {
+            Ok(true) => {}
+            Ok(false) => return Err(BillingError::Unauthorized),
+            Err(_) => return Err(BillingError::IdentityUnavailable),
         }
+        if let Some(proof) = proof {
+            proof.consume(db, expected.exp).await?;
+        }
+        Ok(principal)
     }
 
     #[cfg(test)]
@@ -136,7 +164,6 @@ impl TokenVerifier {
             || claims.exp <= claims.iat
             || claims.exp - claims.iat > 900
             || claims.auth_time > claims.iat
-            || claims.cnf.is_some()
             || [claims.sub, claims.jti, claims.sid, claims.grant_id]
                 .iter()
                 .any(Uuid::is_nil)
@@ -188,8 +215,16 @@ impl TokenVerifier {
             exp: claims.exp,
             iat: claims.iat,
             nbf: claims.nbf,
-            token_type: "Bearer".into(),
-            cnf: None,
+            token_type: if binding(claims.cnf.as_ref())
+                .map_err(|_| BillingError::Unauthorized)?
+                .is_some()
+            {
+                "DPoP"
+            } else {
+                "Bearer"
+            }
+            .into(),
+            cnf: claims.cnf,
         };
         Ok((
             BillingPrincipal {

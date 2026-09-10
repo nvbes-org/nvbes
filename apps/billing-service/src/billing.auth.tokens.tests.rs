@@ -119,6 +119,7 @@ async fn protected_billing_route_requires_live_identity_activity() {
 
 fn config() -> BillingConfig {
     BillingConfig {
+        public_origin: None,
         account_authority: None,
         bind_addr: "127.0.0.1:0".parse().unwrap(),
         database_url: String::new(),

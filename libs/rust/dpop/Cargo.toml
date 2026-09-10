@@ -4,8 +4,15 @@ edition.workspace = true
 license.workspace = true
 version.workspace = true
 
+[features]
+resource-server = ["dep:http", "dep:url", "dep:sqlx", "dep:tokio"]
+
 [dependencies]
 base64.workspace = true
+http = { version = "1", optional = true }
+url = { version = "2", optional = true }
+sqlx = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 chrono.workspace = true
 jsonwebtoken = { version = "10", default-features = false, features = ["aws_lc_rs"] }
 nvbes-redis = { path = "../redis" }

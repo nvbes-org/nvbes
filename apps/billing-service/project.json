@@ -12,6 +12,7 @@
         "{projectRoot}/**/*",
         "{workspaceRoot}/Cargo.toml",
         "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/libs/rust/dpop/**/*",
         "{workspaceRoot}/libs/rust/billing/**/*",
         "{workspaceRoot}/libs/rust/identity-sdk-backend/**/*",
         "{workspaceRoot}/libs/rust/observability/**/*"

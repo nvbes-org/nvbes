@@ -59,6 +59,7 @@ async fn billing_lifecycle_is_isolated_deduplicated_and_audited() {
     });
 
     let config = BillingConfig {
+        public_origin: None,
         account_authority: None,
         bind_addr: "127.0.0.1:8080".parse().unwrap(),
         database_url: database_url.clone(),

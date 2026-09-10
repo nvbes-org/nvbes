@@ -7,6 +7,10 @@ pub enum BillingError {
     Unauthorized,
     #[error("Identity activity verification is unavailable")]
     IdentityUnavailable,
+    #[error("invalid DPoP proof")]
+    InvalidProof,
+    #[error("DPoP verification unavailable")]
+    ProofUnavailable,
     #[error("Account authorization is unavailable")]
     AccountUnavailable,
     #[error("billing account access denied")]
@@ -36,6 +40,8 @@ impl IntoResponse for BillingError {
         let (status, code) = match self {
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, "authentication_required"),
             Self::IdentityUnavailable => (StatusCode::SERVICE_UNAVAILABLE, "identity_unavailable"),
+            Self::InvalidProof => (StatusCode::UNAUTHORIZED, "invalid_dpop_proof"),
+            Self::ProofUnavailable => (StatusCode::SERVICE_UNAVAILABLE, "dpop_unavailable"),
             Self::AccountUnavailable => (StatusCode::SERVICE_UNAVAILABLE, "account_unavailable"),
             Self::AccountForbidden => (StatusCode::FORBIDDEN, "account_access_denied"),
             Self::Forbidden => (StatusCode::FORBIDDEN, "insufficient_scope"),
@@ -46,8 +52,28 @@ impl IntoResponse for BillingError {
             Self::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
         };
         let message = self.to_string();
-        (status, Json(ErrorBody { code, message })).into_response()
+        let mut response = (status, Json(ErrorBody { code, message })).into_response();
+        if status == StatusCode::UNAUTHORIZED {
+            let challenge = if matches!(self, Self::InvalidProof) {
+                "DPoP error=\"invalid_dpop_proof\", algs=\"ES256\""
+            } else {
+                "Bearer, DPoP algs=\"ES256\""
+            };
+            response
+                .headers_mut()
+                .insert("www-authenticate", challenge.parse().unwrap());
+        }
+        response
     }
 }
 
 pub type BillingResult<T> = Result<T, BillingError>;
+
+impl From<nvbes_dpop::resource::ResourceError> for BillingError {
+    fn from(error: nvbes_dpop::resource::ResourceError) -> Self {
+        match error {
+            nvbes_dpop::resource::ResourceError::Invalid => Self::InvalidProof,
+            _ => Self::ProofUnavailable,
+        }
+    }
+}

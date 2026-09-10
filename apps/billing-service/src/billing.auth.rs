@@ -47,7 +47,17 @@ impl FromRequestParts<BillingState> for BillingPrincipal {
         parts: &mut Parts,
         state: &BillingState,
     ) -> Result<Self, Self::Rejection> {
-        state.tokens.authenticate(bearer(parts)?).await
+        let credentials = nvbes_dpop::resource::Credentials::from_headers(&parts.headers)
+            .map_err(|_| BillingError::Unauthorized)?;
+        let uri = parts
+            .extensions
+            .get::<axum::extract::OriginalUri>()
+            .map(|original| &original.0)
+            .unwrap_or(&parts.uri);
+        state
+            .tokens
+            .authenticate(&credentials, &parts.method, uri, &state.db)
+            .await
     }
 }
 

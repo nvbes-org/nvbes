@@ -119,8 +119,10 @@ dates, scopes, audience, issuer et confirmation du token vérifié localement.
 La cible Nx `identity-service:test:resource-runtimes` vérifie cette intégration
 avec les trois vrais binaires et trois bases isolées : Code/PKCE, lectures
 métier, mauvaise audience, logout, arrêt et redémarrage d'Identity. La gestion
-des cookies utilise Node sur loopback HTTP ; les politiques navigateur HTTPS,
-DPoP et l'autorisation métier entre comptes restent des validations distinctes.
+des cookies utilise Node sur loopback HTTP. Le parcours couvre également
+l'[autorisation métier Account](billing-account-authorization.md) et les
+[preuves DPoP des API](identity-resource-dpop.md). Les politiques navigateur
+HTTPS et le SDK restent des validations distinctes.
 
 ### Révocation d'une passkey
 
@@ -184,7 +186,9 @@ Les jetons restent limités à la session active, aux scopes et à l'audience du
 grant. Les réponses de jetons et erreurs de protocole portent `no-store` et
 `no-cache`. Une indisponibilité PostgreSQL donne HTTP 503 et
 `temporarily_unavailable`, sans émission de secours. Ce raccordement serveur
-ne prouve pas encore le support DPoP des SDK et des serveurs de ressources.
+ne prouve pas encore le support DPoP des SDK. Le branchement des serveurs de
+ressources et son registre anti-rejeu sont décrits dans le
+[contrat DPoP des API](identity-resource-dpop.md).
 La liaison du refresh à la clé suit la [RFC 9449, section 5](https://www.rfc-editor.org/rfc/rfc9449.html#section-5).
 
 ## Preuve CSRF des sessions hébergées

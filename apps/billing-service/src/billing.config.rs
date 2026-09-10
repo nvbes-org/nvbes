@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 #[derive(Clone)]
 pub struct BillingConfig {
+    pub public_origin: Option<String>,
     pub account_authority: Option<crate::authorization::AccountAuthority>,
     pub bind_addr: SocketAddr,
     pub database_url: String,
@@ -66,6 +67,7 @@ impl BillingConfig {
             std::env::var("NVBES_APP_URL").unwrap_or_else(|_| "https://nvbes.test".to_string());
 
         Ok(Self {
+            public_origin: std::env::var("NVBES_BILLING_PUBLIC_ORIGIN").ok(),
             account_authority,
             bind_addr,
             database_url,

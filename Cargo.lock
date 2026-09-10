@@ -3184,6 +3184,7 @@ dependencies = [
  "chrono",
  "jsonwebtoken",
  "metrics-exporter-prometheus",
+ "nvbes-dpop",
  "nvbes-identity-sdk",
  "nvbes-observability",
  "rsa",
@@ -3287,6 +3288,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
+ "http 1.4.2",
  "jsonwebtoken",
  "nvbes-redis",
  "p256",
@@ -3295,8 +3297,10 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "sqlx",
  "thiserror 2.0.20",
  "tokio",
+ "url",
  "uuid",
 ]
 

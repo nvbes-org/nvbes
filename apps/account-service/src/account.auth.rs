@@ -33,17 +33,16 @@ impl FromRequestParts<AccountState> for Principal {
         parts: &mut Parts,
         state: &AccountState,
     ) -> Result<Self, Self::Rejection> {
-        let mut headers = parts.headers.get_all("authorization").iter();
-        let value = headers.next().ok_or(AccountError::Unauthorized)?;
-        if headers.next().is_some() {
-            return Err(AccountError::Unauthorized);
-        }
-        let token = value
-            .to_str()
-            .ok()
-            .and_then(|v| v.strip_prefix("Bearer "))
-            .filter(|v| !v.is_empty() && !v.bytes().any(|b| b.is_ascii_whitespace()))
-            .ok_or(AccountError::Unauthorized)?;
-        state.tokens.authenticate(token).await
+        let credentials = nvbes_dpop::resource::Credentials::from_headers(&parts.headers)
+            .map_err(|_| AccountError::Unauthorized)?;
+        let uri = parts
+            .extensions
+            .get::<axum::extract::OriginalUri>()
+            .map(|original| &original.0)
+            .unwrap_or(&parts.uri);
+        state
+            .tokens
+            .authenticate(&credentials, &parts.method, uri, &state.db)
+            .await
     }
 }
