@@ -210,7 +210,6 @@ jobs:
           --health-retries 10
     env:
       NVBES_ENV: test
-      NVBES_REDIS_URL: redis://127.0.0.1:${{ job.services.redis.ports[6379] }}/0
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
       SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
@@ -232,8 +231,12 @@ jobs:
           cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
       - name: Validate rust
+        env:
+          NVBES_REDIS_URL: redis://127.0.0.1:${{ job.services.redis.ports['6379'] }}/0
         run: node tools/ci/run-rust.mjs
       - name: Validate rust coverage
+        env:
+          NVBES_REDIS_URL: redis://127.0.0.1:${{ job.services.redis.ports['6379'] }}/0
         run: bash scripts/test-workspace-coverage.sh
       - name: Upload rust coverage report
         if: always()
