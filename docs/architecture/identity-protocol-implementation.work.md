@@ -13,6 +13,29 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Notification durable après reset — 2026-09-11
+
+Le reset enregistre désormais son événement et ses notifications de sécurité
+dans sa transaction. Une panne d'insertion annule aussi le mot de passe,
+l'audit et les révocations. Les destinataires vérifiés sont figés pour les
+reprises. Le nouvel événement Email `PasswordRecovered` décrit exactement les
+sessions et liens révoqués, sans annoncer de modification des facteurs MFA.
+Le consommateur Email doit être mis à jour avant Identity lors d'un déploiement.
+
+Validation : `cargo check --workspace`, format Rust, 59 tests Email et 264 tests
+Identity avec PostgreSQL réel (220 bibliothèque, 44 binaire, un test interactif
+ignoré). La reprise traverse le client et un serveur gRPC local qui refuse la
+première soumission ; les deux commandes restent identiques même après un
+changement d'adresse. Aucun fournisseur réel n'est sollicité.
+
+L'étape mot de passe Identity Web retrouve aussi la description et les
+dimensions du bouton archivés ; le résumé email reprend le fond sans bordure
+de l'archive, sous forme de section. Les 62 tests web, typage, lint et build
+passent. Chromium 153 valide aussi reset, connexion avec le nouveau mot de
+passe et rejet du lien rejoué, sans fuite de secret ni débordement mobile.
+Les limites de parité visuelle restent documentées dans le contrat de
+restauration du design.
+
 ## Récupération : parcours HTTP, SDK et Identity Web — 2026-09-11
 
 Les routes de contexte, demande et reset sont raccordées à la file chiffrée et
@@ -39,8 +62,9 @@ refusé. Captures 1280 × 800 / 390 × 844, sans débordement horizontal.
 
 Le [contrat HTTP/web](identity-password-recovery-http.md) décrit l'activation,
 les quotas, les réponses et les limites. Aucun email fournisseur ni déploiement
-n'a été réalisé. Les notifications après changement, la cadence opérateur,
-les preuves d'exploitation et les autres exigences A–D restent ouvertes.
+n'a été réalisé. Les notifications après changement ont depuis été raccordées
+ci-dessus. La cadence opérateur, les preuves d'exploitation et les autres
+exigences A–D restent ouvertes.
 
 ## Récupération : file Email chiffrée et reprise — 2026-09-11
 

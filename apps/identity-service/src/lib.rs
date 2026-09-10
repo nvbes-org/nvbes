@@ -17,6 +17,8 @@ pub mod mfa_recovery;
 pub mod notification_command;
 #[path = "identity.notifications.dispatch.rs"]
 pub mod notification_dispatch;
+#[path = "identity.notifications.events.rs"]
+pub mod notification_events;
 #[path = "identity.notifications.queue.rs"]
 mod notification_queue;
 

@@ -169,6 +169,10 @@ fn enum_decoders_cover_all_values_and_reject_unspecified_events() {
 
     let events = [
         (
+            email_pb::AccountSecurityEvent::PasswordRecovered,
+            AccountSecurityEvent::PasswordRecovered,
+        ),
+        (
             email_pb::AccountSecurityEvent::MfaRecoveryCodesGenerated,
             AccountSecurityEvent::MfaRecoveryCodesGenerated,
         ),

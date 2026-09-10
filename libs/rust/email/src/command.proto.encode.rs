@@ -159,6 +159,7 @@ impl AccountSecurityEvent {
             Self::MfaRecoveryStarted => email_pb::AccountSecurityEvent::MfaRecoveryStarted,
             Self::MfaRecovered => email_pb::AccountSecurityEvent::MfaRecovered,
             Self::MfaRecoveryCancelled => email_pb::AccountSecurityEvent::MfaRecoveryCancelled,
+            Self::PasswordRecovered => email_pb::AccountSecurityEvent::PasswordRecovered,
         }
     }
 }

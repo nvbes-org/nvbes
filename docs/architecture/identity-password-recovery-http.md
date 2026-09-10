@@ -77,5 +77,6 @@ Tests React : effacement des champs, double soumission et résultat tardif.
 
 La fixture navigateur lit uniquement sa file synthétique chiffrée pour simuler
 l'ouverture du lien reçu. Elle ne prouve pas la livraison fournisseur. Les
-notifications après changement, les preuves d'exploitation et les autres
-exigences des lots A–D restent ouvertes.
+notifications après changement sont enregistrées atomiquement dans la file de
+sécurité décrite dans le contrat de livraison. Les preuves d'exploitation et
+les autres exigences des lots A–D restent ouvertes.

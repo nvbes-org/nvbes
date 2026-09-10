@@ -68,6 +68,26 @@ vider/annuler ces demandes avant son retrait. Aucun nouveau service, fournisseur
 scheduler ou coût fixe n'est ajouté. Les volumes réels Email et PostgreSQL
 doivent encore être mesurés dans le plafond global de 30 EUR TTC/mois.
 
+## Notification après changement
+
+Le reset inscrit `identity.password_recovered` dans l'outbox et les notifications
+de sécurité dans la même transaction que le mot de passe, les révocations et
+l'audit. Une panne de cette file annule le reset. Les destinataires vérifiés
+sont figés au commit (au plus 16 ; un dépassement refuse la transaction).
+Ni le mot de passe ni le lien secret ne figurent dans ces notifications.
+
+Le dispatcher existant `dispatch-security-notifications` assure leur reprise,
+avec une commande et une clé d'idempotence stables. Un changement ultérieur
+d'adresse ne redirige pas l'alerte. Après acceptation par Email, le corps de la
+commande est effacé selon le contrat de cette file.
+
+L'événement Email `PASSWORD_RECOVERED = 9` distingue cette opération de la
+récupération générale du compte : son texte annonce la révocation des sessions
+de connexion et liens de reset, sans annoncer le remplacement des passkeys,
+facteurs MFA, codes de secours ou appareils reconnus. Mettre à jour le
+consommateur Email avant le producteur Identity lors d'un futur déploiement.
+Aucun envoi réel ni déploiement n'est effectué ici.
+
 ## Preuves et périmètre restant
 
 Les tests utilisent les migrations réelles, des schémas privés, deux dispatchers
@@ -76,7 +96,9 @@ Email local simulant une indisponibilité. Les liens expirés, consommés et les
 destinataires devenus non vérifiés ne sont pas soumis au service Email.
 
 Le [parcours HTTP/web](identity-password-recovery-http.md) décrit les protections
-et quotas désormais raccordés. Restent les notifications après changement,
-la cadence opérateur démontrée et la livraison
-fournisseur. Cette file ne constitue pas un login par email ni une preuve MFA.
+et quotas désormais raccordés. Les tests de notification vérifient le rollback
+du reset sur panne de stockage, les destinataires vérifiés et une reprise après
+indisponibilité gRPC avec conservation du destinataire initial. Restent la
+cadence opérateur démontrée et la livraison fournisseur.
+Cette file ne constitue pas un login par email ni une preuve MFA.
 Les lots A–D restent ouverts.

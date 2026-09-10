@@ -6,6 +6,10 @@ fn recovery_events_round_trip_with_distinct_messages_and_stable_retry_identity()
     let principal = Uuid::new_v4();
     let cases = [
         (
+            "identity.password_recovered",
+            "Your account password was changed",
+        ),
+        (
             "identity.mfa_recovery_codes_generated",
             "Previous recovery codes can no longer be used.",
         ),

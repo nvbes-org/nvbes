@@ -49,6 +49,50 @@ async fn encrypted_recovery_survives_real_email_client_transport_failure() {
     enqueue(&db, &crypto, "https://identity.example/recover", &email)
         .await
         .unwrap();
+    let mailbox = start_email_fixture().await;
+    assert_eq!(
+        run_batch(&db, &crypto, &mailbox.client)
+            .await
+            .unwrap()
+            .deferred,
+        1
+    );
+    sqlx::query("UPDATE identity_recovery_deliveries SET available_at=clock_timestamp()")
+        .execute(&db)
+        .await
+        .unwrap();
+    assert_eq!(
+        run_batch(&db, &crypto, &mailbox.client)
+            .await
+            .unwrap()
+            .accepted,
+        1
+    );
+    let captured = mailbox.requests.lock().unwrap().clone();
+    assert_eq!(captured.len(), 2);
+    assert_eq!(captured[0], captured[1]);
+    assert_eq!(captured[0].producer, "identity-service");
+    assert_eq!(
+        run_batch(&db, &crypto, &mailbox.client)
+            .await
+            .unwrap()
+            .claimed,
+        0
+    );
+    db.close().await;
+}
+
+struct ConnectedEmail {
+    client: EmailClient,
+    requests: Arc<Mutex<Vec<SubmitEmailRequest>>>,
+    server: tokio::task::JoinHandle<()>,
+}
+impl Drop for ConnectedEmail {
+    fn drop(&mut self) {
+        self.server.abort();
+    }
+}
+async fn start_email_fixture() -> ConnectedEmail {
     let service = EmailFixture::default();
     let requests = service.requests.clone();
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
@@ -73,17 +117,53 @@ async fn encrypted_recovery_survives_real_email_client_transport_failure() {
     )
     .await
     .unwrap();
-    assert_eq!(run_batch(&db, &crypto, &client).await.unwrap().deferred, 1);
-    sqlx::query("UPDATE identity_recovery_deliveries SET available_at=clock_timestamp()")
+    ConnectedEmail {
+        client,
+        requests,
+        server,
+    }
+}
+
+#[tokio::test]
+async fn password_change_notification_retries_through_email_with_original_recipient() {
+    let (db, principal, email) = fixture().await;
+    let recovery = crate::recovery::request_recovery(&db, &email)
+        .await
+        .unwrap();
+    crate::recovery::reset_password(&db, &recovery.token, "Password-with-notification!")
+        .await
+        .unwrap();
+    let mailbox = start_email_fixture().await;
+    let first = nvbes_identity_service::notification_dispatch::run_batch(&db, &mailbox.client)
+        .await
+        .unwrap();
+    assert_eq!(first.deferred, 1);
+    let attempted = mailbox.requests.lock().unwrap()[0].clone();
+    let decoded = nvbes_email::EmailCommand::try_from(attempted.clone()).unwrap();
+    assert!(matches!(
+        decoded.template,
+        nvbes_email::EmailTemplate::AccountSecurityV1 {
+            event: nvbes_email::AccountSecurityEvent::PasswordRecovered,
+            ..
+        }
+    ));
+    let rendered = decoded.template.render();
+    assert!(rendered.text_body.contains("password was changed"));
+    assert!(!rendered.text_body.contains(&recovery.token));
+    sqlx::query("UPDATE identity_login_identifiers SET normalized_value='changed-after-reset@example.invalid' WHERE principal_id=$1").bind(principal).execute(&db).await.unwrap();
+    sqlx::query("UPDATE identity_security_notifications SET available_at=clock_timestamp()")
         .execute(&db)
         .await
         .unwrap();
-    assert_eq!(run_batch(&db, &crypto, &client).await.unwrap().accepted, 1);
-    let captured = requests.lock().unwrap().clone();
+    let resumed = nvbes_identity_service::notification_dispatch::run_batch(&db, &mailbox.client)
+        .await
+        .unwrap();
+    assert_eq!(resumed.accepted, 1);
+    let captured = mailbox.requests.lock().unwrap().clone();
     assert_eq!(captured.len(), 2);
     assert_eq!(captured[0], captured[1]);
-    assert_eq!(captured[0].producer, "identity-service");
-    assert_eq!(run_batch(&db, &crypto, &client).await.unwrap().claimed, 0);
-    server.abort();
+    assert_eq!(decoded.recipient.email, email);
+    let retained: i64 = sqlx::query_scalar("SELECT count(*) FROM identity_security_notifications WHERE command IS NOT NULL OR state<>'accepted'").fetch_one(&db).await.unwrap();
+    assert_eq!(retained, 0);
     db.close().await;
 }

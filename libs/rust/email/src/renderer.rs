@@ -167,6 +167,10 @@ fn security(
     security_url: &Option<String>,
 ) -> (String, String, TemplateHtml) {
     let (subject, statement) = match event {
+        AccountSecurityEvent::PasswordRecovered => (
+            "Password changed on your nvbes account",
+            "Your account password was changed using a recovery link. Existing sign-in sessions and unused password recovery links were revoked. Your passkeys, authenticator factors and MFA recovery codes were not replaced by this operation.".to_string(),
+        ),
         AccountSecurityEvent::MfaRecoveryCodesGenerated => (
             "New recovery codes for your nvbes account",
             "A new set of MFA recovery codes was generated. Previous recovery codes can no longer be used. Keep the new codes offline; never share them.".to_string(),

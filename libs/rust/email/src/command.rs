@@ -49,6 +49,7 @@ pub enum AccountSecurityEvent {
     MfaRecoveryStarted,
     MfaRecovered,
     MfaRecoveryCancelled,
+    PasswordRecovered,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

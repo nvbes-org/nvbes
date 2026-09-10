@@ -34,7 +34,7 @@ export function PasswordLogin({
     <form onSubmit={submit} className="flex flex-col gap-5">
       {identified ? (
         <>
-          <div className="flex items-center gap-2 rounded-xl border p-3">
+          <div className="flex items-center gap-2 overflow-hidden rounded-xl bg-card p-3 text-sm text-card-foreground">
             <MailIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             <span className="truncate text-sm font-medium">{email}</span>
           </div>
@@ -100,7 +100,12 @@ export function PasswordLogin({
             Retour
           </Button>
         )}
-        <Button type="submit" disabled={busy} className="h-11 rounded-full px-6" size="lg">
+        <Button
+          type="submit"
+          disabled={busy}
+          className={identified ? 'h-11 rounded-full px-5' : 'h-11 rounded-full px-6'}
+          size={identified ? 'default' : 'lg'}
+        >
           {identified ? 'Se connecter' : 'Continuer'}
         </Button>
       </div>

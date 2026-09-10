@@ -31,6 +31,7 @@ pub fn recovery_command(
         "identity.mfa_recovery_started" => AccountSecurityEvent::MfaRecoveryStarted,
         "identity.mfa_recovered" => AccountSecurityEvent::MfaRecovered,
         "identity.mfa_recovery_cancelled" => AccountSecurityEvent::MfaRecoveryCancelled,
+        "identity.password_recovered" => AccountSecurityEvent::PasswordRecovered,
         _ => return Err(NotificationError::UnsupportedEvent),
     };
     let deliver_before = occurred_at
@@ -47,7 +48,12 @@ pub fn recovery_command(
         },
         producer: "identity-service".into(),
         idempotency_key: EmailIdempotencyKey::new(format!(
-            "identity:mfa-notification:{event_id}:{:x}",
+            "identity:{}-notification:{event_id}:{:x}",
+            if event_type == "identity.password_recovered" {
+                "password"
+            } else {
+                "mfa"
+            },
             Sha256::digest(recipient.as_bytes())
         ))?,
         recipient: EmailRecipient {

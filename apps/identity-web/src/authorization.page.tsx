@@ -72,7 +72,9 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
       headingRef={heading}
       description={
         state.stage === 'login'
-          ? 'Utilisez votre compte nvbes pour accéder à votre espace sécurisé.'
+          ? loginStep === 'password'
+            ? 'Confirmez votre identité pour continuer vers vos services nvbes.'
+            : 'Utilisez votre compte nvbes pour accéder à votre espace sécurisé.'
           : state.stage === 'consent'
             ? "Vérifiez les accès demandés par l'application."
             : undefined

@@ -117,6 +117,7 @@ pub(super) async fn reset_password(db: &PgPool, token: &str, password: &str) -> 
     sqlx::query("UPDATE identity_recovery_deliveries SET state='cancelled',outcome='password_recovered',ciphertext=NULL,nonce=NULL,key_version=NULL,lease_token=NULL,lease_expires_at=NULL,settled_at=clock_timestamp() WHERE principal_id=$1 AND state IN ('pending','sending')")
         .bind(principal_id).execute(&mut *tx).await?;
     audit(&mut tx, principal_id, "identity.password_recovered").await?;
+    nvbes_identity_service::notification_events::password_recovered(&mut tx, principal_id).await?;
     tx.commit().await?;
     Ok(())
 }
@@ -124,6 +125,10 @@ pub(super) async fn reset_password(db: &PgPool, token: &str, password: &str) -> 
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.recovery.database.tests.rs"]
 mod database_tests;
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "identity.recovery.notification.tests.rs"]
+mod notification_tests;
 
 pub(super) fn validate_password_pair(initial: &str, recovered: &str) -> anyhow::Result<()> {
     validate_password(initial)?;

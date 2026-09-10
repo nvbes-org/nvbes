@@ -143,6 +143,7 @@ impl TryFrom<email_pb::AccountSecurityEvent> for AccountSecurityEvent {
             email_pb::AccountSecurityEvent::MfaRecoveryStarted => Ok(Self::MfaRecoveryStarted),
             email_pb::AccountSecurityEvent::MfaRecovered => Ok(Self::MfaRecovered),
             email_pb::AccountSecurityEvent::MfaRecoveryCancelled => Ok(Self::MfaRecoveryCancelled),
+            email_pb::AccountSecurityEvent::PasswordRecovered => Ok(Self::PasswordRecovered),
             email_pb::AccountSecurityEvent::PrimaryEmailChanged => Ok(Self::PrimaryEmailChanged),
             email_pb::AccountSecurityEvent::AccountRecovered => Ok(Self::AccountRecovered),
             email_pb::AccountSecurityEvent::RecoveryReviewRequired => {
