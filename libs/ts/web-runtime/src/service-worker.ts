@@ -1,9 +1,6 @@
 import { createTrustedServiceWorkerScriptUrl, type NvbesTrustedScriptUrl } from './trusted-types';
 
-let readyResolve: (() => void) | null = null;
-const readyPromise = new Promise<void>((resolve) => {
-  readyResolve = resolve;
-});
+export { getSwReady, sendToSw } from './service-worker.messaging';
 
 function onWindowLoad(handler: () => void | Promise<void>) {
   if (document.readyState === 'complete') {
@@ -34,9 +31,6 @@ export function registerServiceWorker() {
       const registration = await serviceWorker.register(
         createTrustedServiceWorkerScriptUrl('/sw.js'),
       );
-      if (readyResolve) {
-        readyResolve();
-      }
       registration.addEventListener('updatefound', () => {
         const installing = registration.installing;
         if (!installing) return;
@@ -207,35 +201,6 @@ export async function requestWebPushPermission(): Promise<NotificationPermission
 }
 
 // ---------------------------------------------------------------------------
-// Bidirectional communication with Service Worker
-// ---------------------------------------------------------------------------
-
-export async function sendToSw<T = unknown>(
-  type: string,
-  data?: Record<string, unknown>,
-): Promise<T> {
-  const sw = await getSwReady();
-  if (!sw?.active) throw new Error('Service worker not active');
-
-  return new Promise((resolve, reject) => {
-    const channel = new MessageChannel();
-    const id = crypto.randomUUID();
-
-    channel.port1.onmessage = (event: MessageEvent<{ id: string; result?: T; error?: string }>) => {
-      if (event.data?.id !== id) return;
-      channel.port1.close();
-      if (event.data.error) {
-        reject(new Error(event.data.error));
-      } else {
-        resolve(event.data.result as T);
-      }
-    };
-
-    sw.active!.postMessage({ type, id, ...data }, [channel.port2]);
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Periodic Background Sync
 // ---------------------------------------------------------------------------
 
@@ -308,12 +273,6 @@ export function onBackgroundFetchEvent(callback: (event: BgFetchEvent) => void):
   return () => navigator.serviceWorker.removeEventListener('message', handler);
 }
 
-export async function getSwReady(): Promise<ServiceWorkerRegistration | null> {
-  if (!('serviceWorker' in navigator)) return null;
-  await readyPromise;
-  return navigator.serviceWorker.ready;
-}
-
 export async function registerBackgroundSync(
   tag: string,
   _handler: (event: Event) => Promise<void>,
@@ -335,16 +294,17 @@ export async function registerBackgroundSync(
 
 export async function queueMutation(tag: string, payload: unknown) {
   const db = await openMutationStore();
-  const tx = db.transaction('mutations', 'readwrite');
-  tx.objectStore('mutations').add({
-    tag,
-    payload,
-    timestamp: Date.now(),
-  });
-  await new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  try {
+    const tx = db.transaction('mutations', 'readwrite');
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error('Offline mutation transaction failed'));
+      tx.onabort = () => reject(tx.error ?? new Error('Offline mutation transaction aborted'));
+      tx.objectStore('mutations').add({ tag, payload, timestamp: Date.now() });
+    });
+  } finally {
+    db.close();
+  }
 
   if (!('serviceWorker' in navigator)) {
     return;
