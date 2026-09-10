@@ -1,6 +1,7 @@
 use super::BillingPrincipal;
 use crate::{config::BillingConfig, error::BillingError};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use nvbes_identity_sdk::introspection::{ExpectedToken, IntrospectionClient};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -32,6 +33,7 @@ struct ConfiguredVerifier {
     key: DecodingKey,
     issuer: String,
     key_id: String,
+    introspection: IntrospectionClient,
 }
 
 #[derive(Clone)]
@@ -43,9 +45,11 @@ impl TokenVerifier {
             &config.identity_public_key_pem,
             &config.identity_token_issuer,
             &config.identity_token_key_id,
+            &config.identity_resource_client_id,
+            &config.identity_resource_secret,
         ) {
-            (None, None, None) => Ok(Self(None)),
-            (Some(pem), Some(issuer), Some(key_id)) => {
+            (None, None, None, None, None) => Ok(Self(None)),
+            (Some(pem), Some(issuer), Some(key_id), Some(client_id), Some(secret)) => {
                 let url = reqwest::Url::parse(issuer)?;
                 anyhow::ensure!(
                     url.host_str().is_some()
@@ -73,15 +77,31 @@ impl TokenVerifier {
                     key: DecodingKey::from_rsa_pem(pem.as_bytes())?,
                     issuer: issuer.clone(),
                     key_id: key_id.clone(),
+                    introspection: IntrospectionClient::new(issuer, client_id, secret)?,
                 })))
             }
             _ => anyhow::bail!(
-                "Identity public key, issuer and key identifier must be configured together"
+                "Identity token verification and resource credentials must be configured together"
             ),
         }
     }
 
-    pub fn verify(&self, token: &str) -> Result<BillingPrincipal, BillingError> {
+    pub async fn authenticate(&self, token: &str) -> Result<BillingPrincipal, BillingError> {
+        let (principal, expected) = self.validated(token)?;
+        let verifier = self.0.as_ref().ok_or(BillingError::Unauthorized)?;
+        match verifier.introspection.is_active(token, &expected).await {
+            Ok(true) => Ok(principal),
+            Ok(false) => Err(BillingError::Unauthorized),
+            Err(_) => Err(BillingError::IdentityUnavailable),
+        }
+    }
+
+    #[cfg(test)]
+    fn verify(&self, token: &str) -> Result<BillingPrincipal, BillingError> {
+        self.validated(token).map(|(principal, _)| principal)
+    }
+
+    fn validated(&self, token: &str) -> Result<(BillingPrincipal, ExpectedToken), BillingError> {
         let verifier = self.0.as_ref().ok_or(BillingError::Unauthorized)?;
         if token.len() > 16_384 {
             return Err(BillingError::Unauthorized);
@@ -156,11 +176,29 @@ impl TokenVerifier {
             .any(|m| matches!(m.as_str(), "totp" | "webauthn"));
         let primary_passkey =
             claims.amr == ["webauthn"] && now.saturating_sub(claims.auth_time) <= 300;
-        Ok(BillingPrincipal {
-            id: claims.sub,
-            scopes,
-            strong_authentication: (fresh_step_up && strong) || primary_passkey,
-        })
+        let expected = ExpectedToken {
+            sub: claims.sub.to_string(),
+            sid: claims.sid.to_string(),
+            grant_id: claims.grant_id.to_string(),
+            jti: claims.jti.to_string(),
+            iss: claims.iss,
+            aud: claims.aud,
+            client_id: claims.client_id,
+            scope: claims.scope,
+            exp: claims.exp,
+            iat: claims.iat,
+            nbf: claims.nbf,
+            token_type: "Bearer".into(),
+            cnf: None,
+        };
+        Ok((
+            BillingPrincipal {
+                id: claims.sub,
+                scopes,
+                strong_authentication: (fresh_step_up && strong) || primary_passkey,
+            },
+            expected,
+        ))
     }
 }
 

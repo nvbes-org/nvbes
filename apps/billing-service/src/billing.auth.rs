@@ -47,7 +47,7 @@ impl FromRequestParts<BillingState> for BillingPrincipal {
         parts: &mut Parts,
         state: &BillingState,
     ) -> Result<Self, Self::Rejection> {
-        state.tokens.verify(bearer(parts)?)
+        state.tokens.authenticate(bearer(parts)?).await
     }
 }
 

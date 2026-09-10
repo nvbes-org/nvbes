@@ -13,6 +13,39 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Consommation de l'introspection par Billing — 2026-09-10
+
+L'extracteur Billing vérifie désormais le JWT puis consulte Identity. Une
+réponse inactive donne 401 ; une panne, un timeout ou une réponse incohérente
+donne 503 avant l'entrée dans le handler métier. La validation locale seule
+n'est plus une voie d'authentification du runtime. Les tests unitaires peuvent
+encore l'exercer isolément, dans une fonction compilée uniquement pour les tests.
+
+Le client est dans le SDK Rust existant afin de le réutiliser pour Account.
+Il borne les consultations à 16 simultanées, 2,5 secondes (connexion une seconde)
+et 16 Kio de réponse. Aucun retry ni cache positif ; pas de redirection ni proxy
+implicite. Le header Basic est marqué sensible. Une réponse active doit retrouver
+exactement les claims attendues du JWT vérifié localement ; une autre session,
+audience, scope ou date ne peut pas être substituée par la réponse HTTP.
+
+Les cinq paramètres Identity de Billing doivent être fournis ensemble. Le
+helper de développement génère et publie atomiquement un secret de ressource
+en mode 0600 ; plusieurs services qui démarrent simultanément lisent la même
+valeur. Le registre local et Billing reçoivent des valeurs cohérentes sans
+sortie contenant le secret. Un registre personnalisé n'est pas remplacé : son
+propriétaire fournit les credentials correspondants. Les audiences par défaut
+du helper et d'Account sont alignées sur les audiences canoniques du protocole.
+Cela ne provisionne pas un registre OAuth public ni une configuration de production.
+
+Validation : compilation workspace et check Billing toutes cibles réussis.
+Les 19 tests du SDK (unitaires et intégration existante), les huit tests Billing
+avec PostgreSQL et les deux tests du helper local passent. Les nouveaux tests
+HTTP couvrent activité/révocation simulée sans cache, claims substituées, réponse
+malformée/trop grande, redirection, erreurs, timeout, saturation et rejet avant
+le handler Billing. Le fournisseur HTTP est une fixture locale contrôlée ; le
+parcours réunissant Identity réel et Billing reste une validation à effectuer,
+ainsi que le branchement Account, DPoP et les gates de charge/FinOps.
+
 ## Endpoint d'introspection authentifié — 2026-09-10
 
 Identity monte POST `/oauth/introspect` lorsque le registre des ressources

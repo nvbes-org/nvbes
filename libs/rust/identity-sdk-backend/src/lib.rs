@@ -1,5 +1,7 @@
 pub mod client;
 pub mod error;
+#[path = "introspection.client.rs"]
+pub mod introspection;
 #[path = "jwt.verifier.rs"]
 pub mod jwt;
 pub mod types;

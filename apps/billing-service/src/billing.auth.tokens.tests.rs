@@ -21,6 +21,102 @@ fn keys() -> &'static (String, String) {
     })
 }
 
+#[tokio::test]
+async fn protected_billing_route_requires_live_identity_activity() {
+    use axum::{
+        Json, Router,
+        body::Body,
+        http::{Request, StatusCode},
+        routing::{get, post},
+    };
+    use std::sync::{
+        Arc, Mutex,
+        atomic::{AtomicUsize, Ordering},
+    };
+    use tower::ServiceExt;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let issuer = format!("http://{}", listener.local_addr().unwrap());
+    let mut c = config();
+    c.identity_token_issuer = Some(issuer.clone());
+    let mut signed_claims = claims();
+    signed_claims["iss"] = json!(issuer);
+    let token = sign(&signed_claims, &header());
+    let mut response = signed_claims.clone();
+    response["active"] = json!(true);
+    response["token_type"] = json!("Bearer");
+    let response = Arc::new(Mutex::new((StatusCode::OK, response)));
+    let requests = Arc::new(AtomicUsize::new(0));
+    let identity = Router::new().route(
+        "/oauth/introspect",
+        post({
+            let response = response.clone();
+            let requests = requests.clone();
+            move || {
+                let (status, value) = response.lock().unwrap().clone();
+                requests.fetch_add(1, Ordering::SeqCst);
+                async move { (status, Json(value)) }
+            }
+        }),
+    );
+    let server = tokio::spawn(async move {
+        axum::serve(listener, identity).await.unwrap();
+    });
+    let state = crate::app::BillingState {
+        db: sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://unused:unused@127.0.0.1/unused")
+            .unwrap(),
+        tokens: TokenVerifier::new(&c).unwrap(),
+        config: c,
+        metrics: crate::metrics::install(),
+    };
+    let reached = Arc::new(AtomicUsize::new(0));
+    let app = Router::new()
+        .route(
+            "/protected",
+            get({
+                let reached = reached.clone();
+                move |_: crate::auth::BillingPrincipal| {
+                    reached.fetch_add(1, Ordering::SeqCst);
+                    async { StatusCode::NO_CONTENT }
+                }
+            }),
+        )
+        .with_state(state);
+    let request = |token: &str| {
+        Request::get("/protected")
+            .header("authorization", format!("Bearer {token}"))
+            .body(Body::empty())
+            .unwrap()
+    };
+    assert_eq!(
+        app.clone().oneshot(request(&token)).await.unwrap().status(),
+        StatusCode::NO_CONTENT
+    );
+    *response.lock().unwrap() = (StatusCode::OK, json!({"active":false}));
+    assert_eq!(
+        app.clone().oneshot(request(&token)).await.unwrap().status(),
+        StatusCode::UNAUTHORIZED
+    );
+    *response.lock().unwrap() = (
+        StatusCode::SERVICE_UNAVAILABLE,
+        json!({"error":"temporarily_unavailable"}),
+    );
+    assert_eq!(
+        app.clone().oneshot(request(&token)).await.unwrap().status(),
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(
+        app.oneshot(request("test-arbitrary"))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(requests.load(Ordering::SeqCst), 3);
+    assert_eq!(reached.load(Ordering::SeqCst), 1);
+    server.abort();
+}
+
 fn config() -> BillingConfig {
     BillingConfig {
         bind_addr: "127.0.0.1:0".parse().unwrap(),
@@ -32,6 +128,8 @@ fn config() -> BillingConfig {
         identity_public_key_pem: Some(keys().1.clone()),
         identity_token_issuer: Some("https://identity.example/".into()),
         identity_token_key_id: Some("identity-test".into()),
+        identity_resource_client_id: Some("billing-api".into()),
+        identity_resource_secret: Some("A".repeat(43)),
         metrics_token: None,
         operator_token: None,
     }
@@ -78,6 +176,8 @@ fn missing_configuration_never_accepts_arbitrary_bearers() {
     assert!(TokenVerifier::new(&c).is_err());
     c.identity_token_issuer = None;
     c.identity_token_key_id = None;
+    c.identity_resource_client_id = None;
+    c.identity_resource_secret = None;
     let verifier = TokenVerifier::new(&c).unwrap();
     for token in [
         "anything".into(),

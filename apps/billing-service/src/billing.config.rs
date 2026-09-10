@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct BillingConfig {
     pub bind_addr: SocketAddr,
     pub database_url: String,
@@ -10,6 +10,8 @@ pub struct BillingConfig {
     pub identity_public_key_pem: Option<String>,
     pub identity_token_issuer: Option<String>,
     pub identity_token_key_id: Option<String>,
+    pub identity_resource_client_id: Option<String>,
+    pub identity_resource_secret: Option<String>,
     pub metrics_token: Option<String>,
     pub operator_token: Option<String>,
     pub app_url: String,
@@ -41,6 +43,9 @@ impl BillingConfig {
         let identity_public_key_pem = std::env::var("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM").ok();
         let identity_token_issuer = std::env::var("NVBES_IDENTITY_TOKEN_ISSUER").ok();
         let identity_token_key_id = std::env::var("NVBES_IDENTITY_TOKEN_KEY_ID").ok();
+        let identity_resource_client_id =
+            std::env::var("NVBES_BILLING_IDENTITY_RESOURCE_CLIENT_ID").ok();
+        let identity_resource_secret = std::env::var("NVBES_BILLING_IDENTITY_RESOURCE_SECRET").ok();
         let metrics_token = std::env::var("NVBES_BILLING_METRICS_TOKEN").ok();
         let operator_token = std::env::var("NVBES_BILLING_OPERATOR_TOKEN").ok();
 
@@ -56,6 +61,8 @@ impl BillingConfig {
             identity_public_key_pem,
             identity_token_issuer,
             identity_token_key_id,
+            identity_resource_client_id,
+            identity_resource_secret,
             metrics_token,
             operator_token,
             app_url,

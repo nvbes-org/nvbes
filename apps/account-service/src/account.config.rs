@@ -40,7 +40,7 @@ impl AccountConfig {
             .or_else(|| development.then(|| "http://identity.local".into()))
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_TOKEN_ISSUER"))?;
         let token_audience = optional("NVBES_ACCOUNT_TOKEN_AUDIENCE")
-            .or_else(|| development.then(|| "nvbes-account".into()))
+            .or_else(|| development.then(|| "nvbes-account-service".into()))
             .ok_or(ConfigError::Missing("NVBES_ACCOUNT_TOKEN_AUDIENCE"))?;
         let token_key_id = required("NVBES_IDENTITY_TOKEN_KEY_ID")?;
         let token_public_key_pem = required("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM")?;

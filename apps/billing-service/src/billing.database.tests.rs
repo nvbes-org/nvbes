@@ -67,6 +67,8 @@ async fn billing_lifecycle_is_isolated_deduplicated_and_audited() {
         identity_public_key_pem: None,
         identity_token_issuer: None,
         identity_token_key_id: None,
+        identity_resource_client_id: None,
+        identity_resource_secret: None,
         metrics_token: None,
         operator_token: Some("test_operator_token".into()),
         app_url: "https://nvbes.test".into(),

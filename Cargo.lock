@@ -3379,6 +3379,7 @@ dependencies = [
 name = "nvbes-identity-sdk"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "base64 0.22.1",
  "jsonwebtoken",
  "rand 0.9.5",

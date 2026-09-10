@@ -23,6 +23,7 @@ metrics = "0.24.6"
 metrics-exporter-prometheus = "0.16"
 nvbes-billing = { path = "../../libs/rust/billing" }
 nvbes-core = { path = "../../libs/rust/core" }
+nvbes-identity-sdk = { path = "../../libs/rust/identity-sdk-backend" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
 reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1.0.228", features = ["derive"] }
