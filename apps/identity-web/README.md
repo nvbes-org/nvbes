@@ -9,6 +9,8 @@ Les tokens des API restent la responsabilité des clients OAuth, dont Account.
 - Connexion par mot de passe ou passkey existante.
 - Step-up passkey, ou TOTP lorsque la politique serveur l'autorise.
 - Affichage des scopes, consentement explicite et annulation.
+- Annulation, timeout et incompatibilité WebAuthn connus : le statut serveur
+  est relu et une autre méthode reste possible selon sa politique.
 - Réponses refusées, interaction expirée et panne : messages sans données
   sensibles ; aucune relance automatique d'une mutation.
 - Une seule initialisation par document, y compris pour PAR. L'état en mémoire
@@ -54,10 +56,19 @@ IDENTITY_WEB_TEST_CLIENT_ORIGIN=https://127.0.0.1:PORT pnpm nx run identity-web:
 
 Playwright doit disposer de Chromium (`pnpm --filter @nvbes/identity-web exec
 playwright install chromium`). Le scénario utilise le build présent au démarrage
-de la fixture : reconstruire avant de démarrer celle-ci. Il traverse les écrans
-mot de passe/consentement, l'échange OIDC/DPoP et Account, avec des identifiants
-synthétiques. Il vérifie aussi l'absence de débordement à 390 px.
-Les parcours graphiques passkey/TOTP de ce nouveau site restent à prouver.
+de la fixture : reconstruire avant de démarrer celle-ci et utiliser une fixture
+neuve à chaque exécution (les facteurs du principal de test sont modifiés).
+Il traverse les écrans mot de passe/consentement, mot de passe + TOTP,
+mot de passe + WebAuthn et login direct passkey, puis l'échange OIDC/DPoP et
+Account pour chaque méthode. Il vérifie l'absence de débordement à 390 px,
+la reprise après annulation WebAuthn et le refus d'un code TOTP déjà consommé.
+
+La préparation des facteurs passe par les cérémonies SDK actives, pas par
+des écrans d'enrollment. CTAP2 et l'authenticator TOTP sont synthétiques ; le
+scénario utilise la tolérance TOTP d'un pas pour ne pas attendre le changement
+de période. L'annulation est simulée au niveau de navigator.credentials.get,
+sans simuler les réponses HTTP. Les clés physiques et les navigateurs mobiles
+restent à valider.
 
 ## Composants et exploitation
 

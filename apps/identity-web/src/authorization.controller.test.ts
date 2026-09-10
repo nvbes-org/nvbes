@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import {
   HostedIdentityError,
+  WebauthnBrowserError,
   type HostedInteraction,
   type HostedAuthenticationStatus,
 } from '@nvbes/identity-sdk-web/oauth';
@@ -49,6 +50,36 @@ function setup() {
 }
 
 describe('hosted authorization orchestration', () => {
+  it.each([
+    'webauthn_not_allowed',
+    'webauthn_timeout',
+    'webauthn_not_supported',
+    'webauthn_unsupported',
+  ])('keeps the server-validated login usable after %s', async (code) => {
+    const { gateway, controller } = setup();
+    await controller.start('authorization');
+    gateway.passkey.mockRejectedValue(new WebauthnBrowserError(code, 'private browser detail'));
+    await controller.passkey();
+    expect(controller.snapshot().stage).toBe('login');
+    expect(controller.snapshot().error).not.toContain('private browser detail');
+    expect(gateway.passkey).toHaveBeenCalledTimes(1);
+    gateway.status.mockResolvedValue(stepUp);
+    await controller.password('email', 'password');
+    expect(controller.snapshot().stage).toBe('step-up');
+    expect(gateway.password).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps unknown WebAuthn failures closed', async () => {
+    const { gateway, controller } = setup();
+    await controller.start('authorization');
+    gateway.passkey.mockRejectedValue(
+      new WebauthnBrowserError('webauthn_security_error', 'invalid origin'),
+    );
+    await controller.passkey();
+    expect(controller.snapshot().stage).toBe('closed');
+    await controller.password('email', 'password');
+    expect(gateway.password).not.toHaveBeenCalled();
+  });
   it('does not resurrect an interaction after leaving the document', async () => {
     const { gateway, controller, navigate } = setup();
     let resolveLoad: (value: HostedInteraction) => void = () => {};

@@ -1,5 +1,6 @@
 import { chromium } from 'playwright';
 import { verifyHostedUi } from '../identity-service/tests/runtime-browser-hosted-ui.mjs';
+import { verifyHostedMfa } from '../identity-service/tests/runtime-browser-hosted-mfa.mjs';
 
 const origin = new URL(process.env.IDENTITY_WEB_TEST_CLIENT_ORIGIN ?? '');
 if (
@@ -24,6 +25,7 @@ try {
         origin.origin,
         process.env.IDENTITY_WEB_TEST_SCREENSHOT_PREFIX,
       )),
+      ...(await verifyHostedMfa(browser, origin.origin)),
     }),
   );
 } finally {

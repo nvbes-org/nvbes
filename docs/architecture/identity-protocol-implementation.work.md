@@ -13,6 +13,36 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Identity : preuves MFA et annulation WebAuthn — 2026-09-10
+
+Le site reconnaît désormais les erreurs WebauthnBrowserError réellement émises
+par le SDK, exportées aussi par son entrée oauth. Les annulations, timeouts et
+incompatibilités connus relisent le statut serveur avant de permettre une
+nouvelle tentative explicite. Une erreur de sécurité inconnue ou une réponse
+réseau incertaine conserve le refus fermé. Aucun message brut du navigateur
+n'est exposé et aucune preuve MFA n'est créée par ce traitement d'erreur.
+
+Le scénario navigateur du site prépare passkey/TOTP via les vraies cérémonies,
+termine le callback de préparation, puis teste trois connexions dans les écrans :
+mot de passe + TOTP, mot de passe + WebAuthn et passkey directe. Dans Chromium
+153.0.8010.12, chaque cas atteint le callback OIDC/DPoP puis Account HTTP 200
+avec le bon sujet. Le consentement n'est pas proposé avant le step-up ; TOTP
+n'est pas proposé au profil recent_webauthn. Une annulation navigateur simulée
+permet le retour au mot de passe, et un code TOTP consommé est refusé.
+
+Les facteurs CTAP2/TOTP sont synthétiques ; les réponses HTTP viennent des
+services réels. Le scénario utilise la tolérance TOTP d'un pas, sans changer
+l'horloge serveur. L'enrollment reste une préparation SDK, pas une interface
+livrée. Une première exécution avait révélé une transaction de préparation
+laissée ouverte ; le callback et le logout la terminent désormais avant les
+parcours UI. La validation finale utilise une nouvelle fixture isolée.
+
+Validation : build du site et du SDK, 16 tests du site et 110 tests SDK,
+typecheck/lint et parcours HTTPS réussis. Aucun Rust modifié ; la fixture
+compile les trois binaires sans relancer cargo check --workspace.
+Les écrans d'enrollment/récupération, Account Web, les clés physiques,
+le bootstrap et les autres exigences A à D restent ouverts.
+
 ## Site Identity : connexion et consentement — 2026-09-10
 
 [Identity Web](../../apps/identity-web/README.md) fournit une interface React active :

@@ -11,3 +11,4 @@ export * from './hosted.totp';
 export * from './hosted.totp.management';
 export * from './hosted.webauthn';
 export * from './hosted.webauthn.credentials';
+export { WebauthnBrowserError } from './webauthn.types';

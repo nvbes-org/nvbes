@@ -1,5 +1,6 @@
 import {
   HostedIdentityError,
+  WebauthnBrowserError,
   type HostedInteraction,
   type HostedAuthenticationStatus,
 } from '@nvbes/identity-sdk-web/oauth';
@@ -100,7 +101,13 @@ export class AuthorizationController {
       // Known refusal or browser cancellation is retryable, but never retry a mutation automatically.
       if (
         (error instanceof HostedIdentityError && [400, 401, 429].includes(error.status)) ||
-        (error instanceof DOMException && error.name === 'NotAllowedError')
+        (error instanceof WebauthnBrowserError &&
+          [
+            'webauthn_not_allowed',
+            'webauthn_timeout',
+            'webauthn_not_supported',
+            'webauthn_unsupported',
+          ].includes(error.code))
       ) {
         try {
           await this.refresh(this.state.interaction ?? interaction);
