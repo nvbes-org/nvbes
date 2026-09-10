@@ -64,6 +64,25 @@ Le smoke exige en plus `NVBES_IDENTITY_SYNTHETIC_EMAIL`,
 `NVBES_IDENTITY_SYNTHETIC_RECOVERED_PASSWORD`. Il ne journalise aucun de ces
 secrets ni les tokens éphémères.
 
+### Test avec les API Account et Billing
+
+Avec Docker actif et l'image `postgres:17-alpine` déjà présente localement :
+
+```bash
+pnpm nx run identity-service:test:resource-runtimes
+```
+
+Cette cible compile les trois binaires puis crée ses propres bases, clés,
+credentials et ports temporaires. Elle ne lit pas les fichiers `.env` et ne
+nécessite aucun `DATABASE_URL`. Le compte synthétique n'envoie aucun email et
+le test ne déclenche aucun paiement. Les processus et le conteneur éphémère
+sont nettoyés à la fin, succès ou échec.
+
+Le parcours vérifie Code/PKCE, les audiences des API, la révocation par logout
+et les réponses 503 pendant une panne d'Identity, suivies de la reprise. Il
+utilise HTTP sur loopback avec un cookie jar Node : il ne remplace pas les
+tests navigateur HTTPS, DPoP ou d'autorisation entre comptes.
+
 `synthetic-mfa-smoke` exige aussi `NVBES_IDENTITY_MFA_ENCRYPTION_KEY`, clé de
 32 octets encodée en base64. Hors développement, le runtime refuse de démarrer
 sans cette clé. Le smoke ne restitue jamais le secret TOTP.

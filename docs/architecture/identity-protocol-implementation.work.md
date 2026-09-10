@@ -13,6 +13,38 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Preuve entre les trois runtimes — 2026-09-10
+
+La cible Nx `identity-service:test:resource-runtimes` compile et lance les vrais
+binaires Identity, Account et Billing. Elle crée un conteneur PostgreSQL local
+éphémère limité à 256 Mio, trois bases distinctes avec leurs migrations réelles,
+une paire RSA et deux secrets de ressource aléatoires. Les environnements des
+services ne reprennent aucune configuration de production ni télémétrie. Le
+compte synthétique est créé par la commande existante, sans envoi d'email.
+
+Le test effectue les échanges HTTP hébergés de login, consentement et Code/PKCE.
+Il vérifie les lectures métier Account/Billing avec des jetons réellement émis
+par Identity, le refus des audiences croisées, puis le refus des deux jetons
+après POST `/oauth/logout`. Une nouvelle connexion fonctionne ; l'arrêt du
+processus Identity entraîne 503 sur les deux API, puis son redémarrage rétablit
+l'accès aux seules sessions actives. Les anciennes sessions restent révoquées.
+
+Validation : cible Nx réussie, scénario complet en environ sept secondes hors
+compilation. Le nettoyage arrête les processus et retire le conteneur dédié,
+y compris lors des échecs. L'image `postgres:17-alpine` doit être disponible
+localement ; aucun téléchargement implicite ni abonnement n'est ajouté. Les
+ports sont temporaires sur loopback ; Identity utilise `localhost` pour son RP
+WebAuthn, qui refuse une adresse IP comme identifiant de domaine.
+
+La gestion des cookies est explicite dans Node : cette preuve ne couvre pas les
+politiques d'un navigateur sous HTTPS, DPoP, la rotation des clés ou le logout
+intersites. Aucun paiement, déploiement ni ouverture publique n'est effectué.
+La lecture des handlers Billing a également identifié un contrôle à traiter :
+les scopes sont vérifiés, mais les routes `/workspaces/{id}/billing/*` ne relient
+pas encore cet identifiant au principal ou à son rôle Account. La preuve de
+transport/introspection n'atteste donc pas l'isolation métier entre comptes ;
+cette autorisation reste un préalable à toute exposition du service.
+
 ## Consommation de l'introspection par Account — 2026-09-10
 
 Account utilise le même client SDK que Billing après validation locale du JWT.

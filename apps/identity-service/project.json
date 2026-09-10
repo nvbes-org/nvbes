@@ -4,6 +4,20 @@
   "root": "apps/identity-service",
   "sourceRoot": "apps/identity-service/src",
   "targets": {
+    "test:resource-runtimes": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": {
+        "commands": [
+          "cargo build --locked --package nvbes-identity-service --package nvbes-account-service --bins --target-dir target",
+          "cargo build --locked --manifest-path apps/billing-service/Cargo.toml --bin nvbes-billing-service --target-dir apps/billing-service/target",
+          "node --test apps/identity-service/tests/resource-runtimes.test.mjs"
+        ],
+        "parallel": false,
+        "cwd": "."
+      }
+    },
     "test:browser-fixture": {
       "executor": "nx:run-commands",
       "cache": false,

@@ -1,8 +1,9 @@
 # Jetons du service Identity actif
 
 Ce document décrit la bibliothèque et les routes OAuth montées sous configuration
-dans le service actif. Les parcours complets et les consommateurs Account/Billing
-restent à terminer dans les [lots A à D](identity-protocol-implementation.work.md).
+dans le service actif. Account/Billing consomment l'introspection ; les parcours
+multisites complets et les autres capacités restent à terminer dans les
+[lots A à D](identity-protocol-implementation.work.md).
 
 ## Émission et révocation
 
@@ -114,6 +115,12 @@ OAuth à chaque appel. Account et Billing utilisent désormais ce contrôle apr�
 la validation locale de chaque JWT, sans cache positif ni repli en cas de panne.
 Le SDK vérifie que la réponse active correspond aux identifiants,
 dates, scopes, audience, issuer et confirmation du token vérifié localement.
+
+La cible Nx `identity-service:test:resource-runtimes` vérifie cette intégration
+avec les trois vrais binaires et trois bases isolées : Code/PKCE, lectures
+métier, mauvaise audience, logout, arrêt et redémarrage d'Identity. La gestion
+des cookies utilise Node sur loopback HTTP ; les politiques navigateur HTTPS,
+DPoP et l'autorisation métier entre comptes restent des validations distinctes.
 
 ### Révocation d'une passkey
 
