@@ -7,6 +7,8 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
 };
+#[path = "identity.oauth.http.cors.rs"]
+mod cors;
 #[path = "identity.oauth.http.introspection.rs"]
 mod introspection;
 #[path = "identity.oauth.http.limits.rs"]
@@ -83,6 +85,7 @@ pub fn token_router(
     tokens: Arc<TokenService>,
     limiter: crate::rate_limits::RateLimiter,
 ) -> Router {
+    let cors = cors::clients(&clients);
     Router::new()
         .route("/oauth/token", post(token))
         .route(
@@ -103,6 +106,7 @@ pub fn token_router(
             clients,
             tokens,
         })
+        .layer(cors)
 }
 
 /// Starts a direct authorization transaction and hands it to the hosted UI.
@@ -456,6 +460,7 @@ pub fn router(issuer: &str, tokens: Arc<TokenService>) -> Router {
         .route("/.well-known/openid-configuration", get(discovery))
         .route("/oauth/jwks", get(jwks))
         .with_state(state)
+        .layer(cors::metadata())
 }
 
 async fn discovery(State(state): State<PublicProtocolState>) -> Json<impl serde::Serialize> {

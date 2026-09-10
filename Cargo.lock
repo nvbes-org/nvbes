@@ -3430,6 +3430,7 @@ dependencies = [
  "tokio-stream",
  "tonic",
  "tower",
+ "tower-http",
  "tracing",
  "uuid",
  "webauthn-authenticator-rs",

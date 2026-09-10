@@ -50,6 +50,14 @@ la connexion TCP ; les en-têtes proxy ne sont pas des preuves de source.
 Voir [les quotas et leur configuration](../../docs/architecture/identity-token-lifecycle.md#quotas-des-routes-http)
 avant d'activer les routes derrière un proxy. Les lots A à D restent en cours.
 
+Les routes PAR, token et UserInfo autorisent CORS pour les origines exactes des
+`redirect_uris` du registre validé, sans cookies interorigines. Les requêtes
+peuvent porter `Content-Type`, `Authorization` et `DPoP` ; les réponses exposent
+`WWW-Authenticate` et `DPoP-Nonce`. Discovery et JWKS sont lisibles depuis toute
+origine, sans credentials. Les routes de session, login et introspection ne
+reçoivent pas cette politique CORS. Cela ne remplace aucune vérification de
+client, de jeton, de preuve DPoP ou de CSRF.
+
 ```bash
 pnpm nx run identity-service:check
 pnpm nx run identity-service:test

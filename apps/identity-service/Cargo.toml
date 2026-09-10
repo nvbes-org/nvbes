@@ -35,6 +35,7 @@ sqlx.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+tower-http.workspace = true
 uuid.workspace = true
 # Read the current typed counter under a database lock; never alter ceremony policy.
 webauthn-rs = { workspace = true, features = ["danger-credential-internals"] }

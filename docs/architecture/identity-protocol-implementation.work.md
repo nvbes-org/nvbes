@@ -13,6 +13,30 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## CORS des endpoints Identity — 2026-09-10
+
+PAR, token et UserInfo autorisent les origines exactes dérivées des redirections
+des clients enregistrés. Aucun wildcard ni cookie interorigines ; les headers
+Content-Type, Authorization et DPoP sont autorisés, WWW-Authenticate et DPoP-Nonce
+sont exposés. Discovery et JWKS sont publics sans credentials. Les routes de
+session, login et introspection gardent leur politique sans CORS.
+
+Le test réseau des trois services vérifie les preflights, les origines refusées,
+les métadonnées publiques et les erreurs protocolaires qui restent lisibles par
+le client autorisé. Il conserve les scénarios SDK, rotation, révocation et panne.
+Le test unitaire vérifie aussi le refus d'un domaine suffixé, d'un changement de
+schéma et de l'origine opaque `null`, ainsi que Vary et l'exposition du nonce.
+
+Validation : `cargo check --workspace`, cible Nx `test:database` (152 tests
+librairie, 24 tests runtime et 3 gardes de base de test ; un test navigateur
+interactif ignoré), cible `test:resource-runtimes` (17 tests DPoP et scénario des
+trois binaires) et lint/format des deux fichiers JavaScript réussis.
+
+CORS des API Account/Billing, parcours navigateur HTTPS et interfaces restent
+à livrer. Ces tests HTTP ne démontrent pas l'application des politiques par un
+navigateur. Cette tranche réutilise tower-http déjà présent dans le workspace,
+sans infrastructure ni dépendance réseau d'exploitation supplémentaire.
+
 ## Validation des ID tokens côté SDK — 2026-09-10
 
 Le callback vérifie désormais la signature RS256 avec `jose` (6.2.9, version

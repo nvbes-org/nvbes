@@ -7,6 +7,7 @@ import { verifyBillingAuthorization } from './runtime-billing-authorization.mjs'
 import { verifyResourceDpop } from './runtime-resource-dpop.mjs';
 import { oauthClient } from './runtime-oauth-client.mjs';
 import { verifySdkRefresh } from './runtime-sdk-refresh.mjs';
+import { verifyIdentityCors } from './runtime-identity-cors.mjs';
 
 const secret = () => randomBytes(32).toString('base64url');
 
@@ -126,6 +127,7 @@ test(
       '/health/ready',
     );
 
+    await verifyIdentityCors(origins);
     const browser = oauthClient({
       origins,
       clientId: clients[0].client_id,

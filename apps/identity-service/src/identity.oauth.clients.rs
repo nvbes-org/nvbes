@@ -57,6 +57,16 @@ impl ClientRegistry {
     pub fn get(&self, id: &str) -> Result<&PublicClient, OAuthError> {
         self.clients.get(id).ok_or(OAuthError::InvalidClient)
     }
+
+    /// Exact web origins from validated redirects; no wildcard or suffix matching.
+    pub fn browser_origins(&self) -> BTreeSet<String> {
+        self.clients
+            .values()
+            .flat_map(|client| &client.redirect_uris)
+            .filter_map(|uri| Url::parse(uri).ok())
+            .map(|url| url.origin().ascii_serialization())
+            .collect()
+    }
 }
 
 fn validate_client(client: &PublicClient, development: bool) -> Result<(), OAuthError> {
