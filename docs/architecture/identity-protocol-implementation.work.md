@@ -13,6 +13,31 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## TOTP et récupération MFA : échéances sous contention — 2026-09-11
+
+Huit régressions ont été reproduites contre l'implémentation précédente avec
+un verrou PostgreSQL observé : confirmation TOTP après expiration du facteur,
+de la session ou de la preuve primaire ; step-up TOTP après expiration de
+session ; rédemption d'un code après expiration primaire ; renouvellement des
+codes après expiration forte ; remplacement MFA après expiration du challenge
+ou de la session de récupération. Les huit tests échouent sur l'ancien code.
+
+Les transactions relisent maintenant les preuves après les attentes pertinentes.
+L'activation TOTP et la consommation du challenge WebAuthn de récupération
+exigent une échéance encore valide. Le step-up TOTP n'accepte plus d'heure de
+l'appelant : le code est vérifié avec l'horloge PostgreSQL après les verrous.
+Le grant est borné par l'expiration de session, y compris dans le diagnostic
+synthétique. Les refus conservent les anciens codes/facteurs et annulent les
+révocations, compteurs, audits et notifications de l'opération.
+
+Validation : suite Nx Identity sur PostgreSQL isolé avec migrations réelles,
+huit tests adversariaux corrigés, un test positif des échéances retournées
+pour confirmation et step-up, `cargo check --workspace` et format Rust.
+Pas de modification du design archivé ni du contrat navigateur ; les fixtures
+graphiques ne sont pas relancées pour ce changement transactionnel. Aucune
+migration, ressource payante ou ouverture publique. Les autres exigences A–D
+restent ouvertes.
+
 ## WebAuthn : échéances après attente de verrou — 2026-09-11
 
 La connexion passkey, le step-up et l'enrollment consomment maintenant leur

@@ -68,6 +68,9 @@ pub async fn generate(db: &PgPool, token: &str) -> Result<RecoveryCodes, Recover
         codes.push(code);
     }
     event(&mut tx, principal, "identity.mfa_recovery_codes_generated").await?;
+    if crate::factor_management::owner(&mut tx, token, true).await? != Some(principal) {
+        return Err(RecoveryError::Invalid);
+    }
     tx.commit().await?;
     Ok(RecoveryCodes { codes })
 }
@@ -105,6 +108,14 @@ pub async fn redeem(
     let token = random_secret();
     let expires_at=sqlx::query_scalar("INSERT INTO identity_mfa_recovery_sessions(id,principal_id,token_hash,expires_at) VALUES($1,$2,$3,clock_timestamp()+interval '5 minutes') RETURNING expires_at")
         .bind(Uuid::new_v4()).bind(principal).bind(hash(&token)).fetch_one(&mut *tx).await?;
+    // Code/session row waits cannot extend the primary proof's five-minute window.
+    let current = crate::authentication_session::load(&mut tx, session_token)
+        .await?
+        .filter(|session| session.recent_primary)
+        .map(|session| session.principal);
+    if current != Some(principal) {
+        return Err(RecoveryError::Invalid);
+    }
     sqlx::query("UPDATE identity_sessions SET revoked_at=clock_timestamp() WHERE principal_id=$1 AND revoked_at IS NULL").bind(principal).execute(&mut *tx).await?;
     event(&mut tx, principal, "identity.mfa_recovery_started").await?;
     tx.commit().await?;

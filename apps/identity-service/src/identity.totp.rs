@@ -81,9 +81,15 @@ pub async fn confirm(
         .await?;
     let counter = verify_totp_code(&secret, code, now, TOTP_WINDOW).ok_or(TotpError::Invalid)?;
     let counter = i64::try_from(counter).map_err(|_| TotpError::Invalid)?;
-    sqlx::query("UPDATE identity_auth_factors SET state='active',last_accepted_counter=$2,enrollment_session_id=NULL,enrollment_expires_at=NULL WHERE id=$1")
-        .bind(id).bind(counter).execute(&mut *tx).await?;
-    let expires = sqlx::query_scalar("UPDATE identity_sessions SET step_up_method='totp',step_up_at=clock_timestamp(),step_up_expires_at=clock_timestamp()+interval '10 minutes' WHERE id=$1 RETURNING step_up_expires_at")
+    if crate::enrollment_policy::owner(&mut tx, token).await? != Some((session, principal)) {
+        return Err(TotpError::Invalid);
+    }
+    let activated = sqlx::query("UPDATE identity_auth_factors SET state='active',last_accepted_counter=$2,enrollment_session_id=NULL,enrollment_expires_at=NULL WHERE id=$1 AND state='pending' AND enrollment_expires_at>clock_timestamp()")
+        .bind(id).bind(counter).execute(&mut *tx).await?.rows_affected();
+    if activated != 1 {
+        return Err(TotpError::Invalid);
+    }
+    let expires = sqlx::query_scalar("UPDATE identity_sessions SET step_up_method='totp',step_up_at=clock_timestamp(),step_up_expires_at=LEAST(expires_at,clock_timestamp()+interval '10 minutes') WHERE id=$1 RETURNING step_up_expires_at")
         .bind(session).fetch_one(&mut *tx).await?;
     audit(&mut tx, principal, "identity.mfa_totp_enrolled").await?;
     audit(&mut tx, principal, "identity.step_up_granted").await?;

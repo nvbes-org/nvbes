@@ -4,6 +4,9 @@ use nvbes_core::mfa::{current_counter, generate_totp_code};
 use webauthn_authenticator_rs::{WebauthnAuthenticator, softpasskey::SoftPasskey};
 use webauthn_rs::{Webauthn, prelude::*};
 
+#[path = "identity.mfa.recovery.deadline.tests.rs"]
+mod mfa_deadline_tests;
+
 struct Fixture {
     db: PgPool,
     token: String,

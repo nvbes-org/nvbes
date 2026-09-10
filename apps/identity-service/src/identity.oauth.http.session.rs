@@ -99,24 +99,18 @@ pub(super) async fn step_up_totp(
     )
     .await
     .map_err(ProtocolError::OAuth)?;
-    let expires_at = crate::mfa::grant_step_up(
-        &state.db,
-        &state.mfa,
-        proof.token(),
-        &form.code,
-        chrono::Utc::now(),
-    )
-    .await
-    .map_err(|error| {
-        let unavailable = error
-            .downcast_ref::<sqlx::Error>()
-            .is_some_and(|error| !matches!(error, sqlx::Error::RowNotFound));
-        ProtocolError::OAuth(if unavailable {
-            OAuthError::Unavailable
-        } else {
-            OAuthError::InvalidRequest
-        })
-    })?;
+    let expires_at = crate::mfa::grant_step_up(&state.db, &state.mfa, proof.token(), &form.code)
+        .await
+        .map_err(|error| {
+            let unavailable = error
+                .downcast_ref::<sqlx::Error>()
+                .is_some_and(|error| !matches!(error, sqlx::Error::RowNotFound));
+            ProtocolError::OAuth(if unavailable {
+                OAuthError::Unavailable
+            } else {
+                OAuthError::InvalidRequest
+            })
+        })?;
     Ok(Json(
         serde_json::json!({"step_up": true, "expires_at": expires_at}),
     ))

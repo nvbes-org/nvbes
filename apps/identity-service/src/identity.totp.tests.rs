@@ -2,6 +2,9 @@ use super::*;
 use crate::test_fixtures::{isolated_database, session};
 use nvbes_core::mfa::{current_counter, generate_totp_code};
 
+#[path = "identity.totp.deadline.tests.rs"]
+mod mfa_deadline_tests;
+
 fn crypto() -> MfaCrypto {
     MfaCrypto::with_rotation(1, [8; 32], None).unwrap()
 }
@@ -37,7 +40,7 @@ async fn enrollment_encrypts_secret_confirms_once_and_rejects_step_up_replay() {
             .is_err()
     );
     assert!(
-        crate::mfa::grant_step_up(&db, &crypto, &token, &code, Utc::now())
+        crate::mfa::grant_step_up(&db, &crypto, &token, &code)
             .await
             .is_err()
     );

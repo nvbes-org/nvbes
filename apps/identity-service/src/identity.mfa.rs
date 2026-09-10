@@ -35,8 +35,8 @@ pub async fn run_synthetic_smoke(
     let secret = enroll_totp(db, crypto, principal_id).await?;
     let now = Utc::now();
     let code = generate_totp_code(&secret, current_counter(now));
-    let step_up_expires_at = confirm_enrollment(db, crypto, &session_token, &code, now).await?;
-    let replay_rejected = grant_step_up(db, crypto, &session_token, &code, now)
+    let step_up_expires_at = confirm_enrollment(db, crypto, &session_token, &code).await?;
+    let replay_rejected = grant_step_up(db, crypto, &session_token, &code)
         .await
         .is_err();
     let state: (String, bool) = sqlx::query_as(
@@ -96,11 +96,14 @@ async fn confirm_enrollment(
     crypto: &MfaCrypto,
     session_token: &str,
     code: &str,
-    now: DateTime<Utc>,
 ) -> anyhow::Result<DateTime<Utc>> {
     let mut tx = db.begin().await?;
-    let session = active_session(&mut tx, session_token, now).await?;
+    let session = active_session(&mut tx, session_token).await?;
     let factor = factor_for_update(&mut tx, session.1, "pending").await?;
+    active_session(&mut tx, session_token).await?;
+    let now: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
+        .fetch_one(&mut *tx)
+        .await?;
     let counter = verified_counter(crypto, &factor, code, now)?;
     let expires_at = now + Duration::minutes(STEP_UP_TTL_MINUTES);
     sqlx::query(
@@ -110,7 +113,7 @@ async fn confirm_enrollment(
     .bind(factor.0)
     .execute(&mut *tx)
     .await?;
-    persist_session_grant(&mut tx, session.0, session.1, expires_at).await?;
+    let expires_at = persist_session_grant(&mut tx, session.0, session.1, expires_at).await?;
     audit(&mut tx, session.1, "identity.mfa_totp_enrolled").await?;
     tx.commit().await?;
     Ok(expires_at)
@@ -123,11 +126,14 @@ pub(crate) async fn grant_step_up(
     crypto: &MfaCrypto,
     session_token: &str,
     code: &str,
-    now: DateTime<Utc>,
 ) -> anyhow::Result<DateTime<Utc>> {
     let mut tx = db.begin().await?;
-    let session = active_session(&mut tx, session_token, now).await?;
+    let session = active_session(&mut tx, session_token).await?;
     let factor = factor_for_update(&mut tx, session.1, "active").await?;
+    active_session(&mut tx, session_token).await?;
+    let now: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
+        .fetch_one(&mut *tx)
+        .await?;
     let counter = verified_counter(crypto, &factor, code, now)?;
     if factor.4.is_some_and(|last| counter <= last as u64) {
         anyhow::bail!("MFA code replay rejected");
@@ -138,7 +144,7 @@ pub(crate) async fn grant_step_up(
         .execute(&mut *tx)
         .await?;
     let expires_at = now + Duration::minutes(STEP_UP_TTL_MINUTES);
-    persist_session_grant(&mut tx, session.0, session.1, expires_at).await?;
+    let expires_at = persist_session_grant(&mut tx, session.0, session.1, expires_at).await?;
     tx.commit().await?;
     Ok(expires_at)
 }
@@ -157,14 +163,12 @@ fn verified_counter(
 async fn active_session(
     tx: &mut Transaction<'_, Postgres>,
     session_token: &str,
-    now: DateTime<Utc>,
 ) -> anyhow::Result<(Uuid, Uuid)> {
     crate::session_locks::session(tx, session_token).await?;
     Ok(sqlx::query_as(
-        "SELECT s.id, s.principal_id FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > $2 AND p.status='active' FOR UPDATE OF s,p",
+        "SELECT s.id, s.principal_id FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > clock_timestamp() AND p.status='active' FOR UPDATE OF s,p",
     )
     .bind(hash_token(session_token))
-    .bind(now)
     .fetch_one(&mut **tx)
     .await?)
 }
@@ -188,14 +192,14 @@ async fn persist_session_grant(
     session_id: Uuid,
     principal_id: Uuid,
     expires_at: DateTime<Utc>,
-) -> anyhow::Result<()> {
-    sqlx::query(
-        "UPDATE identity_sessions SET step_up_expires_at = $1,step_up_method='totp',step_up_at=clock_timestamp() WHERE id = $2",
+) -> anyhow::Result<DateTime<Utc>> {
+    let expires_at = sqlx::query_scalar(
+        "UPDATE identity_sessions SET step_up_expires_at = LEAST(expires_at,$1),step_up_method='totp',step_up_at=clock_timestamp() WHERE id = $2 AND revoked_at IS NULL AND expires_at>clock_timestamp() RETURNING step_up_expires_at",
     )
     .bind(expires_at)
     .bind(session_id)
-    .execute(&mut **tx)
+    .fetch_one(&mut **tx)
     .await?;
     audit(tx, principal_id, "identity.step_up_granted").await?;
-    Ok(())
+    Ok(expires_at)
 }

@@ -73,11 +73,19 @@ pub async fn finish(
         .bind(principal)
         .execute(&mut *tx)
         .await?;
+    event(&mut tx, principal, "identity.mfa_recovered").await?;
+    // Revocation and notification writes can wait too; expiry invalidates the
+    // entire replacement, including those writes, until this authorization point.
+    if owner(&mut tx, token).await? != (session, principal)
+        || !crate::webauthn::challenge::consume(&mut tx, ceremony, principal, "registration")
+            .await?
+    {
+        return Err(RecoveryError::Invalid);
+    }
     sqlx::query("DELETE FROM identity_mfa_recovery_sessions WHERE id=$1")
         .bind(session)
         .execute(&mut *tx)
         .await?;
-    event(&mut tx, principal, "identity.mfa_recovered").await?;
     tx.commit().await?;
     Ok(id)
 }

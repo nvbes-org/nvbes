@@ -77,6 +77,19 @@ trois parcours, la session du step-up et de l'enrollment, la fraîcheur primaire
 pour le premier facteur et la preuve forte pour un facteur supplémentaire.
 Ce sont des preuves de transactions sous contention, pas un benchmark de charge.
 
+Les mêmes refus s'appliquent à TOTP et à la récupération MFA. La confirmation
+TOTP revalide l'autorisation après le verrou du facteur, puis active celui-ci
+uniquement si son enrollment n'a pas expiré. La vérification du code de step-up
+utilise l'heure PostgreSQL relue après ce verrou, sans heure fournie par
+l'adaptateur HTTP. Les grants TOTP ne dépassent pas l'échéance de leur session.
+
+La génération des codes de secours revalide la preuve forte après ses écritures
+transactionnelles ; leur rédemption revalide la preuve primaire avant de
+révoquer les sessions ordinaires. Le remplacement de facteurs relit la session
+de récupération et consomme conditionnellement son challenge avant de terminer.
+Une expiration annule aussi la consommation du code, les révocations, les
+notifications et les nouveaux facteurs de la transaction concernée.
+
 Les tests PostgreSQL couvrent le refus du mot de passe, un vrai enrôlement et
 une confirmation TOTP permettant de reprendre le même consentement, le refus
 TOTP sous recent_webauthn, la limite d'expiration signée, le vieillissement du
