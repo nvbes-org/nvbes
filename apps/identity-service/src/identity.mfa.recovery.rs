@@ -88,10 +88,11 @@ pub async fn redeem(
         return Err(RecoveryError::Invalid);
     }
     let mut tx = db.begin().await?;
-    crate::session_locks::session(&mut tx, session_token).await?;
-    let principal: Option<Uuid> = sqlx::query_scalar("SELECT s.principal_id FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND s.authenticated_at>clock_timestamp()-interval '5 minutes' AND p.status='active' FOR UPDATE OF s,p")
-        .bind(hash(session_token)).fetch_optional(&mut *tx).await?;
-    let principal = principal.ok_or(RecoveryError::Invalid)?;
+    let principal = crate::authentication_session::load(&mut tx, session_token)
+        .await?
+        .filter(|session| session.recent_primary)
+        .map(|session| session.principal)
+        .ok_or(RecoveryError::Invalid)?;
     let consumed=sqlx::query("UPDATE identity_mfa_recovery_codes SET consumed_at=clock_timestamp() WHERE principal_id=$1 AND code_hash=$2 AND consumed_at IS NULL")
         .bind(principal).bind(code_hash(principal,code)).execute(&mut *tx).await?.rows_affected();
     if consumed != 1 {

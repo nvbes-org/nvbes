@@ -139,7 +139,8 @@ async fn wrong_owner_stale_authentication_and_invalid_labels_are_rejected() {
             .await
             .is_err()
     );
-    sqlx::query("UPDATE identity_sessions SET step_up_at=clock_timestamp()-interval '6 minutes' WHERE id=$1").bind(f.session).execute(&f.db).await.unwrap();
+    // Stale but coherent: the primary login must precede the step-up.
+    sqlx::query("UPDATE identity_sessions SET authenticated_at=clock_timestamp()-interval '10 minutes',step_up_at=clock_timestamp()-interval '6 minutes' WHERE id=$1").bind(f.session).execute(&f.db).await.unwrap();
     assert!(matches!(
         revoke(&f.db, &f.token, f.ids[0]).await,
         Err(WebauthnError::InvalidSession)

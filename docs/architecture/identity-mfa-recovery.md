@@ -8,11 +8,21 @@ configuration d'activation que les opérations OAuth hébergées ; aucune ouvert
 publique ou infrastructure n'est effectuée par ce changement. Les méthodes SDK
 sont raccordées et testées, y compris un parcours Chromium HTTPS avec les
 services réels et des authentificateurs virtuels. L'interface reste à livrer.
-Les notifications sont des intentions
-persistées dans l'outbox, pas des emails envoyés. Cette capacité n'est pas
+Les notifications passent par une file durable et un dispatcher dont le trajet
+gRPC vers Email est validé avec un fournisseur de capture locale. La livraison
+dans une boîte réelle n'est pas attestée. Cette capacité n'est pas
 déclarée complète pour les utilisateurs et ne clôture pas le lot B.
 
 ## Contrat HTTP
+
+Les preuves de session sont validées avant autorisation avec l'heure PostgreSQL :
+méthode primaire reconnue, dates non futures, step-up complet et postérieur à la
+connexion primaire. Génération des codes et gestion des facteurs exigent une
+preuve forte de moins de cinq minutes. Consommer un code exige une connexion
+primaire de moins de cinq minutes ; un step-up récent ne rafraîchit pas cette
+connexion. Une preuve incohérente est refusée avant consommation du code ou
+mutation des facteurs. La lecture des facteurs accepte une session valide dont
+la preuve forte est ancienne, mais pas une preuve incohérente.
 
 Toutes les routes utilisent POST JSON, Origin exact et cookies same-origin.
 Les réponses sont non cachables, sans referrer ; aucun Bearer ou CORS n'est
@@ -130,7 +140,8 @@ Les messages texte/HTML décrivent les effets réels, sans code ni jeton ; notam
 MfaRecovered ne prétend pas qu'un mot de passe a été changé. Le constructeur
 Identity fixe idempotence par événement/destinataire et échéance à partir de
 l'événement (24 heures). La preuve réseau avec Email et la livraison restent
-à compléter ; la file conserve la même commande pendant les reprises.
+à compléter pour le fournisseur externe ; la preuve réseau locale est décrite
+dans le contrat du dispatcher. La file conserve la même commande pendant les reprises.
 Le consommateur Email compatible doit précéder l'activation de ce producteur.
 
 Les tests vérifient remplacement des codes, propriété du compte, fraîcheur,

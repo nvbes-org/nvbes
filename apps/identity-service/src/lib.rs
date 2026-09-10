@@ -34,6 +34,8 @@ pub mod webauthn;
 
 #[path = "identity.authentication.rs"]
 mod authentication;
+#[path = "identity.authentication.session.rs"]
+mod authentication_session;
 #[path = "identity.authentication.enrollment.rs"]
 mod enrollment_policy;
 #[path = "identity.authentication.management.rs"]

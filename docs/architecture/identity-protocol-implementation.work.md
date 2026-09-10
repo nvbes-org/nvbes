@@ -13,6 +13,36 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Validation commune des preuves de gestion MFA — 2026-09-10
+
+La politique d'enrôlement, la gestion des facteurs et la consommation des codes
+de récupération chargent désormais une preuve de session commune, sous verrou
+principal puis session. Authentication.validate vérifie les méthodes, la cohérence
+du triplet step-up, son ordre par rapport à la connexion primaire et l'absence de
+dates futures. La comparaison utilise l'heure PostgreSQL, source des preuves.
+Les anciennes conditions SQL de fraîcheur n'excluaient pas les dates futures.
+
+Le premier facteur exige une connexion primaire récente ; les facteurs suivants
+exigent une preuve forte récente. La consommation d'un code de récupération
+exige la fraîcheur primaire, sans la déduire d'un step-up. Les lectures sans
+exigence forte acceptent encore les preuves anciennes cohérentes. Les tests
+vérifient les refus avant mutation et la conservation des codes/sessions après
+un refus de récupération. Deux anciennes fixtures de preuves périmées sont
+corrigées : la connexion doit précéder le step-up pour rester cohérente.
+
+La politique MFA obligatoire par action/opérateur reste à compléter ; cette
+tranche unifie la validation des preuves, sans annoncer cette politique livrée.
+
+Validation finale : cargo check --workspace sans avertissement ; 196 tests
+bibliothèque, 24 tests runtime et trois gardes de base réussissent. Un test
+navigateur interactif reste ignoré dans Cargo ; aucune nouvelle fixture graphique
+n'est exécutée pour ce changement de validation serveur. Une exécution sur
+l'ancien conteneur a échoué pendant les migrations avec PostgreSQL 53100
+(mémoire partagée saturée). La validation finale utilise un conteneur neuf
+postgres:17-alpine, mémoire 512 MiB, shm 256 MiB, loopback 15434 et base
+nvbes_identity_test_assurance, supprimé après validation. Aucun contrôle métier
+n'est assoupli pour contourner cet incident local.
+
 ## Retrait des anciens appels MFA du SDK — 2026-09-10
 
 Le SDK web n'expose plus listMfaFactors, removeMfaFactor, stepUp ni
