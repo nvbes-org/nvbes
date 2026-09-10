@@ -199,11 +199,40 @@ active en remplacement ; le serveur refuse le dernier facteur avec HTTP 409.
 Le succès confirme aussi la révocation de **toutes les sessions du compte** :
 engager une nouvelle autorisation OAuth. Le secret chiffré du facteur est effacé.
 Les exports autonomes sont `listHostedTotpFactors` et `revokeHostedTotpFactor`.
-Les anciennes méthodes génériques `listMfaFactors`/`removeMfaFactor` restent
-historiques ; utiliser ces méthodes dédiées pour le TOTP actif.
+Les anciennes méthodes génériques `listMfaFactors`/`removeMfaFactor` sont
+supprimées ; utiliser ces méthodes dédiées pour le TOTP actif.
 Le mode `verifyBrowserTotp(browser, clientOrigin, true)` sur une fixture neuve
 teste la gestion : liste, refus du dernier facteur, ajout d'une passkey virtuelle,
 révocation TOTP puis refus de la session et du jeton Account déjà émis.
+
+### Migration des méthodes MFA génériques
+
+Les méthodes et fonctions `listMfaFactors`, `removeMfaFactor`, `stepUp` et
+`requestEmailStepUpCode` sont supprimées : elles ciblaient `/auth/mfa/factors`
+et `/auth/step-up*`, absents du runtime actif. Aucun consommateur actif du dépôt
+ne les utilisait. Les consommateurs externes de l'alpha doivent migrer :
+
+| Ancien appel                                           | Parcours actif                                                                           |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `listMfaFactors`                                       | `listPasskeys(sessionCsrf)` et `listTotpFactors(sessionCsrf)`                            |
+| `removeMfaFactor`                                      | `revokePasskey(sessionCsrf, id)` ou `revokeTotpFactor(sessionCsrf, id)` selon le facteur |
+| `stepUp` avec TOTP                                     | `stepUpTotp(sessionCsrf, code)`                                                          |
+| `stepUp` avec WebAuthn                                 | `stepUpPasskey(sessionCsrf, options?)`, qui orchestre la cérémonie navigateur            |
+| `stepUp` avec code de récupération                     | `redeemRecoveryCode(sessionCsrf, code)`, puis récupération MFA et reconnexion            |
+| `stepUp` avec mot de passe ou `requestEmailStepUpCode` | Aucun équivalent de preuve forte ; utiliser un facteur actif                             |
+
+Un code de récupération n'accorde pas de step-up. Le mot de passe reste une
+authentification primaire. La fraîcheur et l'assurance nécessaires à chaque
+action sont décidées côté serveur, jamais par un `purpose` choisi dans le SDK.
+Les réponses de liste sont dédiées à chaque type de facteur ; il n'existe plus
+de pagination générique ni de `mfa_enabled` inféré par le SDK.
+
+Les transports historiques `authHeaders`, `jsonAuthHeaders`, `authCredentials`,
+`handleMfaResponseError`, `MfaError` et `mfaErrorMessage` sont également retirés.
+Utiliser les méthodes hébergées avec CSRF explicite sur l'origine Identity et
+traiter leurs erreurs `HostedIdentityError`. Elles n'acceptent pas un Bearer en
+remplacement d'une preuve de session. Les tests des endpoints archivés sont
+retirés ; les suites des parcours hébergés restent les preuves actives.
 
 ### Migration des méthodes WebAuthn
 

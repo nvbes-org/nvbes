@@ -13,6 +13,22 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Retrait des anciens appels MFA du SDK — 2026-09-10
+
+Le SDK web n'expose plus listMfaFactors, removeMfaFactor, stepUp ni
+requestEmailStepUpCode. Ces appels ciblaient les endpoints archivés auth/mfa
+et auth/step-up, sans consommateur actif du monorepo. Leur transport historique
+Bearer/cookie, leurs erreurs et leurs treize tests simulant ces endpoints sont
+retirés. Les parcours dédiés passkey, TOTP et récupération existent déjà ; le
+README décrit la migration, y compris l'absence de step-up par code de récupération,
+mot de passe seul ou email. Aucun alias ne convertit implicitement ces preuves.
+
+Validation : 107 tests sur 22 fichiers passent, ainsi que les cibles Nx
+identity-sdk-web typecheck/lint/build. La recherche dans les sources ne trouve
+plus d'appel auth/mfa ou auth/step-up. Aucun Rust ni parcours hébergé n'est modifié ;
+cargo check et la fixture navigateur ne sont donc pas relancés pour ce retrait.
+La politique MFA obligatoire côté serveur et les interfaces restent à livrer.
+
 ## Preuve réseau des notifications MFA — 2026-09-10
 
 La cible Nx identity-service:test:email-runtime compile et lance le vrai worker

@@ -28,8 +28,6 @@ import {
   revokeHostedPasskey,
   type HostedPasskey,
 } from './hosted.webauthn.credentials';
-import type { MfaFactorView } from '@nvbes/identity-sdk-core/src/types';
-import { listMfaFactors, removeMfaFactor, stepUp } from './mfa';
 import {
   exchangeAuthorizationCode,
   type AuthorizationCodeTokenResponse,
@@ -116,18 +114,6 @@ export class NvbesIdentityWeb {
     if (!sessionCsrfToken)
       throw new Error('Identity logout requires an explicit session CSRF token.');
     await logoutHostedSession({ baseUrl: this.config.baseUrl }, sessionCsrfToken);
-  }
-
-  async listMfaFactors(
-    token?: string,
-    options: { limit?: number; cursor?: string } = {},
-  ): Promise<{
-    factors: MfaFactorView[];
-    mfa_enabled: boolean;
-    next_cursor: string | null;
-    has_more: boolean;
-  }> {
-    return listMfaFactors(this.config.baseUrl, token, options);
   }
 
   startTotpEnrollment(sessionCsrf: string): Promise<HostedTotpEnrollment> {
@@ -227,23 +213,6 @@ export class NvbesIdentityWeb {
     options?: WebauthnCreateOptions,
   ): Promise<HostedMfaRecovered> {
     return completeHostedMfaRecovery({ baseUrl: this.config.baseUrl }, recovery, label, options);
-  }
-
-  async removeMfaFactor(factorId: string, token?: string): Promise<void> {
-    return removeMfaFactor(this.config.baseUrl, factorId, token);
-  }
-
-  async stepUp(
-    credentials: {
-      password?: string;
-      totpCode?: string;
-      webauthnResponse?: unknown;
-      webauthnChallengeId?: string;
-      recoveryCode?: string;
-    },
-    token?: string,
-  ): Promise<{ success: boolean; valid_until: string }> {
-    return stepUp(this.config.baseUrl, credentials, token);
   }
 }
 

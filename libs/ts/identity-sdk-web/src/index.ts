@@ -15,7 +15,6 @@ export * from './hosted.totp';
 export * from './hosted.totp.management';
 export * from './hosted.webauthn';
 export * from './hosted.webauthn.credentials';
-export * from './mfa';
 export * from './oauth.authorization-code';
 export * from './oauth.authorization-request';
 export * from './oauth.session';
