@@ -11,6 +11,8 @@ pub enum OAuthError {
     InvalidTarget,
     #[error("invalid_grant")]
     InvalidGrant,
+    #[error("invalid_dpop_proof")]
+    InvalidDpopProof,
     #[error("unsupported_response_type")]
     UnsupportedResponseType,
     #[error("access_denied")]

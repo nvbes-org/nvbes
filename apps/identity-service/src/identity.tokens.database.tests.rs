@@ -147,20 +147,44 @@ async fn refresh_rotation_rejects_replay_and_revokes_the_family() {
     let first = service.issue_grant(&db, &clients, &grant).await.unwrap();
     let first_refresh = first.refresh_token.clone().unwrap();
     let second = service
-        .refresh(&db, &clients, &first_refresh)
+        .refresh(
+            &db,
+            &clients,
+            super::RefreshRequest {
+                refresh_token: &first_refresh,
+                client_id: "account-web",
+                dpop_proof: None,
+            },
+        )
         .await
         .unwrap();
     let second_refresh = second.refresh_token.clone().unwrap();
     assert_ne!(first_refresh, second_refresh);
     assert!(
         service
-            .refresh(&db, &clients, &first_refresh)
+            .refresh(
+                &db,
+                &clients,
+                super::RefreshRequest {
+                    refresh_token: &first_refresh,
+                    client_id: "account-web",
+                    dpop_proof: None
+                }
+            )
             .await
             .is_err()
     );
     assert!(
         service
-            .refresh(&db, &clients, &second_refresh)
+            .refresh(
+                &db,
+                &clients,
+                super::RefreshRequest {
+                    refresh_token: &second_refresh,
+                    client_id: "account-web",
+                    dpop_proof: None
+                }
+            )
             .await
             .is_err()
     );

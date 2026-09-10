@@ -1,18 +1,70 @@
+use chrono::{DateTime, Utc};
 use nvbes_dpop::{jwk_thumbprint, verify_dpop_proof};
 use sha2::{Digest, Sha256};
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 
 use super::error::OAuthError;
 
-/// Verify the proof before passing its thumbprint into code exchange. The
-/// caller must persist/check the proof `jti` for replay at the same boundary.
-pub fn verify_code_proof(proof: &str, method: &str, url: &str) -> Result<String, OAuthError> {
-    if proof.len() > 16_384 || method.is_empty() || url.is_empty() {
-        return Err(OAuthError::InvalidRequest);
+const PROOF_SKEW_SECONDS: i64 = 300;
+
+pub(crate) struct VerifiedTokenProof {
+    jkt: String,
+    jti_hash: Vec<u8>,
+    expires_at: DateTime<Utc>,
+}
+
+impl VerifiedTokenProof {
+    pub(crate) fn thumbprint(&self) -> &str {
+        &self.jkt
     }
-    let verified =
-        verify_dpop_proof(proof, method, url, None, 300).map_err(|_| OAuthError::InvalidRequest)?;
-    Ok(jwk_thumbprint(&verified.jwk))
+
+    /// Consume inside the caller's transaction so proof and token state commit together.
+    pub(crate) async fn consume(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+    ) -> Result<(), OAuthError> {
+        if self.expires_at <= Utc::now() {
+            return Err(OAuthError::InvalidDpopProof);
+        }
+        let inserted: Option<Vec<u8>> = sqlx::query_scalar(
+            "INSERT INTO identity_dpop_replay_keys(jti_hash,jkt_hash,expires_at) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING jti_hash",
+        )
+        .bind(&self.jti_hash)
+        .bind(Sha256::digest(self.jkt.as_bytes()).to_vec())
+        .bind(self.expires_at)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(|_| OAuthError::Unavailable)?;
+        inserted.map(|_| ()).ok_or(OAuthError::InvalidDpopProof)
+    }
+}
+
+pub(crate) fn verify_token_proof(
+    proof: &str,
+    method: &str,
+    url: &str,
+) -> Result<VerifiedTokenProof, OAuthError> {
+    if proof.is_empty() || proof.len() > 16_384 || method.is_empty() || url.is_empty() {
+        return Err(OAuthError::InvalidDpopProof);
+    }
+    let verified = verify_dpop_proof(proof, method, url, None, PROOF_SKEW_SECONDS)
+        .map_err(|_| OAuthError::InvalidDpopProof)?;
+    if verified.claims.jti.is_empty() || verified.claims.jti.len() > 256 {
+        return Err(OAuthError::InvalidDpopProof);
+    }
+    // Future-dated proofs remain valid until iat + skew, inclusive.
+    let expires_at = DateTime::from_timestamp(verified.claims.iat + PROOF_SKEW_SECONDS + 1, 0)
+        .ok_or(OAuthError::InvalidDpopProof)?;
+    Ok(VerifiedTokenProof {
+        jkt: jwk_thumbprint(&verified.jwk),
+        jti_hash: Sha256::digest(verified.claims.jti.as_bytes()).to_vec(),
+        expires_at,
+    })
+}
+
+/// Cryptographic validation only; token boundaries must also consume the proof.
+pub fn verify_code_proof(proof: &str, method: &str, url: &str) -> Result<String, OAuthError> {
+    Ok(verify_token_proof(proof, method, url)?.jkt)
 }
 
 pub async fn verify_and_consume_code_proof(
@@ -21,23 +73,11 @@ pub async fn verify_and_consume_code_proof(
     method: &str,
     url: &str,
 ) -> Result<String, OAuthError> {
-    if proof.len() > 16_384 || method.is_empty() || url.is_empty() {
-        return Err(OAuthError::InvalidRequest);
-    }
-    let verified =
-        verify_dpop_proof(proof, method, url, None, 300).map_err(|_| OAuthError::InvalidRequest)?;
-    let jkt = jwk_thumbprint(&verified.jwk);
-    let jti_hash = Sha256::digest(verified.claims.jti.as_bytes()).to_vec();
-    let jkt_hash = Sha256::digest(jkt.as_bytes()).to_vec();
-    let inserted: Option<Vec<u8>> = sqlx::query_scalar(
-        "INSERT INTO identity_dpop_replay_keys(jti_hash,jkt_hash,expires_at) VALUES($1,$2,clock_timestamp()+interval '5 minutes') ON CONFLICT DO NOTHING RETURNING jti_hash",
-    )
-    .bind(jti_hash)
-    .bind(jkt_hash)
-    .fetch_optional(db)
-    .await
-    .map_err(|_| OAuthError::Unavailable)?;
-    inserted.map(|_| jkt).ok_or(OAuthError::InvalidRequest)
+    let verified = verify_token_proof(proof, method, url)?;
+    let mut tx = db.begin().await.map_err(|_| OAuthError::Unavailable)?;
+    verified.consume(&mut tx).await?;
+    tx.commit().await.map_err(|_| OAuthError::Unavailable)?;
+    Ok(verified.jkt)
 }
 
 #[cfg(test)]

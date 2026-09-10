@@ -1,8 +1,8 @@
 # Jetons du service Identity actif
 
-Ce document décrit la bibliothèque implémentée dans le service actif. Les routes
-publiques et les consommateurs Account/Billing doivent encore être raccordés
-dans les [lots A à D](identity-protocol-implementation.work.md).
+Ce document décrit la bibliothèque et les routes OAuth montées sous configuration
+dans le service actif. Les parcours complets et les consommateurs Account/Billing
+restent à terminer dans les [lots A à D](identity-protocol-implementation.work.md).
 
 ## Émission et révocation
 
@@ -30,6 +30,30 @@ d'un code invalide donc aussi les jetons déjà émis. En cas de panne du stocka
 l'introspection renvoie une erreur, jamais un résultat actif par défaut. Les
 consommateurs exigeant une autorisation actuelle devront refuser l'opération si
 ce contrôle est indisponible. Leur intégration fait encore partie des lots.
+
+## Renouvellement lié au client et à DPoP
+
+POST `/oauth/token` avec `grant_type=refresh_token` exige `client_id` et
+`refresh_token`. Le registre courant et le client du grant doivent correspondre.
+Pour un grant lié à DPoP, chaque renouvellement exige une nouvelle preuve ES256
+signée par la même clé, pour POST et l'URL canonique du token endpoint. Les preuves
+manquantes, invalides, dupliquées ou rejouées renvoient `invalid_dpop_proof`.
+La clé liée au grant ne peut pas être remplacée pendant un refresh.
+
+La transaction verrouille d'abord le grant, puis le refresh. La consommation du
+`jti`, la rotation du secret, l'émission et l'audit sont validés ensemble. Un
+échec de signature annule ces changements. Les marqueurs DPoP sont conservés
+jusqu'à la fin de la fenêtre de validité de la preuve, y compris la tolérance
+d'horloge. Le rejeu d'un ancien secret avec le bon client et une nouvelle preuve
+valide révoque sa famille et son grant. Une requête sans la bonne clé ne peut pas
+déclencher cette révocation ; le rejeu de la seule preuve est refusé sans rotation.
+
+Les jetons restent limités à la session active, aux scopes et à l'audience du
+grant. Les réponses de jetons et erreurs de protocole portent `no-store` et
+`no-cache`. Une indisponibilité PostgreSQL donne HTTP 503 et
+`temporarily_unavailable`, sans émission de secours. Ce raccordement serveur
+ne prouve pas encore le support DPoP des SDK et des serveurs de ressources.
+La liaison du refresh à la clé suit la [RFC 9449, section 5](https://www.rfc-editor.org/rfc/rfc9449.html#section-5).
 
 ## Preuves d'authentification
 

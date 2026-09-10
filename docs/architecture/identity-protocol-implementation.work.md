@@ -13,6 +13,27 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Renouvellement et DPoP — 2026-09-10
+
+Le refresh HTTP exige désormais le client enregistré et, pour un grant DPoP,
+une preuve cryptographique de la même clé. Les rotations et rejeux de générations
+différentes prennent les verrous dans le même ordre. La consommation de preuve,
+la signature, la rotation et l'audit sont dans une transaction PostgreSQL.
+Les headers DPoP dupliqués sont refusés sur le token endpoint ; les réponses de
+jetons sont non stockables. Les erreurs de stockage deviennent HTTP 503.
+
+Les tests actifs traversent le routeur token et PostgreSQL : mauvais client,
+clé/méthode/URL erronées, preuve absente ou dupliquée, rejeu de preuve, rejeu du
+refresh, concurrence, retour arrière après échec de signature, expiration,
+révocation de session et suspension de principal. Ils ne prouvent pas encore
+un parcours navigateur avec SDK et API de ressource.
+
+Validation de cette tranche : `cargo check --workspace` sans avertissement ;
+`identity-service:test:database` passe avec 62 tests de bibliothèque, 22 tests
+du runtime et 3 tests du garde de base. Les migrations 0001–0013 sont appliquées
+dans un conteneur PostgreSQL 17 dédié sur loopback, sans utiliser les bases
+applicatives. Le passage des migrations WebAuthn ne valide pas ses cérémonies.
+
 ## Correction HTTP vérifiée au 2026-09-10
 
 Les retours d'autorisation utilisent désormais HTTP 303, avec `Cache-Control:
@@ -32,7 +53,7 @@ navigateur ne sont pas exécutés dans cette tranche.
 
 Le tableau et les résultats ci-dessous restent un suivi historique partiel :
 ils ne constituent pas une validation de bout en bout des lots A à D. Le
-raccordement WebAuthn, les protections refresh/DPoP, UserInfo et les contrôles
+raccordement WebAuthn, DPoP dans les SDK/API, UserInfo et les contrôles
 de session HTTP restent notamment à terminer et à tester.
 
 ## État historique au 2026-09-07, enrichi pendant l'implémentation

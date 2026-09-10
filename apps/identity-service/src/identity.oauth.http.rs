@@ -10,7 +10,10 @@ use axum::{
 };
 #[path = "identity.oauth.http.session.rs"]
 mod session;
+#[path = "identity.oauth.http.token.rs"]
+mod token;
 use session::{logout, step_up_totp};
+use token::token;
 
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -19,8 +22,6 @@ use crate::{
     browser::BrowserSecurity,
     oauth::{
         clients::ClientRegistry,
-        codes::CodeExchange,
-        dpop::verify_and_consume_code_proof,
         error::OAuthError,
         interactions,
         metadata::provider_metadata,
@@ -58,16 +59,6 @@ struct LoginForm {
     interaction: String,
     email: String,
     password: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct TokenForm {
-    grant_type: String,
-    code: Option<String>,
-    client_id: Option<String>,
-    redirect_uri: Option<String>,
-    code_verifier: Option<String>,
-    refresh_token: Option<String>,
 }
 
 pub fn token_router(
@@ -350,65 +341,6 @@ async fn par(
     ))
 }
 
-async fn token(
-    State(state): State<TokenState>,
-    headers: HeaderMap,
-    Form(form): Form<TokenForm>,
-) -> Result<impl IntoResponse, ProtocolError> {
-    if form.grant_type == "refresh_token" {
-        let refresh_token = form
-            .refresh_token
-            .as_deref()
-            .filter(|value| !value.is_empty())
-            .ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-        let response = state
-            .tokens
-            .refresh(&state.db, &state.clients, refresh_token)
-            .await
-            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidGrant))?;
-        return Ok(Json(response));
-    }
-    if form.grant_type != "authorization_code"
-        || form.code.as_deref().is_none_or(str::is_empty)
-        || form.client_id.as_deref().is_none_or(str::is_empty)
-        || form.redirect_uri.as_deref().is_none_or(str::is_empty)
-        || form.code_verifier.as_deref().is_none_or(str::is_empty)
-    {
-        return Err(ProtocolError::OAuth(OAuthError::InvalidRequest));
-    }
-    let verified_dpop_jkt = match headers.get("dpop").and_then(|value| value.to_str().ok()) {
-        Some(proof) => Some(
-            verify_and_consume_code_proof(&state.db, proof, "POST", &state.endpoint)
-                .await
-                .map_err(ProtocolError::OAuth)?,
-        ),
-        None => None,
-    };
-    let grant = crate::oauth::codes::exchange(
-        &state.db,
-        &state.clients,
-        CodeExchange {
-            code: form.code.as_deref().unwrap_or_default(),
-            client_id: form.client_id.as_deref().unwrap_or_default(),
-            redirect_uri: form.redirect_uri.as_deref().unwrap_or_default(),
-            verifier: form.code_verifier.as_deref().unwrap_or_default(),
-            verified_dpop_jkt: verified_dpop_jkt.as_deref(),
-        },
-    )
-    .await
-    .map_err(|error| match error {
-        crate::oauth::store::StoreError::Protocol(error) => ProtocolError::OAuth(error),
-        _ => ProtocolError::OAuth(OAuthError::Unavailable),
-    })?;
-    Ok(Json(
-        state
-            .tokens
-            .issue_grant(&state.db, &state.clients, &grant)
-            .await
-            .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?,
-    ))
-}
-
 async fn userinfo(
     State(state): State<TokenState>,
     headers: HeaderMap,
@@ -459,7 +391,12 @@ impl IntoResponse for ProtocolError {
     fn into_response(self) -> axum::response::Response {
         let ProtocolError::OAuth(error) = self;
         (
-            StatusCode::BAD_REQUEST,
+            if error == OAuthError::Unavailable {
+                StatusCode::SERVICE_UNAVAILABLE
+            } else {
+                StatusCode::BAD_REQUEST
+            },
+            [("cache-control", "no-store"), ("pragma", "no-cache")],
             Json(serde_json::json!({"error": error.to_string()})),
         )
             .into_response()
