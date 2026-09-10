@@ -21,8 +21,11 @@ pub use refresh::RefreshRequest;
 #[path = "identity.tokens.exchange.rs"]
 mod exchange;
 pub use exchange::AuthorizationCodeRequest;
+#[path = "identity.tokens.logout.rs"]
+mod logout;
 #[path = "identity.tokens.userinfo.rs"]
 mod userinfo;
+pub use logout::LogoutHint;
 
 pub const ACCESS_TOKEN_TTL_SECONDS: u64 = 15 * 60;
 

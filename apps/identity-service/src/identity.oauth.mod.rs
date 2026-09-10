@@ -20,6 +20,8 @@ pub mod interactions;
 mod limits;
 #[path = "identity.oauth.login.rs"]
 mod login;
+#[path = "identity.oauth.logout_request.rs"]
+pub mod logout_request;
 #[path = "identity.oauth.maintenance.rs"]
 pub mod maintenance;
 #[path = "identity.oauth.metadata.rs"]

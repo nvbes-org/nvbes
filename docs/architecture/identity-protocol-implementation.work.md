@@ -13,6 +13,21 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Logout RP : validation du hint et du retour enregistré — 2026-09-10
+
+Le service sépare maintenant la vérification d'un `id_token_hint` de celle d'un
+jeton d'accès : un ID Token expiré reste un indice signé, jamais une capacité
+d'authentification. Signature, issuer, type, identifiants et chronologie sont
+contrôlés ; une clé retirée ne redevient pas acceptable. La politique de demande
+vérifie le client enregistré, son audience signée et le retour exact, avec rejet
+des doublons et encodage de state. Aucun nouveau endpoint n'est exposé.
+
+Huit tests adversariaux sont ajoutés à la suite Identity. La compilation workspace
+passe. Le [contrat de logout RP](identity-rp-logout.md) distingue ces validations
+du raccordement encore requis : session en base, préparation GET/POST, confirmation
+CSRF, UI, SDK, Account, découverte et preuve navigateur. Les lots A–D restent
+ouverts ; les validateurs seuls ne démontrent pas un logout standardisé complet.
+
 ## Rotation des clés : retour arrière et reprise vérifiés — 2026-09-10
 
 La fixture de rotation promeut désormais la nouvelle clé dans les trois services,
