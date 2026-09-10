@@ -8,6 +8,7 @@ import { verifyResourceDpop } from './runtime-resource-dpop.mjs';
 import { oauthClient } from './runtime-oauth-client.mjs';
 import { verifySdkRefresh } from './runtime-sdk-refresh.mjs';
 import { verifyIdentityCors } from './runtime-identity-cors.mjs';
+import { verifyResourceCors } from './runtime-resource-cors.mjs';
 
 const secret = () => randomBytes(32).toString('base64url');
 
@@ -70,6 +71,7 @@ test(
         [`${prefix}_DATABASE_URL`]: databases[service],
         [`${prefix}_BIND_ADDR`]: `127.0.0.1:${new URL(origins[service]).port}`,
         [`${prefix}_PUBLIC_ORIGIN`]: origins[service],
+        [`${prefix}_BROWSER_ORIGINS_JSON`]: JSON.stringify([origins.account]),
         NVBES_IDENTITY_TOKEN_ISSUER: origins.identity,
         NVBES_IDENTITY_TOKEN_KEY_ID: 'runtime-test-key',
         NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM: publicKey,
@@ -140,12 +142,14 @@ test(
       account: `${origins.account}/api/v1/profile`,
       billing: `${origins.billing}/accounts/principal/${seed.principal_id}/billing/overview`,
     };
+    await verifyResourceCors(origins, endpoints);
     const access = async (service, token, expected) => {
       const response = await fetch(endpoints[service], {
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, origin: origins.account },
         signal: AbortSignal.timeout(5000),
       });
       assert.equal(response.status, expected, `${service} protected request`);
+      assert.equal(response.headers.get('access-control-allow-origin'), origins.account);
       return response.json();
     };
     const account = await issue('account', true);

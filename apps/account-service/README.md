@@ -33,6 +33,18 @@ leurs propres fragments et suppressions.
 Le runtime ne fournit aucune inscription, credential, abonnement ou capacité
 Enterprise.
 
+Pour les appels navigateur, définir `NVBES_ACCOUNT_BROWSER_ORIGINS_JSON`, par
+exemple `["https://account.example"]`. Valeur absente : `[]`, aucun accès CORS.
+Les origines doivent être canoniques, sans slash final, chemin, credentials ou
+wildcard ; HTTPS est obligatoire sauf HTTP loopback en environnement
+`development` ou `test`. La liste est limitée à 32 entrées et 16 Kio.
+Les routes métier autorisent GET/POST/PUT et les headers Content-Type,
+Authorization, DPoP et Idempotency-Key, sans cookies interorigines. Les réponses
+exposent WWW-Authenticate, DPoP-Nonce et Retry-After, y compris en cas de refus.
+Health, métriques et autorisation Billing interne restent sans CORS. La liste
+doit correspondre aux sites autorisés dans le registre OAuth Identity ; elle
+ne remplace pas l'authentification ni les contrôles métier.
+
 Account décide également de l'accès aux comptes facturés : propriétaire d'un
 profil personnel actif ou propriétaire d'une équipe active. Le endpoint interne
 `POST /internal/v1/billing/authorize` est activé uniquement par

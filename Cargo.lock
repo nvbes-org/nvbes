@@ -3184,6 +3184,7 @@ dependencies = [
  "chrono",
  "jsonwebtoken",
  "metrics-exporter-prometheus",
+ "nvbes-core",
  "nvbes-dpop",
  "nvbes-identity-sdk",
  "nvbes-observability",

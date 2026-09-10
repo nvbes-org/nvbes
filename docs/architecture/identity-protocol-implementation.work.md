@@ -13,6 +13,27 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## CORS des API Account et Billing — 2026-09-10
+
+Les services acceptent chacun une liste explicite `NVBES_*_BROWSER_ORIGINS_JSON`,
+vide par défaut, validée au démarrage : 32 origines, 16 Kio, HTTPS canonique,
+HTTP loopback seulement en développement/test. Pas de normalisation implicite,
+d'alias automatique, de wildcard ou de cookie interorigines. La primitive
+`core::security::resource_cors` est indépendante de l'ancien AppConfig et de
+sa politique de cookies. Les routes utilisateur exposent les erreurs et headers
+DPoP ; les routes internes, opérateur, webhook, health et métriques sont exclues.
+
+Le scénario des trois binaires contrôle les preflights, les origines refusées,
+les réponses 401 et l'absence de CORS sur les routes exclues. Les appels avec
+jetons valides, révoqués ou de mauvaise audience vérifient également le header
+d'origine. Aucune infrastructure supplémentaire ; la liste est chargée une seule
+fois, sans appel réseau. Le parcours navigateur HTTPS reste à démontrer.
+
+Validation : `cargo check --workspace`, check Billing tous targets, test ciblé
+core (la bibliothèque n'a pas de cible Nx), suites Nx PostgreSQL Account
+(5 tests et 5 gardes) et Billing (10 tests et 3 gardes), intégration des trois
+services (17 tests DPoP et scénario réseau), lint/format JavaScript réussis.
+
 ## CORS des endpoints Identity — 2026-09-10
 
 PAR, token et UserInfo autorisent les origines exactes dérivées des redirections

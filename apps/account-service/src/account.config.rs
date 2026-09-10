@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 #[derive(Clone, PartialEq)]
 pub struct AccountConfig {
+    pub browser_origins: nvbes_core::security::resource_cors::ResourceCorsOrigins,
     pub public_origin: Option<String>,
     pub billing_authorization_secret: Option<String>,
     pub environment: String,
@@ -34,6 +35,11 @@ impl AccountConfig {
         }
         let environment = optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into());
         let development = matches!(environment.as_str(), "development" | "test");
+        let browser_origins = nvbes_core::security::resource_cors::ResourceCorsOrigins::from_json(
+            &std::env::var("NVBES_ACCOUNT_BROWSER_ORIGINS_JSON").unwrap_or_else(|_| "[]".into()),
+            development,
+        )
+        .map_err(|_| ConfigError::Invalid("NVBES_ACCOUNT_BROWSER_ORIGINS_JSON"))?;
         let database_url = optional("NVBES_ACCOUNT_DATABASE_URL")
             .or_else(|| development.then(|| "postgres://localhost/nvbes_account".into()))
             .ok_or(ConfigError::Missing("NVBES_ACCOUNT_DATABASE_URL"))?;
@@ -80,6 +86,7 @@ impl AccountConfig {
             &metrics_token,
         )?;
         Ok(Self {
+            browser_origins,
             public_origin: optional("NVBES_ACCOUNT_PUBLIC_ORIGIN"),
             billing_authorization_secret,
             environment,

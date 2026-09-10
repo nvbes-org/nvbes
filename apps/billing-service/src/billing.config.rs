@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 #[derive(Clone)]
 pub struct BillingConfig {
+    pub browser_origins: nvbes_core::security::resource_cors::ResourceCorsOrigins,
     pub public_origin: Option<String>,
     pub account_authority: Option<crate::authorization::AccountAuthority>,
     pub bind_addr: SocketAddr,
@@ -21,6 +22,12 @@ pub struct BillingConfig {
 
 impl BillingConfig {
     pub fn from_env() -> anyhow::Result<Self> {
+        let environment =
+            std::env::var("NVBES_ENVIRONMENT").unwrap_or_else(|_| "development".into());
+        let browser_origins = nvbes_core::security::resource_cors::ResourceCorsOrigins::from_json(
+            &std::env::var("NVBES_BILLING_BROWSER_ORIGINS_JSON").unwrap_or_else(|_| "[]".into()),
+            matches!(environment.as_str(), "development" | "test"),
+        )?;
         let account_authority = match (
             std::env::var("NVBES_BILLING_ACCOUNT_ORIGIN").ok(),
             std::env::var("NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET").ok(),
@@ -67,6 +74,7 @@ impl BillingConfig {
             std::env::var("NVBES_APP_URL").unwrap_or_else(|_| "https://nvbes.test".to_string());
 
         Ok(Self {
+            browser_origins,
             public_origin: std::env::var("NVBES_BILLING_PUBLIC_ORIGIN").ok(),
             account_authority,
             bind_addr,

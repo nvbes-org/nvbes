@@ -16,6 +16,7 @@ async fn failed_delivery_rolls_back_then_retries_once() {
     crate::database::migrate(&pool).await.unwrap();
     let config = crate::config::BillingConfig {
         public_origin: None,
+        browser_origins: Default::default(),
         account_authority: None,
         bind_addr: "127.0.0.1:0".parse().unwrap(),
         database_url: String::new(),

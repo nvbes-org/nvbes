@@ -59,6 +59,18 @@ Service Billing V1 minimal, opérant exclusivement avec Stripe en mode test.
 
 ## Actions CLI
 
+Les sites autorisés à lire les API sont configurés par
+`NVBES_BILLING_BROWSER_ORIGINS_JSON`, par exemple `["https://account.example"]`.
+Valeur absente : `[]`. Limites : 32 origines et 16 Kio ; chaque origine doit être
+canonique, HTTPS, sans slash final, chemin, credentials ni wildcard. HTTP
+loopback est admis uniquement en environnement `development` ou `test`.
+La politique autorise GET/POST et Content-Type, Authorization, DPoP,
+Idempotency-Key, sans cookies interorigines ; elle expose WWW-Authenticate,
+DPoP-Nonce et Retry-After. Elle couvre les plans et les routes utilisateur,
+jamais les webhooks, l'opérateur, health ou les métriques. Cette liste doit
+rester cohérente avec les sites autorisés par Identity. CORS ne remplace ni
+l'introspection Identity ni l'autorisation Account.
+
 ```bash
 billing-service serve                     # Démarre le serveur HTTP
 billing-service migrate                   # Applique les migrations SQLx
