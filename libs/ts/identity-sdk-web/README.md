@@ -255,6 +255,39 @@ Il vérifie l'inscription d'une clé CTAP2 USB virtuelle sans capacité résiden
 la fermeture de session après annulation, puis la connexion et l'accès Account.
 Il ne prouve pas la compatibilité d'un modèle de clé physique ou de tous les OS.
 
+## Récupération MFA hébergée
+
+Ces méthodes s'exécutent exclusivement sur l'origine Identity :
+
+- `generateRecoveryCodes(sessionCsrf)` retourne dix codes après preuve forte
+  récente. Afficher une fois pour sauvegarde par l'utilisateur ; ne pas les
+  enregistrer dans le stockage navigateur ou les logs.
+- `redeemRecoveryCode(sessionCsrf, code)` exige une connexion primaire récente.
+  Le serveur consomme le code et révoque les sessions ordinaires. Le client
+  efface sa transaction OAuth locale et retourne `{ csrfToken, expiresAt }`.
+  L'interface doit abandonner ses anciennes preuves et jetons ; ne pas reprendre
+  le consentement OAuth avec l'ancienne interaction.
+- `completeMfaRecovery(recovery, label, options?)` inscrit une nouvelle passkey
+  avec vérification utilisateur. Le résultat `{ credentialId,
+mustReauthenticate: true }` impose une nouvelle connexion. Les anciens facteurs
+  et codes sont invalidés ; générer un nouveau lot après reconnexion forte.
+
+Les fonctions autonomes `generateHostedRecoveryCodes`,
+`redeemHostedRecoveryCode` et `completeHostedMfaRecovery` sont aussi exportées
+par la racine et `./oauth`. Elles ne gèrent aucun stockage de transaction client.
+Le jeton de récupération reste dans un cookie HttpOnly ; seule sa preuve CSRF
+est exposée au JavaScript, à conserver en mémoire pendant les cinq minutes du
+parcours. Aucune preuve de step-up ou session OAuth n'est accordée par un code.
+Une erreur ou annulation ne déclenche aucun retry automatique. Après une erreur
+réseau, ne pas affirmer qu'une mutation a été annulée : son résultat peut être
+inconnu. La reprise après rechargement et l'abandon explicite restent à livrer.
+
+L'ancien export autonome `generateRecoveryCodes(baseUrl, password?, token?)`
+sur `/auth/mfa/recovery-codes` est supprimé. La méthode homonyme de la classe
+requiert désormais le CSRF de session et retourne `string[]`, sans mot de passe
+ni Bearer. Les tests SDK vérifient contrats et erreurs ; la preuve HTTPS de
+récupération complète et les notifications effectivement délivrées restent ouvertes.
+
 ## Détection d’environnement
 
 ```typescript

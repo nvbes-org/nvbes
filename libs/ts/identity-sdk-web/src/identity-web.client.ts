@@ -1,4 +1,11 @@
 import { logoutHostedSession } from './hosted.client';
+import {
+  generateHostedRecoveryCodes,
+  redeemHostedRecoveryCode,
+  completeHostedMfaRecovery,
+  type HostedMfaRecovery,
+  type HostedMfaRecovered,
+} from './hosted.recovery';
 import { loginHostedSecurityKey, type HostedSecurityKeyLogin } from './hosted.security-key';
 import {
   listHostedTotpFactors,
@@ -19,8 +26,8 @@ import {
   revokeHostedPasskey,
   type HostedPasskey,
 } from './hosted.webauthn.credentials';
-import type { MfaFactorView, RecoveryCodesResult } from '@nvbes/identity-sdk-core/src/types';
-import { generateRecoveryCodes, listMfaFactors, removeMfaFactor, stepUp } from './mfa';
+import type { MfaFactorView } from '@nvbes/identity-sdk-core/src/types';
+import { listMfaFactors, removeMfaFactor, stepUp } from './mfa';
 import {
   exchangeAuthorizationCode,
   type AuthorizationCodeTokenResponse,
@@ -190,8 +197,26 @@ export class NvbesIdentityWeb {
     return revokeHostedPasskey({ baseUrl: this.config.baseUrl }, sessionCsrf, id);
   }
 
-  async generateRecoveryCodes(password?: string, token?: string): Promise<RecoveryCodesResult> {
-    return generateRecoveryCodes(this.config.baseUrl, password, token);
+  generateRecoveryCodes(sessionCsrf: string): Promise<string[]> {
+    return generateHostedRecoveryCodes({ baseUrl: this.config.baseUrl }, sessionCsrf);
+  }
+
+  async redeemRecoveryCode(sessionCsrf: string, code: string): Promise<HostedMfaRecovery> {
+    const result = await redeemHostedRecoveryCode(
+      { baseUrl: this.config.baseUrl },
+      sessionCsrf,
+      code,
+    );
+    this.clearAuthorizationTransaction();
+    return result;
+  }
+
+  completeMfaRecovery(
+    recovery: HostedMfaRecovery,
+    label: string,
+    options?: WebauthnCreateOptions,
+  ): Promise<HostedMfaRecovered> {
+    return completeHostedMfaRecovery({ baseUrl: this.config.baseUrl }, recovery, label, options);
   }
 
   async removeMfaFactor(factorId: string, token?: string): Promise<void> {

@@ -13,6 +13,48 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## SDK de récupération MFA — 2026-09-10
+
+Les fonctions et méthodes hébergées génèrent les dix codes, consomment un code
+avec CSRF de session puis inscrivent la passkey de remplacement avec la preuve
+de récupération distincte. Le SDK valide les réponses et exige une reconnexion
+explicite en fin de parcours. Il ne stocke ni codes ni preuve de récupération.
+L'ancien appel générique de génération vers `/auth/mfa/recovery-codes` est
+supprimé avec migration documentée. Les autres méthodes MFA génériques restent
+à migrer, ainsi que reprise/abandon, preuve HTTPS, interfaces et notifications.
+
+La revalidation Rust compile sans avertissement. La première exécution PostgreSQL
+a échoué sur 65 tests OAuth existants, notamment avec Protocol(AccessDenied).
+Un test isolé puis la suite complète passent sans changement Rust : 183 tests
+bibliothèque, 24 runtime et trois gardes ; un test interactif ignoré. Cause
+transitoire non établie : la cohérence temporelle DB/processus reste à vérifier
+dans les gates de résilience, sans assouplir les contrôles d'authentification.
+
+Validation SDK : 116 tests sur 22 fichiers passent, ainsi que les cibles Nx
+typecheck, lint et build. Les six nouveaux tests remplacent les deux simulations
+de l'ancien endpoint de génération. Aucun parcours navigateur de récupération
+n'est revendiqué par cette tranche et aucune infrastructure n'est ajoutée.
+
+## Surface HTTP de récupération MFA — 2026-09-10
+
+Les routes génération/consommation et inscription de la passkey de remplacement
+sont montées avec les opérations OAuth hébergées. La consommation pose un cookie
+HttpOnly de récupération distinct et efface celui de session normale ; le jeton
+reste absent du JSON. Sa preuve CSRF est liée à l'origine et au cookie navigateur
+avec un domaine HMAC distinct. Le succès final confirme la nécessité de se
+reconnecter et efface les cookies, sans créer de session ordinaire.
+
+Le décodeur objet strict de TOTP est extrait et partagé. Les corps sont bornés,
+les quotas source précèdent la vérification navigateur et les quotas compte
+restent communs entre sessions et avec les opérations MFA/WebAuthn. Une panne
+de persistance ne produit pas de cookie de succès. Le contrat liste précisément
+les réponses et les opérations restantes côté interface.
+
+Les tests HTTP/PostgreSQL traversent une vraie attestation, couvrent séparation
+des preuves, refus Origin/CSRF, ambiguïtés JSON, quotas conservés après remplacement
+de session et panne du store. Le SDK, la preuve navigateur HTTPS, les interfaces,
+les notifications délivrées et les autres exigences A à D restent ouverts.
+
 ## Noyau transactionnel de récupération MFA — 2026-09-10
 
 La migration 0022 et les modules mfa_recovery implémentent génération de dix

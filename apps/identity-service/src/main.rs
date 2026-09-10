@@ -278,6 +278,12 @@ async fn main() -> anyhow::Result<()> {
                             webauthn.clone(),
                             limiter.clone(),
                         ));
+                    router = router.merge(nvbes_identity_service::oauth::http::recovery_router(
+                        db.clone(),
+                        browser.clone(),
+                        webauthn.clone(),
+                        limiter.clone(),
+                    ));
                     router = router.merge(nvbes_identity_service::oauth::http::webauthn_router(
                         db.clone(),
                         browser,

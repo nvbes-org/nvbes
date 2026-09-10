@@ -22,14 +22,19 @@ mod login_response;
 #[path = "identity.oauth.http.navigation.rs"]
 mod navigation;
 use navigation::redirect_with_result;
+#[path = "identity.oauth.http.json.rs"]
+mod json;
 #[path = "identity.oauth.http.query.rs"]
 mod query;
+#[path = "identity.oauth.http.recovery.rs"]
+mod recovery;
 #[path = "identity.oauth.http.session.rs"]
 mod session;
 #[path = "identity.oauth.http.token.rs"]
 mod token;
 #[path = "identity.oauth.http.totp.rs"]
 mod totp;
+pub use recovery::router as recovery_router;
 #[path = "identity.oauth.http.userinfo.rs"]
 mod userinfo;
 #[path = "identity.oauth.http.webauthn.rs"]

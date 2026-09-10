@@ -1,10 +1,5 @@
-import type { MfaFactorView, RecoveryCodesResult } from '@nvbes/identity-sdk-core/src/types';
-import {
-  authCredentials,
-  authHeaders,
-  handleMfaResponseError,
-  jsonAuthHeaders,
-} from './mfa.transport';
+import type { MfaFactorView } from '@nvbes/identity-sdk-core/src/types';
+import { authCredentials, authHeaders, handleMfaResponseError } from './mfa.transport';
 
 export async function listMfaFactors(
   baseUrl: string,
@@ -23,21 +18,6 @@ export async function listMfaFactors(
   const response = await fetch(`${baseUrl}/auth/mfa/factors${query ? `?${query}` : ''}`, {
     headers: authHeaders(token),
     credentials: authCredentials(token),
-  });
-  if (!response.ok) return handleMfaResponseError(response);
-  return response.json();
-}
-
-export async function generateRecoveryCodes(
-  baseUrl: string,
-  password?: string,
-  token?: string,
-): Promise<RecoveryCodesResult> {
-  const response = await fetch(`${baseUrl}/auth/mfa/recovery-codes`, {
-    method: 'POST',
-    headers: jsonAuthHeaders(token),
-    credentials: authCredentials(token),
-    body: JSON.stringify({ password: password ?? '' }),
   });
   if (!response.ok) return handleMfaResponseError(response);
   return response.json();

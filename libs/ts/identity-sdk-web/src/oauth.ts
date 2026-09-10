@@ -4,6 +4,7 @@ export * from './storage';
 export * from './dpop.transaction-store';
 export * from './oauth.session';
 export * from './hosted.client';
+export * from './hosted.recovery';
 export * from './hosted.security-key';
 export * from './hosted.totp';
 export * from './hosted.totp.management';

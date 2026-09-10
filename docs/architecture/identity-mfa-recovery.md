@@ -2,11 +2,46 @@
 
 ## État de livraison
 
-Le noyau Rust et la migration 0022 sont implémentés et testés avec PostgreSQL
-et de vraies signatures WebAuthn. Aucune route HTTP de récupération, interface
-ou méthode SDK n'est encore montée. Les notifications sont des intentions
+Le noyau Rust, la migration 0022 et les routes HTTP sont implémentés et testés
+avec PostgreSQL et de vraies signatures WebAuthn. Les routes utilisent la même
+configuration d'activation que les opérations OAuth hébergées ; aucune ouverture
+publique ou infrastructure n'est effectuée par ce changement. Les méthodes SDK
+sont raccordées et testées ; l'interface et la preuve navigateur HTTPS restent
+à livrer. Les notifications sont des intentions
 persistées dans l'outbox, pas des emails envoyés. Cette capacité n'est pas
-déclarée disponible aux utilisateurs et ne clôture pas le lot B.
+déclarée complète pour les utilisateurs et ne clôture pas le lot B.
+
+## Contrat HTTP
+
+Toutes les routes utilisent POST JSON, Origin exact et cookies same-origin.
+Les réponses sont non cachables, sans referrer ; aucun Bearer ou CORS n'est
+accepté pour effectuer ces opérations.
+
+| Route                                    | Preuve requise                        | Corps objet                          | Réponse 200                                                     |
+| ---------------------------------------- | ------------------------------------- | ------------------------------------ | --------------------------------------------------------------- |
+| `/oauth/session/recovery/codes/generate` | Session normale et CSRF de session    | `{}`                                 | `codes` : dix chaînes                                           |
+| `/oauth/session/recovery/redeem`         | Session normale et CSRF de session    | `code`                               | `recovery: true`, `csrf_token`, `expires_at`                    |
+| `/oauth/recovery/registration/options`   | Cookie de récupération et CSRF dédiée | `{}`                                 | `ceremony_id`, `options` WebAuthn                               |
+| `/oauth/recovery/registration/finish`    | Cookie de récupération et CSRF dédiée | `ceremony_id`, `credential`, `label` | `recovered: true`, `credential_id`, `must_reauthenticate: true` |
+
+La consommation réussie pose `__Host-nvbes-recovery` (HttpOnly, Secure,
+SameSite=Lax, Path=/, Max-Age=300, sans Domain) et efface le cookie de session
+ordinaire. Le jeton de récupération n'apparaît pas dans le JSON. La preuve CSRF
+est un HMAC du navigateur et de l'origine avec un domaine distinct du CSRF de
+session. Le succès final efface les cookies de récupération et de session.
+Une panne avant commit ne pose ni n'efface de cookie.
+
+Les objets refusent champs inconnus, champs dupliqués et tableaux positionnels.
+Les corps sont limités à 4096 octets, sauf la réponse d'attestation finale
+(65 536 octets). Les refus métier renvoient 400, les mauvaises preuves navigateur
+403, les quotas 429 avec Retry-After=600 et les pannes 503.
+
+Le quota source de connexion (30/minute) et le quota protocole (120/minute)
+précèdent l'analyse navigateur. Génération et consommation utilisent le quota
+MFA partagé de cinq requêtes par principal sur dix minutes ; options et finish
+utilisent le quota WebAuthn de vingt requêtes. Recréer une session normale ou de
+récupération ne réinitialise pas ces compteurs. Les corps invalides sont comptés.
+Ces plafonds sont partagés avec les autres opérations MFA/WebAuthn existantes.
 
 ## Contrat et séparation des preuves
 
@@ -44,8 +79,8 @@ Chaque code contient 32 octets aléatoires encodés en base64url sans padding,
 préfixés `nvr1_` : 48 caractères, 256 bits d'entropie. Seul SHA-256 du code avec
 séparation de domaine et UUID du principal est stocké. Il n'y a ni code en clair
 en base, ni code dans les événements. Les réponses contenant les secrets n'ont
-pas d'implémentation Debug. Le SDK devra les afficher une fois, sans persistance
-navigateur ni télémétrie ; l'utilisateur devra les conserver hors ligne.
+pas d'implémentation Debug. Le SDK retourne les codes sans les persister ni les
+journaliser ; l'interface devra les afficher une fois pour sauvegarde hors ligne.
 
 Le verrou du principal précède ceux des sessions, codes et cérémonies. Deux
 consommations concurrentes du même code ne réussissent pas. Une récupération
@@ -74,9 +109,12 @@ expiration/remplacement des cérémonies, mauvaise origine signée, récupérati
 avec dix anciennes clés, utilisation cryptographique de la nouvelle clé et
 rollback après panne de notification ou d'audit.
 
-Avant activation HTTP : cookie de récupération HttpOnly/Secure distinct, preuve
-CSRF dédiée liée au navigateur, Origin exact, corps bornés, quotas source/compte
-durables et réponses non cachables. Le refus d'un code ne doit pas révéler son
-existence ni réinitialiser les quotas en recréant une session. Compléter ensuite
-SDK, interfaces, notifications réellement délivrées et preuve navigateur HTTPS.
+Les tests HTTP vérifient aussi la séparation des cookies/CSRF, le cycle complet,
+les corps ambigus, l'épuisement des quotas entre sessions, les erreurs de stockage
+et l'absence de modification des cookies après rollback. Les tests SDK couvrent
+le contrat actif, les preuves distinctes, les réponses malformées, l'expiration,
+l'annulation native et les erreurs sans retry ni fuite de secrets. Compléter
+ensuite interfaces, notifications réellement délivrées et preuve navigateur HTTPS.
+La reprise de l'interface après rechargement et l'abandon explicite du parcours
+restent à définir ; l'autorisation actuelle expire au bout de cinq minutes.
 Les gates d'exploitation et le plafond global de 30 EUR TTC/mois restent ouverts.

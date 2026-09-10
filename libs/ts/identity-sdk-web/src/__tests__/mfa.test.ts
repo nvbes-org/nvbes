@@ -5,14 +5,7 @@ vi.mock('../pow', () => ({
   solvePowChallenge: vi.fn().mockResolvedValue(42),
 }));
 
-import {
-  generateRecoveryCodes,
-  listMfaFactors,
-  MfaError,
-  removeMfaFactor,
-  requestEmailStepUpCode,
-  stepUp,
-} from '../mfa';
+import { listMfaFactors, MfaError, removeMfaFactor, requestEmailStepUpCode, stepUp } from '../mfa';
 
 const mockToken = 'test-jwt-token';
 const mockBaseUrl = 'https://account.nvbes.fr';
@@ -132,29 +125,6 @@ describe('MFA API functions', () => {
       });
 
       await expect(listMfaFactors(mockBaseUrl, mockToken)).rejects.toThrow(MfaError);
-    });
-  });
-
-  describe('generateRecoveryCodes', () => {
-    it('should return recovery codes on success', async () => {
-      const mockCodes = { codes: ['code1-abc', 'code2-def', 'code3-ghi'] };
-
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockCodes),
-      });
-
-      const result = await generateRecoveryCodes(mockBaseUrl, 'password123', mockToken);
-      expect(result.codes).toHaveLength(3);
-    });
-
-    it('should work with cookie auth when token is absent', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ codes: [] }),
-      });
-
-      await generateRecoveryCodes(mockBaseUrl, 'password123');
     });
   });
 

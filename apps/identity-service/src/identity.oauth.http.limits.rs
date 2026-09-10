@@ -49,6 +49,8 @@ pub(super) async fn protect_source(
             "/oauth/authorize/login" | "/oauth/session/step-up/totp"
         ) || request.uri().path().starts_with("/oauth/session/webauthn/")
             || request.uri().path().starts_with("/oauth/session/totp/")
+            || request.uri().path().starts_with("/oauth/session/recovery/")
+            || request.uri().path().starts_with("/oauth/recovery/")
             || request
                 .uri()
                 .path()

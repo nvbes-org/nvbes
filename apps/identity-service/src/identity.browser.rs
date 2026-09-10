@@ -6,6 +6,9 @@ use crate::oauth::{pkce::is_sha256_base64url, store::random_secret};
 #[path = "identity.browser.session.rs"]
 mod session;
 pub(crate) use session::{SessionProof, protect_session_mutation};
+#[path = "identity.browser.recovery.rs"]
+mod recovery;
+pub(crate) use recovery::{RecoveryProof, protect_recovery_mutation};
 
 #[derive(Debug, thiserror::Error)]
 pub enum BrowserError {
