@@ -13,6 +13,37 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Login primaire passkey lié à OAuth — 2026-09-10
+
+`oauth::passkey_login` démarre une cérémonie discoverable sans identifiant de
+compte, après validation du navigateur, du CSRF et de l'interaction OAuth.
+La migration 0017 relie la cérémonie à la requête OAuth avec suppression en
+cascade et unicité ; un nouveau départ remplace la cérémonie précédente.
+
+À la fin, `userHandle` est traité comme un indice non authentifié : le principal
+actif et son credential non révoqué sont verrouillés puis la bibliothèque
+vérifie l'assertion avec le credential courant et l'UV obligatoire. Elle vérifie
+donc aussi le compteur courant, sans utiliser une ancienne copie de clé.
+La mise à jour du Passkey, la consommation de la cérémonie, la création d'une
+session `primary_amr=webauthn`, l'audit et le rattachement OAuth avec rotation
+CSRF partagent une transaction. Aucun token de session ne sort avant commit.
+
+Validation : `cargo check --workspace` sans avertissement ; cible Nx
+`identity-service:test:database` avec 127 tests de bibliothèque et 24 tests du
+runtime réussis. Les tests couvrent les signatures valides jusqu'au code OAuth,
+le rejeu, les substitutions navigateur/compte, deux finishes concurrents, une
+clé révoquée, un principal suspendu et la panne du rattachement OAuth. Cette
+panne ne laisse ni session passkey ni mise à jour du credential ; la même
+assertion peut être réessayée après restauration.
+
+Limite de preuve : SoftPasskey ne possède pas d'UI de sélection discoverable.
+Le test lui fournit le credential sélectionné et le userHandle, tandis que
+l'état conservé côté serveur reste celui du parcours discoverable. Cela vérifie
+les signatures et la liaison de compte, pas le comportement d'un navigateur.
+Les routes HTTP du login primaire, l'UX conditional UI, l'enrollment assurant
+la disponibilité de credentials découvrables et le parcours des clés non
+découvrables restent à terminer. Les lots A–D ne sont pas clos.
+
 ## Routes HTTP d'enrollment et step-up WebAuthn — 2026-09-10
 
 Le runtime monte désormais les quatre routes POST sous

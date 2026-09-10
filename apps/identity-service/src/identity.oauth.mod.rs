@@ -20,6 +20,8 @@ mod login;
 pub mod maintenance;
 #[path = "identity.oauth.metadata.rs"]
 pub mod metadata;
+#[path = "identity.oauth.passkey_login.rs"]
+pub mod passkey_login;
 #[path = "identity.oauth.pkce.rs"]
 pub mod pkce;
 #[path = "identity.oauth.session.rs"]

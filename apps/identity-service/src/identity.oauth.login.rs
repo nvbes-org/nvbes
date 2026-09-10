@@ -48,7 +48,7 @@ pub(super) async fn authenticate(
     Ok(LoginSession { token, csrf })
 }
 
-async fn validate_interaction(
+pub(super) async fn validate_interaction(
     tx: &mut Transaction<'_, Postgres>,
     clients: &ClientRegistry,
     handle: &str,
