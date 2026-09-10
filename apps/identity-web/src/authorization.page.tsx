@@ -7,12 +7,14 @@ import { AuthenticationForms } from './authorization.forms';
 import { EnrollmentForm } from './authorization.enrollment';
 import { RecoveryCodes } from './authorization.recovery-codes';
 import { FactorsPanel } from './factors.panel';
+import { managementExpiry } from './authorization.state';
 import type { AuthorizationController } from './authorization.controller';
 
 const titles = {
   loading: 'Préparation de votre connexion',
   login: 'Votre espace commence ici.',
   'step-up': 'Confirmez que c’est vous.',
+  'security-step-up': 'Confirmez votre accès à la sécurité.',
   enrollment: 'Protégez votre compte.',
   'recovery-codes': 'Gardez un accès de secours.',
   factors: 'Vos méthodes de sécurité.',
@@ -35,6 +37,17 @@ const scopeLabels: Record<string, string> = {
 
 export function AuthorizationPage({ controller }: { controller: AuthorizationController }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
+  const securityExpiry = managementExpiry(state);
+  useEffect(() => {
+    if (state.stage !== 'consent' || !securityExpiry) return;
+    const expire = () => controller.expireSecurityAccess();
+    const timer = window.setTimeout(expire, Math.max(0, Date.parse(securityExpiry) - Date.now()));
+    document.addEventListener('visibilitychange', expire);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', expire);
+    };
+  }, [controller, state.stage, securityExpiry]);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     heading.current?.focus();
@@ -91,7 +104,7 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
                 <AlertDescription>{state.error}</AlertDescription>
               </Alert>
             )}
-            {(state.stage === 'login' || state.stage === 'step-up') && (
+            {['login', 'step-up', 'security-step-up'].includes(state.stage) && (
               <AuthenticationForms controller={controller} state={state} />
             )}
             {state.stage === 'enrollment' && (
@@ -99,7 +112,7 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
             )}
             {state.stage === 'consent' && state.interaction && (
               <>
-                {state.authentication?.proofExpiresAt && (
+                {securityExpiry && (
                   <>
                     <p className="text-sm text-muted-foreground">
                       Générer des codes de secours remplace immédiatement tous vos anciens codes.
@@ -118,15 +131,13 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
             {state.stage === 'recovery-codes' && (
               <RecoveryCodes controller={controller} state={state} />
             )}
-            {state.stage === 'factors' &&
-              state.interaction?.sessionCsrfToken &&
-              state.authentication?.proofExpiresAt && (
-                <FactorsPanel
-                  authorization={controller}
-                  csrf={state.interaction.sessionCsrfToken}
-                  expiresAt={state.authentication.proofExpiresAt}
-                />
-              )}
+            {state.stage === 'factors' && state.interaction?.sessionCsrfToken && securityExpiry && (
+              <FactorsPanel
+                authorization={controller}
+                csrf={state.interaction.sessionCsrfToken}
+                expiresAt={securityExpiry}
+              />
+            )}
             {state.stage === 'consent' && state.interaction && (
               <>
                 <h2 className="font-medium">Accès demandés</h2>
@@ -148,7 +159,7 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
                 >
                   Autoriser et continuer
                 </Button>
-                {(state.firstEnrollmentAvailable || state.authentication?.proofExpiresAt) && (
+                {(state.firstEnrollmentAvailable || securityExpiry) && (
                   <Button
                     variant="outline"
                     disabled={state.busy}
@@ -157,7 +168,16 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
                     Ajouter une méthode de sécurité
                   </Button>
                 )}
-                {state.authentication?.proofExpiresAt && (
+                {!securityExpiry && !state.firstEnrollmentAvailable && (
+                  <Button
+                    variant="outline"
+                    disabled={state.busy}
+                    onClick={() => controller.beginSecurityStepUp()}
+                  >
+                    Confirmer mon identité pour gérer la sécurité
+                  </Button>
+                )}
+                {securityExpiry && (
                   <Button
                     variant="outline"
                     disabled={state.busy}

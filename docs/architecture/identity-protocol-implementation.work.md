@@ -13,6 +13,32 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Identity : confirmation MFA volontaire — 2026-09-10
+
+Un client à politique primary peut maintenant demander une confirmation MFA
+volontaire depuis le consentement afin d'accéder aux opérations de sécurité.
+Le contrôleur conserve une échéance de gestion distincte du statut OAuth, issue
+du résultat serveur du step-up et bornée conservativement à cinq minutes depuis
+le début de la requête. Aucune politique cliente ni preuve d'autorisation OAuth
+n'est réécrite. Les opérations sensibles sont toujours revérifiées côté serveur.
+
+L'interface propose TOTP/passkey, permet d'annuler sans accorder de preuve et
+revient à une demande de confirmation après expiration. La preuve de gestion
+est retirée au changement de session et à la sortie de page ; les réponses
+tardives ne la restaurent pas. Une preuve déjà fraîche évite les lectures de
+facteurs inutiles. Les contrats d'état et les indications de fraîcheur sont
+isolés dans authorization.state.ts pour leur utilisation commune par les écrans.
+
+Validation : 51 tests du site et checks typecheck/lint/format/build réussis.
+Deux fixtures HTTPS ont validé la confirmation volontaire TOTP et passkey avec
+un client primary, la gestion des facteurs, les codes de secours et le callback
+OIDC/DPoP jusqu'à Account HTTP 200. Le statut serveur reste primary sans échéance
+OAuth forte. Authentificateurs synthétiques, services réels. Aucun Rust modifié.
+Le dernier build passe également les quatre parcours existants (mot de passe,
+TOTP, step-up WebAuthn et login passkey), tous jusqu'à Account 200.
+La réauthentification primaire d'une ancienne session sans facteur, Account Web,
+logout intersites et validations d'exploitation restent ouverts.
+
 ## Site Identity : renommage et révocation des facteurs — 2026-09-10
 
 La gestion des facteurs s'ouvre depuis le consentement après preuve forte fraîche.

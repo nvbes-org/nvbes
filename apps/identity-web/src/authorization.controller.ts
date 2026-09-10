@@ -2,31 +2,13 @@ import {
   HostedIdentityError,
   WebauthnBrowserError,
   type HostedInteraction,
-  type HostedAuthenticationStatus,
-  type HostedTotpEnrollment,
 } from '@nvbes/identity-sdk-web/oauth';
 import type { IdentityGateway } from './authorization.gateway';
-
-export interface AuthorizationState {
-  stage:
-    | 'loading'
-    | 'login'
-    | 'step-up'
-    | 'enrollment'
-    | 'recovery-codes'
-    | 'factors'
-    | 'consent'
-    | 'leaving'
-    | 'closed';
-  busy: boolean;
-  interaction: HostedInteraction | null;
-  authentication: HostedAuthenticationStatus | null;
-  error: string | null;
-  firstEnrollmentAvailable: boolean;
-  totpEnrollment: HostedTotpEnrollment | null;
-  recoveryCodes: string[] | null;
-  hasTotp: boolean;
-}
+import {
+  managementExpiry,
+  managementDeadline,
+  type AuthorizationState,
+} from './authorization.state';
 
 /** One instance per document; never cache credentials, interactions or mutations. */
 export class AuthorizationController {
@@ -40,6 +22,7 @@ export class AuthorizationController {
     totpEnrollment: null,
     recoveryCodes: null,
     hasTotp: false,
+    managementExpiresAt: null,
   };
   private listeners = new Set<() => void>();
   private started = false;
@@ -85,6 +68,7 @@ export class AuthorizationController {
       totpEnrollment: null,
       recoveryCodes: null,
       hasTotp: false,
+      managementExpiresAt: null,
       error:
         'Cette connexion ne peut pas être poursuivie. Revenez à votre application pour recommencer.',
     });
@@ -98,16 +82,24 @@ export class AuthorizationController {
   private async refresh(interaction: HostedInteraction) {
     if (this.disposed) return;
     // Keep rotated CSRF before the next network request.
-    this.publish({ interaction, recoveryCodes: null });
+    this.publish({
+      interaction,
+      recoveryCodes: null,
+      managementExpiresAt:
+        interaction.sessionCsrfToken === this.state.interaction?.sessionCsrfToken
+          ? this.state.managementExpiresAt
+          : null,
+    });
     const authentication = await this.gateway.status(interaction);
     if (this.disposed) return;
     const firstEnrollmentAvailable =
       !authentication.needsLogin &&
-      authentication.proofExpiresAt === null &&
+      managementExpiry({ ...this.state, authentication }) === null &&
       interaction.sessionCsrfToken !== null &&
       !(await this.gateway.hasFactors(interaction.sessionCsrfToken));
     if (this.disposed) return;
-    const enrollmentAvailable = firstEnrollmentAvailable || authentication.proofExpiresAt !== null;
+    const enrollmentAvailable =
+      firstEnrollmentAvailable || managementExpiry({ ...this.state, authentication }) !== null;
     this.publish({
       authentication,
       firstEnrollmentAvailable,
@@ -173,13 +165,17 @@ export class AuthorizationController {
   }
 
   passkey() {
-    if (this.state.stage !== 'login' && this.state.stage !== 'step-up') return Promise.resolve();
+    if (!['login', 'step-up', 'security-step-up'].includes(this.state.stage))
+      return Promise.resolve();
     return this.mutate(async (interaction) => {
       if (this.state.stage === 'login') {
         await this.refresh(await this.gateway.passkey(interaction));
       } else {
         if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
-        await this.gateway.stepUpPasskey(interaction.sessionCsrfToken);
+        const started = Date.now();
+        const expiry = await this.gateway.stepUpPasskey(interaction.sessionCsrfToken);
+        if (this.disposed) return;
+        this.publish({ managementExpiresAt: managementDeadline(expiry, started) });
         await this.refresh(interaction);
       }
     });
@@ -187,13 +183,17 @@ export class AuthorizationController {
 
   totp(code: string) {
     if (
-      this.state.stage !== 'step-up' ||
-      this.state.authentication?.minimumAuthentication !== 'recent_mfa'
+      !['step-up', 'security-step-up'].includes(this.state.stage) ||
+      (this.state.stage !== 'security-step-up' &&
+        this.state.authentication?.minimumAuthentication !== 'recent_mfa')
     )
       return Promise.resolve();
     return this.mutate(async (interaction) => {
       if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
-      await this.gateway.stepUpTotp(interaction.sessionCsrfToken, code);
+      const started = Date.now();
+      const expiry = await this.gateway.stepUpTotp(interaction.sessionCsrfToken, code);
+      if (this.disposed) return;
+      this.publish({ managementExpiresAt: managementDeadline(expiry, started) });
       await this.refresh(interaction);
     });
   }
@@ -210,6 +210,7 @@ export class AuthorizationController {
         totpEnrollment: null,
         recoveryCodes: null,
         firstEnrollmentAvailable: false,
+        managementExpiresAt: null,
       });
       this.navigate(destination);
     });
@@ -225,7 +226,7 @@ export class AuthorizationController {
   }
 
   beginFactors() {
-    const expiry = this.state.authentication?.proofExpiresAt;
+    const expiry = managementExpiry(this.state);
     if (
       this.state.stage === 'consent' &&
       !this.state.busy &&
@@ -250,7 +251,7 @@ export class AuthorizationController {
   }
 
   private canEnroll() {
-    const expiry = this.state.authentication?.proofExpiresAt;
+    const expiry = managementExpiry(this.state);
     return (
       this.state.firstEnrollmentAvailable ||
       (expiry !== null && expiry !== undefined && Date.parse(expiry) > Date.now())
@@ -258,7 +259,7 @@ export class AuthorizationController {
   }
 
   generateRecoveryCodes() {
-    const expiry = this.state.authentication?.proofExpiresAt;
+    const expiry = managementExpiry(this.state);
     if (this.state.stage !== 'consent' || !expiry || Date.parse(expiry) <= Date.now())
       return Promise.resolve();
     return this.mutate(async (interaction) => {
@@ -294,7 +295,7 @@ export class AuthorizationController {
   }
 
   expireRecoveryCodes() {
-    const expiry = this.state.authentication?.proofExpiresAt;
+    const expiry = managementExpiry(this.state);
     if (this.state.recoveryCodes && (!expiry || Date.parse(expiry) <= Date.now())) this.close();
   }
 
@@ -304,6 +305,21 @@ export class AuthorizationController {
       this.publish({ totpEnrollment: null });
       await this.refresh(interaction);
     });
+  }
+
+  beginSecurityStepUp() {
+    if (this.state.stage === 'consent' && !this.state.busy && !this.state.firstEnrollmentAvailable)
+      this.publish({ stage: 'security-step-up', error: null });
+  }
+
+  expireSecurityAccess() {
+    if (!this.disposed && this.state.stage === 'consent' && !managementExpiry(this.state))
+      this.publish({ managementExpiresAt: null });
+  }
+
+  cancelSecurityStepUp() {
+    if (this.state.stage !== 'security-step-up') return Promise.resolve();
+    return this.mutate((interaction) => this.refresh(interaction));
   }
 
   registerPasskey(label: string) {

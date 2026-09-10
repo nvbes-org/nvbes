@@ -3,6 +3,7 @@ import { verifyHostedUi } from '../identity-service/tests/runtime-browser-hosted
 import { verifyHostedMfa } from '../identity-service/tests/runtime-browser-hosted-mfa.mjs';
 import { verifyHostedEnrollment } from '../identity-service/tests/runtime-browser-hosted-enrollment.mjs';
 import { verifyHostedFactors } from '../identity-service/tests/runtime-browser-hosted-factors.mjs';
+import { verifyHostedSecurity } from '../identity-service/tests/runtime-browser-hosted-security.mjs';
 
 const origin = new URL(process.env.IDENTITY_WEB_TEST_CLIENT_ORIGIN ?? '');
 if (
@@ -25,12 +26,21 @@ if (
     'enrollment-passkey',
     'factors-totp',
     'factors-passkey',
+    'security-totp',
+    'security-passkey',
   ].includes(suite)
 )
   throw new Error('Unknown Identity Web browser suite');
 const browser = await chromium.launch();
 try {
-  if (suite.startsWith('factors-')) {
+  if (suite.startsWith('security-')) {
+    console.log(
+      JSON.stringify({
+        browser: browser.version(),
+        ...(await verifyHostedSecurity(browser, origin.origin, suite.slice('security-'.length))),
+      }),
+    );
+  } else if (suite.startsWith('factors-')) {
     console.log(
       JSON.stringify({
         browser: browser.version(),

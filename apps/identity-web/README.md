@@ -30,6 +30,13 @@ permet de renommer les passkeys et demande confirmation avant révocation. Le
 dernier facteur ne peut pas être supprimé. Toute révocation réussie interrompt
 ce parcours OAuth pour demander une nouvelle connexion avec un facteur conservé.
 Le site Account reste à construire.
+
+Un client à politique `primary` peut également proposer une confirmation MFA
+volontaire depuis le consentement. TOTP ou passkey ouvre les actions de sécurité
+avec une preuve de gestion distincte, bornée à cinq minutes au maximum. La
+politique OAuth enregistrée n'est pas modifiée. Annuler cette confirmation rend
+le consentement initial sans accorder d'accès de gestion. Les contrôles serveur
+restent requis sur chaque opération sensible.
 Aucun lien d'inscription publique n'est exposé.
 
 Lorsqu'une politique OAuth exige une preuve forte fraîche et que le serveur la
@@ -118,6 +125,10 @@ renomment une passkey via l'écran, annulent une première confirmation de suppr
 révoquent le facteur choisi puis se reconnectent avec le facteur conservé.
 Elles vérifient que la suppression du dernier facteur n'est plus proposée et
 terminent le callback OIDC/DPoP jusqu'à Account.
+Les suites `security-totp` et `security-passkey` vérifient un client `primary`,
+la confirmation MFA volontaire, l'accès aux facteurs et codes de secours, puis
+le callback OIDC/DPoP. Elles vérifient que le statut OAuth conserve sa politique
+initiale. Chaque suite utilise une fixture neuve.
 
 ## Composants et exploitation
 

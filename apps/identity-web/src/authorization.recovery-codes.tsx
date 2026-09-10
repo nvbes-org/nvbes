@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import type { AuthorizationController, AuthorizationState } from './authorization.controller';
+import type { AuthorizationController } from './authorization.controller';
+import { managementExpiry, type AuthorizationState } from './authorization.state';
 
 export function RecoveryCodes({
   controller,
@@ -9,7 +10,7 @@ export function RecoveryCodes({
   controller: AuthorizationController;
   state: AuthorizationState;
 }) {
-  const expiry = state.authentication?.proofExpiresAt;
+  const expiry = managementExpiry(state);
   useEffect(() => {
     const expire = () => controller.expireRecoveryCodes();
     const timer = window.setTimeout(expire, Math.max(0, Date.parse(expiry ?? '') - Date.now()));

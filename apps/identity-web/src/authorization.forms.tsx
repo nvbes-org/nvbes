@@ -3,7 +3,8 @@ import { Fingerprint, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel, FieldSeparator } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import type { AuthorizationController, AuthorizationState } from './authorization.controller';
+import type { AuthorizationController } from './authorization.controller';
+import type { AuthorizationState } from './authorization.state';
 import { RecoveryRequest } from './recovery.request';
 
 export function AuthenticationForms({
@@ -75,7 +76,8 @@ export function AuthenticationForms({
             </Button>
           </FieldGroup>
         </form>
-      ) : state.authentication?.minimumAuthentication === 'recent_mfa' ? (
+      ) : state.stage === 'security-step-up' ||
+        state.authentication?.minimumAuthentication === 'recent_mfa' ? (
         <form onSubmit={totp}>
           <FieldGroup>
             <FieldSeparator>ou avec votre application d’authentification</FieldSeparator>
@@ -103,7 +105,16 @@ export function AuthenticationForms({
           utilisateur.
         </p>
       )}
-      {!login && <RecoveryRequest controller={controller} busy={state.busy} />}
+      {state.stage === 'step-up' && <RecoveryRequest controller={controller} busy={state.busy} />}
+      {state.stage === 'security-step-up' && (
+        <Button
+          variant="ghost"
+          disabled={state.busy}
+          onClick={() => void controller.cancelSecurityStepUp()}
+        >
+          Revenir aux accès demandés
+        </Button>
+      )}
     </div>
   );
 }
