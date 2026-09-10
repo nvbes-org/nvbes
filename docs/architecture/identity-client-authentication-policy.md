@@ -70,7 +70,25 @@ l'introspection ne contournent pas la nouvelle politique.
 
 Les tests purs couvrent les échéances, le profil WebAuthn, les dates futures,
 les valeurs inconnues et l'impossibilité de choisir un profil plus faible dans
-une requête navigateur. Pas de migration ni nouvelle ressource payante. Aucun
-client déployé n'est reconfiguré par cette tranche. Le parcours graphique de
-sélection du facteur et l'application aux opérations administrateur restent
-des exigences ouvertes du lot B.
+une requête navigateur.
+
+Deux fixtures HTTPS neuves valident maintenant les profils dans Chromium
+152.0.7977.83 avec les services Identity/Account et le SDK réels. Le scénario
+runtime-browser-totp.mjs lit le statut anonyme, effectue le login, vérifie le
+refus du consentement après mot de passe, puis le statut après TOTP. Pour
+recent_webauthn, le consentement reste refusé après TOTP jusqu'à une assertion
+WebAuthn avec vérification utilisateur. Les deux profils terminent par un
+échange OIDC/DPoP et un accès Account autorisé. Les preuves ne sortent pas dans
+le rapport du test.
+
+Lancer une fixture neuve avec la cible identity-service:test:https-browser-fixture,
+puis appeler verifyBrowserTotp(browser, clientOrigin, false, 'recent_mfa') ou
+verifyBrowserTotp(browser, clientOrigin, false, 'recent_webauthn'). Chaque profil
+utilise son client enregistré et exige une fixture neuve, car le scénario
+enrôle un premier facteur. Arrêter la fixture ensuite. Seuls le calcul TOTP et
+l'authentificateur WebAuthn sont simulés ; aucune clé physique ni application
+TOTP mobile n'est attestée. Le test interactif ne tourne pas en CI.
+
+Pas de migration ni nouvelle ressource payante. Aucun client déployé n'est
+reconfiguré. Les écrans de sélection du facteur et l'application aux opérations
+administrateur restent des exigences ouvertes du lot B.

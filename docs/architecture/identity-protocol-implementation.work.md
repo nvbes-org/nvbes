@@ -13,6 +13,24 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Preuve navigateur des profils OAuth forts — 2026-09-10
+
+La fixture HTTPS enregistre deux clients supplémentaires pour recent_mfa et
+recent_webauthn. Le scénario TOTP accepte le profil à vérifier et interroge le
+SDK avant login, après mot de passe, après TOTP et avant consentement. Le
+mot de passe seul est refusé pour les deux profils ; le TOTP reste insuffisant
+pour recent_webauthn jusqu'à une assertion WebAuthn vérifiée. Un step-up TOTP
+ultérieur remplace la méthode de session : le scénario refait alors WebAuthn
+avant le consentement fort, sans inventer une assurance persistante côté SDK.
+
+Validation : deux fixtures neuves réussissent dans Chromium 152.0.7977.83,
+jusqu'à l'échange OIDC/DPoP et l'accès Account. Le TOTP est calculé avec WebCrypto
+et la clé CTAP2 est virtuelle ; aucun secret n'est affiché dans le rapport.
+Format/lint des deux scénarios passent. Aucun Rust ni SDK modifié : les trois
+binaires compilent dans la fixture, sans relance des suites unitaires déjà
+validées. Les deux processus sont arrêtés et leurs conteneurs supprimés.
+Les interfaces produit et les autres exigences A à D restent ouvertes.
+
 ## Lecture de l'exigence MFA pour le site Identity — 2026-09-10
 
 POST oauth/authorize/authentication relit la politique courante et la preuve

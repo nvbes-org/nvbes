@@ -85,6 +85,14 @@ try {
   ];
   const authorizationSecret = randomBytes(32).toString('hex');
   const billingClientId = 'https-browser-billing-test';
+  const mfaClientId = 'https-browser-mfa-test';
+  const webauthnClientId = 'https-browser-webauthn-test';
+  for (const [id, policy] of [
+    [mfaClientId, 'recent_mfa'],
+    [webauthnClientId, 'recent_webauthn'],
+  ]) {
+    clients.push({ ...clients[0], client_id: id, minimum_authentication: policy });
+  }
   clients.push({
     ...clients[0],
     client_id: billingClientId,
@@ -142,6 +150,8 @@ try {
     origins,
     clientId,
     billingClientId,
+    mfaClientId,
+    webauthnClientId,
     redirectUri,
     email,
     password,

@@ -1,9 +1,16 @@
 // Real HTTPS services and SDK. WebCrypto emulates only the synthetic authenticator.
-export async function verifyBrowserTotp(browser, clientOrigin, manageFactors = false) {
+export async function verifyBrowserTotp(
+  browser,
+  clientOrigin,
+  manageFactors = false,
+  policy = 'primary',
+) {
+  if (!['primary', 'recent_mfa', 'recent_webauthn'].includes(policy))
+    throw new Error('Invalid test policy');
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   try {
     const page = await context.newPage();
-    if (manageFactors) {
+    if (manageFactors || policy === 'recent_webauthn') {
       const cdp = await context.newCDPSession(page);
       await cdp.send('WebAuthn.enable');
       await cdp.send('WebAuthn.addVirtualAuthenticator', {
@@ -19,6 +26,8 @@ export async function verifyBrowserTotp(browser, clientOrigin, manageFactors = f
     }
     await page.goto(clientOrigin);
     const config = await page.evaluate(async () => (await fetch('/__fixture/config')).json());
+    if (policy === 'recent_mfa') config.clientId = config.mfaClientId;
+    if (policy === 'recent_webauthn') config.clientId = config.webauthnClientId;
     const authorizationUrl = await page.evaluate(async (config) => {
       const { createAuthorizationRequest } =
         await import('/libs/ts/identity-sdk-web/src/oauth.authorization-request.ts');
@@ -41,7 +50,7 @@ export async function verifyBrowserTotp(browser, clientOrigin, manageFactors = f
     const interaction = await response.json();
     await page.goto(`${config.origins.identity}/__fixture/hosted`);
     const authorized = await page.evaluate(
-      async ({ config, interaction, manageFactors }) => {
+      async ({ config, interaction, manageFactors, policy }) => {
         const { parseHostedInteraction, loginHostedPassword, completeHostedConsent } =
           await import('/libs/ts/identity-sdk-web/src/hosted.client.ts');
         const { NvbesIdentityWeb } =
@@ -55,10 +64,31 @@ export async function verifyBrowserTotp(browser, clientOrigin, manageFactors = f
           resource: config.origins.account,
         });
         const transport = { baseUrl: config.origins.identity };
-        const state = await loginHostedPassword(transport, parseHostedInteraction(interaction), {
+        const initial = parseHostedInteraction(interaction);
+        const beforeLogin = await client.getAuthenticationStatus(initial);
+        if (
+          beforeLogin.minimumAuthentication !== policy ||
+          !beforeLogin.needsLogin ||
+          beforeLogin.needsStepUp
+        )
+          throw new Error('Anonymous authentication requirement mismatch');
+        const state = await loginHostedPassword(transport, initial, {
           email: config.email,
           password: config.password,
         });
+        const expectPolicyDenial = async () => {
+          try {
+            await completeHostedConsent(transport, state, 'approve');
+          } catch (error) {
+            if (error instanceof HostedIdentityError && error.status === 400) return;
+            throw error;
+          }
+          throw new Error('Consent bypassed the registered authentication policy');
+        };
+        const afterPassword = await client.getAuthenticationStatus(state);
+        if (afterPassword.needsLogin || afterPassword.needsStepUp !== (policy !== 'primary'))
+          throw new Error('Password authentication requirement mismatch');
+        if (policy !== 'primary') await expectPolicyDenial();
         const enrollment = await client.startTotpEnrollment(state.sessionCsrfToken);
         if (Date.parse(enrollment.expiresAt) <= Date.now()) throw new Error('Enrollment expired');
         const bytes = [];
@@ -94,6 +124,14 @@ export async function verifyBrowserTotp(browser, clientOrigin, manageFactors = f
           first,
         );
         if (Date.parse(expiry) <= Date.now()) throw new Error('Confirmation did not grant step-up');
+        const afterTotp = await client.getAuthenticationStatus(state);
+        if (afterTotp.needsStepUp !== (policy === 'recent_webauthn'))
+          throw new Error('TOTP policy mismatch');
+        if (policy === 'recent_webauthn') {
+          await expectPolicyDenial();
+          await client.registerPasskey(state.sessionCsrfToken, 'Policy verification key');
+          await client.stepUpPasskey(state.sessionCsrfToken);
+        }
         const expectReplay = async (code) => {
           try {
             await client.stepUpTotp(state.sessionCsrfToken, code);
@@ -123,13 +161,24 @@ export async function verifyBrowserTotp(browser, clientOrigin, manageFactors = f
           if (Date.parse(nextExpiry) <= Date.now()) throw new Error('Fresh step-up failed');
           await expectReplay(next);
         }
+        // A later TOTP step-up can replace the session's current strong-method evidence.
+        if (policy === 'recent_webauthn') await client.stepUpPasskey(state.sessionCsrfToken);
+        const finalStatus = await client.getAuthenticationStatus(state);
+        if (
+          finalStatus.needsLogin ||
+          finalStatus.needsStepUp ||
+          finalStatus.minimumAuthentication !== policy
+        )
+          throw new Error('Authentication requirement was not satisfied');
+        if (policy !== 'primary' && Date.parse(finalStatus.proofExpiresAt) <= Date.now())
+          throw new Error('Strong proof expiry missing');
         return {
           redirect: await completeHostedConsent(transport, state, 'approve'),
           csrf: state.sessionCsrfToken,
           factorId: enrollment.factorId,
         };
       },
-      { config, interaction, manageFactors },
+      { config, interaction, manageFactors, policy },
     );
     await page.goto(authorized.redirect);
     const result = await page.evaluate(async (config) => {
@@ -205,6 +254,9 @@ export async function verifyBrowserTotp(browser, clientOrigin, manageFactors = f
       factorManagementAndApiRevocation: manageFactors,
       oidcAndAccount: true,
       syntheticAuthenticator: true,
+      authenticationPolicy: policy,
+      passwordOnlyConsentRefused: policy !== 'primary',
+      totpConsentRefusedUntilWebauthn: policy === 'recent_webauthn',
     };
   } finally {
     await context.close();
