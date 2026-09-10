@@ -8,6 +8,8 @@ pub struct BillingConfig {
     pub stripe_webhook_secret: String,
     pub stripe_api_base_url: String,
     pub identity_public_key_pem: Option<String>,
+    pub identity_token_issuer: Option<String>,
+    pub identity_token_key_id: Option<String>,
     pub metrics_token: Option<String>,
     pub operator_token: Option<String>,
     pub app_url: String,
@@ -36,7 +38,9 @@ impl BillingConfig {
         let stripe_api_base_url = std::env::var("NVBES_STRIPE_API_BASE_URL")
             .unwrap_or_else(|_| "https://api.stripe.com".to_string());
 
-        let identity_public_key_pem = std::env::var("NVBES_IDENTITY_PUBLIC_KEY_PEM").ok();
+        let identity_public_key_pem = std::env::var("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM").ok();
+        let identity_token_issuer = std::env::var("NVBES_IDENTITY_TOKEN_ISSUER").ok();
+        let identity_token_key_id = std::env::var("NVBES_IDENTITY_TOKEN_KEY_ID").ok();
         let metrics_token = std::env::var("NVBES_BILLING_METRICS_TOKEN").ok();
         let operator_token = std::env::var("NVBES_BILLING_OPERATOR_TOKEN").ok();
 
@@ -50,6 +54,8 @@ impl BillingConfig {
             stripe_webhook_secret,
             stripe_api_base_url,
             identity_public_key_pem,
+            identity_token_issuer,
+            identity_token_key_id,
             metrics_token,
             operator_token,
             app_url,

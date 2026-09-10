@@ -34,7 +34,7 @@ pub async fn create_checkout_handler(
     headers: HeaderMap,
     Json(payload): Json<CreateCheckoutRequest>,
 ) -> BillingResult<Json<CheckoutSessionResponse>> {
-    principal.require_scope("billing:write")?;
+    principal.require_scope("billing:checkout")?;
 
     let account_type = payload.account_type.as_deref().unwrap_or("team");
     let idempotency_key = headers

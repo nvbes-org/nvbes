@@ -13,6 +13,37 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Contrat des jetons d'accès Billing — 2026-09-10
+
+L'intégration de révocation a révélé que le vérificateur Billing acceptait un
+bearer arbitraire sans clé publique et ignorait l'audience avec une clé. Ce
+contournement est supprimé. Le service exige le profil RS256 `at+jwt`, la clé
+configurée, l'émetteur exact, l'audience `nvbes-billing-service`, des identifiants
+de session/grant/principal valides et une durée maximale de 900 secondes.
+Les scopes acceptés sont `billing:read` et `billing:checkout` ; le checkout utilise
+maintenant ce dernier, conformément au profil Identity. Le pseudo-scope
+`billing:admin` ne donne plus de passe-droit.
+
+La configuration emploie le triplet canonique de clé publique, issuer et key ID.
+Sans triplet, les API utilisateur sont indisponibles à l'authentification, sans
+empêcher les webhooks Stripe de fonctionner. Un triplet partiel est une erreur
+de démarrage. Le helper de développement exporte déjà ces trois variables.
+Le signal d'authentification forte tient compte de la fraîcheur de la preuve,
+pas seulement de la présence historique de `totp` ou `webauthn` dans `amr`.
+
+Cette correction est un préalable au contrôle de révocation ; l'appel à Identity
+depuis Account/Billing n'est pas encore implémenté. DPoP n'est pas encore accepté
+par Billing : un token contenant une confirmation de clé est refusé en Bearer.
+
+Validation : `cargo check --workspace`, Nx `billing-service:check` (toutes les
+cibles Cargo) et `billing-service:test` passent. Les tests de sécurité utilisent
+des JWT signés avec une paire RSA éphémère ; aucune clé de test n'est stockée.
+La cible PostgreSQL `billing-service:test:database` passe également sur une base
+neuve isolée `nvbes_billing_test_identity`, avec Stripe simulé localement.
+Les tests vérifient le cycle Billing et le rollback/rejeu des webhooks sans
+recourir à l'ancien contournement bearer. Aucun appel de paiement réel ni
+déploiement n'est effectué.
+
 ## Révocation des sessions liées aux passkeys — 2026-09-10
 
 La révocation d'un credential invalide maintenant, dans la même transaction,

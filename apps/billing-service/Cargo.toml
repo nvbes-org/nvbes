@@ -37,4 +37,5 @@ tracing = "0.1.44"
 uuid = { version = "1.23.1", features = ["serde", "v4"] }
 
 [dev-dependencies]
+rsa = "0.9.10"
 tower = "0.5"

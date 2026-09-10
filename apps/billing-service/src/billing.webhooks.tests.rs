@@ -21,6 +21,8 @@ async fn failed_delivery_rolls_back_then_retries_once() {
         stripe_webhook_secret: "whsec_fixture".into(),
         stripe_api_base_url: "https://api.stripe.com".into(),
         identity_public_key_pem: None,
+        identity_token_issuer: None,
+        identity_token_key_id: None,
         metrics_token: None,
         operator_token: Some("fixture".into()),
         app_url: "https://nvbes.test".into(),

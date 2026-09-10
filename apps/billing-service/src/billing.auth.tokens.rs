@@ -1,0 +1,169 @@
+use super::BillingPrincipal;
+use crate::{config::BillingConfig, error::BillingError};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use serde::Deserialize;
+use uuid::Uuid;
+
+const AUDIENCE: &str = "nvbes-billing-service";
+
+#[derive(Deserialize)]
+struct Claims {
+    sub: Uuid,
+    iss: String,
+    aud: String,
+    token_type: String,
+    scope: String,
+    amr: Vec<String>,
+    client_id: String,
+    exp: u64,
+    iat: u64,
+    nbf: u64,
+    auth_time: u64,
+    step_up_time: Option<u64>,
+    step_up_expires_at: Option<u64>,
+    jti: Uuid,
+    sid: Uuid,
+    grant_id: Uuid,
+    cnf: Option<serde_json::Value>,
+}
+
+#[derive(Clone)]
+struct ConfiguredVerifier {
+    key: DecodingKey,
+    issuer: String,
+    key_id: String,
+}
+
+#[derive(Clone)]
+pub struct TokenVerifier(Option<ConfiguredVerifier>);
+
+impl TokenVerifier {
+    pub fn new(config: &BillingConfig) -> anyhow::Result<Self> {
+        match (
+            &config.identity_public_key_pem,
+            &config.identity_token_issuer,
+            &config.identity_token_key_id,
+        ) {
+            (None, None, None) => Ok(Self(None)),
+            (Some(pem), Some(issuer), Some(key_id)) => {
+                let url = reqwest::Url::parse(issuer)?;
+                anyhow::ensure!(
+                    url.host_str().is_some()
+                        && matches!(url.scheme(), "http" | "https")
+                        && url.username().is_empty()
+                        && url.password().is_none()
+                        && url.query().is_none()
+                        && url.fragment().is_none(),
+                    "invalid Identity issuer"
+                );
+                anyhow::ensure!(
+                    url.scheme() == "https"
+                        || matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]")),
+                    "Identity HTTP issuer must be loopback"
+                );
+                anyhow::ensure!(
+                    !key_id.is_empty()
+                        && key_id.len() <= 128
+                        && key_id
+                            .bytes()
+                            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.')),
+                    "invalid Identity key identifier"
+                );
+                Ok(Self(Some(ConfiguredVerifier {
+                    key: DecodingKey::from_rsa_pem(pem.as_bytes())?,
+                    issuer: issuer.clone(),
+                    key_id: key_id.clone(),
+                })))
+            }
+            _ => anyhow::bail!(
+                "Identity public key, issuer and key identifier must be configured together"
+            ),
+        }
+    }
+
+    pub fn verify(&self, token: &str) -> Result<BillingPrincipal, BillingError> {
+        let verifier = self.0.as_ref().ok_or(BillingError::Unauthorized)?;
+        if token.len() > 16_384 {
+            return Err(BillingError::Unauthorized);
+        }
+        let header = decode_header(token).map_err(|_| BillingError::Unauthorized)?;
+        if header.alg != Algorithm::RS256
+            || header.typ.as_deref() != Some("at+jwt")
+            || header.kid.as_deref() != Some(&verifier.key_id)
+            || header.jku.is_some()
+            || header.jwk.is_some()
+            || header.x5u.is_some()
+        {
+            return Err(BillingError::Unauthorized);
+        }
+        let mut validation = Validation::new(Algorithm::RS256);
+        validation.set_issuer(&[&verifier.issuer]);
+        validation.set_audience(&[AUDIENCE]);
+        validation.set_required_spec_claims(&["iss", "aud", "sub", "exp", "iat", "nbf"]);
+        validation.validate_nbf = true;
+        validation.leeway = 0;
+        let claims = decode::<Claims>(token, &verifier.key, &validation)
+            .map_err(|_| BillingError::Unauthorized)?
+            .claims;
+        let now = chrono::Utc::now().timestamp() as u64;
+        if claims.iss != verifier.issuer
+            || claims.aud != AUDIENCE
+            || claims.token_type != "access"
+            || claims.client_id.is_empty()
+            || claims.iat > now
+            || claims.nbf != claims.iat
+            || claims.exp <= now
+            || claims.exp <= claims.iat
+            || claims.exp - claims.iat > 900
+            || claims.auth_time > claims.iat
+            || claims.cnf.is_some()
+            || [claims.sub, claims.jti, claims.sid, claims.grant_id]
+                .iter()
+                .any(Uuid::is_nil)
+        {
+            return Err(BillingError::Unauthorized);
+        }
+        if claims.amr.is_empty()
+            || claims
+                .amr
+                .iter()
+                .any(|m| !matches!(m.as_str(), "pwd" | "totp" | "webauthn"))
+        {
+            return Err(BillingError::Unauthorized);
+        }
+        let fresh_step_up = match (claims.step_up_time, claims.step_up_expires_at) {
+            (None, None) => false,
+            (Some(at), Some(until))
+                if at >= claims.auth_time
+                    && at <= claims.iat
+                    && until > claims.iat
+                    && until - at <= 600 =>
+            {
+                until > now
+            }
+            _ => return Err(BillingError::Unauthorized),
+        };
+        let scopes: Vec<String> = claims.scope.split(' ').map(str::to_owned).collect();
+        if scopes
+            .iter()
+            .any(|s| !matches!(s.as_str(), "billing:read" | "billing:checkout"))
+        {
+            return Err(BillingError::Unauthorized);
+        }
+        let strong = claims
+            .amr
+            .iter()
+            .any(|m| matches!(m.as_str(), "totp" | "webauthn"));
+        let primary_passkey =
+            claims.amr == ["webauthn"] && now.saturating_sub(claims.auth_time) <= 300;
+        Ok(BillingPrincipal {
+            id: claims.sub,
+            scopes,
+            strong_authentication: (fresh_step_up && strong) || primary_passkey,
+        })
+    }
+}
+
+#[cfg(test)]
+#[path = "billing.auth.tokens.tests.rs"]
+mod tests;

@@ -65,6 +65,8 @@ async fn billing_lifecycle_is_isolated_deduplicated_and_audited() {
         stripe_webhook_secret: "whsec_mock_secret".into(),
         stripe_api_base_url,
         identity_public_key_pem: None,
+        identity_token_issuer: None,
+        identity_token_key_id: None,
         metrics_token: None,
         operator_token: Some("test_operator_token".into()),
         app_url: "https://nvbes.test".into(),
