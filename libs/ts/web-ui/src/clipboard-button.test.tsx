@@ -35,15 +35,18 @@ describe('clipboard feedback and cleanup', () => {
     expect(button().type).toBe('button');
     expect(button().getAttribute('aria-label')).toBe('Copy');
     expect(button().className).toContain('custom');
+    expect(button().outerHTML).toMatchSnapshot('idle copy control');
     await act(async () => button().click());
     expect(writeText).toHaveBeenCalledExactlyOnceWith('copy me');
     expect(button().getAttribute('aria-label')).toBe('Copied');
     expect(button().title).toBe('Copied');
     expect(host.querySelector('[aria-live="polite"]')?.textContent).toBe('Copied');
+    expect(button().outerHTML).toMatchSnapshot('successful copy control');
     await act(async () => vi.advanceTimersByTime(1999));
     expect(button().title).toBe('Copied');
     await act(async () => vi.advanceTimersByTime(1));
     expect(button().title).toBe('Copy');
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('uses custom labels and cancels a pending reset when unmounted', async () => {
@@ -75,6 +78,8 @@ describe('clipboard feedback and cleanup', () => {
         expect(textarea?.readOnly).toBe(true);
         expect(textarea?.style.position).toBe('fixed');
         expect(textarea?.style.opacity).toBe('0');
+        expect(textarea?.selectionStart).toBe(0);
+        expect(textarea?.selectionEnd).toBe('fallback value'.length);
         return true;
       });
       Object.defineProperty(document, 'execCommand', { configurable: true, value: copy });
@@ -99,6 +104,7 @@ describe('clipboard feedback and cleanup', () => {
       await act(async () => button().click());
       expect(button().title).toBe('Copy');
       expect(host.querySelector('[aria-live="polite"]')?.textContent).toBe('Copy failed');
+      expect(button().outerHTML).toMatchSnapshot('failed copy control');
       expect(document.querySelector('textarea')).toBeNull();
       expect(vi.getTimerCount()).toBe(0);
     },

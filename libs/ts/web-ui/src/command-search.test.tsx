@@ -36,6 +36,7 @@ describe('command suggestions', () => {
     ['hello st', 1, 'hello status:open '],
     ['owner:me ', 2, 'owner:me owner:me '],
     ['status:open', 2, 'status:open owner:me '],
+    ['   hello st  ', 2, '   hello owner:me '],
   ])('offers and inserts tokens for %j', async (value, count, expected) => {
     const onChange = vi.fn();
     await act(async () =>
@@ -43,6 +44,7 @@ describe('command suggestions', () => {
     );
     expect(input().placeholder).toBe('Search...');
     expect(host.querySelectorAll('button')).toHaveLength(0);
+    expect(host.innerHTML).toMatchSnapshot('unmatched search without empty popup');
     await act(async () => input().focus());
     expect(host.querySelectorAll('button')).toHaveLength(count);
     const button = host.querySelector('button');
@@ -90,6 +92,23 @@ describe('command suggestions', () => {
     await act(async () => vi.advanceTimersByTime(99));
     expect(host.querySelectorAll('button')).toHaveLength(2);
     await act(async () => vi.advanceTimersByTime(1));
+    expect(host.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('refreshes suggestions when either query or available commands change', async () => {
+    const onChange = vi.fn();
+    await act(async () =>
+      root.render(<CommandSearch value="ow" tokens={tokens} onChange={onChange} />),
+    );
+    await act(async () => input().focus());
+    expect(host.querySelector('button')?.textContent).toContain('Owner');
+    await act(async () =>
+      root.render(<CommandSearch value="st" tokens={tokens} onChange={onChange} />),
+    );
+    expect(host.querySelector('button')?.textContent).toContain('Status');
+    await act(async () =>
+      root.render(<CommandSearch value="st" tokens={[]} onChange={onChange} />),
+    );
     expect(host.querySelectorAll('button')).toHaveLength(0);
   });
 });

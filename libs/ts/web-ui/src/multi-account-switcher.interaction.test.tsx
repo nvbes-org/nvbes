@@ -56,6 +56,8 @@ describe('account switcher interactions', () => {
       expect(portal()?.textContent).toContain('Basculer entre les sessions ouvertes.');
       expect(portal()?.textContent).toContain('Session help');
       expect(portal()?.style.width).toBe(density === 'compact' ? '320px' : '384px');
+      expect(host.innerHTML).toMatchSnapshot(`${density} active account control`);
+      expect(portal()?.outerHTML).toMatchSnapshot(`${density} connected accounts menu`);
       const buttons = [...(portal()?.querySelectorAll('button') ?? [])];
       const select = buttons.find((button) => button.textContent?.includes('Grace Hopper'));
       const remove = buttons.find(
@@ -84,7 +86,11 @@ describe('account switcher interactions', () => {
   it('keeps inside clicks open, closes outside clicks and removes listeners', async () => {
     const add = vi.spyOn(window, 'addEventListener');
     const remove = vi.spyOn(window, 'removeEventListener');
+    const documentAdd = vi.spyOn(document, 'addEventListener');
+    const documentRemove = vi.spyOn(document, 'removeEventListener');
     await act(async () => root.render(<MultiAccountSwitcher {...props()} />));
+    expect(add.mock.calls.filter(([name]) => ['scroll', 'resize'].includes(name))).toEqual([]);
+    expect(documentAdd.mock.calls.filter(([name]) => name === 'pointerdown')).toEqual([]);
     await act(async () => trigger().click());
     const menu = portal();
     if (!menu) throw new Error('Missing portal');
@@ -110,6 +116,10 @@ describe('account switcher interactions', () => {
         remove.mock.calls.some(([name, handler]) => name === kind && handler === registration?.[1]),
       ).toBe(true);
     }
+    expect(add).toHaveBeenCalledWith('scroll', expect.any(Function), true);
+    expect(remove).toHaveBeenCalledWith('scroll', expect.any(Function), true);
+    const registration = documentAdd.mock.calls.find(([name]) => name === 'pointerdown');
+    expect(documentRemove).toHaveBeenCalledWith('pointerdown', registration?.[1]);
   });
 
   it.each([true, false])('renders loading=%s and empty account states', async (loading) => {
@@ -122,6 +132,7 @@ describe('account switcher interactions', () => {
       loading ? 'Chargement des comptes...' : 'Aucun compte connecté.',
     );
     expect(portal()?.querySelector('[role="status"]') !== null).toBe(loading);
+    expect(portal()?.outerHTML).toMatchSnapshot(`accounts loading=${loading}`);
   });
 
   it('disables the switching account and uses custom labels', async () => {
@@ -142,6 +153,8 @@ describe('account switcher interactions', () => {
     expect(portal()?.textContent).toContain('Pick one');
     expect(portal()?.textContent).toContain('Add account');
     expect(portal()?.querySelector('[aria-label^="Retirer"]')).toBeNull();
+    expect(host.innerHTML).toMatchSnapshot('desktop account details');
+    expect(portal()?.outerHTML).toMatchSnapshot('switching account menu');
   });
 
   it.each(['default', 'compact'] as const)(
@@ -155,6 +168,8 @@ describe('account switcher interactions', () => {
       await act(async () => trigger().click());
       const images = [...document.querySelectorAll('img')];
       expect(images).toHaveLength(3);
+      expect(host.innerHTML).toMatchSnapshot(`${density} avatar control`);
+      expect(portal()?.outerHTML).toMatchSnapshot(`${density} avatar menu`);
       await act(async () => images.forEach((image) => image.dispatchEvent(new Event('error'))));
       for (const image of images) {
         expect(image.crossOrigin).toBe('anonymous');
