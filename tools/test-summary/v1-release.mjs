@@ -6,6 +6,7 @@ import { confinedRead, sha256, verifyBundle } from './v1-bundle-verification.mjs
 import { productionUnits } from './v1-catalogue.mjs';
 import { evaluateV1 } from './v1-evidence.mjs';
 import { validateManifest } from './v1-manifest.mjs';
+import { githubArtifactReader } from './v1-ci-artifacts.mjs';
 
 export function loadV1(cwd) {
   const rootBytes = confinedRead(cwd, 'docs/testing/v1/manifest.json');
@@ -73,12 +74,18 @@ function main() {
       units,
       repository: 'nvbes-org/nvbes',
       workflows: ['.github/workflows/ci.yml', '.github/workflows/v1-testing.yml'],
+      getCiArtifact: githubArtifactReader('nvbes-org/nvbes'),
       getRun: (runId) =>
         JSON.parse(
-          execFileSync('gh', ['api', `repos/nvbes-org/nvbes/actions/runs/${runId}`], {
-            encoding: 'utf8',
-            maxBuffer: 4 * 1024 * 1024,
-          }),
+          execFileSync(
+            'gh',
+            ['api', '--hostname', 'github.com', `repos/nvbes-org/nvbes/actions/runs/${runId}`],
+            {
+              encoding: 'utf8',
+              maxBuffer: 4 * 1024 * 1024,
+              timeout: 30000,
+            },
+          ),
         ),
     });
     verified = true;

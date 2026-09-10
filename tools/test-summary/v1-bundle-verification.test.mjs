@@ -13,7 +13,8 @@ function fixture(t) {
   const publicKey = key.export({ type: 'spki', format: 'pem' });
   writeFileSync(path.join(directory, 'result.json'), '{}');
   const run = {
-    repository: { full_name: 'nvbes-org/nvbes' },
+    id: 123,
+    repository: { id: 1, full_name: 'nvbes-org/nvbes' },
     head_sha: 'a'.repeat(40),
     path: '.github/workflows/ci.yml',
     status: 'completed',
@@ -23,7 +24,9 @@ function fixture(t) {
   };
   const bundle = {
     sha: run.head_sha,
-    artifacts: [{ path: 'result.json', sha256: sha256('{}') }],
+    artifacts: [
+      { path: 'result.json', sha256: sha256('{}'), ci: { artifactId: 456, member: 'result.json' } },
+    ],
     results: [
       {
         artifacts: ['result.json'],
@@ -47,6 +50,10 @@ function fixture(t) {
       repository: 'nvbes-org/nvbes',
       workflows: [run.path],
       getRun: () => run,
+      getCiArtifact: ({ reference }) => {
+        assert.equal(reference.artifactId, 456);
+        return Buffer.from('{}');
+      },
       units: [{ name: 'signature-boundary-fixture', language: 'fixture' }],
     },
     directory,
@@ -123,6 +130,24 @@ for (const [name, mutate] of [
       input.workflows = [];
     },
   ],
+  [
+    'missing artifact retrieval',
+    ({ input }) => {
+      delete input.getCiArtifact;
+    },
+  ],
+  [
+    'different published bytes',
+    ({ input }) => {
+      input.getCiArtifact = () => Buffer.from('forged');
+    },
+  ],
+  [
+    'wrong returned run ID',
+    ({ run }) => {
+      run.id = 124;
+    },
+  ],
 ]) {
   test(`rejects ${String(name)}`, (t) => {
     const f = fixture(t);
@@ -136,6 +161,35 @@ test('rejects traversal and escaping symlinks', (t) => {
   assert.throws(() => confinedRead(directory, '../result.json'), /traversal/u);
   symlinkSync(os.tmpdir(), path.join(directory, 'outside'));
   assert.throws(() => confinedRead(directory, 'outside'), /escapes/u);
+});
+
+test('a fresh signature cannot replace missing CI provenance', (t) => {
+  const f = fixture(t);
+  delete f.bundle.artifacts[0].ci;
+  f.input.bytes = Buffer.from(JSON.stringify(f.bundle));
+  f.input.signature = sign(null, f.input.bytes, f.privateKey);
+  assert.throws(() => verifyBundle(f.input), /Missing CI artifact provenance/u);
+});
+
+test('solo operator evidence remains local and cannot impersonate CI measurements', (t) => {
+  const f = fixture(t);
+  delete f.bundle.artifacts[0].ci;
+  f.bundle.results[0].producer = {
+    kind: 'operator',
+    signedBy: 'solo fixture operator',
+    publicKeyDigest: f.input.publicKeyDigest,
+  };
+  f.input.getCiArtifact = () => {
+    throw new Error('Operator report must not access CI');
+  };
+  const check = () => {
+    f.input.bytes = Buffer.from(JSON.stringify(f.bundle));
+    f.input.signature = sign(null, f.input.bytes, f.privateKey);
+    return verifyBundle(f.input);
+  };
+  assert.doesNotThrow(check);
+  f.bundle.measurements = [{ ...f.bundle.results[0], unit: 'nvbes-example' }];
+  assert.throws(check, /Measurements require a CI producer/u);
 });
 
 test('signed packets cannot bypass raw TypeScript measurement validation', (t) => {
@@ -172,7 +226,11 @@ test('signed packets cannot bypass raw TypeScript measurement validation', (t) =
   ]) {
     const bytes = JSON.stringify(report);
     writeFileSync(path.join(f.directory, name), bytes);
-    f.bundle.artifacts.push({ path: name, sha256: sha256(bytes) });
+    f.bundle.artifacts.push({
+      path: name,
+      sha256: sha256(bytes),
+      ci: { artifactId: 456, member: name },
+    });
   }
   const measurement = {
     unit: '@nvbes/example',
@@ -183,6 +241,15 @@ test('signed packets cannot bypass raw TypeScript measurement validation', (t) =
     reports: { 'istanbul-summary': 'coverage.json', stryker: 'mutation.json' },
   };
   f.bundle.measurements = [measurement];
+  measurement.producer = f.bundle.results[0].producer;
+  f.input.getCiArtifact = ({ reference }) =>
+    Buffer.from(
+      reference.member === 'coverage.json'
+        ? JSON.stringify(coverage)
+        : reference.member === 'mutation.json'
+          ? JSON.stringify(mutation)
+          : '{}',
+    );
   const check = () => {
     f.input.bytes = Buffer.from(JSON.stringify(f.bundle));
     f.input.signature = sign(null, f.input.bytes, f.privateKey);

@@ -65,6 +65,25 @@ autorisé, terminé avec succès au premier essai pour le SHA candidat.
 Un résultat manuel identifie `signedBy` et `publicKeyDigest` ; la signature
 du paquet engage cet opérateur solo, pas un tiers indépendant.
 
+Pour chaque fichier automatisé, `artifacts[].ci` contient `artifactId`
+(identifiant numérique GitHub) et `member` (chemin exact dans son ZIP).
+Chaque mesure porte aussi un `producer` GitHub Actions, au même format que
+les résultats de suites. Le validateur interroge GitHub avec `gh api`,
+contrôle le run, le SHA, les identifiants du dépôt et l'expiration, télécharge
+le ZIP, vérifie son digest fourni par GitHub puis compare les octets du membre
+aux octets locaux signés. Un artefact absent, supprimé, expiré ou sans digest
+entraîne NO-GO ; aucune confiance de remplacement dans la signature locale.
+Le contrat API utilisé est documenté par [GitHub](https://docs.github.com/en/rest/actions/artifacts).
+
+La vérification nécessite `gh` authentifié avec lecture des Actions et
+`unzip` disponible (les tests de ce lecteur utilisent aussi `zip`). Les
+archives ne sont jamais extraites : un membre sans glob est lu sur stdout.
+Bornes : 16 Mio par archive/membre, 64 Mio téléchargés et 64 Mio de fichiers
+locaux, 32 archives/runs, 256 fichiers locaux ; 30 s par requête GitHub et
+10 s par lecture ZIP. Les fichiers temporaires privés sont nettoyés.
+Les preuves opérateur n'ont pas de référence `ci` et restent dans leur
+stockage confidentiel ; elles ne peuvent pas remplacer les mesures CI.
+
 Les mesures identifient `unit`, `sha`, `completedAt`, `artifacts`, `lines`,
 `branches`, `mutation`. `operations` contient `rpoHours`, `rtoHours`,
 `targetMonthlyEurTtc`, `maximumMonthlyEurTtc` (limites 24, 8, 20, 30).
@@ -104,7 +123,8 @@ builds non viables sortent du dénominateur. Les trois scores déclarés doivent
 
 Ces contrôles ne prouvent pas encore l'exhaustivité de l'instrumentation
 Rust ni celle des sites de mutation. LLVM ne contient pas le texte source :
-la liaison de son contenu au SHA exige toujours la collecte CI authentifiée.
+sa provenance est liée au run candidat par la comparaison avec l'artefact
+GitHub, mais le producteur doit encore garantir ce qu'il a instrumenté.
 Un export dont des fichiers entiers auraient été omis doit être détecté par
 le futur contrôle de complétude de campagne, pas par une comparaison naïve
 avec tous les modules Rust (certains n'ont aucun compteur applicable).
@@ -115,13 +135,13 @@ avec tous les modules Rust (certains n'ont aucun compteur applicable).
    classement de toutes les exigences historiques et migrer les
    consommateurs Account ensemble. Les IDs actuels sont des obligations,
    pas des assertions d'exécution.
-2. Produire les enveloppes depuis les runners CI, lier les artefacts à leurs
-   producteurs. Les recalculs TypeScript et Rust sont intégrés ;
-   l'authentification de la collecte CI, l'exhaustivité de l'instrumentation
-   et des sites de mutation et la vérification du
-   contenu métier des preuves de suites/opérations restent à terminer.
-   La signature du paquet et la vérification d'un run ne prouvent pas à
-   elles seules que GitHub a produit ces artefacts.
+2. Produire les enveloppes depuis les runners CI. Les recalculs TypeScript
+   et Rust et la comparaison avec les artefacts GitHub sont intégrés et
+   testés sur fixtures ; aucun paquet candidat réel complet n'a encore
+   été vérifié. L'exhaustivité de l'instrumentation et des sites de mutation,
+   ainsi que la vérification du contenu métier des preuves de suites et
+   d'opérations, restent à terminer. Publier un fichier dans un run réussi
+   ne prouve pas à lui seul que les cas annoncés ont réellement été exécutés.
 3. Étalonner nightly (épinglé à `nightly-2026-09-09`) ; étendre les mesures Rust/TypeScript et
    atteindre effectivement 90 % partout. `llvm-cov --branch` mesure les
    branches ; ce n'est pas une preuve MC/DC ni une couverture indépendante

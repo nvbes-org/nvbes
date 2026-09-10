@@ -27,6 +27,7 @@ export function verifyBundle({
   repository,
   workflows,
   getRun,
+  getCiArtifact,
   units,
 }) {
   assert(Array.isArray(units) && units.length > 0, 'Candidate measurement scope required');
@@ -42,13 +43,18 @@ export function verifyBundle({
     'Missing bundle artifacts',
   );
   const artifacts = new Map();
+  let artifactBytesTotal = 0;
   for (const artifact of bundle.artifacts) {
+    assert(artifacts.size < 256, 'Too many evidence artifacts');
     assert(!artifacts.has(artifact.path), 'Duplicate artifact');
     const artifactBytes = confinedRead(artifactDirectory, artifact.path);
+    artifactBytesTotal += artifactBytes.length;
+    assert(artifactBytesTotal <= 64 * 1024 * 1024, 'Evidence artifact memory budget exceeded');
     assert.equal(sha256(artifactBytes), artifact.sha256, 'Artifact digest mismatch');
     artifacts.set(artifact.path, artifactBytes);
   }
-  for (const result of bundle.results) {
+  const runs = new Map();
+  for (const result of [...bundle.results, ...(bundle.measurements ?? [])]) {
     assert(
       Array.isArray(result.artifacts) &&
         result.artifacts.length > 0 &&
@@ -58,6 +64,11 @@ export function verifyBundle({
     const producer = result.producer;
     assert(producer && ['github-actions', 'operator'].includes(producer.kind), 'Unknown producer');
     if (producer.kind === 'operator') {
+      assert(!Object.hasOwn(result, 'unit'), 'Measurements require a CI producer');
+      assert(
+        result.artifacts.every((file) => !bundle.artifacts.find((entry) => entry.path === file).ci),
+        'Operator evidence must remain separate from CI artifacts',
+      );
       assert(
         typeof producer.signedBy === 'string' && producer.signedBy.trim(),
         'Missing operator identity',
@@ -68,7 +79,18 @@ export function verifyBundle({
     assert.equal(producer.repository, repository, 'Wrong producer repository');
     assert(/^[1-9][0-9]*$/u.test(String(producer.runId)), 'Invalid workflow run ID');
     assert(workflows.includes(producer.workflow), 'Untrusted workflow');
-    const run = getRun(producer.runId);
+    const id = String(producer.runId);
+    assert(Number.isSafeInteger(Number(id)), 'Invalid workflow run ID');
+    if (!runs.has(id)) {
+      assert(runs.size < 32, 'Too many evidence runs');
+      runs.set(id, getRun(producer.runId));
+    }
+    const run = runs.get(id);
+    assert.equal(String(run.id), id, 'Wrong workflow run ID');
+    assert(
+      Number.isSafeInteger(run.repository.id) && run.repository.id > 0,
+      'Missing repository ID',
+    );
     assert.equal(run.repository.full_name, repository);
     assert.equal(run.head_sha, bundle.sha, 'Workflow SHA mismatch');
     assert.equal(run.path, producer.workflow, 'Workflow path mismatch');
@@ -76,6 +98,15 @@ export function verifyBundle({
     assert.equal(run.conclusion, 'success');
     assert.equal(run.run_attempt, 1, 'Rerun cannot replace failed evidence');
     assert(['push', 'workflow_dispatch'].includes(run.event), 'Untrusted workflow event');
+    for (const file of result.artifacts) {
+      const reference = bundle.artifacts.find((entry) => entry.path === file).ci;
+      assert(reference && typeof getCiArtifact === 'function', 'Missing CI artifact provenance');
+      const published = getCiArtifact({ reference, run, sha: bundle.sha });
+      assert(
+        Buffer.isBuffer(published) && published.equals(artifacts.get(file)),
+        'Local evidence differs from published CI artifact',
+      );
+    }
   }
   verifyTypescriptMeasurements(bundle, units, artifacts);
   verifyRustMeasurements(bundle, units, artifacts);
