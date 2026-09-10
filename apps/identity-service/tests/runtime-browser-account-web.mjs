@@ -67,8 +67,9 @@ export async function verifyAccountWeb(config) {
     await page.goto(config.origins.client);
     await page.getByRole('button', { name: 'Se connecter avec Identity' }).click();
     await page.getByLabel('Adresse email').fill(config.email);
-    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
     await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
+    await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
     const profileResponse = page.waitForResponse(
       (response) => response.url() === `${config.origins.account}/api/v1/profile`,
     );

@@ -4,8 +4,9 @@ import { authorizationFor, confirmHostedAccount } from './runtime-browser-hosted
 export async function verifyRecoveryFromUi(page, context, client, code) {
   await page.goto(await authorizationFor(page, client));
   await page.getByLabel('Adresse email').fill(client.email);
-  await page.getByLabel('Mot de passe', { exact: true }).fill(client.password);
   await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+  await page.getByLabel('Mot de passe', { exact: true }).fill(client.password);
+  await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
   await page.getByRole('heading', { name: 'Confirmez que c’est vous.' }).waitFor();
   await page.getByText('Vous avez perdu vos facteurs ?', { exact: true }).click();
   await page.getByLabel('Code de secours', { exact: true }).fill(code);

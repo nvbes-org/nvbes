@@ -1,8 +1,10 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { ArrowUpRight, LockKeyhole } from 'lucide-react';
+import { useEffect, useState, useRef, useSyncExternalStore } from 'react';
+import { ArrowUpRight } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { AuthShell } from './auth.shell';
+import { LoginProgress } from './components/LoginProgress';
 import { AuthenticationForms } from './authorization.forms';
 import { EnrollmentForm } from './authorization.enrollment';
 import { RecoveryCodes } from './authorization.recovery-codes';
@@ -37,6 +39,7 @@ const scopeLabels: Record<string, string> = {
 };
 
 export function AuthorizationPage({ controller }: { controller: AuthorizationController }) {
+  const [loginStep, setLoginStep] = useState<'identifier' | 'password'>('identifier');
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const securityExpiry = managementExpiry(state);
   useEffect(() => {
@@ -56,164 +59,145 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
   const active =
     state.interaction !== null && !['closed', 'leaving', 'loading'].includes(state.stage);
   return (
-    <div className="flex min-h-svh flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between px-6 py-7 sm:px-12">
-        <span className="text-2xl font-semibold tracking-tighter">
-          nvbes<span className="text-primary">.</span>
-        </span>
-        <span className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-          Identity
-        </span>
-      </header>
-      <main className="mx-auto flex w-full max-w-5xl flex-1 items-center px-6 py-10 sm:px-12">
-        <section
-          className="grid w-full gap-12 md:grid-cols-[1fr_1fr] md:gap-20"
-          aria-busy={state.busy}
-        >
-          <div className="flex flex-col gap-5">
-            <LockKeyhole className="size-7 text-primary" aria-hidden="true" />
-            <h1
-              ref={heading}
-              tabIndex={-1}
-              className="max-w-sm font-heading text-4xl leading-tight tracking-tight outline-none sm:text-5xl"
-            >
-              {titles[state.stage]}
-            </h1>
-            {state.interaction && (
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Connexion demandée par{' '}
-                <strong className="break-all font-medium text-foreground">
-                  {state.interaction.clientId}
-                </strong>
-                .
-              </p>
-            )}
-            {state.stage === 'login' && (
-              <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-                Utilisez votre compte nvbes pour continuer vers votre application.
-              </p>
-            )}
-            {state.stage === 'consent' && (
-              <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-                Vérifiez les accès demandés avant de continuer.
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-6">
-            {state.error && (
-              <Alert variant="destructive">
-                <AlertDescription>{state.error}</AlertDescription>
-              </Alert>
-            )}
-            {['login', 'reauthenticate', 'step-up', 'security-step-up'].includes(state.stage) && (
-              <AuthenticationForms controller={controller} state={state} />
-            )}
-            {state.stage === 'enrollment' && (
-              <EnrollmentForm controller={controller} state={state} />
-            )}
-            {state.stage === 'consent' && state.interaction && (
+    <AuthShell
+      title={
+        state.stage === 'login'
+          ? loginStep === 'password'
+            ? 'Bienvenue'
+            : 'Se connecter'
+          : state.stage === 'consent'
+            ? "Demande d'autorisation"
+            : titles[state.stage]
+      }
+      headingRef={heading}
+      description={
+        state.stage === 'login'
+          ? 'Utilisez votre compte nvbes pour accéder à votre espace sécurisé.'
+          : state.stage === 'consent'
+            ? "Vérifiez les accès demandés par l'application."
+            : undefined
+      }
+    >
+      <div
+        className="flex flex-col gap-6 animate-login-card-enter-forward motion-reduce:animate-none"
+        aria-busy={state.busy}
+      >
+        {['login', 'reauthenticate', 'step-up', 'security-step-up'].includes(state.stage) && (
+          <LoginProgress
+            isOAuthFlow
+            step={state.stage === 'login' || state.stage === 'reauthenticate' ? loginStep : 'mfa'}
+          />
+        )}
+        {state.error && (
+          <Alert variant="destructive">
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
+        )}
+        {['login', 'reauthenticate', 'step-up', 'security-step-up'].includes(state.stage) && (
+          <AuthenticationForms controller={controller} state={state} onStep={setLoginStep} />
+        )}
+        {state.stage === 'enrollment' && <EnrollmentForm controller={controller} state={state} />}
+        {state.stage === 'consent' && state.interaction && (
+          <>
+            {securityExpiry && (
               <>
-                {securityExpiry && (
-                  <>
-                    <p className="text-sm text-muted-foreground">
-                      Générer des codes de secours remplace immédiatement tous vos anciens codes.
-                    </p>
-                    <Button
-                      variant="outline"
-                      disabled={state.busy}
-                      onClick={() => void controller.generateRecoveryCodes()}
-                    >
-                      Générer des codes de secours
-                    </Button>
-                  </>
-                )}
-              </>
-            )}
-            {state.stage === 'recovery-codes' && (
-              <RecoveryCodes controller={controller} state={state} />
-            )}
-            {state.stage === 'factors' && state.interaction?.sessionCsrfToken && securityExpiry && (
-              <FactorsPanel
-                authorization={controller}
-                csrf={state.interaction.sessionCsrfToken}
-                expiresAt={securityExpiry}
-              />
-            )}
-            {state.stage === 'consent' && state.interaction && (
-              <>
-                <h2 className="font-medium">Accès demandés</h2>
-                <ul className="flex flex-col gap-3 text-sm">
-                  {[...new Set(state.interaction.scope.split(' ').filter(Boolean))].map((scope) => (
-                    <li key={scope} className="flex items-start gap-3">
-                      <ArrowUpRight
-                        className="mt-0.5 size-4 shrink-0 text-primary"
-                        aria-hidden="true"
-                      />
-                      <span className="break-all">{scopeLabels[scope] ?? scope}</span>
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm text-muted-foreground">
+                  Générer des codes de secours remplace immédiatement tous vos anciens codes.
+                </p>
                 <Button
-                  size="lg"
+                  variant="outline"
                   disabled={state.busy}
-                  onClick={() => void controller.consent('approve')}
+                  onClick={() => void controller.generateRecoveryCodes()}
                 >
-                  Autoriser et continuer
-                </Button>
-                {(state.firstEnrollmentAvailable || securityExpiry) && (
-                  <Button
-                    variant="outline"
-                    disabled={state.busy}
-                    onClick={() => void controller.beginEnrollment()}
-                  >
-                    Ajouter une méthode de sécurité
-                  </Button>
-                )}
-                {!securityExpiry && !state.firstEnrollmentAvailable && (
-                  <Button
-                    variant="outline"
-                    disabled={state.busy}
-                    onClick={() => controller.beginSecurityStepUp()}
-                  >
-                    Confirmer mon identité pour gérer la sécurité
-                  </Button>
-                )}
-                {securityExpiry && (
-                  <Button
-                    variant="outline"
-                    disabled={state.busy}
-                    onClick={() => controller.beginFactors()}
-                  >
-                    Gérer mes méthodes de sécurité
-                  </Button>
-                )}
-              </>
-            )}
-            {active && state.stage !== 'factors' && (
-              <>
-                <Separator />
-                <Button
-                  variant="ghost"
-                  disabled={state.busy}
-                  onClick={() => void controller.consent('deny')}
-                >
-                  Annuler la connexion
+                  Générer des codes de secours
                 </Button>
               </>
             )}
-            <p role="status" aria-live="polite" className="min-h-5 text-sm text-muted-foreground">
-              {state.busy
-                ? 'Vérification en cours…'
-                : state.stage === 'leaving'
-                  ? 'Redirection en cours…'
-                  : ''}
+          </>
+        )}
+        {state.stage === 'recovery-codes' && (
+          <RecoveryCodes controller={controller} state={state} />
+        )}
+        {state.stage === 'factors' && state.interaction?.sessionCsrfToken && securityExpiry && (
+          <FactorsPanel
+            authorization={controller}
+            csrf={state.interaction.sessionCsrfToken}
+            expiresAt={securityExpiry}
+          />
+        )}
+        {state.stage === 'consent' && state.interaction && (
+          <>
+            <h2 className="font-medium">Accès demandés</h2>
+            <p className="break-all text-sm text-muted-foreground">
+              Connexion demandée par <strong>{state.interaction.clientId}</strong>.
             </p>
-          </div>
-        </section>
-      </main>
-      <footer className="px-6 py-7 text-xs text-muted-foreground sm:px-12">
-        Un compte nvbes. Vos accès, votre choix.
-      </footer>
-    </div>
+            <ul className="flex flex-col gap-3 text-sm">
+              {[...new Set(state.interaction.scope.split(' ').filter(Boolean))].map((scope) => (
+                <li key={scope} className="flex items-start gap-3">
+                  <ArrowUpRight
+                    className="mt-0.5 size-4 shrink-0 text-primary"
+                    aria-hidden="true"
+                  />
+                  <span className="break-all">{scopeLabels[scope] ?? scope}</span>
+                </li>
+              ))}
+            </ul>
+            <Button
+              size="lg"
+              disabled={state.busy}
+              onClick={() => void controller.consent('approve')}
+            >
+              Autoriser et continuer
+            </Button>
+            {(state.firstEnrollmentAvailable || securityExpiry) && (
+              <Button
+                variant="outline"
+                disabled={state.busy}
+                onClick={() => void controller.beginEnrollment()}
+              >
+                Ajouter une méthode de sécurité
+              </Button>
+            )}
+            {!securityExpiry && !state.firstEnrollmentAvailable && (
+              <Button
+                variant="outline"
+                disabled={state.busy}
+                onClick={() => controller.beginSecurityStepUp()}
+              >
+                Confirmer mon identité pour gérer la sécurité
+              </Button>
+            )}
+            {securityExpiry && (
+              <Button
+                variant="outline"
+                disabled={state.busy}
+                onClick={() => controller.beginFactors()}
+              >
+                Gérer mes méthodes de sécurité
+              </Button>
+            )}
+          </>
+        )}
+        {active && state.stage !== 'factors' && (
+          <>
+            <Separator />
+            <Button
+              variant="ghost"
+              disabled={state.busy}
+              onClick={() => void controller.consent('deny')}
+            >
+              Annuler la connexion
+            </Button>
+          </>
+        )}
+        <p role="status" aria-live="polite" className="min-h-5 text-sm text-muted-foreground">
+          {state.busy
+            ? 'Vérification en cours…'
+            : state.stage === 'leaving'
+              ? 'Redirection en cours…'
+              : ''}
+        </p>
+      </div>
+    </AuthShell>
   );
 }

@@ -26,8 +26,9 @@ export async function verifyHostedSecurity(browser, origin, method) {
     const factors = await prepareHostedFactors(page, config);
     await page.goto(await authorizationFor(page, config));
     await page.getByLabel('Adresse email').fill(config.email);
-    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
     await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
+    await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
     await page.getByRole('heading', { name: 'Accès demandés' }).waitFor();
     if (await page.getByRole('button', { name: 'Gérer mes méthodes de sécurité' }).count())
       throw new Error('Primary-only login offered factor management');

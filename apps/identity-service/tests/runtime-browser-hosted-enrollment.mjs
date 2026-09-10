@@ -38,13 +38,14 @@ export async function verifyHostedEnrollment(browser, clientOrigin, method) {
     };
     await page.goto(await authorizationFor(page, client));
     await page.getByLabel('Adresse email').fill(config.email);
+    await page.getByRole('button', { name: 'Continuer', exact: true }).click();
     await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
     const loginResponse = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname === '/oauth/authorize/login' &&
         response.request().method() === 'POST',
     );
-    await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+    await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
     const { session_csrf_token: csrf } = await (await loginResponse).json();
     await page.getByRole('heading', { name: 'Protégez votre compte.' }).waitFor();
     if (await page.getByRole('button', { name: 'Autoriser et continuer' }).count())

@@ -1,3 +1,4 @@
+import { AuthShell } from './auth.shell';
 import {
   createRootRoute,
   createRoute,
@@ -49,13 +50,11 @@ export function App({
 
 function StartPage() {
   return (
-    <main className="mx-auto flex min-h-svh max-w-xl flex-col justify-center gap-6 px-6">
-      <span className="text-2xl font-semibold tracking-tighter">nvbes.</span>
-      <h1 className="font-heading text-4xl tracking-tight">Votre compte, vos applications.</h1>
+    <AuthShell title="Votre compte, vos applications.">
       <p className="leading-relaxed text-muted-foreground">
         Pour vous connecter, ouvrez votre application nvbes et choisissez de vous connecter à votre
         compte.
       </p>
-    </main>
+    </AuthShell>
   );
 }

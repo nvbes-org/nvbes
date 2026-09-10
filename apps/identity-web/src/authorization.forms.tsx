@@ -1,29 +1,22 @@
 import type { FormEvent } from 'react';
-import { Fingerprint, ArrowRight } from 'lucide-react';
+import { Fingerprint } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel, FieldSeparator } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import type { AuthorizationController } from './authorization.controller';
 import type { AuthorizationState } from './authorization.state';
+import { PasswordLogin } from './authorization.password';
 import { RecoveryRequest } from './recovery.request';
 
 export function AuthenticationForms({
   controller,
   state,
+  onStep,
 }: {
   controller: AuthorizationController;
   state: AuthorizationState;
+  onStep: (step: 'identifier' | 'password') => void;
 }) {
-  function password(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    const email = data.get('email');
-    const secret = data.get('password');
-    form.reset();
-    if (typeof email === 'string' && typeof secret === 'string')
-      void controller.password(email, secret);
-  }
   function totp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -44,38 +37,7 @@ export function AuthenticationForms({
         {login ? 'Se connecter avec une passkey' : 'Vérifier avec une passkey'}
       </Button>
       {login ? (
-        <form onSubmit={password}>
-          <FieldGroup>
-            <FieldSeparator>ou avec votre mot de passe</FieldSeparator>
-            <Field data-disabled={state.busy}>
-              <FieldLabel htmlFor="email">Adresse email</FieldLabel>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="username"
-                maxLength={320}
-                required
-                disabled={state.busy}
-              />
-            </Field>
-            <Field data-disabled={state.busy}>
-              <FieldLabel htmlFor="password">Mot de passe</FieldLabel>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                maxLength={1024}
-                required
-                disabled={state.busy}
-              />
-            </Field>
-            <Button size="lg" type="submit" disabled={state.busy}>
-              Continuer <ArrowRight data-icon="inline-end" />
-            </Button>
-          </FieldGroup>
-        </form>
+        <PasswordLogin controller={controller} busy={state.busy} onStep={onStep} />
       ) : state.stage === 'security-step-up' ||
         state.authentication?.minimumAuthentication === 'recent_mfa' ? (
         <form onSubmit={totp}>

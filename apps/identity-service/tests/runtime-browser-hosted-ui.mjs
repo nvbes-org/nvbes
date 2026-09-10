@@ -39,16 +39,25 @@ export async function verifyHostedUi(browser, clientOrigin, screenshotPrefix) {
     await page.goto(authorizationUrl);
     await page.getByLabel('Adresse email').waitFor();
     if (screenshotPrefix)
-      await page.screenshot({ path: screenshotPrefix + '-desktop.png', fullPage: true });
+      await page.screenshot({
+        path: screenshotPrefix + '-desktop.png',
+        fullPage: true,
+        animations: 'disabled',
+      });
     await page.setViewportSize({ width: 390, height: 844 });
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
       throw new Error('Mobile layout overflows');
     if (screenshotPrefix)
-      await page.screenshot({ path: screenshotPrefix + '-mobile.png', fullPage: true });
+      await page.screenshot({
+        path: screenshotPrefix + '-mobile.png',
+        fullPage: true,
+        animations: 'disabled',
+      });
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByLabel('Adresse email').fill(config.email);
-    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
     await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
+    await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
     await page.getByRole('heading', { name: 'Accès demandés' }).waitFor();
     if (await page.locator('input[type=password]').count())
       throw new Error('Password must be removed after login');

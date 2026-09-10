@@ -56,8 +56,9 @@ export async function verifyHostedFactors(browser, clientOrigin, removed) {
       await page.getByRole('button', { name: 'Se connecter avec une passkey' }).click();
     } else {
       await page.getByLabel('Adresse email').fill(config.email);
-      await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
       await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+      await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
+      await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
       await page
         .getByLabel('Code à 6 chiffres')
         .fill(

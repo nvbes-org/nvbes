@@ -69,8 +69,9 @@ export async function verifyHostedMfa(browser, clientOrigin) {
         await page.getByRole('button', { name: 'Se connecter avec une passkey' }).click();
       } else {
         await page.getByLabel('Adresse email').fill(config.email);
-        await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
         await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+        await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
+        await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
       }
       const loginResponse = await responsePromise;
       if (loginResponse.status() !== 200) throw new Error('Hosted primary login failed');

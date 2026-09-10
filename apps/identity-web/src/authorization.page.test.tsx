@@ -52,9 +52,18 @@ describe('Identity login screen', () => {
     fireEvent.change(screen.getByLabelText('Adresse email'), {
       target: { value: 'user@example.invalid' },
     });
+    expect(screen.queryByLabelText('Mot de passe')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Continuer' }));
+    expect(gateway.password).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retour' }));
+    expect(screen.queryByLabelText('Mot de passe')).toBeNull();
+    expect(screen.getByLabelText<HTMLInputElement>('Adresse email').value).toBe(
+      'user@example.invalid',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continuer' }));
     const password = screen.getByLabelText<HTMLInputElement>('Mot de passe');
     fireEvent.change(password, { target: { value: 'never-persist-me' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Continuer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Se connecter$/ }));
     expect(password.value).toBe('');
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(

@@ -17,8 +17,9 @@ export async function verifyHostedReauthentication(fixture, origin) {
     const config = await page.evaluate(async () => (await fetch('/__fixture/config')).json());
     await page.goto(await authorizationFor(page, config));
     await page.getByLabel('Adresse email').fill(config.email);
-    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
     await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
+    await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
     await page.getByRole('heading', { name: 'Accès demandés' }).waitFor();
     await fixture.sql(
       'identity',
@@ -37,12 +38,14 @@ export async function verifyHostedReauthentication(fixture, origin) {
     await page.getByRole('button', { name: 'Me reconnecter avant la configuration' }).click();
     await page.getByRole('heading', { name: 'Reconnectez-vous pour continuer.' }).waitFor();
     await page.getByLabel('Adresse email').fill(config.email);
-    await page.getByLabel('Mot de passe', { exact: true }).fill('Wrong-synthetic-password!');
     await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+    await page.getByLabel('Mot de passe', { exact: true }).fill('Wrong-synthetic-password!');
+    await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
     await page.getByRole('alert').waitFor();
     await page.getByLabel('Adresse email').fill(config.email);
-    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
     await page.getByRole('button', { name: 'Continuer', exact: true }).click();
+    await page.getByLabel('Mot de passe', { exact: true }).fill(config.password);
+    await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
     await page.getByRole('heading', { name: 'Accès demandés' }).waitFor();
     await page.getByRole('button', { name: 'Ajouter une méthode de sécurité' }).click();
     await page
