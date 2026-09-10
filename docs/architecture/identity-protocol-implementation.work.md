@@ -13,6 +13,38 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Routes HTTP du login primaire passkey — 2026-09-10
+
+Le runtime hébergé monte POST `/oauth/authorize/passkey/options` et
+`/oauth/authorize/passkey/finish`, avec le même RP, registre client et origine
+navigateur que les autres routes Identity. Les deux routes portent les quotas
+de source protocole/login, la validation Origin/cookies/CSRF navigateur et une
+limite de corps de 65536 octets. Le moteur revalide ensuite le CSRF exact de
+l'interaction et le registre avant de créer ou consommer une cérémonie.
+
+Options reçoit `{interaction}` et retourne `{ceremony_id, options}`. Finish
+reçoit `{interaction, ceremony_id, credential}` et retourne l'interaction, son
+nouveau `csrf_token` et le `session_csrf_token`. La session opaque sort seulement
+dans le cookie hôte HttpOnly/Secure/SameSite=Lax, après commit. Cette construction
+de réponse est partagée avec le login par mot de passe. Les erreurs de parsing
+ou de stockage ne reflètent pas les credentials et ne posent pas de cookie.
+
+Le login sans identifiant utilise les quotas de source, sans compter un
+`userHandle` non authentifié dans le quota d'un compte cible. La limitation
+globale en charge et les scénarios de panne restent des gates de livraison.
+
+Validation : compilation workspace sans avertissement et cible Nx
+`identity-service:test:database` avec 130 tests de bibliothèque et 24 tests du
+runtime réussis. Les nouveaux tests HTTP produisent une assertion signée,
+vérifient le cookie et poursuivent jusqu'au consentement avec redirection 303.
+Ils couvrent aussi origine/CSRF incorrects, gros corps, quota source, rejeu et
+panne SQL sans cookie, suivie du retry de la même assertion.
+
+Le comportement graphique de conditional UI et l'enrollment de credentials
+découvrables restent à valider avec un navigateur. Le simulateur utilise la
+sélection décrite dans la tranche précédente, sans démontrer cette UX. Restent
+également la gestion/récupération des facteurs et les autres exigences A–D.
+
 ## Login primaire passkey lié à OAuth — 2026-09-10
 
 `oauth::passkey_login` démarre une cérémonie discoverable sans identifiant de

@@ -9,6 +9,11 @@ use axum::{
 };
 #[path = "identity.oauth.http.limits.rs"]
 mod limits;
+#[path = "identity.oauth.http.passkey_login.rs"]
+mod passkey_login;
+pub use passkey_login::router as passkey_login_router;
+#[path = "identity.oauth.http.login_response.rs"]
+mod login_response;
 #[path = "identity.oauth.http.query.rs"]
 mod query;
 #[path = "identity.oauth.http.session.rs"]
@@ -160,24 +165,13 @@ async fn login(
         store::StoreError::Protocol(error) => ProtocolError::OAuth(error),
         _ => ProtocolError::OAuth(OAuthError::Unavailable),
     })?;
-    let session = authenticated.token;
-    let csrf = authenticated.csrf;
-    let session_cookie = state
-        .browser
-        .session_cookie(&session)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
-    Ok((
-        [
-            ("set-cookie", session_cookie),
-            ("cache-control", "no-store".parse().unwrap()),
-        ],
-        Json(serde_json::json!({
-            "interaction": form.interaction,
-            "csrf_token": csrf,
-            "session_csrf_token": state.browser.session_csrf_token(&session, &proof.browser_token)
-                .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?
-        })),
-    ))
+    login_response::authenticated_response(
+        &state.browser,
+        &proof,
+        &form.interaction,
+        &authenticated.token,
+        &authenticated.csrf,
+    )
 }
 
 #[derive(Debug, Deserialize)]

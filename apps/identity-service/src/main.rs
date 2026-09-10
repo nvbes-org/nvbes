@@ -237,10 +237,11 @@ async fn main() -> anyhow::Result<()> {
                             config.environment == "development" || config.environment == "test",
                         )
                         .map_err(|_| anyhow::anyhow!("invalid OIDC client registry"))?;
+                    let clients = Arc::new(clients);
                     router =
                         router.merge(nvbes_identity_service::oauth::http::authorization_router(
                             db.clone(),
-                            Arc::new(clients),
+                            clients.clone(),
                             browser.clone(),
                             Arc::new(mfa),
                             limiter.clone(),
@@ -251,10 +252,19 @@ async fn main() -> anyhow::Result<()> {
                         .ok_or_else(|| anyhow::anyhow!("missing WebAuthn RP hostname"))?;
                     let webauthn = nvbes_identity_service::webauthn::build_server(rp_id, &origin)
                         .map_err(|error| anyhow::anyhow!(error))?;
+                    let webauthn = Arc::new(webauthn);
+                    router =
+                        router.merge(nvbes_identity_service::oauth::http::passkey_login_router(
+                            db.clone(),
+                            clients,
+                            browser.clone(),
+                            webauthn.clone(),
+                            limiter.clone(),
+                        ));
                     router = router.merge(nvbes_identity_service::oauth::http::webauthn_router(
                         db.clone(),
                         browser,
-                        Arc::new(webauthn),
+                        webauthn,
                         limiter,
                     ));
                     tracing::info!("OAuth authorization interaction endpoint enabled");
