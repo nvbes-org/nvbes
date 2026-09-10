@@ -13,6 +13,45 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Gestion des credentials WebAuthn — 2026-09-10
+
+POST `/oauth/session/webauthn/credentials/list`, `/rename` et `/revoke` sont
+montés derrière les protections Origin/CSRF de session, les quotas source/MFA
+et la limite JSON existante. List reçoit `{}` et retourne au plus dix clés
+actives du propriétaire avec `id`, `label`, `created_at`, `last_used_at`.
+Aucun identifiant cryptographique brut, Passkey sérialisé ou clé publique n'est
+retourné par ce contrat de gestion.
+
+Rename reçoit `{credential_id,label}` et revoke `{credential_id}`. Les mutations
+exigent une session active avec WebAuthn primaire récent ou step-up TOTP/WebAuthn
+récent (cinq minutes). Le propriétaire et le credential sont verrouillés ; la
+mutation et l'audit sont atomiques. Un renommage identique et une nouvelle
+révocation d'une clé déjà révoquée du propriétaire ne dupliquent pas l'audit.
+
+Révoquer la dernière passkey utilisable nécessite un autre credential actif
+avec état complet ou un TOTP actif. Une configuration TOTP encore pending et
+une ancienne ligne sans Passkey complet ne suffisent pas. Le refus HTTP est
+409 `{error: "last_strong_factor"}`. Le verrou de principal sérialise aussi
+les révocations concurrentes depuis deux sessions pour conserver cette propriété.
+
+La révocation interdit les assertions futures, y compris les cérémonies déjà
+commencées. Les sessions préexistantes suivent encore leur cycle distinct :
+la propagation de révocation aux sessions/jetons, les notifications et la
+récupération restent des exigences ouvertes, notamment du lot C. Les routes
+livrées ici ne constituent donc pas une clôture des lots B/C ni de l'objectif A–D.
+
+Les tests utilisent des enrollments/assertions signés et PostgreSQL. Ils
+couvrent propriétaires distincts authentifiés, fraîcheur, labels invalides,
+idempotence, autre facteur pending/actif, concurrence entre sessions, panne
+d'audit avec rollback et routes HTTP (mauvaise origine, métadonnées et dernier
+facteur). La liste reste accessible avec une session active sans step-up récent.
+
+Validation : `cargo check --workspace` passe sans avertissement. La cible Nx
+`identity-service:test:database` passe avec 137 tests de bibliothèque et 24 tests
+du runtime ; le test navigateur interactif reste ignoré dans cette suite. Aucun
+nouveau parcours navigateur n'a été exécuté pour ces routes de gestion, couvertes
+ici par les tests HTTP avec PostgreSQL et assertions WebAuthn signées.
+
 ## Parcours Chromium contre les vraies API Identity — 2026-09-10
 
 Le [harnais Rust](../../apps/identity-service/src/identity.browser.e2e_fixture.rs)

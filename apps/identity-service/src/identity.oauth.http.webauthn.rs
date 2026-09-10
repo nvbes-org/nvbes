@@ -1,4 +1,6 @@
 use super::{OAuthError, ProtocolError, limits};
+#[path = "identity.oauth.http.webauthn.credentials.rs"]
+mod credentials;
 use crate::{
     browser::{BrowserSecurity, SessionProof, protect_session_mutation},
     rate_limits::{Category, RateLimiter},
@@ -37,6 +39,18 @@ pub fn router(
         limiter: limiter.clone(),
     };
     Router::new()
+        .route(
+            "/oauth/session/webauthn/credentials/list",
+            post(credentials::list),
+        )
+        .route(
+            "/oauth/session/webauthn/credentials/rename",
+            post(credentials::rename),
+        )
+        .route(
+            "/oauth/session/webauthn/credentials/revoke",
+            post(credentials::revoke),
+        )
         .route(
             "/oauth/session/webauthn/registration/options",
             post(registration_options),

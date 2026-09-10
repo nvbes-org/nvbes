@@ -9,6 +9,8 @@ use webauthn_rs::{
 #[path = "identity.webauthn.registration.rs"]
 pub mod registration;
 
+#[path = "identity.webauthn.credentials.rs"]
+pub mod credentials;
 #[path = "identity.webauthn.step_up.rs"]
 pub mod step_up;
 
@@ -20,6 +22,8 @@ pub enum WebauthnError {
     InvalidSession,
     #[error("credential limit reached")]
     Limit,
+    #[error("another active strong factor is required")]
+    LastFactor,
     #[error("WebAuthn persistence unavailable")]
     Database(#[from] sqlx::Error),
     #[error("invalid stored WebAuthn state")]
