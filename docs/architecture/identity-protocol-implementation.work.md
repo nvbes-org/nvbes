@@ -13,6 +13,30 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Preuve navigateur HTTPS de récupération MFA — 2026-09-10
+
+Le scénario runtime-browser-recovery.mjs traverse Identity et Account réels
+avec le SDK actif, les migrations PostgreSQL et des authentificateurs CTAP2
+virtuels. Il inscrit une clé, produit une preuve forte, génère les codes et
+obtient un premier accès Account OAuth/DPoP. La clé virtuelle est ensuite retirée.
+La consommation d'un code pose le cookie de récupération isolé et invalide
+l'accès Account déjà délivré. Une annulation native ne termine pas le parcours.
+
+Le remplacement vérifie une vraie attestation, efface les cookies de session
+et de récupération puis exige une nouvelle connexion. Une assertion avec la
+nouvelle passkey permet de constater le retrait de l'ancienne clé, de générer
+un nouveau lot de codes et de retrouver Account avec un nouvel échange OIDC.
+Les codes restent en mémoire de page ; aucun secret n'est renvoyé dans le rapport.
+
+Validation Chromium 152.0.7977.83 réussie sur une fixture HTTPS neuve ; seule la
+partie authentificateur est virtuelle. Le premier essai a exposé une assertion
+de test incorrecte : le SDK encapsule AbortError dans WebauthnBrowserError.
+L'assertion vérifie désormais la cause native sans changer le SDK. La fixture
+est arrêtée après validation. Format/lint du scénario passent. Aucun Rust ou
+SDK n'est modifié ; les trois binaires compilent dans la fixture, sans relance
+des suites unitaires déjà validées. Reprise après rechargement, abandon explicite,
+notifications délivrées, interfaces et autres exigences A à D restent ouverts.
+
 ## SDK de récupération MFA — 2026-09-10
 
 Les fonctions et méthodes hébergées génèrent les dix codes, consomment un code

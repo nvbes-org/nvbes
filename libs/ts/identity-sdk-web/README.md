@@ -285,8 +285,13 @@ inconnu. La reprise après rechargement et l'abandon explicite restent à livrer
 L'ancien export autonome `generateRecoveryCodes(baseUrl, password?, token?)`
 sur `/auth/mfa/recovery-codes` est supprimé. La méthode homonyme de la classe
 requiert désormais le CSRF de session et retourne `string[]`, sans mot de passe
-ni Bearer. Les tests SDK vérifient contrats et erreurs ; la preuve HTTPS de
-récupération complète et les notifications effectivement délivrées restent ouvertes.
+ni Bearer. Les tests SDK vérifient contrats et erreurs. Le scénario
+`runtime-browser-recovery.mjs` expose `verifyBrowserRecovery(browser, clientOrigin)`
+sur une fixture HTTPS neuve. Il vérifie perte d'une clé virtuelle, consommation
+du code, révocation de l'accès Account, annulation native, remplacement puis
+reconnexion avec la nouvelle passkey et nouvel accès Account OIDC/DPoP. Seuls
+les authentificateurs CTAP2 sont virtuels. L'interface, la reprise/annulation
+explicite côté serveur et les notifications effectivement délivrées restent ouvertes.
 
 ## Détection d’environnement
 

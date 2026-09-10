@@ -6,8 +6,9 @@ Le noyau Rust, la migration 0022 et les routes HTTP sont implémentés et testé
 avec PostgreSQL et de vraies signatures WebAuthn. Les routes utilisent la même
 configuration d'activation que les opérations OAuth hébergées ; aucune ouverture
 publique ou infrastructure n'est effectuée par ce changement. Les méthodes SDK
-sont raccordées et testées ; l'interface et la preuve navigateur HTTPS restent
-à livrer. Les notifications sont des intentions
+sont raccordées et testées, y compris un parcours Chromium HTTPS avec les
+services réels et des authentificateurs virtuels. L'interface reste à livrer.
+Les notifications sont des intentions
 persistées dans l'outbox, pas des emails envoyés. Cette capacité n'est pas
 déclarée complète pour les utilisateurs et ne clôture pas le lot B.
 
@@ -113,8 +114,12 @@ Les tests HTTP vérifient aussi la séparation des cookies/CSRF, le cycle comple
 les corps ambigus, l'épuisement des quotas entre sessions, les erreurs de stockage
 et l'absence de modification des cookies après rollback. Les tests SDK couvrent
 le contrat actif, les preuves distinctes, les réponses malformées, l'expiration,
-l'annulation native et les erreurs sans retry ni fuite de secrets. Compléter
-ensuite interfaces, notifications réellement délivrées et preuve navigateur HTTPS.
+l'annulation native et les erreurs sans retry ni fuite de secrets. Le scénario
+runtime-browser-recovery.mjs vérifie en HTTPS la révocation de l'accès Account,
+les cookies isolés, l'annulation, le remplacement, la reconnexion par la nouvelle
+clé et un nouvel accès Account OIDC/DPoP. Il ne prouve pas la compatibilité des
+clés physiques ni celle de tous les navigateurs. Compléter ensuite interfaces
+et notifications réellement délivrées.
 La reprise de l'interface après rechargement et l'abandon explicite du parcours
 restent à définir ; l'autorisation actuelle expire au bout de cinq minutes.
 Les gates d'exploitation et le plafond global de 30 EUR TTC/mois restent ouverts.
