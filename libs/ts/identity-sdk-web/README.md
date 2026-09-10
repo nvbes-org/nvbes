@@ -35,9 +35,9 @@ Une deuxième autorisation ne remplace pas la première. Une panne IndexedDB
 interrompt le démarrage sans fallback Bearer. `dpop: false` désactive explicitement
 la liaison pour un client dont le registre le permet. `dpopStore` permet d'injecter
 un stockage respectant le contrat `DpopTransactionStore` pour les tests.
-La persistance de clé a été vérifiée après rechargement dans Chromium ; les
-échanges OAuth de cette preuve utilisent des réponses simulées. La validation
-du parcours navigateur HTTPS reste à terminer.
+La [preuve HTTPS Chromium](../../../docs/architecture/identity-browser-protocol-proof.md)
+vérifie les échanges réels avec Identity, Account et Billing, sur deux origines
+clientes, y compris la persistance IndexedDB et la révocation après logout.
 
 Le callback vérifie l'ID token avec `jose` avant de retourner les jetons : signature
 RS256, type JWT, issuer, audience client unique, `azp` éventuel, nonce, dates et
@@ -73,8 +73,8 @@ effacée. Ne pas créer plusieurs instances à partir du même refresh token.
 
 La cible `identity-service:test:resource-runtimes` traverse le vrai SDK TypeScript,
 Identity, Account et Billing : PAR, code, rotations, accès API et refus après
-logout. Elle utilise Node et un stockage de clé injecté ; les politiques CORS,
-cookies intersites et IndexedDB sous HTTPS requièrent encore les tests navigateur.
+logout. Elle utilise Node et un stockage de clé injecté ; la preuve Chromium
+complète ces assertions avec CORS, cookies intersites et IndexedDB sous HTTPS.
 
 ```typescript
 import { NvbesIdentityWeb } from '@nvbes/identity-sdk-web';
@@ -117,14 +117,28 @@ window.location.replace(result.returnTo);
 ```
 
 Le SDK valide `state`, l’âge de la transaction et le verifier PKCE avant l’échange. Il supprime la
-transaction après succès. Un éventuel `idToken` reste opaque : une application qui consomme ses
-claims doit le valider selon OpenID Connect avec l’issuer et le JWKS Identity.
+transaction après succès. Il vérifie aussi l'ID token et retourne les claims
+validés dans `identity` ; ne pas utiliser un simple décodage du JWT comme preuve.
 
 ## Session Identity
 
-Les méthodes `getCurrentUser`, `logout`, MFA, WebAuthn et step-up s’adressent directement au
-domaine Identity et utilisent sa session HttpOnly. Elles sont destinées au site Identity, pas aux
-Resource Servers comme Account.
+Les fonctions `loadHostedAuthorization`, `parseHostedInteraction`,
+`loginHostedPassword`, `completeHostedConsent` et `logoutHostedSession` suivent
+les routes `/oauth/*` actives. Elles sont exportées depuis le package et `./oauth`.
+Chaque requête exige que `location.origin` corresponde à `baseUrl`, utilise
+`credentials: 'same-origin'`, refuse les redirections automatiques et borne la
+réponse à 64 Kio et dix secondes, sans retry. Le mot de passe n'est pas persisté.
+
+Après login, utiliser l'interaction retournée : sa preuve CSRF a changé.
+`completeHostedConsent` retourne l'URL validée par Identity ; l'interface peut
+ensuite appeler `location.assign(destination)`. La preuve CSRF de session est
+distincte et doit être passée à `logoutHostedSession`.
+
+`NvbesIdentityWeb.logout(sessionCsrfToken)` exige désormais cette preuve explicite
+et confirme réellement le succès serveur. Il ne peut pas être appelé depuis
+Account pour envoyer un cookie à Identity. Le parcours de déconnexion intersites
+reste à livrer. Les anciennes méthodes MFA/WebAuthn du wrapper ne constituent
+pas encore un contrat aligné sur les routes actives ; leur migration reste ouverte.
 
 ## Détection d’environnement
 

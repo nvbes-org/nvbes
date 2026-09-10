@@ -8,6 +8,7 @@ export * from './device-profile';
 export * from './dpop';
 export * from './dpop.transaction-store';
 export * from './identity-web.client';
+export * from './hosted.client';
 export * from './mfa';
 export * from './oauth.authorization-code';
 export * from './oauth.authorization-request';

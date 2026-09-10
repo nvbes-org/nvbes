@@ -69,42 +69,19 @@ export async function verifyBrowserJourney(browser, clientOrigin) {
       await page.goto(`${config.origins.identity}/__fixture/hosted`);
       const navigation = await page.evaluate(
         async ({ interaction, config }) => {
-          const post = async (path, body, csrf) => {
-            const response = await fetch(path, {
-              method: 'POST',
-              credentials: 'same-origin',
-              redirect: 'error',
-              headers: {
-                'content-type': 'application/json',
-                accept: 'application/json',
-                'x-csrf-token': csrf,
-              },
-              body: JSON.stringify(body),
+          const { parseHostedInteraction, loginHostedPassword, completeHostedConsent } =
+            await import('/libs/ts/identity-sdk-web/src/hosted.client.ts');
+          const transport = { baseUrl: config.origins.identity };
+          let state = parseHostedInteraction(interaction);
+          if (state.needsLogin)
+            state = await loginHostedPassword(transport, state, {
+              email: config.email,
+              password: config.password,
             });
-            if (!response.ok) throw new Error(`Hosted request failed: ${response.status}`);
-            return response.json();
+          return {
+            redirectUri: await completeHostedConsent(transport, state, 'approve'),
+            sessionCsrf: state.sessionCsrfToken,
           };
-          let csrf = interaction.csrf_token;
-          let sessionCsrf = interaction.session_csrf_token;
-          if (interaction.needs_login) {
-            const result = await post(
-              '/oauth/authorize/login',
-              {
-                interaction: interaction.interaction,
-                email: config.email,
-                password: config.password,
-              },
-              csrf,
-            );
-            csrf = result.csrf_token;
-            sessionCsrf = result.session_csrf_token;
-          }
-          const result = await post(
-            '/oauth/authorize/approve',
-            { interaction: interaction.interaction },
-            csrf,
-          );
-          return { redirectUri: result.redirect_uri, sessionCsrf };
         },
         { interaction, config },
       );
@@ -236,19 +213,13 @@ export async function verifyBrowserJourney(browser, clientOrigin) {
     check(blocked, 'Browser must enforce CORS for an unregistered origin');
     const identity = await context.newPage();
     await identity.goto(`${config.origins.identity}/__fixture/hosted`);
-    const logout = await identity.evaluate(
-      async (csrf) =>
-        (
-          await fetch('/oauth/logout', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
-            body: '{}',
-          })
-        ).status,
-      sessionCsrf,
-    );
-    check(logout === 200, 'Identity logout must succeed');
+    const logout = await identity.evaluate(async (csrf) => {
+      const { logoutHostedSession } =
+        await import('/libs/ts/identity-sdk-web/src/hosted.client.ts');
+      await logoutHostedSession({ baseUrl: location.origin }, csrf);
+      return true;
+    }, sessionCsrf);
+    check(logout, 'Identity logout must succeed');
     for (const page of sessions) {
       const revoked = await page.evaluate(async () => {
         const { session, endpoint, dpopFetch } = window.fixtureSession;

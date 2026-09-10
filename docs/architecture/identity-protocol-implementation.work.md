@@ -13,6 +13,26 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Client SDK des opérations hébergées — 2026-09-10
+
+Le SDK expose le chargement/validation d'interaction, login mot de passe,
+consentement et logout sur les routes actives. Le transport exige l'origine
+Identity courante, des cookies same-origin et une preuve CSRF explicite ; il
+refuse les redirections automatiques, borne les réponses à 64 Kio/dix secondes
+et n'effectue aucun retry. Les erreurs de parsing ne recopient pas le corps.
+Le résultat de login remplace la preuve d'interaction ; le logout utilise la
+preuve distincte de session et exige `logged_out: true`.
+
+L'ancien wrapper logout appelait `/auth/logout` et ignorait le statut HTTP.
+Il appelle maintenant `/oauth/logout` avec une preuve explicite et échoue si le
+serveur refuse. Les anciennes méthodes MFA/WebAuthn du wrapper restent à migrer.
+
+Validation : 93 tests SDK, lint/typecheck, build du package et parcours Chromium HTTPS des deux
+clients réussis. Le banc navigateur utilise désormais ces fonctions pour
+login, consentement et logout, au lieu de ses propres appels fetch. Aucun code
+Rust modifié ; les compilations des trois binaires passent dans la fixture.
+Les interfaces produit et les autres exigences A à D restent ouvertes.
+
 ## Parcours HTTPS de deux clients dans Chromium — 2026-09-10
 
 Le SDK réel passe le parcours PAR → login/consentement → callback → refresh →

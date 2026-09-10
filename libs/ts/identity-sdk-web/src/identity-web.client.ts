@@ -1,10 +1,9 @@
-import { createRequestHeaders } from '@nvbes/http-client';
+import { logoutHostedSession } from './hosted.client';
 import type {
   MfaFactorView,
   RecoveryCodesResult,
   TotpSetupResult,
 } from '@nvbes/identity-sdk-core/src/types';
-import { readCurrentAuthuser, readScopedCsrfToken } from './csrf';
 import {
   completeWebAuthnStepUp,
   confirmTotp,
@@ -100,19 +99,10 @@ export class NvbesIdentityWeb {
     this.storage.clearTransaction();
   }
 
-  async logout(): Promise<void> {
-    const headers: Record<string, string> = {};
-    const authuser = readCurrentAuthuser();
-    if (authuser) headers['X-Auth-User'] = authuser;
-
-    const csrfToken = readScopedCsrfToken(authuser);
-    if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
-
-    await fetch(`${this.config.baseUrl}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: createRequestHeaders('POST', headers),
-    });
+  async logout(sessionCsrfToken?: string): Promise<void> {
+    if (!sessionCsrfToken)
+      throw new Error('Identity logout requires an explicit session CSRF token.');
+    await logoutHostedSession({ baseUrl: this.config.baseUrl }, sessionCsrfToken);
   }
 
   async listMfaFactors(
