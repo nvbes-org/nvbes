@@ -29,6 +29,7 @@ import {
 } from './oauth.authorization-request';
 import { defaultWebStorage, type WebStorage } from './storage';
 import type { WebauthnRegistrationKind } from './webauthn';
+import type { DpopTransactionStore } from './dpop.transaction-store';
 
 export interface AuthConfig {
   baseUrl: string;
@@ -41,6 +42,8 @@ export interface IdentityWebConfig extends AuthConfig {
   cookieDomain?: string;
   secureCookies?: boolean;
   storage?: WebStorage;
+  dpop?: boolean;
+  dpopStore?: DpopTransactionStore;
 }
 
 export class NvbesIdentityWeb {
@@ -64,6 +67,8 @@ export class NvbesIdentityWeb {
         clientId: this.config.clientId,
         redirectUri: this.config.redirectUri,
         resource: this.config.resource,
+        dpop: this.config.dpop,
+        dpopStore: this.config.dpopStore,
         storage: this.storage,
       },
       options,
@@ -85,6 +90,7 @@ export class NvbesIdentityWeb {
         clientId: this.config.clientId,
         redirectUri: this.config.redirectUri,
         storage: this.storage,
+        dpopStore: this.config.dpopStore,
       },
       input,
     );

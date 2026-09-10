@@ -21,9 +21,23 @@ désormais l'URL du serveur en dernier argument ; le cache est isolé par origin
 limité à 32 entrées et 1 024 caractères par nonce. Les preuves excluent query et
 fragment de `htu`. Le mode worker conserve le contrat de son fournisseur crypto.
 
-Cette primitive reste à raccorder au parcours OAuth ci-dessous. La conservation
-de la clé au retour de redirection reste à terminer ; cet exemple ne prouve pas
-le parcours complet avec le service actif.
+Le parcours OAuth active DPoP par défaut. Chaque transaction conserve sa propre
+clé privée non exportable dans IndexedDB (15 minutes, 32 entrées maximum).
+`sessionStorage` ne contient que sa référence et sa liaison issuer/client/redirect.
+Le SDK refuse une clé absente au callback et un token Bearer pour une transaction
+DPoP. Après échange, la clé quitte IndexedDB et revient en mémoire dans
+`result.dpopKey` ; les appels API doivent la passer explicitement à
+`dpopFetch(url, { key: result.dpopKey, accessToken: result.accessToken })`.
+L'application conserve ce résultat en mémoire, jamais en JSON ou localStorage.
+
+Un seul parcours est autorisé à la fois dans un même stockage de transaction.
+Une deuxième autorisation ne remplace pas la première. Une panne IndexedDB
+interrompt le démarrage sans fallback Bearer. `dpop: false` désactive explicitement
+la liaison pour un client dont le registre le permet. `dpopStore` permet d'injecter
+un stockage respectant le contrat `DpopTransactionStore` pour les tests.
+La persistance de clé a été vérifiée après rechargement dans Chromium ; les
+échanges OAuth de cette preuve utilisent des réponses simulées. Refresh DPoP,
+validation complète OIDC et parcours contre les vrais services restent à valider.
 
 ```typescript
 import { NvbesIdentityWeb } from '@nvbes/identity-sdk-web';

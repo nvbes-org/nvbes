@@ -15,14 +15,14 @@ type DpopWorkerKeyPair = {
   usingWorker: true;
 };
 
-type DpopMainKeyPair = {
+export type DpopMainKeyPair = {
   keyPair: CryptoKeyPair;
   publicJwk: JsonWebKey;
   jkt: string;
   usingWorker: false;
 };
 
-type DpopKeyPair = DpopWorkerKeyPair | DpopMainKeyPair;
+export type DpopKeyPair = DpopWorkerKeyPair | DpopMainKeyPair;
 
 let cryptoWorker: DpopWorkerCrypto | null = null;
 let cachedKeyPair: DpopKeyPair | null = null;
@@ -52,7 +52,7 @@ async function sha256Base64url(input: string): Promise<string> {
   return base64urlEncode(hash);
 }
 
-async function computeJwkThumbprint(jwk: JsonWebKey): Promise<string> {
+export async function computeJwkThumbprint(jwk: JsonWebKey): Promise<string> {
   const canonical = {
     crv: jwk.crv,
     kty: jwk.kty,
@@ -72,6 +72,12 @@ export async function generateDpopKeyPair(): Promise<DpopKeyPair> {
     return cachedKeyPair;
   }
 
+  cachedKeyPair = await generateBrowserDpopKeyPair();
+  return cachedKeyPair;
+}
+
+/** Independent key for one OAuth transaction; never changes the legacy global cache. */
+export async function generateBrowserDpopKeyPair(): Promise<DpopMainKeyPair> {
   const keyPair = await crypto.subtle.generateKey(
     {
       name: 'ECDSA',
@@ -84,8 +90,7 @@ export async function generateDpopKeyPair(): Promise<DpopKeyPair> {
   const publicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
   const jkt = await computeJwkThumbprint(publicJwk);
 
-  cachedKeyPair = { keyPair, publicJwk, jkt, usingWorker: false };
-  return cachedKeyPair;
+  return { keyPair, publicJwk, jkt, usingWorker: false };
 }
 
 export function getCachedKeyPair(): DpopKeyPair | null {
@@ -198,9 +203,9 @@ export async function createDpopProof(
 
 export async function dpopFetch(
   url: string,
-  options: RequestInit & { dpop?: boolean; accessToken?: string } = {},
+  options: RequestInit & { dpop?: boolean; accessToken?: string; key?: DpopKeyPair } = {},
 ): Promise<Response> {
-  const { dpop = true, accessToken, ...fetchOptions } = options;
+  const { dpop = true, accessToken, key, ...fetchOptions } = options;
   const method = (fetchOptions.method ?? 'GET').toUpperCase();
   const headers = createRequestHeaders(method, fetchOptions.headers);
 
@@ -211,7 +216,7 @@ export async function dpopFetch(
     });
   }
 
-  const keyPair = await ensureDpopKeyPair();
+  const keyPair = key ?? (await ensureDpopKeyPair());
   const proof = await createDpopProof(keyPair, method, url, accessToken);
   headers.set(D_POP_HEADER, proof);
 

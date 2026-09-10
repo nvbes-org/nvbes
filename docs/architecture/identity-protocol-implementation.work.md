@@ -13,6 +13,29 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Clé DPoP du SDK à travers la redirection — 2026-09-10
+
+Le SDK utilise DPoP par défaut avec une clé WebCrypto non exportable par
+transaction. IndexedDB conserve la clé par structured clone, jamais sous forme
+de JWK privé ; 32 entrées maximum, durée des transactions de quinze minutes,
+nettoyage des entrées expirées à l'admission. PAR et token signent des preuves
+distinctes avec cette même clé. Le callback contrôle la référence, le thumbprint,
+l'issuer, le client et la redirection ; une clé manquante ou une réponse Bearer
+sont refusées. Après succès, la clé revient en mémoire dans `dpopKey` pour les
+requêtes ressources explicites et l'entrée temporaire est supprimée.
+
+Validation : 77 tests SDK, lint et typecheck réussis. Contrôle Playwright avec
+Chromium réel sur HTTP loopback : rechargement de page, même clé récupérée,
+signature ES256 vérifiée, refus d'export, saturation à 32 entrées, suppression.
+Un second scénario traverse PAR puis token après rechargement avec sessionStorage
+et IndexedDB réels, mais réponses OAuth simulées ; mêmes clés et `jti` distincts,
+états temporaires effacés. Les bases et le serveur Vite temporaires ont été retirés.
+
+Les tests automatisés vérifient aussi absence de clé, changement de contexte,
+downgrade, échec PAR et préservation d'une transaction déjà ouverte. Aucun test
+Rust relancé : aucun code Rust touché. Restent les échanges avec les vrais
+services sous HTTPS, refresh DPoP, validation des ID tokens et les autres lots.
+
 ## Paramètres PAR du SDK — 2026-09-10
 
 La configuration publique du SDK utilise désormais `resource`, URL exacte du

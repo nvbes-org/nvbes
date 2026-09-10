@@ -8,6 +8,7 @@ describe('pushed authorization requests', () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const config = {
       baseUrl: 'https://identity.example',
+      dpop: false,
       clientId: 'account-web',
       redirectUri: 'https://account.example/oauth/callback',
       resource: 'https://api.example/account',
@@ -50,6 +51,7 @@ describe('pushed authorization requests', () => {
     const result = await createAuthorizationRequest(
       {
         baseUrl: 'https://identity.example/',
+        dpop: false,
         clientId: 'account-web',
         redirectUri: 'https://account.example/oauth/callback',
         resource: 'https://api.example/account',
@@ -105,6 +107,7 @@ describe('pushed authorization requests', () => {
     await createAuthorizationRequest(
       {
         baseUrl: 'https://identity.example',
+        dpop: false,
         clientId: 'account-web',
         redirectUri: 'https://account.example/oauth/callback',
         resource: 'https://identity.example/oauth/userinfo',
@@ -129,6 +132,7 @@ describe('pushed authorization requests', () => {
       createAuthorizationRequest(
         {
           baseUrl: 'https://identity.example',
+          dpop: false,
           clientId: 'account-web',
           resource: 'https://api.example/account',
           redirectUri: 'https://account.example/oauth/callback',

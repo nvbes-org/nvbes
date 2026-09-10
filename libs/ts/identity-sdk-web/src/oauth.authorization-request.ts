@@ -1,4 +1,6 @@
 import { generateCodeChallenge, generateCodeVerifier } from './pkce';
+import { createDpopProof, generateBrowserDpopKeyPair, type DpopMainKeyPair } from './dpop';
+import { IndexedDbDpopTransactionStore, type DpopTransactionStore } from './dpop.transaction-store';
 import type { OAuthTransaction, WebStorage } from './storage';
 
 export interface AuthorizationRequestConfig {
@@ -9,6 +11,8 @@ export interface AuthorizationRequestConfig {
   storage: WebStorage;
   fetchImpl?: typeof fetch;
   now?: () => number;
+  dpop?: boolean;
+  dpopStore?: DpopTransactionStore;
 }
 
 export interface AuthorizationRequestInput {
@@ -69,15 +73,32 @@ export async function createAuthorizationRequest(
     body.set('nonce', nonce);
   }
 
-  config.storage.saveTransaction(transaction);
+  const keyStore = config.dpopStore ?? new IndexedDbDpopTransactionStore();
+  const key = config.dpop === false ? undefined : await generateBrowserDpopKeyPair();
+  if (key) {
+    const keyId = crypto.randomUUID();
+    await keyStore.save(keyId, key, Date.now() + 15 * 60_000);
+    transaction.dpop = {
+      keyId,
+      jkt: key.jkt,
+      issuer: normalizedBaseUrl(config.baseUrl),
+      clientId: config.clientId,
+      redirectUri: config.redirectUri,
+    };
+  }
   try {
-    const par = await pushAuthorizationRequest(config, body);
+    if (config.storage.getTransaction())
+      throw new Error('An OAuth transaction is already pending.');
+    config.storage.saveTransaction(transaction);
+    const par = await pushAuthorizationRequest(config, body, key);
     const authorizeUrl = new URL('/oauth/authorize', normalizedBaseUrl(config.baseUrl));
     authorizeUrl.searchParams.set('client_id', config.clientId);
     authorizeUrl.searchParams.set('request_uri', par.requestUri);
     return { authorizationUrl: authorizeUrl.toString(), state };
   } catch (error) {
-    config.storage.clearTransaction();
+    if (config.storage.getTransaction()?.codeVerifier === codeVerifier)
+      config.storage.clearTransaction();
+    if (transaction.dpop) await keyStore.remove(transaction.dpop.keyId);
     throw error;
   }
 }
@@ -85,9 +106,12 @@ export async function createAuthorizationRequest(
 async function pushAuthorizationRequest(
   config: AuthorizationRequestConfig,
   body: URLSearchParams,
+  key?: DpopMainKeyPair,
 ): Promise<ParResponse> {
   const fetchImpl = config.fetchImpl ?? fetch.bind(globalThis);
-  const response = await fetchImpl(`${normalizedBaseUrl(config.baseUrl)}/oauth/par`, {
+  const endpoint = `${normalizedBaseUrl(config.baseUrl)}/oauth/par`;
+  const proof = key ? await createDpopProof(key, 'POST', endpoint) : undefined;
+  const response = await fetchImpl(endpoint, {
     method: 'POST',
     credentials: 'omit',
     redirect: 'error',
@@ -95,6 +119,7 @@ async function pushAuthorizationRequest(
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
+      ...(proof ? { DPoP: proof } : {}),
     },
     body,
   });
