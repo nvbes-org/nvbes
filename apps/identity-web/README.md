@@ -25,8 +25,11 @@ fraîche confirmée pour le client, le consentement permet également l'ajout de
 facteurs supplémentaires. Un TOTP déjà actif n'est pas proposé à nouveau.
 Configurer TOTP comme facteur supplémentaire ne satisfait pas une politique
 WebAuthn : le serveur doit encore confirmer une preuve passkey avant consentement.
-Le renommage, la révocation des facteurs et le site Account restent à raccorder
-à des écrans.
+La gestion accessible après preuve forte affiche les passkeys et le facteur TOTP,
+permet de renommer les passkeys et demande confirmation avant révocation. Le
+dernier facteur ne peut pas être supprimé. Toute révocation réussie interrompt
+ce parcours OAuth pour demander une nouvelle connexion avec un facteur conservé.
+Le site Account reste à construire.
 Aucun lien d'inscription publique n'est exposé.
 
 Lorsqu'une politique OAuth exige une preuve forte fraîche et que le serveur la
@@ -108,6 +111,13 @@ remplacement. Une nouvelle connexion avec cette passkey atteint Account ; les
 anciennes transactions clientes sont abandonnées explicitement avec le SDK.
 Avant la récupération, ces scénarios ajoutent aussi un second facteur : passkey
 après TOTP ou TOTP après passkey, avec le step-up WebAuthn requis par le client.
+
+Les suites `IDENTITY_WEB_TEST_SUITE=factors-totp` et `factors-passkey` utilisent
+chacune une nouvelle fixture. Après préparation SDK des deux facteurs, elles
+renomment une passkey via l'écran, annulent une première confirmation de suppression,
+révoquent le facteur choisi puis se reconnectent avec le facteur conservé.
+Elles vérifient que la suppression du dernier facteur n'est plus proposée et
+terminent le callback OIDC/DPoP jusqu'à Account.
 
 ## Composants et exploitation
 

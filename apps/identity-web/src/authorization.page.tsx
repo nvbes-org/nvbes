@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { AuthenticationForms } from './authorization.forms';
 import { EnrollmentForm } from './authorization.enrollment';
 import { RecoveryCodes } from './authorization.recovery-codes';
+import { FactorsPanel } from './factors.panel';
 import type { AuthorizationController } from './authorization.controller';
 
 const titles = {
@@ -14,6 +15,7 @@ const titles = {
   'step-up': 'Confirmez que c’est vous.',
   enrollment: 'Protégez votre compte.',
   'recovery-codes': 'Gardez un accès de secours.',
+  factors: 'Vos méthodes de sécurité.',
   consent: 'Vous gardez le contrôle.',
   leaving: 'Retour à votre application',
   closed: 'Connexion interrompue',
@@ -116,6 +118,15 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
             {state.stage === 'recovery-codes' && (
               <RecoveryCodes controller={controller} state={state} />
             )}
+            {state.stage === 'factors' &&
+              state.interaction?.sessionCsrfToken &&
+              state.authentication?.proofExpiresAt && (
+                <FactorsPanel
+                  authorization={controller}
+                  csrf={state.interaction.sessionCsrfToken}
+                  expiresAt={state.authentication.proofExpiresAt}
+                />
+              )}
             {state.stage === 'consent' && state.interaction && (
               <>
                 <h2 className="font-medium">Accès demandés</h2>
@@ -146,9 +157,18 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
                     Ajouter une méthode de sécurité
                   </Button>
                 )}
+                {state.authentication?.proofExpiresAt && (
+                  <Button
+                    variant="outline"
+                    disabled={state.busy}
+                    onClick={() => controller.beginFactors()}
+                  >
+                    Gérer mes méthodes de sécurité
+                  </Button>
+                )}
               </>
             )}
-            {active && (
+            {active && state.stage !== 'factors' && (
               <>
                 <Separator />
                 <Button

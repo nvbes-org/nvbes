@@ -13,6 +13,26 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Identity : renommage et révocation des facteurs — 2026-09-10
+
+La gestion des facteurs s'ouvre depuis le consentement après preuve forte fraîche.
+Elle liste les métadonnées actives, renomme les passkeys et demande confirmation
+avant révocation. Les mutations sont sérialisées, limitées aux identifiants lus,
+et restent soumises aux contrôles serveur de propriétaire, fraîcheur et dernier
+facteur. Le client ne tente pas de supprimer son dernier facteur affiché.
+Une suppression réussie ferme l'interaction OAuth même si le serveur a pu
+conserver d'autres sessions. Le texte distingue révocation des sessions liées
+à une passkey et révocation de toutes les sessions lors d'une suppression TOTP.
+
+Validation : 46 tests du site, typecheck/lint/format/build réussis. Deux nouvelles
+fixtures HTTPS avec Chromium 153 valident le renommage, l'annulation d'une
+confirmation, la suppression de TOTP ou d'une passkey et la reconnexion avec le
+facteur conservé, jusqu'à Account HTTP 200 avec le bon sujet. La dernière méthode
+restante ne peut plus être supprimée via l'écran. Les authentificateurs sont
+synthétiques ; les listes, modifications et connexions utilisent les services
+réels. Aucun Rust changé. Account Web, réauthentification explicite hors politique
+OAuth forte, logout intersites et gates d'exploitation restent ouverts.
+
 ## Site Identity : facteurs supplémentaires — 2026-09-10
 
 Après preuve forte fraîche confirmée pour le client OAuth, le consentement

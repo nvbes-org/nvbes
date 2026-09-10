@@ -14,6 +14,7 @@ export interface AuthorizationState {
     | 'step-up'
     | 'enrollment'
     | 'recovery-codes'
+    | 'factors'
     | 'consent'
     | 'leaving'
     | 'closed';
@@ -221,6 +222,31 @@ export class AuthorizationController {
       const hasTotp = await this.gateway.hasTotp(interaction.sessionCsrfToken);
       if (!this.disposed) this.publish({ stage: 'enrollment', hasTotp });
     });
+  }
+
+  beginFactors() {
+    const expiry = this.state.authentication?.proofExpiresAt;
+    if (
+      this.state.stage === 'consent' &&
+      !this.state.busy &&
+      expiry &&
+      Date.parse(expiry) > Date.now()
+    )
+      this.publish({ stage: 'factors', error: null });
+  }
+
+  endFactors() {
+    if (this.state.stage !== 'factors') return Promise.resolve();
+    return this.mutate((interaction) => this.refresh(interaction));
+  }
+
+  closeFactors(revoked: boolean) {
+    this.dispose();
+    if (revoked)
+      this.publish({
+        error:
+          'Le facteur a été supprimé. Revenez à votre application pour vous reconnecter avec une méthode conservée.',
+      });
   }
 
   private canEnroll() {

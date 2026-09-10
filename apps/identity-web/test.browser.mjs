@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { verifyHostedUi } from '../identity-service/tests/runtime-browser-hosted-ui.mjs';
 import { verifyHostedMfa } from '../identity-service/tests/runtime-browser-hosted-mfa.mjs';
 import { verifyHostedEnrollment } from '../identity-service/tests/runtime-browser-hosted-enrollment.mjs';
+import { verifyHostedFactors } from '../identity-service/tests/runtime-browser-hosted-factors.mjs';
 
 const origin = new URL(process.env.IDENTITY_WEB_TEST_CLIENT_ORIGIN ?? '');
 if (
@@ -17,11 +18,26 @@ if (
   throw new Error('Expected the client origin of an isolated HTTPS browser fixture.');
 }
 const suite = process.env.IDENTITY_WEB_TEST_SUITE ?? 'authentication';
-if (!['authentication', 'enrollment-totp', 'enrollment-passkey'].includes(suite))
+if (
+  ![
+    'authentication',
+    'enrollment-totp',
+    'enrollment-passkey',
+    'factors-totp',
+    'factors-passkey',
+  ].includes(suite)
+)
   throw new Error('Unknown Identity Web browser suite');
 const browser = await chromium.launch();
 try {
-  if (suite !== 'authentication') {
+  if (suite.startsWith('factors-')) {
+    console.log(
+      JSON.stringify({
+        browser: browser.version(),
+        ...(await verifyHostedFactors(browser, origin.origin, suite.slice('factors-'.length))),
+      }),
+    );
+  } else if (suite !== 'authentication') {
     console.log(
       JSON.stringify({
         browser: browser.version(),
