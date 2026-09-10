@@ -11,6 +11,21 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 
+it('resolves relative paths with URL file semantics and absolute paths without a base', () => {
+  expect(resolveRequestUrl('users/me', 'https://a.test/api').href).toBe('https://a.test/users/me');
+  expect(resolveRequestUrl('https://b.test/item', 'invalid-base').href).toBe('https://b.test/item');
+  expect(resolveRequestUrl('custom123://b.test/item', 'invalid-base').href).toBe(
+    'custom123://b.test/item',
+  );
+});
+
+it('uses UUIDs when Web Crypto provides them, including default request keys', () => {
+  expect(createIdempotencyKey()).toMatch(/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/u);
+  expect(createRequestHeaders('POST').get('Idempotency-Key')).toMatch(
+    /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/u,
+  );
+});
+
 it.each(['post', 'put', 'patch'])('adds both mutation headers for %s', (method) => {
   const headers = createRequestHeaders(method, undefined, 'explicit-key');
   expect([...headers]).toEqual([
