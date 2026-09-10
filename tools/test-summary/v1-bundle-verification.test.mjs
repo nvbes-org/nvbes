@@ -47,9 +47,12 @@ function fixture(t) {
       repository: 'nvbes-org/nvbes',
       workflows: [run.path],
       getRun: () => run,
+      units: [{ name: 'fixture-rust', language: 'rust' }],
     },
     directory,
     run,
+    bundle,
+    privateKey,
   };
 }
 
@@ -120,4 +123,63 @@ test('rejects traversal and escaping symlinks', (t) => {
   assert.throws(() => confinedRead(directory, '../result.json'), /traversal/u);
   symlinkSync(os.tmpdir(), path.join(directory, 'outside'));
   assert.throws(() => confinedRead(directory, 'outside'), /escapes/u);
+});
+
+test('signed packets cannot bypass raw TypeScript measurement validation', (t) => {
+  const f = fixture(t);
+  const source = 'export const value = true;';
+  const file = 'libs/ts/example/src/index.ts';
+  f.input.units = [
+    {
+      name: '@nvbes/example',
+      language: 'typescript',
+      sourceFiles: {
+        [file]: { sha256: sha256(source), runtime: true },
+      },
+    },
+  ];
+  const coverage = {
+    [file]: {
+      lines: { total: 10000, covered: 8999, skipped: 0 },
+      branches: { total: 1, covered: 1, skipped: 0 },
+    },
+  };
+  const mutation = {
+    schemaVersion: '1.0',
+    files: {
+      [file]: {
+        source,
+        mutants: [{ id: '0', status: 'Killed' }],
+      },
+    },
+  };
+  for (const [name, report] of [
+    ['coverage.json', coverage],
+    ['mutation.json', mutation],
+  ]) {
+    const bytes = JSON.stringify(report);
+    writeFileSync(path.join(f.directory, name), bytes);
+    f.bundle.artifacts.push({ path: name, sha256: sha256(bytes) });
+  }
+  const measurement = {
+    unit: '@nvbes/example',
+    lines: 90,
+    branches: 100,
+    mutation: 100,
+    artifacts: ['coverage.json', 'mutation.json'],
+    reports: { 'istanbul-summary': 'coverage.json', stryker: 'mutation.json' },
+  };
+  f.bundle.measurements = [measurement];
+  const check = () => {
+    f.input.bytes = Buffer.from(JSON.stringify(f.bundle));
+    f.input.signature = sign(null, f.input.bytes, f.privateKey);
+    return verifyBundle(f.input);
+  };
+  assert.throws(check, /declared lines differs/u);
+  measurement.lines = 89.99;
+  assert.equal(check().measurements[0].lines, 89.99);
+  delete measurement.reports;
+  assert.throws(check, /verified istanbul-summary/u);
+  delete f.input.units;
+  assert.throws(check, /scope required/u);
 });

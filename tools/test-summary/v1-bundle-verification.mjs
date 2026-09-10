@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash, createPublicKey, verify } from 'node:crypto';
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { verifyTypescriptMeasurements } from './v1-typescript-measurements.mjs';
 
 export const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -25,7 +26,9 @@ export function verifyBundle({
   repository,
   workflows,
   getRun,
+  units,
 }) {
+  assert(Array.isArray(units) && units.length > 0, 'Candidate measurement scope required');
   assert(/^[a-f0-9]{64}$/u.test(publicKeyDigest ?? ''), 'Pinned public key digest required');
   assert.equal(sha256(publicKey), publicKeyDigest, 'Untrusted signing key');
   const key = createPublicKey(publicKey);
@@ -37,15 +40,12 @@ export function verifyBundle({
     Array.isArray(bundle.artifacts) && bundle.artifacts.length > 0,
     'Missing bundle artifacts',
   );
-  const artifacts = new Set();
+  const artifacts = new Map();
   for (const artifact of bundle.artifacts) {
     assert(!artifacts.has(artifact.path), 'Duplicate artifact');
-    assert.equal(
-      sha256(confinedRead(artifactDirectory, artifact.path)),
-      artifact.sha256,
-      'Artifact digest mismatch',
-    );
-    artifacts.add(artifact.path);
+    const artifactBytes = confinedRead(artifactDirectory, artifact.path);
+    assert.equal(sha256(artifactBytes), artifact.sha256, 'Artifact digest mismatch');
+    artifacts.set(artifact.path, artifactBytes);
   }
   for (const result of bundle.results) {
     assert(
@@ -76,5 +76,6 @@ export function verifyBundle({
     assert.equal(run.run_attempt, 1, 'Rerun cannot replace failed evidence');
     assert(['push', 'workflow_dispatch'].includes(run.event), 'Untrusted workflow event');
   }
+  verifyTypescriptMeasurements(bundle, units, artifacts);
   return bundle;
 }

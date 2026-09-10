@@ -70,6 +70,7 @@ function main() {
       publicKey: readFileSync(env.NVBES_V1_PUBLIC_KEY_FILE),
       publicKeyDigest: env.NVBES_V1_PUBLIC_KEY_SHA256,
       artifactDirectory: directory,
+      units,
       repository: 'nvbes-org/nvbes',
       workflows: ['.github/workflows/ci.yml', '.github/workflows/v1-testing.yml'],
       getRun: (runId) =>

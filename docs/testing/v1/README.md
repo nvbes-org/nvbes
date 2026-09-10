@@ -70,6 +70,22 @@ Les mesures identifient `unit`, `sha`, `completedAt`, `artifacts`, `lines`,
 `targetMonthlyEurTtc`, `maximumMonthlyEurTtc` (limites 24, 8, 20, 30).
 Les fixtures des tests du validateur ne sont jamais des preuves du projet.
 
+Pour TypeScript, chaque mesure doit aussi fournir `reports` avec les clés
+`istanbul-summary` et `stryker`, pointant vers deux artefacts JSON signés et
+référencés dans `artifacts`. Le catalogue inventorie les sources `src/**/*.ts`
+et `src/**/*.tsx`, hors tests, déclarations `.d` et fichiers `.gen`, avec
+leur empreinte et la présence de code émis. Les rapports doivent inclure
+chaque source runtime ; aucun fichier étranger ou dupliqué n'est accepté.
+Le texte source embarqué par Stryker doit correspondre exactement au candidat.
+Les types sans code émis peuvent être absents, ou avoir des compteurs nuls.
+
+Les scores déclarés doivent égaler les scores recalculés, sans arrondi :
+couverture depuis les compteurs entiers par fichier (pas `pct` ni le total
+annoncé), mutation depuis les statuts individuels. Un timeout reste non
+détecté. Les compteurs ignorés, incomplets ou sans métrique applicable
+bloquent la validation ; leur éventuelle non-applicabilité nécessite encore
+une décision contrôlée, jamais une conversion automatique en 100 %.
+
 ## Limites à fermer avant tout candidat
 
 1. Relier chaque ID de cas à un test réellement exécuté ; terminer le
@@ -77,9 +93,12 @@ Les fixtures des tests du validateur ne sont jamais des preuves du projet.
    consommateurs Account ensemble. Les IDs actuels sont des obligations,
    pas des assertions d'exécution.
 2. Produire les enveloppes depuis les runners CI, lier les artefacts à leurs
-   producteurs et recalculer les mesures depuis les rapports bruts. Le
-   paquet signé contrôle actuellement l'intégrité des fichiers et le run
-   référencé, pas leur contenu métier ni leur collecte automatique.
+   producteurs et recalculer aussi les mesures Rust depuis les rapports
+   bruts. Le recalcul TypeScript est intégré ; l'authentification de la
+   collecte CI, l'intégralité des sites de mutation et la vérification du
+   contenu métier des preuves de suites/opérations restent à terminer.
+   La signature du paquet et la vérification d'un run ne prouvent pas à
+   elles seules que GitHub a produit ces artefacts.
 3. Étalonner nightly (épinglé à `nightly-2026-09-09`) ; étendre les mesures Rust/TypeScript et
    atteindre effectivement 90 % partout. `llvm-cov --branch` mesure les
    branches ; ce n'est pas une preuve MC/DC ni une couverture indépendante

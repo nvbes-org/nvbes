@@ -1,8 +1,28 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
+
+export function typescriptSources(location, relativeRoot) {
+  const sources = {};
+  for (const file of readdirSync(path.join(location, 'src'), { recursive: true })) {
+    if (!/\.(ts|tsx)$/u.test(file) || /\.(gen|test|spec|d)\.(ts|tsx)$/u.test(file)) continue;
+    const source = readFileSync(path.join(location, 'src', file), 'utf8');
+    const emitted = ts
+      .transpileModule(source, {
+        compilerOptions: { module: ts.ModuleKind.ESNext, removeComments: true },
+        fileName: file,
+      })
+      .outputText.trim();
+    sources[`${relativeRoot}/src/${file.replaceAll(path.sep, '/')}`] = {
+      sha256: createHash('sha256').update(source).digest('hex'),
+      runtime: emitted !== '' && emitted !== 'export {};',
+    };
+  }
+  return sources;
+}
 
 export function cargoClosure(packages, seeds) {
   const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
@@ -107,7 +127,12 @@ export function productionUnits(root, domains, cwd) {
         `${pkg.name}: excluded package contains handwritten runtime TypeScript`,
       );
     } else
-      units.push({ name: pkg.name, language: 'typescript', thresholds: typescriptThresholds(pkg) });
+      units.push({
+        name: pkg.name,
+        language: 'typescript',
+        thresholds: typescriptThresholds(pkg),
+        sourceFiles: typescriptSources(location, path.dirname(manifest)),
+      });
   }
   return units.sort((a, b) => a.name.localeCompare(b.name));
 }
