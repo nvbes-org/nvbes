@@ -13,6 +13,36 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Préférence de découvrabilité et preuve Chromium — 2026-09-10
+
+L'enrollment standard de webauthn-rs émet `residentKey: discouraged`. Le probe
+[Playwright](../../apps/identity-service/tests/webauthn-residency.playwright.js)
+a confirmé avec Chromium 152.0.7977.83 et un authentificateur CTAP2 virtuel que
+cette option produit un credential non découvrable. Avec `preferred`, le même
+authentificateur crée un credential découvrable, puis `credentials.get` avec
+`allowCredentials: []` retourne une assertion et son userHandle sans sélection
+de credential injectée par le test.
+
+L'enrollment actif demande donc désormais `residentKey: preferred`, avec le type
+de `webauthn-rs-proto`. `requireResidentKey` reste faux et `userVerification`
+reste obligatoire. Cette préférence accepte toujours les credentials classiques,
+en cohérence avec la politique d'acceptation conservée dans l'état de cérémonie.
+Elle ne modifie ni challenge ni exigence cryptographique et n'est pas une preuve
+de résidence : [WebAuthn](https://www.w3.org/TR/webauthn-3/) autorise encore un
+credential non découvrable avec cette préférence. Aucun signal n'est promu en
+garantie matérielle ou en niveau d'assurance.
+
+Validation : compilation workspace sans avertissement ; cible Nx
+`identity-service:test:database` avec 130 tests de bibliothèque et 24 tests du
+runtime réussis. Le test d'enrollment vérifie les trois options et conserve les
+tests cryptographiques de refus en absence d'UV. Le probe Chromium a été exécuté
+dans un contexte neuf, fermé à la fin, sans comptes utilisateur ni clé réelle.
+
+Limite : le probe isole les options WebAuthn dans une page de test interceptée,
+sans appeler le backend. Il n'est pas une preuve E2E Identity ni un test de l'UX
+conditional UI. L'enchaînement réel navigateur/API, les autres navigateurs et
+le login avec identifiant pour les clés non découvrables restent à terminer.
+
 ## Routes HTTP du login primaire passkey — 2026-09-10
 
 Le runtime hébergé monte POST `/oauth/authorize/passkey/options` et

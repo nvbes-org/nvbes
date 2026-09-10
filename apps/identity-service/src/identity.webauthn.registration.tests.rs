@@ -21,6 +21,19 @@ async fn enrollment_persists_a_usable_passkey_and_consumes_once() {
     let (session_id, token) = session(&db).await;
     let server = server();
     let started = start(&db, &server, &token).await.unwrap();
+    let options_json = serde_json::to_value(&started.options).unwrap();
+    assert_eq!(
+        options_json["publicKey"]["authenticatorSelection"]["residentKey"],
+        "preferred"
+    );
+    assert_eq!(
+        options_json["publicKey"]["authenticatorSelection"]["requireResidentKey"],
+        false
+    );
+    assert_eq!(
+        options_json["publicKey"]["authenticatorSelection"]["userVerification"],
+        "required"
+    );
     let stored: Vec<u8> =
         sqlx::query_scalar("SELECT challenge FROM identity_webauthn_challenges WHERE id=$1")
             .bind(started.ceremony_id)

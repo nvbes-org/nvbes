@@ -27,7 +27,7 @@ pub async fn start(
     if credentials.len() >= 10 {
         return Err(WebauthnError::Limit);
     }
-    let (options, state) = server
+    let (mut options, state) = server
         .start_passkey_registration(
             principal,
             &principal.to_string(),
@@ -35,6 +35,14 @@ pub async fn start(
             Some(credentials.into_iter().map(Into::into).collect()),
         )
         .map_err(|_| WebauthnError::InvalidCeremony)?;
+    // Prefer discoverability without requiring it: classic security keys remain
+    // accepted, exactly as in the stored library policy. UV is never weakened.
+    let selection = options
+        .public_key
+        .authenticator_selection
+        .as_mut()
+        .ok_or(WebauthnError::InvalidCeremony)?;
+    selection.resident_key = Some(webauthn_rs_proto::ResidentKeyRequirement::Preferred);
     let id = Uuid::new_v4();
     // One pending enrollment per session. Session locking serializes starts.
     sqlx::query(
