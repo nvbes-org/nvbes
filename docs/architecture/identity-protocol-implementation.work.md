@@ -13,6 +13,40 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Récupération du mot de passe : atomicité du cycle interne — 2026-09-10
+
+La primitive de reset révoque désormais tous les liens en attente du principal,
+en même temps que ses sessions et le changement du mot de passe. Les resets
+concurrents prennent le verrou principal avant les challenges, comme le login,
+pour éviter les inversions de verrou lors de l'invalidation des liens frères.
+Le statut actif, le hash courant, l'expiration et la non-consommation sont
+revérifiés sous verrou après le calcul coûteux du nouveau hash.
+
+La vérification et le hash utilisent les workers bloquants bornés communs au
+login, sans garder une transaction ouverte pendant le calcul. Un mot de passe
+identique au mot de passe courant est refusé. Les liens ne sont émis que pour
+un humain actif avec credential et email vérifié, recontrôlé après verrouillage.
+L'échéance de quinze minutes est calculée par PostgreSQL. Le conteneur portant
+le jeton de récupération n'implémente plus Debug.
+
+Six tests PostgreSQL couvrent les liens identiques/distincts concurrents,
+l'isolation d'un autre compte, un login vérifié avant le reset, les refus sans
+mutation, les comptes inactifs, l'expiration/suspension pendant l'attente du
+verrou et le rollback après panne d'audit. Ces tests utilisent des schémas
+privés avec les migrations réelles et synchronisent la course sur une attente
+de verrou observée dans PostgreSQL.
+
+Validation finale : `cargo check --workspace`, format Rust et cible Nx
+`identity-service:test:database` passent. La suite exécute 219 tests bibliothèque
+et 30 tests binaire, dont les six nouveaux tests ; un test interactif reste
+ignoré. La base Docker de cette exécution a été supprimée. Aucun frontend ni
+protocole HTTP n'a changé dans cette tranche, donc aucun nouveau test navigateur.
+
+Cette modification reste une capacité interne : elle ne livre pas encore le
+parcours HTTP/web de mot de passe oublié, sa livraison Email durable, ses
+quotas ni ses notifications. Elle n'accorde aucune preuve MFA. Les lots A–D
+restent ouverts, avec leur périmètre complet.
+
 ## Lot consolidé : logout RP de bout en bout — 2026-09-10
 
 Le runtime expose GET/POST `/oauth/end-session`, puis deux opérations JSON

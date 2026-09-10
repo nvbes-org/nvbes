@@ -13,7 +13,7 @@ const PASSWORD_VERIFY_CONCURRENCY: usize = 2;
 
 static PASSWORD_VERIFY_PERMITS: Semaphore = Semaphore::const_new(PASSWORD_VERIFY_CONCURRENCY);
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RecoveryNotification {
     pub challenge_id: Uuid,
     pub principal_id: Uuid,
@@ -171,7 +171,7 @@ pub(crate) async fn create_verified_session(
     Ok(token)
 }
 
-async fn verify_stored_password(
+pub(crate) async fn verify_stored_password(
     password: &str,
     password_hash: &str,
 ) -> anyhow::Result<(bool, bool)> {
@@ -184,7 +184,7 @@ async fn verify_stored_password(
     .map_err(|_| anyhow::anyhow!("password verification failed"))
 }
 
-async fn hash_current_password(password: &str) -> anyhow::Result<String> {
+pub(crate) async fn hash_current_password(password: &str) -> anyhow::Result<String> {
     let password = password.to_owned();
     password_work(&PASSWORD_VERIFY_PERMITS, move || hash_password(&password))
         .await?
