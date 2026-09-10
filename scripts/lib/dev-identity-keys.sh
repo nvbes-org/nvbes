@@ -32,14 +32,21 @@ load_dev_identity_keys() {
     # Custom registries and credentials are owned by the caller; do not replace them.
     return 0
   fi
-  if [ -z "${NVBES_BILLING_IDENTITY_RESOURCE_SECRET:-}" ]; then
+  if [ -z "${NVBES_BILLING_IDENTITY_RESOURCE_SECRET:-}" ] || [ -z "${NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET:-}" ]; then
     node "$(dirname "${BASH_SOURCE[0]}")/dev-identity-resources.mjs" "$key_dir"
+  fi
+  if [ -z "${NVBES_BILLING_IDENTITY_RESOURCE_SECRET:-}" ]; then
     NVBES_BILLING_IDENTITY_RESOURCE_SECRET="$(<"$key_dir/identity-billing-resource.secret")"
   fi
+  if [ -z "${NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET:-}" ]; then
+    NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET="$(<"$key_dir/identity-account-resource.secret")"
+  fi
+  export NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET
+  export NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID="${NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID:-account-api-local}"
   export NVBES_BILLING_IDENTITY_RESOURCE_SECRET
   export NVBES_BILLING_IDENTITY_RESOURCE_CLIENT_ID="${NVBES_BILLING_IDENTITY_RESOURCE_CLIENT_ID:-billing-api-local}"
   if [ -z "${NVBES_IDENTITY_RESOURCE_SERVERS_JSON:-}" ]; then
-    NVBES_IDENTITY_RESOURCE_SERVERS_JSON="$(node -e 'process.stdout.write(JSON.stringify([{client_id:process.env.NVBES_BILLING_IDENTITY_RESOURCE_CLIENT_ID,audience:"nvbes-billing-service",secret:process.env.NVBES_BILLING_IDENTITY_RESOURCE_SECRET}]))')"
+    NVBES_IDENTITY_RESOURCE_SERVERS_JSON="$(node -e 'process.stdout.write(JSON.stringify([{client_id:process.env.NVBES_BILLING_IDENTITY_RESOURCE_CLIENT_ID,audience:"nvbes-billing-service",secret:process.env.NVBES_BILLING_IDENTITY_RESOURCE_SECRET},{client_id:process.env.NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID,audience:"nvbes-account-service",secret:process.env.NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET}]))')"
   fi
   export NVBES_IDENTITY_RESOURCE_SERVERS_JSON
 }

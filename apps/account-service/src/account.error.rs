@@ -5,6 +5,8 @@ use serde::Serialize;
 pub enum AccountError {
     #[error("authentication required")]
     Unauthorized,
+    #[error("Identity activity verification is unavailable")]
+    IdentityUnavailable,
     #[error("insufficient scope")]
     Forbidden,
     #[error("resource not found")]
@@ -27,6 +29,7 @@ impl IntoResponse for AccountError {
     fn into_response(self) -> axum::response::Response {
         let (status, code) = match self {
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, "authentication_required"),
+            Self::IdentityUnavailable => (StatusCode::SERVICE_UNAVAILABLE, "identity_unavailable"),
             Self::Forbidden => (StatusCode::FORBIDDEN, "insufficient_scope"),
             Self::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             Self::Conflict => (StatusCode::CONFLICT, "state_conflict"),

@@ -13,6 +13,39 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Consommation de l'introspection par Account — 2026-09-10
+
+Account utilise le même client SDK que Billing après validation locale du JWT.
+L'extracteur refuse les credentials HTTP ambigus et les tokens inactifs ; une
+panne d'introspection produit 503 avant le handler. Le JWT doit respecter
+l'issuer exact, l'audience canonique Account, les scopes, les identifiants et
+les bornes temporelles du profil actif. Les tokens liés à DPoP sont refusés en
+Bearer. La configuration ne retire plus le slash final de l'issuer.
+
+Le contrôle des actions sensibles conserve une échéance d'authentification forte
+et la vérifie au moment de l'autorisation, après la consultation d'Identity.
+Un AMR historique sans preuve temporelle valide ne suffit plus pour un export
+ou une fermeture. L'échéance est plafonnée par l'expiration du token ; une
+connexion primaire passkey est recevable pendant cinq minutes.
+
+Les credentials de ressource Account sont obligatoires et distincts de Billing.
+Le helper local publie deux secrets persistants et un registre cohérent, sans
+remplacer un registre personnalisé. Le graphe Nx déclare la dépendance au SDK
+et le cache du check inclut ses sources. Aucune configuration de production
+n'est écrite et aucun déploiement n'est effectué.
+
+Les nouveaux tests utilisent des JWT signés et une fixture HTTP contrôlée pour
+vérifier scopes/audiences/dates, activité et révocation, panne, headers dupliqués,
+refus avant le handler sensible et expiration des preuves. Le parcours avec
+les vrais runtimes Identity, Account et Billing demeure une validation à mener,
+ainsi que DPoP, le logout intersites et les gates globaux.
+
+Validation : `cargo check --workspace`, Nx `account-service:check` toutes cibles,
+les quatre tests de `account-service:test:database` sur une base neuve isolée,
+les deux tests du helper local, son lint/format et la syntaxe Bash passent.
+Le fournisseur d'introspection utilisé dans le test HTTP Account est simulé ;
+ces résultats ne constituent pas encore une preuve interservices complète.
+
 ## Consommation de l'introspection par Billing — 2026-09-10
 
 L'extracteur Billing vérifie désormais le JWT puis consulte Identity. Une

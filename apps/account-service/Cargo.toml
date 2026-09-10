@@ -17,6 +17,7 @@ axum.workspace = true
 chrono.workspace = true
 jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 metrics-exporter-prometheus.workspace = true
+nvbes-identity-sdk = { path = "../../libs/rust/identity-sdk-backend" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
 serde.workspace = true
 serde_json.workspace = true
@@ -28,4 +29,5 @@ tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+rsa = "0.9.10"
 tower = "0.5"

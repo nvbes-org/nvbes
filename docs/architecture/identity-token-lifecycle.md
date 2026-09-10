@@ -110,9 +110,9 @@ Le corps est borné à 20 480 octets, le token à 16 384 caractères. Le quota s
 protocolaire existant (120/minute, partagé par source réseau avec les autres
 routes protocolaires) s'applique ; un dépassement produit 429. Toutes les réponses
 interdisent le cache. La consultation relit grant, session, principal et registre
-OAuth à chaque appel. Billing utilise désormais ce contrôle après la validation
-locale de chaque JWT, sans cache positif ni repli en cas de panne. Account reste
-à brancher. Le SDK vérifie que la réponse active correspond aux identifiants,
+OAuth à chaque appel. Account et Billing utilisent désormais ce contrôle après
+la validation locale de chaque JWT, sans cache positif ni repli en cas de panne.
+Le SDK vérifie que la réponse active correspond aux identifiants,
 dates, scopes, audience, issuer et confirmation du token vérifié localement.
 
 ### Révocation d'une passkey

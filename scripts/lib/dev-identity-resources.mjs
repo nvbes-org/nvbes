@@ -12,9 +12,9 @@ import {
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export function ensureBillingResourceSecret(directory) {
+function ensureResourceSecret(directory, resource) {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const target = join(directory, 'identity-billing-resource.secret');
+  const target = join(directory, `identity-${resource}-resource.secret`);
   const temporary = join(directory, `.resource-${randomUUID()}.tmp`);
   const descriptor = openSync(temporary, 'wx', 0o600);
   try {
@@ -42,7 +42,11 @@ export function ensureBillingResourceSecret(directory) {
   }
 }
 
+export function ensureResourceSecrets(directory) {
+  for (const resource of ['billing', 'account']) ensureResourceSecret(directory, resource);
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (!process.argv[2]) throw new Error('Local key directory is required');
-  ensureBillingResourceSecret(process.argv[2]);
+  ensureResourceSecrets(process.argv[2]);
 }
