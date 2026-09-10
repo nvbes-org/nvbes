@@ -13,6 +13,8 @@ pub mod mfa;
 pub mod mfa_crypto;
 #[path = "identity.mfa.recovery.rs"]
 pub mod mfa_recovery;
+#[path = "identity.notifications.command.rs"]
+pub mod notification_command;
 #[path = "identity.rate_limits.rs"]
 pub mod rate_limits;
 #[path = "identity.sessions.lock.rs"]

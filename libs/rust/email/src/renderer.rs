@@ -167,6 +167,22 @@ fn security(
     security_url: &Option<String>,
 ) -> (String, String, TemplateHtml) {
     let (subject, statement) = match event {
+        AccountSecurityEvent::MfaRecoveryCodesGenerated => (
+            "New recovery codes for your nvbes account",
+            "A new set of MFA recovery codes was generated. Previous recovery codes can no longer be used. Keep the new codes offline; never share them.".to_string(),
+        ),
+        AccountSecurityEvent::MfaRecoveryStarted => (
+            "MFA recovery started on your nvbes account",
+            "A saved recovery code was used and existing sign-in sessions were revoked. Replacement of your authentication factors is not yet complete.".to_string(),
+        ),
+        AccountSecurityEvent::MfaRecovered => (
+            "Authentication factors replaced on your nvbes account",
+            "A new passkey replaced your previous authentication factors. Existing sessions and remaining recovery codes were revoked. Sign in again with the new passkey and save a new set of recovery codes. Your password was not changed by this recovery.".to_string(),
+        ),
+        AccountSecurityEvent::MfaRecoveryCancelled => (
+            "MFA recovery cancelled on your nvbes account",
+            "The MFA recovery was cancelled without replacing your authentication factors. The recovery code that was used remains consumed, and revoked sessions remain closed.".to_string(),
+        ),
         AccountSecurityEvent::EmailAdded => (
             "New email added to your nvbes account",
             format!("A secondary email address was added: {}.", optional_value(affected)),

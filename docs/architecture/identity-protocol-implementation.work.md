@@ -13,6 +13,36 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Contrat des notifications de récupération MFA — 2026-09-10
+
+Le contrat Email possède maintenant quatre événements MFA distincts (valeurs
+Protobuf 5 à 8), avec encodage/décodage et rendus texte/HTML. L'ancien événement
+AccountRecovered annonce un reset de mot de passe : il n'est donc pas réutilisé
+pour la récupération MFA. Les nouveaux messages distinguent génération des
+codes, début, remplacement effectif des facteurs et abandon. Ils n'incluent ni
+code, jeton, identifiant de facteur ni lien d'authentification.
+
+Le constructeur Identity accepte exclusivement ces quatre événements, une ligne
+d'outbox de confiance et un destinataire dont la vérification devra être garantie
+par le dispatcher. Il produit une commande AccountSecurity, une clé d'idempotence
+liée à l'événement et une échéance fixe de 24 heures après son occurrence.
+Un retry ne prolonge pas l'échéance ; événements futurs/expirés et destinataires
+invalides sont refusés. Le passage Protobuf aller-retour et les textes exacts
+sont testés côté Identity.
+
+Validation : cargo check --workspace, cible Nx email-worker:test (bibliothèque,
+worker, adaptateur Scaleway), 188 tests bibliothèque Identity, 24 runtime et trois
+gardes PostgreSQL passent ; un test interactif reste ignoré. Aucun frontend ou
+parcours navigateur modifié, aucun envoi réseau réel effectué par cette tranche.
+
+Le dispatcher durable reste à implémenter : figer le destinataire vérifié avant
+le premier envoi, réclamer les événements sans concurrence, borner retries et
+backoff, persister le reçu Email, distinguer acceptation et livraison finale,
+traiter expiration/absence d'adresse et tester redémarrage/pannes. Une ancienne
+version d'Email refuse les nouvelles valeurs : déployer le consommateur compatible
+avant d'activer le producteur. Aucun déploiement n'est réalisé ici. Notifications
+effectivement délivrées, interfaces et autres exigences A à D restent ouvertes.
+
 ## Reprise et abandon de récupération MFA — 2026-09-10
 
 Les routes resume/cancel et leurs méthodes SDK complètent le cycle de vie.

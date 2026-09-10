@@ -153,6 +153,12 @@ impl AccountSecurityEvent {
             Self::PrimaryEmailChanged => email_pb::AccountSecurityEvent::PrimaryEmailChanged,
             Self::AccountRecovered => email_pb::AccountSecurityEvent::AccountRecovered,
             Self::RecoveryReviewRequired => email_pb::AccountSecurityEvent::RecoveryReviewRequired,
+            Self::MfaRecoveryCodesGenerated => {
+                email_pb::AccountSecurityEvent::MfaRecoveryCodesGenerated
+            }
+            Self::MfaRecoveryStarted => email_pb::AccountSecurityEvent::MfaRecoveryStarted,
+            Self::MfaRecovered => email_pb::AccountSecurityEvent::MfaRecovered,
+            Self::MfaRecoveryCancelled => email_pb::AccountSecurityEvent::MfaRecoveryCancelled,
         }
     }
 }

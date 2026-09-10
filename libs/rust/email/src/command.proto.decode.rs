@@ -137,6 +137,12 @@ impl TryFrom<email_pb::AccountSecurityEvent> for AccountSecurityEvent {
     fn try_from(value: email_pb::AccountSecurityEvent) -> Result<Self, Self::Error> {
         match value {
             email_pb::AccountSecurityEvent::EmailAdded => Ok(Self::EmailAdded),
+            email_pb::AccountSecurityEvent::MfaRecoveryCodesGenerated => {
+                Ok(Self::MfaRecoveryCodesGenerated)
+            }
+            email_pb::AccountSecurityEvent::MfaRecoveryStarted => Ok(Self::MfaRecoveryStarted),
+            email_pb::AccountSecurityEvent::MfaRecovered => Ok(Self::MfaRecovered),
+            email_pb::AccountSecurityEvent::MfaRecoveryCancelled => Ok(Self::MfaRecoveryCancelled),
             email_pb::AccountSecurityEvent::PrimaryEmailChanged => Ok(Self::PrimaryEmailChanged),
             email_pb::AccountSecurityEvent::AccountRecovered => Ok(Self::AccountRecovered),
             email_pb::AccountSecurityEvent::RecoveryReviewRequired => {
