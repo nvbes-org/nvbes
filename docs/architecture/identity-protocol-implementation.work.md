@@ -13,6 +13,31 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Noyau transactionnel de récupération MFA — 2026-09-10
+
+La migration 0022 et les modules mfa_recovery implémentent génération de dix
+codes hachés, consommation après connexion récente, jeton de récupération
+séparé d'OAuth et cérémonie de remplacement par une passkey. Le
+[contrat](identity-mfa-recovery.md) décrit la séparation des preuves, le besoin
+de reconnexion et les limites restant avant exposition HTTP.
+
+Une preuve forte récente protège la génération. La consommation révoque les
+sessions ordinaires ; seule la nouvelle attestation vérifiée permet de retirer
+les anciens facteurs, effacer le TOTP et invalider les codes restants. Toutes
+les mutations concernées et les audits/intentions de notification sont atomiques.
+Le remplacement fonctionne aussi avec dix anciennes passkeys. Aucun AMR ou
+step-up n'est attribué au code ou au jeton de récupération.
+
+Validation : cargo check --workspace, 176 tests bibliothèque Identity, 24 tests
+runtime et trois gardes PostgreSQL passent (un test interactif ignoré). Les sept
+nouveaux tests utilisent de vraies signatures, couvrent concurrence, refus OAuth,
+isolation, expiration, preuve d'utilisation de la clé récupérée et rollback.
+
+Cette tranche est interne : routes HTTP, cookies/CSRF dédiés, quotas, SDK,
+interface et notification réellement délivrée restent à raccorder. Aucun test
+navigateur n'est revendiqué pour ce nouveau parcours et aucun service public
+n'est ouvert. Les lots A à D restent actifs.
+
 ## Compatibilité WebAuthn non découvrable via session authentifiée — 2026-09-10
 
 Le SDK expose loginWithSecurityKey et loginHostedSecurityKey : mot de passe,

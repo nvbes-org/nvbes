@@ -11,6 +11,8 @@ pub mod browser;
 pub mod mfa;
 #[path = "identity.mfa.crypto.rs"]
 pub mod mfa_crypto;
+#[path = "identity.mfa.recovery.rs"]
+pub mod mfa_recovery;
 #[path = "identity.rate_limits.rs"]
 pub mod rate_limits;
 #[path = "identity.sessions.lock.rs"]
