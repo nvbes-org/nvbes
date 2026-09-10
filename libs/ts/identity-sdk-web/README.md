@@ -159,8 +159,28 @@ routes actives et sont également disponibles depuis `./oauth`.
 `NvbesIdentityWeb.logout(sessionCsrfToken)` exige désormais cette preuve explicite
 et confirme réellement le succès serveur. Il ne peut pas être appelé depuis
 Account pour envoyer un cookie à Identity. Le parcours de déconnexion intersites
-reste à livrer. Les anciennes méthodes MFA/WebAuthn du wrapper ne constituent
-pas encore un contrat aligné sur les routes actives ; leur migration reste ouverte.
+reste à livrer. Les méthodes TOTP, récupération et `stepUp` générique du wrapper
+restent à migrer ; elles ne constituent pas un contrat aligné sur les routes actives.
+
+### Migration des méthodes WebAuthn
+
+Les anciennes méthodes WebAuthn et leurs exports autonomes ont été supprimés :
+ils appelaient les endpoints archivés `/auth/mfa/webauthn/*`. Aucun consommateur
+actif du monorepo n'utilisait ces méthodes. Pour un consommateur externe de l'alpha,
+ce changement nécessite une adaptation explicite :
+
+| Ancien appel                                               | Appel actif sur `NvbesIdentityWeb`                                   |
+| ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| `startWebAuthnRegistration` + `finishWebAuthnRegistration` | `registerPasskey(sessionCsrf, label, options?)`                      |
+| `registerWebAuthnCredential`                               | `registerPasskey(sessionCsrf, label, options?)`                      |
+| `startWebAuthnAuthentication` + `completeWebAuthnStepUp`   | `stepUpPasskey(sessionCsrf, options?)`                               |
+| Connexion découvrable                                      | `loginPasskey(interaction, options?)`                                |
+| Gestion des clés                                           | `listPasskeys`, `renamePasskey`, `revokePasskey` avec CSRF explicite |
+
+La politique de l'authentificateur vient du serveur. Les méthodes ne prennent
+plus de Bearer token ni de `kind` local ; elles exigent l'origine Identity et
+les preuves de session/interaction actives. Les fonctions `*HostedPasskey(s)`
+restent disponibles pour les interfaces qui préfèrent des fonctions autonomes.
 
 ## Détection d’environnement
 

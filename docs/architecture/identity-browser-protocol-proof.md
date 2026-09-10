@@ -53,6 +53,8 @@ Il vérifie également la liste des clés, le renommage persistant, le refus HTT
 de révoquer le dernier facteur, puis l'enregistrement d'une seconde clé virtuelle.
 La révocation de la première clé invalide la session qui l'a utilisée et le jeton
 Account déjà émis ; le SDK observe ces refus par les vraies routes.
+Les six opérations WebAuthn passent désormais par les méthodes publiques de
+`NvbesIdentityWeb` ; leurs fonctions hébergées sont également testées séparément.
 
 Le serveur de test se ferme après dix minutes, à la perte de son lanceur ou sur
 SIGINT/SIGTERM. Le PID affiché permet aussi un arrêt explicite avec `kill -TERM`.

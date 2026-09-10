@@ -13,7 +13,6 @@ import {
   removeMfaFactor,
   requestEmailStepUpCode,
   setupTotp,
-  startWebAuthnAuthentication,
   stepUp,
 } from '../mfa';
 
@@ -392,42 +391,6 @@ describe('MFA API functions', () => {
           body: JSON.stringify({ purpose: 'password_change' }),
         }),
       );
-    });
-  });
-
-  describe('startWebAuthnAuthentication', () => {
-    it('should preserve the server challenge id', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            challenge_id: 'challenge-id',
-            options: {
-              challenge: 'dGVzdC1jaGFsbGVuZ2U',
-              allowCredentials: [{ id: 'Y3JlZGVudGlhbC1pZA', type: 'public-key' }],
-            },
-          }),
-      });
-
-      const result = await startWebAuthnAuthentication(mockBaseUrl);
-
-      expect(result.challengeId).toBe('challenge-id');
-      expect(result.options.challenge).toBeInstanceOf(ArrayBuffer);
-    });
-
-    it('should reject malformed start responses without a challenge id', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () =>
-          Promise.resolve({
-            options: {
-              challenge: 'dGVzdC1jaGFsbGVuZ2U',
-            },
-          }),
-      });
-
-      await expect(startWebAuthnAuthentication(mockBaseUrl)).rejects.toThrow(MfaError);
     });
   });
 });

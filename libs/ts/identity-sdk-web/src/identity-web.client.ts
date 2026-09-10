@@ -1,20 +1,23 @@
 import { logoutHostedSession } from './hosted.client';
+import type { HostedInteraction } from './hosted.client';
+import { registerHostedPasskey, loginHostedPasskey, stepUpHostedPasskey } from './hosted.webauthn';
+import {
+  listHostedPasskeys,
+  renameHostedPasskey,
+  revokeHostedPasskey,
+  type HostedPasskey,
+} from './hosted.webauthn.credentials';
 import type {
   MfaFactorView,
   RecoveryCodesResult,
   TotpSetupResult,
 } from '@nvbes/identity-sdk-core/src/types';
 import {
-  completeWebAuthnStepUp,
   confirmTotp,
-  finishWebAuthnRegistration,
   generateRecoveryCodes,
   listMfaFactors,
-  registerWebAuthnCredential,
   removeMfaFactor,
   setupTotp,
-  startWebAuthnAuthentication,
-  startWebAuthnRegistration,
   stepUp,
 } from './mfa';
 import {
@@ -27,7 +30,7 @@ import {
   type AuthorizationRequestInput,
 } from './oauth.authorization-request';
 import { defaultWebStorage, type WebStorage } from './storage';
-import type { WebauthnRegistrationKind } from './webauthn';
+import type { WebauthnCreateOptions, WebauthnGetOptions } from './webauthn';
 import type { DpopTransactionStore } from './dpop.transaction-store';
 
 export interface AuthConfig {
@@ -129,38 +132,35 @@ export class NvbesIdentityWeb {
     return confirmTotp(this.config.baseUrl, factorId, code, token);
   }
 
-  async startWebAuthnRegistration(
-    label?: string,
-    kind: WebauthnRegistrationKind = 'passkey',
-    token?: string,
-  ): Promise<{ factorId: string; options: PublicKeyCredentialCreationOptions }> {
-    return startWebAuthnRegistration(this.config.baseUrl, label, kind, token);
+  registerPasskey(
+    sessionCsrf: string,
+    label: string,
+    options?: WebauthnCreateOptions,
+  ): Promise<string> {
+    return registerHostedPasskey({ baseUrl: this.config.baseUrl }, sessionCsrf, label, options);
   }
 
-  async finishWebAuthnRegistration(
-    factorId: string,
-    credential: PublicKeyCredential,
-    token?: string,
-  ): Promise<void> {
-    return finishWebAuthnRegistration(this.config.baseUrl, factorId, credential, token);
+  loginPasskey(
+    interaction: HostedInteraction,
+    options?: WebauthnGetOptions,
+  ): Promise<HostedInteraction> {
+    return loginHostedPasskey({ baseUrl: this.config.baseUrl }, interaction, options);
   }
 
-  async registerWebAuthnCredential(
-    label?: string,
-    kind: WebauthnRegistrationKind = 'passkey',
-    token?: string,
-  ): Promise<void> {
-    return registerWebAuthnCredential(this.config.baseUrl, label, kind, token);
+  stepUpPasskey(sessionCsrf: string, options?: WebauthnGetOptions): Promise<string> {
+    return stepUpHostedPasskey({ baseUrl: this.config.baseUrl }, sessionCsrf, options);
   }
 
-  async startWebAuthnAuthentication(
-    token?: string,
-  ): Promise<{ challengeId: string; options: PublicKeyCredentialRequestOptions }> {
-    return startWebAuthnAuthentication(this.config.baseUrl, token);
+  listPasskeys(sessionCsrf: string): Promise<HostedPasskey[]> {
+    return listHostedPasskeys({ baseUrl: this.config.baseUrl }, sessionCsrf);
   }
 
-  async completeWebAuthnStepUp(token?: string): Promise<void> {
-    return completeWebAuthnStepUp(this.config.baseUrl, token);
+  renamePasskey(sessionCsrf: string, id: string, label: string): Promise<void> {
+    return renameHostedPasskey({ baseUrl: this.config.baseUrl }, sessionCsrf, id, label);
+  }
+
+  revokePasskey(sessionCsrf: string, id: string): Promise<void> {
+    return revokeHostedPasskey({ baseUrl: this.config.baseUrl }, sessionCsrf, id);
   }
 
   async generateRecoveryCodes(password?: string, token?: string): Promise<RecoveryCodesResult> {

@@ -13,6 +13,25 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Remplacement des anciens appels WebAuthn du client — 2026-09-10
+
+`NvbesIdentityWeb` expose désormais register/login/step-up/list/rename/revoke
+Passkey en utilisant les fonctions hébergées validées. Les anciennes méthodes
+start/finish et le module `mfa.webauthn.ts` sont supprimés : ils appelaient les
+routes archivées avec des contrats factor/challenge et un Bearer optionnel.
+La recherche des consommateurs actifs ne trouve que le SDK et ses tests.
+Le README donne la migration explicite pour d'éventuels consommateurs externes.
+
+Validation : 104 tests SDK, lint/typecheck/build et parcours Chromium HTTPS
+réussis. Le parcours WebAuthn utilise maintenant les six méthodes du client,
+avec authentificateurs virtuels, vrais services et révocation session/API.
+Les deux anciens tests simulant `/auth/mfa/webauthn/start` sont remplacés par
+les tests des fonctions hébergées et cette preuve navigateur. Aucun Rust modifié ;
+pas de relance Cargo complète, compilation des trois binaires dans la fixture.
+
+La migration TOTP/récupération et step-up générique reste ouverte, ainsi que les
+interfaces, logout intersites et gates d'exploitation. Les lots A à D restent actifs.
+
 ## Gestion des passkeys via le SDK — 2026-09-10
 
 Le SDK expose liste, renommage et révocation sur les routes Identity actives,
