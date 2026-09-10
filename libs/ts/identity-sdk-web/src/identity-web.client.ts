@@ -1,4 +1,10 @@
 import { logoutHostedSession } from './hosted.client';
+import {
+  startHostedTotpEnrollment,
+  confirmHostedTotpEnrollment,
+  stepUpHostedTotp,
+  type HostedTotpEnrollment,
+} from './hosted.totp';
 import type { HostedInteraction } from './hosted.client';
 import { registerHostedPasskey, loginHostedPasskey, stepUpHostedPasskey } from './hosted.webauthn';
 import {
@@ -7,19 +13,8 @@ import {
   revokeHostedPasskey,
   type HostedPasskey,
 } from './hosted.webauthn.credentials';
-import type {
-  MfaFactorView,
-  RecoveryCodesResult,
-  TotpSetupResult,
-} from '@nvbes/identity-sdk-core/src/types';
-import {
-  confirmTotp,
-  generateRecoveryCodes,
-  listMfaFactors,
-  removeMfaFactor,
-  setupTotp,
-  stepUp,
-} from './mfa';
+import type { MfaFactorView, RecoveryCodesResult } from '@nvbes/identity-sdk-core/src/types';
+import { generateRecoveryCodes, listMfaFactors, removeMfaFactor, stepUp } from './mfa';
 import {
   exchangeAuthorizationCode,
   type AuthorizationCodeTokenResponse,
@@ -120,16 +115,21 @@ export class NvbesIdentityWeb {
     return listMfaFactors(this.config.baseUrl, token, options);
   }
 
-  async setupTotp(label?: string, token?: string): Promise<TotpSetupResult> {
-    return setupTotp(this.config.baseUrl, label, token);
+  startTotpEnrollment(sessionCsrf: string): Promise<HostedTotpEnrollment> {
+    return startHostedTotpEnrollment({ baseUrl: this.config.baseUrl }, sessionCsrf);
   }
 
-  async confirmTotp(
-    factorId: string,
-    code: string,
-    token?: string,
-  ): Promise<{ factor: MfaFactorView; mfa_enabled: boolean }> {
-    return confirmTotp(this.config.baseUrl, factorId, code, token);
+  confirmTotpEnrollment(sessionCsrf: string, factorId: string, code: string): Promise<string> {
+    return confirmHostedTotpEnrollment(
+      { baseUrl: this.config.baseUrl },
+      sessionCsrf,
+      factorId,
+      code,
+    );
+  }
+
+  stepUpTotp(sessionCsrf: string, code: string): Promise<string> {
+    return stepUpHostedTotp({ baseUrl: this.config.baseUrl }, sessionCsrf, code);
   }
 
   registerPasskey(

@@ -6,13 +6,11 @@ vi.mock('../pow', () => ({
 }));
 
 import {
-  confirmTotp,
   generateRecoveryCodes,
   listMfaFactors,
   MfaError,
   removeMfaFactor,
   requestEmailStepUpCode,
-  setupTotp,
   stepUp,
 } from '../mfa';
 
@@ -134,104 +132,6 @@ describe('MFA API functions', () => {
       });
 
       await expect(listMfaFactors(mockBaseUrl, mockToken)).rejects.toThrow(MfaError);
-    });
-  });
-
-  describe('setupTotp', () => {
-    it('should return setup result with secret and provisioning_uri', async () => {
-      const mockSetup = {
-        factor: { id: 'factor-2', factor_type: 'totp', status: 'pending' },
-        secret_base32: 'JBSWY3DPEHPK3PXP',
-        provisioning_uri: 'otpauth://totp/nvbes:test@nvbes.fr?secret=JBSWY3DPEHPK3PXP',
-      };
-
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockSetup),
-      });
-
-      const result = await setupTotp(mockBaseUrl, 'Phone', mockToken);
-      expect(result.secret_base32).toBe('JBSWY3DPEHPK3PXP');
-      expect(result.provisioning_uri).toContain('otpauth://totp');
-      expect(result.factor.status).toBe('pending');
-    });
-
-    it('should work with cookie auth when token is absent', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
-
-      await setupTotp(mockBaseUrl, 'Phone');
-      const body = JSON.parse((globalThis.fetch as Mock).mock.calls[0][1].body);
-      expect(body.label).toBe('Phone');
-    });
-
-    it('should send scoped csrf and authuser headers with cookie auth', async () => {
-      installBrowserContext({
-        cookie: 'csrf_token=base; csrf_token_1=one',
-        search: '?authuser=1',
-      });
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
-
-      await setupTotp(mockBaseUrl, 'Phone');
-      const headers = (globalThis.fetch as Mock).mock.calls[0][1].headers as Headers;
-
-      expect(headers.get('X-Auth-User')).toBe('1');
-      expect(headers.get('X-CSRF-Token')).toBe('one');
-    });
-
-    it('should send label in request body', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
-
-      await setupTotp(mockBaseUrl, 'Work TOTP', mockToken);
-      const body = JSON.parse((globalThis.fetch as Mock).mock.calls[0][1].body);
-      expect(body.label).toBe('Work TOTP');
-    });
-  });
-
-  describe('confirmTotp', () => {
-    it('should confirm TOTP with factor_id and code', async () => {
-      const mockConfirm = {
-        factor: { id: 'factor-2', factor_type: 'totp', status: 'active' },
-        mfa_enabled: true,
-      };
-
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockConfirm),
-      });
-
-      const result = await confirmTotp(mockBaseUrl, 'factor-2', '123456', mockToken);
-      expect(result.mfa_enabled).toBe(true);
-      expect(result.factor.status).toBe('active');
-    });
-
-    it('should work with cookie auth when token is absent', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
-
-      await confirmTotp(mockBaseUrl, 'factor-2', '123456');
-    });
-
-    it('should send correct body', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
-
-      await confirmTotp(mockBaseUrl, 'factor-2', '123456', mockToken);
-      const body = JSON.parse((globalThis.fetch as Mock).mock.calls[0][1].body);
-      expect(body.factor_id).toBe('factor-2');
-      expect(body.code).toBe('123456');
     });
   });
 

@@ -159,8 +159,39 @@ routes actives et sont également disponibles depuis `./oauth`.
 `NvbesIdentityWeb.logout(sessionCsrfToken)` exige désormais cette preuve explicite
 et confirme réellement le succès serveur. Il ne peut pas être appelé depuis
 Account pour envoyer un cookie à Identity. Le parcours de déconnexion intersites
-reste à livrer. Les méthodes TOTP, récupération et `stepUp` générique du wrapper
+reste à livrer. Les méthodes de récupération et `stepUp` générique du wrapper
 restent à migrer ; elles ne constituent pas un contrat aligné sur les routes actives.
+
+### TOTP hébergé
+
+`NvbesIdentityWeb.startTotpEnrollment(sessionCsrf)` retourne `factorId`,
+`secretBase32`, `provisioningUri` et `expiresAt`. Le secret et son URI sont
+sensibles : les afficher uniquement dans Identity, sans journalisation ni
+stockage navigateur. Le SDK valide le profil émis par nvbes et la correspondance
+entre URI et secret. La transaction expire après cinq minutes côté serveur.
+
+`confirmTotpEnrollment(sessionCsrf, factorId, code)` active le facteur et retourne
+l'échéance du step-up accordé. `stepUpTotp(sessionCsrf, code)` vérifie un code
+d'un facteur actif et retourne son échéance. Les codes contiennent exactement
+six chiffres ASCII ; un code consommé ne peut pas être réutilisé. Les requêtes
+exigent cookies et CSRF sur l'origine Identity, sans Bearer ni retry implicite.
+Les erreurs HTTP, notamment 400 et 429, remontent via `HostedIdentityError`.
+
+Les fonctions autonomes `startHostedTotpEnrollment`, `confirmHostedTotpEnrollment`
+et `stepUpHostedTotp` sont exportées depuis le package et `./oauth`.
+Les anciens `setupTotp` et `confirmTotp` (méthodes et fonctions) ont été supprimés :
+ils appelaient `/auth/mfa/totp/*` archivé. Migrer explicitement vers les nouvelles
+signatures ; le label et le Bearer des anciennes signatures ne sont pas acceptés.
+Les types générés historiques de `identity-sdk-core` restent distincts de ce contrat.
+
+`apps/identity-service/tests/runtime-browser-totp.mjs` vérifie les trois méthodes
+avec Chromium et les services HTTPS réels : provisioning, confirmation, step-up,
+refus des codes consommés, puis échange OIDC et accès Account avec DPoP.
+Son authentificateur synthétique utilise WebCrypto ; aucune application mobile
+TOTP réelle n'est testée. Lancer une fixture neuve avec
+`pnpm nx run identity-service:test:https-browser-fixture`, puis appeler
+`verifyBrowserTotp(browser, clientOrigin)` dans Playwright. La fixture est isolée
+et doit être arrêtée après le test. Ce parcours interactif ne tourne pas en CI.
 
 ### Migration des méthodes WebAuthn
 

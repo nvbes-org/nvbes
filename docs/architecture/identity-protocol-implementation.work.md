@@ -13,6 +13,32 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## SDK et preuve navigateur TOTP — 2026-09-10
+
+Le SDK expose start/confirm/step-up TOTP sur les routes hébergées actives, avec
+CSRF de session, transport borné et absence de retry. Le provisioning valide
+UUID, secret Base32, cohérence de l'URI avec le profil serveur et expiration.
+Les réponses sont projetées sur le contrat public ; les erreurs ne recopient
+pas le secret. Les anciennes méthodes et fonctions setup/confirm sur `/auth/*`
+sont supprimées, avec migration documentée. Les sept anciens tests simulant
+ces endpoints sont remplacés par cinq tests des contrats actifs et une preuve
+navigateur réelle.
+
+Chromium HTTPS vérifie enrôlement, confirmation, step-up et refus du rejeu des
+deux codes consommés, puis consentement, ID token vérifié et API Account DPoP.
+Seul l'authentificateur TOTP est synthétique (WebCrypto HMAC), sans modification
+de l'horloge serveur. Le test utilise la fenêtre +1 documentée pour le second
+code. Identity, Account, Billing et les migrations sont réels dans la fixture.
+
+Validation : 102 tests SDK, lint/typecheck/build Nx et format/lint des fichiers
+touchés réussis. La fixture est arrêtée et son conteneur supprimé. Aucun Rust
+modifié : pas de relance Cargo globale ; les trois binaires compilent dans la
+fixture. Le parcours navigateur reste interactif, hors CI.
+
+La gestion/récupération MFA et le step-up générique historique restent à migrer.
+Les interfaces, politique opérateur, notifications, logout proactif et gates
+d'exploitation restent ouverts. Aucun lot A à D n'est clos.
+
 ## Enrôlement TOTP lié à la session — 2026-09-10
 
 Les routes `/oauth/session/totp/enrollment/start|confirm` utilisent le cookie et
