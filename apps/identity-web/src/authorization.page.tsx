@@ -4,12 +4,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { AuthenticationForms } from './authorization.forms';
+import { EnrollmentForm } from './authorization.enrollment';
 import type { AuthorizationController } from './authorization.controller';
 
 const titles = {
   loading: 'Préparation de votre connexion',
   login: 'Votre espace commence ici.',
   'step-up': 'Confirmez que c’est vous.',
+  enrollment: 'Protégez votre compte.',
   consent: 'Vous gardez le contrôle.',
   leaving: 'Retour à votre application',
   closed: 'Connexion interrompue',
@@ -88,6 +90,9 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
             {(state.stage === 'login' || state.stage === 'step-up') && (
               <AuthenticationForms controller={controller} state={state} />
             )}
+            {state.stage === 'enrollment' && (
+              <EnrollmentForm controller={controller} state={state} />
+            )}
             {state.stage === 'consent' && state.interaction && (
               <>
                 <h2 className="font-medium">Accès demandés</h2>
@@ -109,6 +114,15 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
                 >
                   Autoriser et continuer
                 </Button>
+                {state.firstEnrollmentAvailable && (
+                  <Button
+                    variant="outline"
+                    disabled={state.busy}
+                    onClick={() => controller.beginEnrollment()}
+                  >
+                    Ajouter une méthode de sécurité
+                  </Button>
+                )}
               </>
             )}
             {active && (

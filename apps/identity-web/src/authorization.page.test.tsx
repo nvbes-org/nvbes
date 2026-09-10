@@ -35,6 +35,10 @@ describe('Identity login screen', () => {
         };
       }),
       passkey: vi.fn(),
+      hasFactors: vi.fn().mockResolvedValue(true),
+      registerPasskey: vi.fn(),
+      startTotp: vi.fn(),
+      confirmTotp: vi.fn(),
       stepUpPasskey: vi.fn(),
       stepUpTotp: vi.fn(),
       consent: vi.fn(),

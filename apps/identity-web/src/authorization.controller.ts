@@ -3,15 +3,18 @@ import {
   WebauthnBrowserError,
   type HostedInteraction,
   type HostedAuthenticationStatus,
+  type HostedTotpEnrollment,
 } from '@nvbes/identity-sdk-web/oauth';
 import type { IdentityGateway } from './authorization.gateway';
 
 export interface AuthorizationState {
-  stage: 'loading' | 'login' | 'step-up' | 'consent' | 'leaving' | 'closed';
+  stage: 'loading' | 'login' | 'step-up' | 'enrollment' | 'consent' | 'leaving' | 'closed';
   busy: boolean;
   interaction: HostedInteraction | null;
   authentication: HostedAuthenticationStatus | null;
   error: string | null;
+  firstEnrollmentAvailable: boolean;
+  totpEnrollment: HostedTotpEnrollment | null;
 }
 
 /** One instance per document; never cache credentials, interactions or mutations. */
@@ -22,6 +25,8 @@ export class AuthorizationController {
     interaction: null,
     authentication: null,
     error: null,
+    firstEnrollmentAvailable: false,
+    totpEnrollment: null,
   };
   private listeners = new Set<() => void>();
   private started = false;
@@ -63,6 +68,8 @@ export class AuthorizationController {
       stage: 'closed',
       interaction: null,
       authentication: null,
+      firstEnrollmentAvailable: false,
+      totpEnrollment: null,
       error:
         'Cette connexion ne peut pas être poursuivie. Revenez à votre application pour recommencer.',
     });
@@ -79,14 +86,27 @@ export class AuthorizationController {
     this.publish({ interaction });
     const authentication = await this.gateway.status(interaction);
     if (this.disposed) return;
+    const firstEnrollmentAvailable =
+      !authentication.needsLogin &&
+      interaction.sessionCsrfToken !== null &&
+      !(await this.gateway.hasFactors(interaction.sessionCsrfToken));
+    if (this.disposed) return;
     this.publish({
       authentication,
+      firstEnrollmentAvailable,
+      totpEnrollment:
+        firstEnrollmentAvailable && authentication.minimumAuthentication !== 'recent_webauthn'
+          ? this.state.totpEnrollment
+          : null,
       error: null,
       stage: authentication.needsLogin
         ? 'login'
-        : authentication.needsStepUp
-          ? 'step-up'
-          : 'consent',
+        : firstEnrollmentAvailable &&
+            (authentication.needsStepUp || this.state.totpEnrollment !== null)
+          ? 'enrollment'
+          : authentication.needsStepUp
+            ? 'step-up'
+            : 'consent',
     });
   }
 
@@ -165,8 +185,86 @@ export class AuthorizationController {
     return this.mutate(async (interaction) => {
       const destination = await this.gateway.consent(interaction, decision);
       if (this.disposed) return;
-      this.publish({ stage: 'leaving', interaction: null, authentication: null });
+      this.publish({
+        stage: 'leaving',
+        interaction: null,
+        authentication: null,
+        totpEnrollment: null,
+        firstEnrollmentAvailable: false,
+      });
       this.navigate(destination);
     });
+  }
+
+  beginEnrollment() {
+    if (!this.state.busy && this.state.firstEnrollmentAvailable && this.state.stage === 'consent')
+      this.publish({ stage: 'enrollment', error: null });
+  }
+
+  cancelEnrollment() {
+    if (this.state.stage !== 'enrollment') return Promise.resolve();
+    return this.mutate(async (interaction) => {
+      this.publish({ totpEnrollment: null });
+      await this.refresh(interaction);
+    });
+  }
+
+  registerPasskey(label: string) {
+    if (this.state.stage !== 'enrollment' || !this.state.firstEnrollmentAvailable)
+      return Promise.resolve();
+    return this.mutate(async (interaction) => {
+      if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
+      this.publish({ totpEnrollment: null });
+      await this.gateway.registerPasskey(interaction.sessionCsrfToken, label);
+      if (this.disposed) return;
+      // Enrollment does not itself assert fresh WebAuthn authentication.
+      await this.gateway.stepUpPasskey(interaction.sessionCsrfToken);
+      await this.refresh(interaction);
+    });
+  }
+
+  startTotp() {
+    if (
+      this.state.stage !== 'enrollment' ||
+      !this.state.firstEnrollmentAvailable ||
+      this.state.authentication?.minimumAuthentication === 'recent_webauthn' ||
+      this.state.totpEnrollment
+    )
+      return Promise.resolve();
+    return this.mutate(async (interaction) => {
+      if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
+      const enrollment = await this.gateway.startTotp(interaction.sessionCsrfToken);
+      if (this.disposed) return;
+      if (Date.parse(enrollment.expiresAt) <= Date.now()) throw new Error('Enrollment expired');
+      this.publish({ totpEnrollment: enrollment });
+    });
+  }
+
+  confirmTotp(code: string) {
+    const enrollment = this.state.totpEnrollment;
+    if (
+      this.state.stage !== 'enrollment' ||
+      !enrollment ||
+      this.state.authentication?.minimumAuthentication === 'recent_webauthn'
+    )
+      return Promise.resolve();
+    return this.mutate(async (interaction) => {
+      if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
+      if (Date.parse(enrollment.expiresAt) <= Date.now()) {
+        this.expireTotp();
+        return;
+      }
+      await this.gateway.confirmTotp(interaction.sessionCsrfToken, enrollment.factorId, code);
+      this.publish({ totpEnrollment: null });
+      await this.refresh(interaction);
+    });
+  }
+
+  expireTotp() {
+    if (this.state.totpEnrollment && Date.parse(this.state.totpEnrollment.expiresAt) <= Date.now())
+      this.publish({
+        totpEnrollment: null,
+        error: 'Cette configuration a expiré. Commencez une nouvelle configuration.',
+      });
   }
 }

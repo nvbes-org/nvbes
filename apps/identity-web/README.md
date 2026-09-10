@@ -16,8 +16,13 @@ Les tokens des API restent la responsabilité des clients OAuth, dont Account.
 - Une seule initialisation par document, y compris pour PAR. L'état en mémoire
   est invalidé à la sortie de page pour empêcher sa réutilisation via bfcache.
 
-L'enrollment, la récupération, la gestion des facteurs et le site Account
-restent à raccorder à des écrans. Aucun lien d'inscription publique n'est exposé.
+L'ajout du premier facteur dispose d'écrans : création puis assertion passkey,
+ou clé TOTP à saisir manuellement puis confirmation par code. Les secrets restent
+en mémoire et sont retirés à expiration, annulation, confirmation ou sortie de page.
+Les listes de facteurs orientent l'écran ; le serveur revérifie la fraîcheur de
+l'authentification et l'autorisation à chaque mutation. La récupération, la gestion
+des facteurs supplémentaires et le site Account restent à raccorder à des écrans.
+Aucun lien d'inscription publique n'est exposé.
 
 ## Développement
 
@@ -69,6 +74,15 @@ scénario utilise la tolérance TOTP d'un pas pour ne pas attendre le changement
 de période. L'annulation est simulée au niveau de navigator.credentials.get,
 sans simuler les réponses HTTP. Les clés physiques et les navigateurs mobiles
 restent à valider.
+
+Pour tester l'ajout du premier facteur depuis les écrans, démarrer une fixture
+neuve pour chaque méthode et ajouter `IDENTITY_WEB_TEST_SUITE=enrollment-totp`
+ou `IDENTITY_WEB_TEST_SUITE=enrollment-passkey` à la commande navigateur.
+Ces scénarios n'enregistrent aucun facteur via une préparation SDK ; ils vérifient
+la confirmation, l'absence de secret dans le consentement et de stockage navigateur
+Identity, puis le callback OIDC/DPoP et Account. TOTP couvre aussi l'abandon suivi
+d'une nouvelle configuration avec une nouvelle clé. Les authentificateurs restent
+synthétiques et les services HTTP réels.
 
 ## Composants et exploitation
 

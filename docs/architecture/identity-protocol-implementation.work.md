@@ -13,6 +13,27 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Identity : ajout du premier facteur — 2026-09-10
+
+Les écrans permettent maintenant la création puis l'assertion d'une première
+passkey, ou la configuration manuelle et la confirmation TOTP. La liste des
+facteurs sert uniquement à orienter l'interface ; la politique transactionnelle
+serveur demeure l'autorité. Le profil recent_webauthn ne propose pas TOTP.
+Les secrets ne sont pas persistés et sont effacés du rendu à expiration,
+annulation, confirmation et sortie de page. Les réponses tardives après sortie
+ne réintroduisent pas la clé de configuration.
+
+Deux fixtures HTTPS neuves ont validé les écrans compilés avec Chromium
+153.0.8010.12 : premier TOTP et première passkey aboutissent à OIDC/DPoP puis
+Account HTTP 200 avec le bon sujet. TOTP couvre un abandon suivi d'une nouvelle
+clé, conformément au remplacement serveur du facteur pending. Les facteurs
+sont synthétiques ; aucune préparation SDK ne les crée dans ces deux scénarios.
+Les 22 tests du site, typecheck, lint, format et build passent. Aucun Rust changé.
+
+La gestion des facteurs supplémentaires, la récupération, la réauthentification
+explicite d'une session SSO trop ancienne, Account Web et les autres gates A–D
+restent ouverts. Cette preuve ne constitue pas une ouverture publique.
+
 ## Site Identity : preuves MFA et annulation WebAuthn — 2026-09-10
 
 Le site reconnaît désormais les erreurs WebauthnBrowserError réellement émises

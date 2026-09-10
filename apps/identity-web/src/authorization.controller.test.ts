@@ -29,7 +29,11 @@ const loggedIn = {
   needsLogin: false,
 };
 const stepUp = { ...anonymous, needsLogin: false, needsStepUp: true };
-const satisfied = { ...stepUp, needsStepUp: false, proofExpiresAt: '2030-01-01T00:00:00Z' };
+const satisfied = {
+  ...stepUp,
+  needsStepUp: false,
+  proofExpiresAt: '2030-01-01T00:00:00Z',
+};
 
 function setup() {
   const gateway = {
@@ -37,6 +41,10 @@ function setup() {
     status: vi.fn<IdentityGateway['status']>().mockResolvedValue(anonymous),
     password: vi.fn<IdentityGateway['password']>().mockResolvedValue(loggedIn),
     passkey: vi.fn<IdentityGateway['passkey']>().mockResolvedValue(loggedIn),
+    hasFactors: vi.fn<IdentityGateway['hasFactors']>().mockResolvedValue(true),
+    registerPasskey: vi.fn<IdentityGateway['registerPasskey']>(),
+    startTotp: vi.fn<IdentityGateway['startTotp']>(),
+    confirmTotp: vi.fn<IdentityGateway['confirmTotp']>(),
     stepUpPasskey: vi
       .fn<IdentityGateway['stepUpPasskey']>()
       .mockResolvedValue('2030-01-01T00:00:00Z'),
@@ -46,7 +54,11 @@ function setup() {
       .mockResolvedValue('https://account.example/callback?code=opaque'),
   };
   const navigate = vi.fn();
-  return { gateway, navigate, controller: new AuthorizationController(gateway, navigate) };
+  return {
+    gateway,
+    navigate,
+    controller: new AuthorizationController(gateway, navigate),
+  };
 }
 
 describe('hosted authorization orchestration', () => {
@@ -156,7 +168,10 @@ describe('hosted authorization orchestration', () => {
   it('never offers TOTP as a way to satisfy the WebAuthn policy', async () => {
     const { gateway, controller } = setup();
     await controller.start('authorization');
-    gateway.status.mockResolvedValue({ ...stepUp, minimumAuthentication: 'recent_webauthn' });
+    gateway.status.mockResolvedValue({
+      ...stepUp,
+      minimumAuthentication: 'recent_webauthn',
+    });
     await controller.password('email', 'password');
     await controller.totp('123456');
     expect(gateway.stepUpTotp).not.toHaveBeenCalled();
