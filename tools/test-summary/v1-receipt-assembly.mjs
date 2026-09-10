@@ -5,6 +5,11 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { artifactId, githubArtifactReader } from './v1-ci-artifacts.mjs';
 import { sha256 } from './v1-bundle-verification.mjs';
+import { productionUnits } from './v1-catalogue.mjs';
+import {
+  assembleTypescriptMeasurement,
+  typescriptMeasurementArtifact,
+} from './v1-measurement-assembly.mjs';
 import { loadV1 } from './v1-release.mjs';
 import { eligibleSuite, suiteCommandDigest } from './v1-suite-receipt.mjs';
 
@@ -98,6 +103,7 @@ export function assembleReceiptDraft({
   runId,
   listing,
   domains,
+  units = [],
   manifestDigest,
   readArtifact,
 }) {
@@ -111,17 +117,38 @@ export function assembleReceiptDraft({
     'Incomplete artifact listing',
   );
   const results = [];
+  const measurements = [];
   const artifacts = [];
   const files = new Map();
   const ids = new Set();
   const suites = new Set();
+  const measuredUnits = new Set();
   for (const metadata of listing.artifacts) {
     const suiteId = receiptSuite(metadata.name, run.head_sha);
-    if (!suiteId) continue;
+    const measurementSlug = typescriptMeasurementArtifact(metadata.name, run.head_sha);
+    if (!suiteId && !measurementSlug) continue;
     const id = artifactId(metadata.id);
     assert(!ids.has(id), 'Duplicate artifact ID');
-    assert(!suites.has(suiteId), 'Duplicate suite receipt');
     ids.add(id);
+    if (measurementSlug) {
+      const assembled = assembleTypescriptMeasurement({
+        metadata,
+        slug: measurementSlug,
+        run,
+        units,
+        readArtifact,
+      });
+      assert(!measuredUnits.has(assembled.unit), 'Duplicate unit measurement');
+      measuredUnits.add(assembled.unit);
+      measurements.push(assembled.measurement);
+      artifacts.push(...assembled.artifacts);
+      for (const [file, bytes] of assembled.files) {
+        assert(!files.has(file), 'Duplicate measurement file');
+        files.set(file, bytes);
+      }
+      continue;
+    }
+    assert(!suites.has(suiteId), 'Duplicate suite receipt');
     suites.add(suiteId);
     const member = `${suiteId}.json`;
     const reference = { artifactId: Number(id), member };
@@ -141,8 +168,9 @@ export function assembleReceiptDraft({
     delete result.receiptVersion;
     results.push({ ...result, artifacts: [artifactPath] });
   }
-  assert(results.length > 0, 'No V1 suite receipts found');
+  assert(results.length + measurements.length > 0, 'No V1 evidence artifacts found');
   results.sort((a, b) => a.suite.localeCompare(b.suite));
+  measurements.sort((a, b) => a.unit.localeCompare(b.unit));
   artifacts.sort((a, b) => a.path.localeCompare(b.path));
   return {
     draft: {
@@ -153,7 +181,7 @@ export function assembleReceiptDraft({
       manifestDigest,
       results,
       artifacts,
-      measurements: [],
+      measurements,
       operations: null,
     },
     files,
@@ -180,7 +208,8 @@ function main() {
   assert(process.argv[2].startsWith('--runId='), 'Run ID must be a named argument');
   const runId = artifactId(process.argv[2].slice('--runId='.length));
   const cwd = process.cwd();
-  const { domains, manifestDigest } = loadV1(cwd);
+  const { root, domains, manifestDigest } = loadV1(cwd);
+  const units = productionUnits(root, domains, cwd);
   const run = api(`repos/${REPOSITORY}/actions/runs/${runId}`);
   const listing = api(`repos/${REPOSITORY}/actions/runs/${runId}/artifacts?per_page=100`);
   const assembled = assembleReceiptDraft({
@@ -188,6 +217,7 @@ function main() {
     runId,
     listing,
     domains,
+    units,
     manifestDigest,
     readArtifact: githubArtifactReader(REPOSITORY),
   });
@@ -205,7 +235,7 @@ function main() {
     flag: 'wx',
   });
   console.log(
-    `Incomplete V1 draft assembled from ${assembled.draft.results.length} receipt(s): ${path.relative(cwd, output)}`,
+    `Incomplete V1 draft assembled from ${assembled.draft.results.length} suite receipt(s) and ${assembled.draft.measurements.length} measurement(s): ${path.relative(cwd, output)}`,
   );
 }
 

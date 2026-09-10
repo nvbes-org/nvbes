@@ -56,6 +56,12 @@ for (const [name, mutate] of [
       delete w.jobs.scope.steps.find((s) => s.uses === './.github/actions/ci-setup').if;
     },
   ],
+  [
+    'measurement on pull requests',
+    (w) => {
+      delete w.jobs['typescript-measurement'].if;
+    },
+  ],
 ]) {
   test(`rejects ${String(name)}`, () => {
     const changed = parse(workflow);

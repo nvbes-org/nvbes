@@ -24,6 +24,18 @@
       "cache": false,
       "parallelism": false
     },
+    "coverage:typescript": {
+      "executor": "nx:run-commands",
+      "options": { "command": "node tools/test-summary/run-typescript-coverage.mjs" },
+      "cache": false,
+      "parallelism": false
+    },
+    "measurement:typescript": {
+      "executor": "nx:run-commands",
+      "options": { "command": "node tools/test-summary/v1-measurement-receipt.mjs" },
+      "cache": false,
+      "parallelism": false
+    },
     "catalogue": {
       "executor": "nx:run-commands",
       "options": { "command": "node tools/test-summary/v1-release.mjs --catalogue" },

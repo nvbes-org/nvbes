@@ -108,6 +108,15 @@ ni une preuve réutilisable depuis une exécution PR. L'assemblage ultérieur du
 paquet doit télécharger ce reçu, lui ajouter la référence d'artefact GitHub et
 vérifier le run complet avec le gate commun.
 
+Lors du même déclenchement manuel, une lane isolée mesure `@nvbes/http-client` :
+Vitest/V8 produit les compteurs de lignes et branches, puis Stryker produit les
+mutants avec les timeouts comptés comme non détectés. Le reçu et les deux
+rapports bruts sont publiés ensemble pendant sept jours sous le nom
+`v1-measurement-typescript-http-client-<sha>`. L'assembleur recalcule les trois
+scores depuis ces membres GitHub exacts avant de les ajouter au brouillon.
+Cette première unité démontre la chaîne de mesure ; les huit autres packages
+TypeScript et toutes les crates Rust restent obligatoires.
+
 Après un run manuel terminé, l'opérateur peut construire un brouillon local :
 
 ```sh
