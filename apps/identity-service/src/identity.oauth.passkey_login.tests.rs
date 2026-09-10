@@ -246,3 +246,43 @@ async fn failed_oauth_binding_rolls_back_session_counter_and_challenge() {
         .unwrap();
     assert!(f.finish(id, &response).await.is_ok());
 }
+
+#[tokio::test]
+async fn revoking_primary_login_key_ends_its_session_even_with_another_key_enrolled() {
+    let mut f = Fixture::new().await;
+    let (id, response) = f.assertion().await;
+    let authenticated = f.finish(id, &response).await.unwrap();
+    let started = registration::start(&f.db, &f.server, &authenticated.token)
+        .await
+        .unwrap();
+    let mut second = WebauthnAuthenticator::new(SoftPasskey::new(true));
+    let response = second
+        .do_registration("https://identity.example".parse().unwrap(), started.options)
+        .unwrap();
+    registration::finish(
+        &f.db,
+        &f.server,
+        &authenticated.token,
+        started.ceremony_id,
+        &response,
+        "Spare key",
+    )
+    .await
+    .unwrap();
+    crate::webauthn::credentials::revoke(&f.db, &authenticated.token, f.credential)
+        .await
+        .unwrap();
+    let revoked: bool = sqlx::query_scalar(
+        "SELECT revoked_at IS NOT NULL FROM identity_sessions WHERE token_hash=$1",
+    )
+    .bind(hash(&authenticated.token))
+    .fetch_one(&f.db)
+    .await
+    .unwrap();
+    assert!(revoked);
+    assert!(
+        registration::start(&f.db, &f.server, &authenticated.token)
+            .await
+            .is_err()
+    );
+}

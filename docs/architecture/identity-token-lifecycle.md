@@ -76,6 +76,25 @@ l'introspection renvoie une erreur, jamais un résultat actif par défaut. Les
 consommateurs exigeant une autorisation actuelle devront refuser l'opération si
 ce contrôle est indisponible. Leur intégration fait encore partie des lots.
 
+### Révocation d'une passkey
+
+Chaque connexion primaire et step-up WebAuthn conserve le credential vérifié
+dans `identity_session_webauthn_credentials`. Utiliser ensuite une autre clé
+ne supprime pas cette association. Révoquer une clé révoque atomiquement toutes
+les sessions associées et écrit l'audit ; une panne annule les deux mutations.
+Cela peut terminer la session qui demande la révocation. La réponse confirme
+l'opération, mais les appels suivants nécessitent alors une reconnexion.
+
+OAuth, UserInfo, l'introspection et le refresh refusent les sessions révoquées.
+Les API qui vérifient seulement la signature JWT doivent encore intégrer un
+contrôle d'activité : la signature d'un jeton déjà émis reste valide jusqu'à
+son expiration. Le logout intersites reste une capacité distincte à terminer.
+
+La migration 0019 impose une reconnexion aux sessions antérieures au suivi
+d'attribution 0018, ainsi qu'aux sessions WebAuthn sans attribution cohérente ou
+liées à une clé déjà révoquée. Les anciennes preuves ne sont pas reconstituées
+à partir d'indices. Un audit enregistre le nombre de sessions révoquées par compte.
+
 ## Autorisation directe et PAR
 
 GET `/oauth/authorize` refuse les paramètres dupliqués après décodage des noms.

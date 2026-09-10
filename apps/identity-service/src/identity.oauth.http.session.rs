@@ -11,6 +11,9 @@ pub(super) async fn logout(
         .begin()
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    crate::session_locks::session(&mut tx, proof.token())
+        .await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
     let session: Option<(uuid::Uuid, uuid::Uuid, bool)> = sqlx::query_as(
         "SELECT id,principal_id,revoked_at IS NOT NULL FROM identity_sessions WHERE token_hash=$1 FOR UPDATE",
     ).bind(store::hash(proof.token())).fetch_optional(&mut *tx).await

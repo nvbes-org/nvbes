@@ -20,6 +20,7 @@ pub(super) async fn load(
     token: Option<&str>,
 ) -> Result<Option<ActiveSession>, StoreError> {
     let Some(token) = token else { return Ok(None) };
+    crate::session_locks::session(tx, token).await?;
     let row: Option<(Uuid, Uuid, serde_json::Value)> = sqlx::query_as(
         "SELECT s.id,s.principal_id,jsonb_build_object('authenticated_at',s.authenticated_at,'primary_amr',s.primary_amr,'step_up_method',s.step_up_method,'step_up_at',s.step_up_at,'step_up_expires_at',s.step_up_expires_at) FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' FOR UPDATE OF s,p"
     ).bind(hash(token)).fetch_optional(&mut **tx).await?;

@@ -55,6 +55,7 @@ pub(super) async fn reset_password(db: &PgPool, token: &str, password: &str) -> 
     .bind(hash_token(token))
     .fetch_one(&mut *tx)
     .await?;
+    crate::session_locks::principal(&mut tx, principal_id).await?;
     sqlx::query("UPDATE identity_password_credentials SET password_hash = $1, changed_at = clock_timestamp(), compromised_at = NULL WHERE principal_id = $2")
         .bind(password_hash)
         .bind(principal_id)

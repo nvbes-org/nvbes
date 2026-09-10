@@ -111,6 +111,7 @@ async fn enrollment_session(
     tx: &mut Transaction<'_, Postgres>,
     token: &str,
 ) -> Result<(Uuid, Uuid), WebauthnError> {
+    crate::session_locks::session(tx, token).await?;
     // Lock the principal as well: the per-account credential cap holds across
     // simultaneous enrollments from different sessions.
     let row: Option<(Uuid, Uuid, bool)> = sqlx::query_as("SELECT s.id,s.principal_id,COALESCE((s.primary_amr='webauthn' AND s.authenticated_at>clock_timestamp()-interval '5 minutes') OR (s.step_up_method IN ('totp','webauthn') AND s.step_up_at>clock_timestamp()-interval '5 minutes' AND s.step_up_expires_at>clock_timestamp()),false) FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' AND (s.authenticated_at>clock_timestamp()-interval '5 minutes' OR (s.step_up_at>clock_timestamp()-interval '5 minutes' AND s.step_up_expires_at>clock_timestamp())) FOR UPDATE OF s,p")

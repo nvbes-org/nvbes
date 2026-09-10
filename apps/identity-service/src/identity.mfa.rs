@@ -159,6 +159,7 @@ async fn active_session(
     session_token: &str,
     now: DateTime<Utc>,
 ) -> anyhow::Result<(Uuid, Uuid)> {
+    crate::session_locks::session(tx, session_token).await?;
     Ok(sqlx::query_as(
         "SELECT s.id, s.principal_id FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > $2 AND p.status='active' FOR UPDATE OF s,p",
     )

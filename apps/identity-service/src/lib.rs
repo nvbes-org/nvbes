@@ -13,6 +13,8 @@ pub mod mfa;
 pub mod mfa_crypto;
 #[path = "identity.rate_limits.rs"]
 pub mod rate_limits;
+#[path = "identity.sessions.lock.rs"]
+mod session_locks;
 #[path = "identity.webauthn.rs"]
 pub mod webauthn;
 

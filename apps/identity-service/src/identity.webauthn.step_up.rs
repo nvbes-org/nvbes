@@ -100,6 +100,7 @@ async fn active_session(
     tx: &mut Transaction<'_, Postgres>,
     token: &str,
 ) -> Result<(Uuid, Uuid), WebauthnError> {
+    crate::session_locks::session(tx, token).await?;
     sqlx::query_as("SELECT s.id,s.principal_id FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' FOR UPDATE OF s,p")
         .bind(store::hash(token)).fetch_optional(&mut **tx).await?.ok_or(WebauthnError::InvalidSession)
 }

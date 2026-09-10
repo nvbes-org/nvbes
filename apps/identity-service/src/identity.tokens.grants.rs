@@ -33,6 +33,12 @@ pub(crate) async fn load(
     clients: &ClientRegistry,
     id: Uuid,
 ) -> Result<ActiveGrant, TokenError> {
+    let owner: Option<Uuid> =
+        sqlx::query_scalar("SELECT principal_id FROM identity_oauth_grants WHERE id=$1")
+            .bind(id)
+            .fetch_optional(&mut **tx)
+            .await?;
+    crate::session_locks::principal(tx, owner.ok_or(TokenError::InactiveGrant)?).await?;
     let stored: StoredGrant = sqlx::query_as("SELECT g.session_id,g.principal_id,g.parameters,c.authentication,s.expires_at AS session_expires_at,g.token_issued_at FROM identity_oauth_grants g JOIN identity_oauth_codes c ON c.code_hash=g.code_hash JOIN identity_sessions s ON s.id=g.session_id AND s.principal_id=g.principal_id JOIN identity_principals p ON p.id=g.principal_id WHERE g.id=$1 AND g.revoked_at IS NULL AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' FOR UPDATE OF g,s,p")
         .bind(id).fetch_optional(&mut **tx).await?.ok_or(TokenError::InactiveGrant)?;
     let request = AuthorizationRequest::restore(stored.parameters, clients)?;

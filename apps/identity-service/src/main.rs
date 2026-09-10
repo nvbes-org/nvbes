@@ -24,6 +24,8 @@ mod mfa_crypto;
 mod mfa_rotation;
 #[path = "identity.recovery.rs"]
 mod recovery;
+#[path = "identity.sessions.lock.rs"]
+mod session_locks;
 #[path = "identity.synthetic.rs"]
 mod synthetic;
 #[path = "identity.tokens.synthetic.rs"]

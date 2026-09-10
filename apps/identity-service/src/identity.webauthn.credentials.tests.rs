@@ -6,6 +6,9 @@ use crate::{
 use webauthn_authenticator_rs::{WebauthnAuthenticator, softpasskey::SoftPasskey};
 use webauthn_rs::Webauthn;
 
+#[path = "identity.webauthn.revocation.tests.rs"]
+mod revocation;
+
 struct Fixture {
     db: PgPool,
     token: String,
@@ -28,6 +31,7 @@ impl Fixture {
             authenticator: WebauthnAuthenticator::new(SoftPasskey::new(true)),
         };
         for _ in 0..count {
+            f.authenticator = WebauthnAuthenticator::new(SoftPasskey::new(true));
             let started = registration::start(&f.db, &f.server, &f.token)
                 .await
                 .unwrap();
@@ -50,6 +54,13 @@ impl Fixture {
             let token = f.token.clone();
             f.authenticate(&token).await;
         }
+        // Manage from a fresh session that used only the final authenticator.
+        let (management, token) = crate::test_fixtures::session(&f.db).await;
+        sqlx::query("UPDATE identity_sessions SET principal_id=(SELECT principal_id FROM identity_sessions WHERE id=$1) WHERE id=$2")
+            .bind(f.session).bind(management).execute(&f.db).await.unwrap();
+        f.authenticate(&token).await;
+        f.session = management;
+        f.token = token;
         f
     }
     async fn authenticate(&mut self, token: &str) {
@@ -148,9 +159,21 @@ async fn concurrent_revocations_in_two_sessions_preserve_one_factor() {
     );
     assert_ne!(a.is_ok(), b.is_ok());
     assert!(
-        matches!(a, Err(WebauthnError::LastFactor)) || matches!(b, Err(WebauthnError::LastFactor))
+        matches!(
+            a,
+            Err(WebauthnError::LastFactor | WebauthnError::InvalidSession)
+        ) || matches!(
+            b,
+            Err(WebauthnError::LastFactor | WebauthnError::InvalidSession)
+        )
     );
-    assert_eq!(list(&f.db, &f.token).await.unwrap().len(), 1);
+    let active: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM identity_webauthn_credentials WHERE revoked_at IS NULL",
+    )
+    .fetch_one(&f.db)
+    .await
+    .unwrap();
+    assert_eq!(active, 1);
 }
 
 #[tokio::test]
@@ -202,7 +225,10 @@ async fn only_an_active_totp_can_replace_the_last_passkey() {
         .await
         .unwrap();
     revoke(&f.db, &f.token, f.ids[0]).await.unwrap();
-    assert!(list(&f.db, &f.token).await.unwrap().is_empty());
+    assert!(matches!(
+        list(&f.db, &f.token).await,
+        Err(WebauthnError::InvalidSession)
+    ));
 }
 
 #[tokio::test]

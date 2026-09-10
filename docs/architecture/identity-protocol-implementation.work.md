@@ -13,6 +13,48 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Révocation des sessions liées aux passkeys — 2026-09-10
+
+La révocation d'un credential invalide maintenant, dans la même transaction,
+toutes les sessions auxquelles il a contribué (connexion primaire ou step-up).
+La session appelante est également révoquée si elle a utilisé cette clé ; elle
+doit alors se reconnecter avant une nouvelle opération de gestion. L'enrollment
+d'une autre clé n'efface pas cette provenance. Une session du même compte qui
+n'a pas utilisé la clé reste active.
+
+Les lectures transactionnelles OAuth, MFA et WebAuthn prennent désormais le
+verrou du principal avant celui des sessions. Les échanges de code, chargements
+de grants, logout et récupération suivent le même ordre pour éviter le cycle
+entre une révocation multi-session et une opération détenant déjà une session.
+Les vérifications d'activité sont exécutées après acquisition du verrou.
+
+L'échange d'un code en attente, l'introspection, UserInfo et le refresh utilisent
+le contrôle d'activité de la session. Révoquer celle-ci rend donc ses grants
+inutilisables dans ces chemins sans devoir réécrire chaque ligne de jeton.
+La validation cryptographique locale d'un JWT ne consulte pas cet état : la
+propagation aux API Account/Billing et leur politique de cache restent ouvertes.
+
+La migration 0019 révoque les sessions créées avant la migration d'attribution
+0018, les sessions WebAuthn sans association correspondant à leur rôle et celles
+liées à une clé déjà révoquée. Même une ancienne session affichant maintenant
+TOTP peut avoir utilisé WebAuthn auparavant : aucune provenance n'est supposée.
+Cette transition produit un audit par compte avec le nombre de sessions révoquées.
+Elle impose une reconnexion aux anciennes sessions lors de son déploiement ;
+aucun déploiement n'est effectué ici.
+
+Les scénarios PostgreSQL couvrent le login passkey primaire, le step-up, la
+session appelante, une session indépendante préservée, le code non échangé,
+l'introspection et le refresh après révocation, le rollback d'audit et la
+transition des anciennes sessions. La validation utilise la base isolée
+`nvbes_identity_test_revocation` sur le conteneur de tests dédié (port 15433).
+L'ancienne base de développement du test de migration n'est pas réutilisée
+après modification de la migration non publiée.
+
+Validation finale : `cargo check --workspace` sans avertissement et cible Nx
+`identity-service:test:database` réussie (143 tests de bibliothèque, 24 runtime,
+un test navigateur interactif ignoré). Aucun parcours navigateur supplémentaire
+n'a été exécuté pour cette évolution de persistance et de contrôle des sessions.
+
 ## Attribution des sessions aux credentials — 2026-09-10
 
 La migration 0018 conserve les clés ayant contribué à une session dans

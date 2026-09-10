@@ -42,8 +42,8 @@ pub async fn rename(db: &PgPool, token: &str, id: Uuid, label: &str) -> Result<(
     Ok(())
 }
 
-/// Revokes future uses of a credential, including already-started ceremonies.
-/// Previously authenticated sessions retain their separate lifecycle.
+/// Revokes the credential and every session to which it contributed authentication.
+/// This includes the caller's session when it used the revoked credential.
 pub async fn revoke(db: &PgPool, token: &str, id: Uuid) -> Result<(), WebauthnError> {
     let mut tx = db.begin().await?;
     let principal = owner(&mut tx, token, true).await?;
@@ -62,6 +62,8 @@ pub async fn revoke(db: &PgPool, token: &str, id: Uuid) -> Result<(), WebauthnEr
         .bind(id)
         .execute(&mut *tx)
         .await?;
+        sqlx::query("UPDATE identity_sessions s SET revoked_at=clock_timestamp() WHERE s.principal_id=$1 AND s.revoked_at IS NULL AND EXISTS(SELECT 1 FROM identity_session_webauthn_credentials b WHERE b.session_id=s.id AND b.credential_id=$2)")
+            .bind(principal).bind(id).execute(&mut *tx).await?;
         store::audit(&mut tx, principal, "identity.webauthn.revoked").await?;
     }
     tx.commit().await?;
@@ -73,6 +75,7 @@ async fn owner(
     token: &str,
     strong: bool,
 ) -> Result<Uuid, WebauthnError> {
+    crate::session_locks::session(tx, token).await?;
     let row:Option<Uuid>=sqlx::query_scalar("SELECT s.principal_id FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' AND (NOT $2 OR (s.primary_amr='webauthn' AND s.authenticated_at>clock_timestamp()-interval '5 minutes') OR (s.step_up_method IN ('totp','webauthn') AND s.step_up_at>clock_timestamp()-interval '5 minutes' AND s.step_up_expires_at>clock_timestamp())) FOR UPDATE OF s,p")
         .bind(store::hash(token)).bind(strong).fetch_optional(&mut **tx).await?;
     row.ok_or(WebauthnError::InvalidSession)

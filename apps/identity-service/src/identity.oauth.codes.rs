@@ -85,6 +85,14 @@ pub(crate) async fn exchange_in(
     clients: &ClientRegistry,
     input: CodeExchange<'_>,
 ) -> Result<ExchangeOutcome, StoreError> {
+    let owner: Option<Uuid> = sqlx::query_scalar(
+        "SELECT principal_id FROM identity_oauth_codes WHERE code_hash=$1 AND client_id=$2",
+    )
+    .bind(hash(input.code))
+    .bind(input.client_id)
+    .fetch_optional(&mut **tx)
+    .await?;
+    crate::session_locks::principal(tx, owner.ok_or(OAuthError::InvalidGrant)?).await?;
     let code: StoredCode = sqlx::query_as("SELECT principal_id,session_id,parameters,consumed_at,expires_at FROM identity_oauth_codes WHERE code_hash=$1 AND client_id=$2 FOR UPDATE")
         .bind(hash(input.code)).bind(input.client_id).fetch_optional(&mut **tx).await?
         .ok_or(OAuthError::InvalidGrant)?;

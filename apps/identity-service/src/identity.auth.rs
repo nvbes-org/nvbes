@@ -134,6 +134,7 @@ pub(crate) async fn create_verified_session(
         upgraded_hash,
         email,
     } = verified;
+    crate::session_locks::principal(tx, principal_id).await?;
     let token = random_token();
     let unchanged = sqlx::query_scalar::<_, bool>(
         "SELECT p.status = 'active' AND c.password_hash = $2 FROM identity_principals p JOIN identity_password_credentials c ON c.principal_id = p.id JOIN identity_login_identifiers i ON i.principal_id=p.id WHERE p.id = $1 AND i.kind='email' AND i.normalized_value=$3 FOR UPDATE OF p,c,i",
