@@ -90,7 +90,7 @@
     },
     {
       "crate": "nvbes-product-cloud",
-      "reason": "Produit Cloud hors périmètre V1 : squelette de ports, aucune branche exercée (0/4). Ré-inclusion conditionnée aux tests du produit.",
+      "reason": "Produit Cloud exclu par la direction V1, archivé dans archive/libs/rust/products/cloud et retiré du workspace Cargo. Baseline historique conservée, sans rôle dans la décision d'exclusion.",
       "baseline": { "score": 0.0, "count": 4, "covered": 0 }
     },
     {
@@ -100,7 +100,7 @@
     },
     {
       "crate": "nvbes-product-enterprise",
-      "reason": "Produit Enterprise archivé : squelette de ports, aucune branche instrumentée (0/0). Ré-inclusion conditionnée aux tests du produit.",
+      "reason": "Produit Enterprise exclu par la direction V1, archivé dans archive/libs/rust/products/enterprise et retiré du workspace Cargo. Baseline historique conservée, sans rôle dans la décision d'exclusion.",
       "baseline": { "score": 0.0, "count": 0, "covered": 0 }
     },
     {

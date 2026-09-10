@@ -2,6 +2,8 @@ pre-commit:
   commands:
     check:
       glob: '*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,css,scss,md,html}'
+      exclude:
+        - 'archive/**'
       run: pnpm exec vp check --fix {staged_files}
       stage_fixed: true
 

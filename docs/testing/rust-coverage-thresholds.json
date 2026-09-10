@@ -102,7 +102,7 @@
     },
     {
       "crate": "nvbes-product-cloud",
-      "reason": "Produit Cloud hors périmètre V1 ; squelette de ports, aucun test cible."
+      "reason": "Produit Cloud exclu par docs/product/nvbes-product-strategy.md et archivé dans archive/libs/rust/products/cloud, hors workspace Cargo. Aucune exclusion liée au score."
     },
     {
       "crate": "nvbes-product-developer",
@@ -110,7 +110,7 @@
     },
     {
       "crate": "nvbes-product-enterprise",
-      "reason": "Produit Enterprise archivé ; squelette de ports, aucun test cible."
+      "reason": "Produit Enterprise exclu par docs/product/nvbes-product-strategy.md et archivé dans archive/libs/rust/products/enterprise, hors workspace Cargo. Aucune exclusion liée au score."
     },
     {
       "crate": "nvbes-test-utils",

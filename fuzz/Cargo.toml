@@ -10,7 +10,6 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 nvbes-account-service = { path = "../apps/account-service" }
-nvbes-cloud-service = { path = "../apps/cloud-service" }
 nvbes-dpop = { path = "../libs/rust/dpop" }
 
 [[bin]]
@@ -23,13 +22,6 @@ bench = false
 [[bin]]
 name = "oauth_authorization_details"
 path = "fuzz_targets/oauth_authorization_details.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
-name = "upload_inputs"
-path = "fuzz_targets/upload_inputs.rs"
 test = false
 doc = false
 bench = false

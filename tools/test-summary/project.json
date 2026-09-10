@@ -8,6 +8,14 @@
   "namedInputs": {
     "default": [
       "{projectRoot}/**/*",
+      "{workspaceRoot}/Cargo.toml",
+      "{workspaceRoot}/apps/**/Cargo.toml",
+      "{workspaceRoot}/.nxignore",
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/fuzz/Cargo.toml",
+      "{workspaceRoot}/scripts/dev-hot.sh",
+      "{workspaceRoot}/archive/libs/**/Cargo.toml",
+      "{workspaceRoot}/archive/libs/ts/identity-client/src/*.ts",
       "{workspaceRoot}/docs/testing/v1/**/*",
       "{workspaceRoot}/docs/testing/account-test-manifest.json",
       "{workspaceRoot}/docs/testing/rust-coverage-thresholds.json",

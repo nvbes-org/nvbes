@@ -17,18 +17,6 @@ scrape_configs:
           service: 'account-service'
           environment: 'development'
 
-  - job_name: 'cloud-service'
-    static_configs:
-      - targets: ['host.docker.internal:4002']
-        labels:
-          service: 'cloud-service'
-
-  - job_name: 'cloud-worker'
-    static_configs:
-      - targets: ['host.docker.internal:4101']
-        labels:
-          service: 'cloud-worker'
-
   - job_name: 'account-worker'
     static_configs:
       - targets: ['host.docker.internal:4102']

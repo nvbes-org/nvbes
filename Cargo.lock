@@ -3357,27 +3357,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nvbes-product-cloud"
-version = "0.1.0"
-dependencies = [
- "nvbes-core",
- "nvbes-storage",
- "sqlx",
- "thiserror 2.0.20",
- "tracing",
-]
-
-[[package]]
 name = "nvbes-product-developer"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "uuid",
-]
-
-[[package]]
-name = "nvbes-product-enterprise"
 version = "0.1.0"
 dependencies = [
  "chrono",
