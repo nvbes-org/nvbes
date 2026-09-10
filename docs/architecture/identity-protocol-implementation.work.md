@@ -13,6 +13,30 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Quotas HTTP — 2026-09-10
+
+Les routeurs OAuth exigent désormais un limiteur à clé stable ; le runtime exige
+`NVBES_IDENTITY_RATE_LIMIT_KEY` lorsque le registre public est configuré et fournit
+l'adresse TCP via `ConnectInfo`. Les en-têtes proxy ne sont pas utilisés.
+Toutes les routes du protocole portent le quota de source avant parsing ; login
+et TOTP ont un quota de source plus strict et un quota distinct par compte.
+Les tentatives restent comptées après un refus métier. La migration 0014 étend
+la contrainte des catégories à MFA sans effacer les compteurs existants.
+
+HTTP 429 comporte `Retry-After` et `no-store`. Une panne ou un délai de quota
+supérieur à deux secondes renvoie 503 ; il n'existe pas de fallback permissif.
+Les tests couvrent les routes réelles, les headers proxy falsifiés, la clé,
+la normalisation email/IPv6, la panne du stockage, l'expiration de fenêtre et
+le partage du quota MFA entre sessions. Voir les limites et la configuration
+d'exploitation dans [le cycle des jetons](identity-token-lifecycle.md#quotas-des-routes-http).
+Les parcours navigateur, la topologie proxy, la charge et le budget restent
+des gates de livraison ; aucune ouverture publique n'est effectuée.
+
+Validation : `cargo check --workspace` sans avertissement ; la cible Nx
+`identity-service:test:database` passe avec 85 tests de bibliothèque, 24 tests
+du runtime et 3 contrôles de base isolée. Le test TCP utilise un vrai serveur
+Axum sur loopback ; les autres tests HTTP traversent les routeurs et PostgreSQL.
+
 ## Calculs de mot de passe et annulation — 2026-09-10
 
 La vérification Argon2, la vérification factice et le renouvellement du hash
@@ -20,8 +44,8 @@ conservent désormais leur permis de concurrence dans le travail bloquant.
 L'annulation de la requête HTTP ne libère donc pas de capacité tant que le calcul
 continue. Les tests pilotent explicitement un calcul en cours, annulent son
 appelant puis vérifient que le permis reste occupé jusqu'à sa fin. Une panique
-du calcul libère aussi le permis. Ce correctif ne remplace pas les quotas HTTP,
-qui restent à raccorder.
+du calcul libère aussi le permis. Les quotas HTTP sont raccordés dans la tranche
+documentée ci-dessus.
 
 Validation : `cargo check --workspace` sans avertissement ;
 `identity-service:test:database` passe avec 77 tests de bibliothèque, 24 tests
@@ -70,8 +94,8 @@ Validation : `cargo check --workspace` sans avertissement ;
 du runtime et 3 contrôles de base isolée. Les tests exécutent les routes Axum
 et PostgreSQL ; aucun parcours de navigateur graphique n'est encore attesté.
 
-Les limites de tentatives HTTP et le logout intersites restent à terminer avant
-ouverture publique.
+Le logout intersites reste à terminer avant ouverture publique. Les limites
+HTTP ont été raccordées dans la tranche documentée ci-dessus.
 
 ## Renouvellement et DPoP — 2026-09-10
 

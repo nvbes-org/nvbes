@@ -26,10 +26,10 @@ Les inscriptions publiques restent fermées jusqu'au GO explicite.
 Contrat canonique : `contracts/identity/access-token.v1.schema.json` et
 `contracts/identity/scopes.v1.json`.
 
-| Audience | Scopes autorisés |
-| --- | --- |
+| Audience                | Scopes autorisés                                                   |
+| ----------------------- | ------------------------------------------------------------------ |
 | `nvbes-account-service` | `account:read`, `account:write`, `account:export`, `account:close` |
-| `nvbes-billing-service` | `billing:read`, `billing:checkout` |
+| `nvbes-billing-service` | `billing:read`, `billing:checkout`                                 |
 
 - Algorithme : RS256, en-tête `typ=at+jwt`, claim `token_type=access`.
 - Durée de vie : 900 secondes (15 minutes).
@@ -42,6 +42,13 @@ Contrat canonique : `contracts/identity/access-token.v1.schema.json` et
   `identity.token.synthetic_proven`, sans persister le JWT).
 
 ## Commandes
+
+L'activation du registre `NVBES_IDENTITY_OAUTH_CLIENTS_JSON` exige
+`NVBES_IDENTITY_RATE_LIMIT_KEY`, clé aléatoire de 32 octets encodée en base64,
+stable et partagée entre les répliques. Les quotas HTTP utilisent l'adresse de
+la connexion TCP ; les en-têtes proxy ne sont pas des preuves de source.
+Voir [les quotas et leur configuration](../../docs/architecture/identity-token-lifecycle.md#quotas-des-routes-http)
+avant d'activer les routes derrière un proxy. Les lots A à D restent en cours.
 
 ```bash
 pnpm nx run identity-service:check

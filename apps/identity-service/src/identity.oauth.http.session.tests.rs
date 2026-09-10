@@ -14,6 +14,8 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use tower::ServiceExt;
 
+#[path = "identity.oauth.http.limits.tests.rs"]
+mod limits_tests;
 #[path = "identity.oauth.http.login.tests.rs"]
 mod login_tests;
 
@@ -61,7 +63,11 @@ impl Fixture {
             Arc::new(clients()),
             BrowserSecurity::new("https://identity.example", false).unwrap(),
             crypto.clone(),
-        );
+            crate::rate_limits::RateLimiter::new([53; 32]).unwrap(),
+        )
+        .layer(axum::Extension(axum::extract::ConnectInfo(
+            "127.0.0.1:4000".parse::<std::net::SocketAddr>().unwrap(),
+        )));
         Self {
             db,
             app,

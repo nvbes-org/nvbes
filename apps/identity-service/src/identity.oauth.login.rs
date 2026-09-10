@@ -20,13 +20,22 @@ pub(super) async fn authenticate(
     proof: &BrowserProof,
     email: &str,
     password: &str,
+    limiter: &crate::rate_limits::RateLimiter,
 ) -> Result<LoginSession, StoreError> {
     // Reject expired, replayed or foreign interactions before password work,
     // without holding a database transaction during Argon2 verification.
     let mut preflight = db.begin().await?;
     validate_interaction(&mut preflight, clients, handle, proof).await?;
     preflight.commit().await?;
-    let verified = auth::verify_credentials(db, email, password)
+    let email = auth::normalize_email(email).map_err(authentication_error)?;
+    super::limits::enforce(
+        db,
+        limiter,
+        crate::rate_limits::Category::LoginAccount,
+        &email,
+    )
+    .await?;
+    let verified = auth::verify_credentials(db, &email, password)
         .await
         .map_err(authentication_error)?;
     let mut tx = db.begin().await?;

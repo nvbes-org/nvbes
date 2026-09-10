@@ -25,6 +25,7 @@ struct Fixture {
     key: DpopKeyPair,
     refresh: String,
     session: uuid::Uuid,
+    limiter: crate::rate_limits::RateLimiter,
 }
 
 impl Fixture {
@@ -66,6 +67,7 @@ impl Fixture {
             key,
             refresh,
             session,
+            limiter: crate::rate_limits::RateLimiter::new(rand::random()).unwrap(),
         }
     }
 
@@ -75,6 +77,7 @@ impl Fixture {
             self.db.clone(),
             self.clients.clone(),
             self.service.clone(),
+            self.limiter.clone(),
         )
     }
 
@@ -100,8 +103,11 @@ async fn refresh(
     if let Some(client) = client {
         body.push_str(&format!("&client_id={client}"));
     }
-    let mut request =
-        Request::post("/oauth/token").header("content-type", "application/x-www-form-urlencoded");
+    let mut request = Request::post("/oauth/token")
+        .extension(axum::extract::ConnectInfo(
+            "127.0.0.1:4000".parse::<std::net::SocketAddr>().unwrap(),
+        ))
+        .header("content-type", "application/x-www-form-urlencoded");
     for proof in proofs {
         request = request.header("dpop", *proof);
     }
@@ -291,6 +297,7 @@ async fn failed_signing_rolls_back_proof_consumption_and_refresh_rotation() {
         f.db.clone(),
         f.clients.clone(),
         bad_service.clone(),
+        f.limiter.clone(),
     );
     let proof = f.proof();
     assert_eq!(

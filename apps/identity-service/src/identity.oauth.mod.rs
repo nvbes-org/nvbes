@@ -12,6 +12,8 @@ pub mod error;
 pub mod http;
 #[path = "identity.oauth.interactions.rs"]
 pub mod interactions;
+#[path = "identity.oauth.limits.rs"]
+mod limits;
 #[path = "identity.oauth.login.rs"]
 mod login;
 #[path = "identity.oauth.maintenance.rs"]

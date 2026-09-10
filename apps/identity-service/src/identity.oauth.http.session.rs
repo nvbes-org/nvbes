@@ -44,6 +44,19 @@ pub(super) async fn step_up_totp(
     if form.code.len() != 6 || !form.code.bytes().all(|value| value.is_ascii_digit()) {
         return Err(ProtocolError::OAuth(OAuthError::InvalidRequest));
     }
+    let principal: Option<uuid::Uuid> = sqlx::query_scalar(
+        "SELECT s.principal_id FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active'",
+    ).bind(store::hash(proof.token())).fetch_optional(&state.db).await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    let principal = principal.ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    crate::oauth::limits::enforce(
+        &state.db,
+        &state.limiter,
+        crate::rate_limits::Category::MfaAccount,
+        &principal.to_string(),
+    )
+    .await
+    .map_err(ProtocolError::OAuth)?;
     let expires_at = crate::mfa::grant_step_up(
         &state.db,
         &state.mfa,

@@ -23,4 +23,6 @@ pub enum OAuthError {
     ConsentRequired,
     #[error("temporarily_unavailable")]
     Unavailable,
+    #[error("temporarily_unavailable")]
+    RateLimited(u32),
 }

@@ -113,5 +113,6 @@ fn authorization_router_requires_browser_and_mfa_runtime_state() {
         std::sync::Arc<crate::oauth::clients::ClientRegistry>,
         BrowserSecurity,
         std::sync::Arc<MfaCrypto>,
+        crate::rate_limits::RateLimiter,
     ) -> _ = authorization_router;
 }

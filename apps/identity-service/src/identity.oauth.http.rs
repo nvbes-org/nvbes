@@ -8,6 +8,8 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
 };
+#[path = "identity.oauth.http.limits.rs"]
+mod limits;
 #[path = "identity.oauth.http.session.rs"]
 mod session;
 #[path = "identity.oauth.http.token.rs"]
@@ -52,6 +54,7 @@ struct AuthorizationState {
     clients: Arc<ClientRegistry>,
     browser: BrowserSecurity,
     mfa: Arc<crate::mfa_crypto::MfaCrypto>,
+    limiter: crate::rate_limits::RateLimiter,
 }
 
 #[derive(Deserialize)]
@@ -66,11 +69,20 @@ pub fn token_router(
     db: PgPool,
     clients: Arc<ClientRegistry>,
     tokens: Arc<TokenService>,
+    limiter: crate::rate_limits::RateLimiter,
 ) -> Router {
     Router::new()
         .route("/oauth/token", post(token))
         .route("/oauth/par", post(par))
         .route("/oauth/userinfo", get(userinfo))
+        .route_layer(axum::middleware::from_fn_with_state(
+            limits::SourceLimit {
+                db: db.clone(),
+                limiter,
+                browser: None,
+            },
+            limits::protect_source,
+        ))
         .with_state(TokenState {
             db,
             clients,
@@ -87,6 +99,7 @@ pub fn authorization_router(
     clients: Arc<ClientRegistry>,
     browser: BrowserSecurity,
     mfa: Arc<crate::mfa_crypto::MfaCrypto>,
+    limiter: crate::rate_limits::RateLimiter,
 ) -> Router {
     let sessions = Router::new()
         .route("/oauth/logout", post(logout))
@@ -105,11 +118,20 @@ pub fn authorization_router(
         ))
         .merge(sessions)
         .route("/oauth/authorize", get(authorize))
+        .route_layer(axum::middleware::from_fn_with_state(
+            limits::SourceLimit {
+                db: db.clone(),
+                limiter: limiter.clone(),
+                browser: Some(browser.clone()),
+            },
+            limits::protect_source,
+        ))
         .with_state(AuthorizationState {
             db,
             clients,
             browser,
             mfa,
+            limiter,
         })
 }
 
@@ -125,6 +147,7 @@ async fn login(
         &proof,
         &form.email,
         &form.password,
+        &state.limiter,
     )
     .await
     .map_err(|error| match error {
@@ -399,16 +422,21 @@ enum ProtocolError {
 impl IntoResponse for ProtocolError {
     fn into_response(self) -> axum::response::Response {
         let ProtocolError::OAuth(error) = self;
-        (
-            if error == OAuthError::Unavailable {
-                StatusCode::SERVICE_UNAVAILABLE
-            } else {
-                StatusCode::BAD_REQUEST
-            },
+        let status = match error {
+            OAuthError::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
+            OAuthError::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
+            _ => StatusCode::BAD_REQUEST,
+        };
+        let mut response = (
+            status,
             [("cache-control", "no-store"), ("pragma", "no-cache")],
             Json(serde_json::json!({"error": error.to_string()})),
         )
-            .into_response()
+            .into_response();
+        if let OAuthError::RateLimited(seconds) = error {
+            response.headers_mut().insert("retry-after", seconds.into());
+        }
+        response
     }
 }
 

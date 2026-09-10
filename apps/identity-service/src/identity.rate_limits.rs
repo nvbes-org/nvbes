@@ -17,6 +17,7 @@ pub enum Category {
     LoginAccount,
     LoginSource,
     ProtocolSource,
+    MfaAccount,
 }
 
 impl Category {
@@ -25,18 +26,31 @@ impl Category {
             Self::LoginAccount => ("login_account", 5, 600),
             Self::LoginSource => ("login_source", 30, 60),
             Self::ProtocolSource => ("protocol_source", 120, 60),
+            Self::MfaAccount => ("mfa_account", 5, 600),
         }
+    }
+
+    pub(crate) fn retry_after(self) -> u32 {
+        self.policy().2 as u32
     }
 }
 
 /// Share the same stable secret across replicas. No raw IP, email or unkeyed
-/// identifier hash is stored. 3 * 4096 slots is the maximum table cardinality.
+/// identifier hash is stored. 4 * 4096 slots is the maximum table cardinality.
 #[derive(Clone)]
 pub struct RateLimiter {
     key: [u8; 32],
 }
 
 impl RateLimiter {
+    pub fn from_base64(value: &str) -> Result<Self, LimitError> {
+        use base64::{Engine, engine::general_purpose::STANDARD};
+        let key = STANDARD
+            .decode(value)
+            .map_err(|_| LimitError::Configuration)?;
+        Self::new(key.try_into().map_err(|_| LimitError::Configuration)?)
+    }
+
     pub fn new(key: [u8; 32]) -> Result<Self, LimitError> {
         if key == [0; 32] {
             return Err(LimitError::Configuration);
@@ -76,3 +90,29 @@ impl RateLimiter {
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.rate_limits.tests.rs"]
 mod tests;
+
+#[cfg(test)]
+mod configuration_tests {
+    use super::*;
+    use base64::{Engine, engine::general_purpose::STANDARD};
+
+    #[test]
+    fn stable_key_requires_exact_nonzero_32_bytes() {
+        for invalid in [
+            String::new(),
+            "not-base64".into(),
+            STANDARD.encode([0; 32]),
+            STANDARD.encode([1; 31]),
+            STANDARD.encode([1; 33]),
+        ] {
+            assert!(RateLimiter::from_base64(&invalid).is_err());
+        }
+        let encoded = STANDARD.encode([7; 32]);
+        let a = RateLimiter::from_base64(&encoded).unwrap();
+        let b = RateLimiter::from_base64(&encoded).unwrap();
+        assert_eq!(
+            a.slot("login_account", "email@example.invalid"),
+            b.slot("login_account", "email@example.invalid")
+        );
+    }
+}

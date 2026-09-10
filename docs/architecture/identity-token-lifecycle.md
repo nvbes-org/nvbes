@@ -83,8 +83,43 @@ La validité cryptographique ne remplace pas l'état PostgreSQL : le step-up
 verrouille la session et le principal et refuse un compte suspendu. Le logout
 révoque uniquement la session présentée et écrit son audit dans la même
 transaction ; le répéter ne duplique pas l'audit. Une panne de stockage retourne
-503 sans prétendre avoir déconnecté la session. La déconnexion intersites et
-les limites de tentatives sur les parcours HTTP restent à terminer.
+503 sans prétendre avoir déconnecté la session. La déconnexion intersites
+reste à terminer.
+
+## Quotas des routes HTTP
+
+Le démarrage avec `NVBES_IDENTITY_OAUTH_CLIENTS_JSON` exige aussi
+`NVBES_IDENTITY_RATE_LIMIT_KEY` : une clé aléatoire distincte de 32 octets,
+encodée en base64 standard, identique sur toutes les répliques. Une clé absente,
+mal encodée ou nulle empêche le démarrage des routes publiques. Ne pas la renouveler
+à chaque redémarrage : cela changerait l'affectation des compteurs.
+
+Les routes authorize, login, approve, deny, logout, TOTP, token, PAR et UserInfo
+comptent au maximum 120 requêtes par fenêtre de 60 secondes pour une même source.
+Login et TOTP partagent aussi un plafond de 30 requêtes par source et par minute.
+La source provient de la connexion TCP, sans son port. Les IPv4 mappées en IPv6
+sont normalisées et les adresses IPv6 sont regroupées par /64.
+`Forwarded`, `X-Forwarded-For` et les en-têtes CDN ne font pas autorité. Derrière
+un proxy, son adresse partage donc le quota : l'exploitation doit valider cette
+topologie avant ouverture, ou définir et tester un contrat de proxy de confiance.
+
+Après validation de l'interaction, le login autorise cinq tentatives par email
+normalisé sur 600 secondes, avant Argon2. TOTP utilise un quota distinct de cinq
+tentatives sur 600 secondes par principal, partagé entre ses sessions.
+Les succès comptent également et les échecs métier ne remboursent pas une tentative.
+
+Les refus de quota retournent HTTP 429, `temporarily_unavailable`, `no-store`
+et `Retry-After` (60 ou 600 secondes, délai conservateur). Une panne du quota ou
+une attente supérieure à deux secondes retourne 503. Une absence d'information
+de transport refuse aussi la requête. Les contrôles de source précèdent le parsing
+des corps, la cryptographie et les mutations métier.
+
+La migration 0014 ajoute la catégorie MFA sans modifier les compteurs existants.
+Elle est compatible avec l'ancien binaire ; un retour applicatif peut conserver
+la migration. PostgreSQL conserve au plus 4 × 4096 compteurs, sans email ni IP
+en clair. Les collisions HMAC refusent de manière conservatrice. Aucun Redis
+ni service payant supplémentaire n'est introduit ; la charge PostgreSQL et les
+seuils restent à mesurer dans les gates de résilience et de budget.
 
 ## Preuves d'authentification
 

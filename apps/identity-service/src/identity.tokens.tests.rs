@@ -13,7 +13,7 @@ use rsa::{
 use std::sync::OnceLock;
 use uuid::Uuid;
 
-pub(super) fn config() -> TokenConfig {
+pub(crate) fn config() -> TokenConfig {
     static CONFIG: OnceLock<TokenConfig> = OnceLock::new();
     CONFIG
         .get_or_init(|| {

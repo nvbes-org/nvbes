@@ -204,6 +204,9 @@ async fn main() -> anyhow::Result<()> {
                 Arc::clone(&token_service),
             ));
             if let Ok(registry_json) = std::env::var("NVBES_IDENTITY_OAUTH_CLIENTS_JSON") {
+                let limiter = nvbes_identity_service::rate_limits::RateLimiter::from_base64(
+                    &required_secret("NVBES_IDENTITY_RATE_LIMIT_KEY")?,
+                )?;
                 let clients = nvbes_identity_service::oauth::clients::ClientRegistry::from_json(
                     &registry_json,
                     config.environment == "development" || config.environment == "test",
@@ -214,6 +217,7 @@ async fn main() -> anyhow::Result<()> {
                     db.clone(),
                     Arc::new(clients),
                     Arc::clone(&token_service),
+                    limiter.clone(),
                 ));
                 if let Ok(origin) = std::env::var("NVBES_IDENTITY_BROWSER_ORIGIN") {
                     let browser = nvbes_identity_service::browser::BrowserSecurity::new(
@@ -240,6 +244,7 @@ async fn main() -> anyhow::Result<()> {
                             Arc::new(clients),
                             browser,
                             Arc::new(mfa),
+                            limiter,
                         ));
                     tracing::info!("OAuth authorization interaction endpoint enabled");
                 }
@@ -257,9 +262,12 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
     tracing::info!(bind_addr = %config.bind_addr, environment = %config.environment, "starting closed identity foundation");
 
-    axum::serve(listener, router)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    axum::serve(
+        listener,
+        router.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await?;
     nvbes_observability::flush_error_reporting(std::time::Duration::from_secs(2));
     db.close().await;
     Ok(())
