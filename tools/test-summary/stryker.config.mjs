@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 
 const name = process.env.NVBES_MUTATION_PACKAGE;
 if (!/^[a-z][a-z0-9-]*$/u.test(name ?? '')) throw new Error('NVBES_MUTATION_PACKAGE is required');
@@ -12,10 +13,10 @@ export default {
   mutate: [`${root}/src/**/*.{ts,tsx}`, `!${root}/src/**/*.{test,spec,gen,d}.{ts,tsx}`],
   testRunner: 'command',
   commandRunner: {
-    command: `node node_modules/vite-plus/bin/vp test run --root ${root} --retry=0`,
+    command: `node node_modules/vite-plus/bin/vp test run --root ${root} --retry=0 --pool=threads --maxWorkers=2 --bail=1`,
   },
   coverageAnalysis: 'off',
-  concurrency: 1,
+  concurrency: Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2))),
   timeoutMS: 10000,
   timeoutFactor: 1,
   dryRunTimeoutMinutes: 2,
