@@ -3,6 +3,10 @@ use reqwest::Url;
 
 use crate::oauth::{pkce::is_sha256_base64url, store::random_secret};
 
+#[path = "identity.browser.session.rs"]
+mod session;
+pub(crate) use session::{SessionProof, protect_session_mutation};
+
 #[derive(Debug, thiserror::Error)]
 pub enum BrowserError {
     #[error("invalid Identity browser origin")]
@@ -79,6 +83,20 @@ impl BrowserSecurity {
         let token = random_secret();
         let header = self.cookie(self.browser_name(), &token, 3600);
         BrowserCookie { token, header }
+    }
+
+    /// Preserve the browser identity across concurrent authorization tabs.
+    pub fn existing_or_new_browser_cookie(
+        &self,
+        headers: &HeaderMap,
+    ) -> Result<BrowserCookie, BrowserError> {
+        match self.browser_token(headers)? {
+            Some(token) => Ok(BrowserCookie {
+                header: self.cookie(self.browser_name(), &token, 3600),
+                token,
+            }),
+            None => Ok(self.browser_cookie()),
+        }
     }
 
     pub fn session_cookie(&self, token: &str) -> Result<HeaderValue, BrowserError> {

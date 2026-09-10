@@ -9,6 +9,52 @@ use tower::ServiceExt;
 use super::{BrowserProof, BrowserSecurity, protect_mutation};
 use crate::oauth::store::random_secret;
 
+#[test]
+fn session_csrf_binds_origin_browser_and_session_without_exposing_cookies() {
+    let security = BrowserSecurity::new("https://identity.example", false).unwrap();
+    let session = random_secret();
+    let browser = random_secret();
+    let csrf = security.session_csrf_token(&session, &browser).unwrap();
+    assert_ne!(csrf, session);
+    assert_ne!(csrf, browser);
+    let proof = BrowserProof {
+        browser_token: browser,
+        session_token: Some(session.clone()),
+        csrf_token: csrf,
+    };
+    assert_eq!(security.verify_session_csrf(&proof).unwrap(), session);
+    let other_origin = BrowserSecurity::new("https://other.example", false).unwrap();
+    assert!(other_origin.verify_session_csrf(&proof).is_err());
+    let mut changed = proof.clone();
+    changed.browser_token = random_secret();
+    assert!(security.verify_session_csrf(&changed).is_err());
+    changed = proof.clone();
+    changed.session_token = Some(random_secret());
+    assert!(security.verify_session_csrf(&changed).is_err());
+    changed = proof.clone();
+    changed.csrf_token = random_secret();
+    assert!(security.verify_session_csrf(&changed).is_err());
+    changed = proof;
+    changed.session_token = None;
+    assert!(security.verify_session_csrf(&changed).is_err());
+}
+
+#[test]
+fn authorization_preserves_an_existing_browser_cookie() {
+    let security = BrowserSecurity::new("https://identity.example", false).unwrap();
+    let existing = headers();
+    let before = security.browser_token(&existing).unwrap().unwrap();
+    let after = security.existing_or_new_browser_cookie(&existing).unwrap();
+    assert_eq!(before, after.token);
+    let fresh = security
+        .existing_or_new_browser_cookie(&HeaderMap::new())
+        .unwrap();
+    assert_ne!(fresh.token, before);
+    let mut ambiguous = existing.clone();
+    ambiguous.append("cookie", existing["cookie"].clone());
+    assert!(security.existing_or_new_browser_cookie(&ambiguous).is_err());
+}
+
 fn headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
     for (name, value) in [

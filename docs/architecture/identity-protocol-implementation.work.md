@@ -13,6 +13,31 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Sessions navigateur — 2026-09-10
+
+Logout et step-up TOTP exigent une preuve CSRF liée par HMAC à la session,
+au cookie navigateur et à l'origine. Le login et l'autorisation avec une session
+active renvoient `session_csrf_token`, distinct du `csrf_token` de consentement.
+Toutes les mutations hébergées passent par le middleware navigateur avant
+lecture du JSON ; les deux mutations de session vérifient aussi le HMAC à cet
+endroit. Le cookie navigateur est conservé entre autorisations concurrentes.
+
+Le logout révoque et audite dans une transaction, sans audit dupliqué au rejeu.
+Le step-up vérifie le statut actif du principal sous verrou. Les scénarios HTTP
+avec PostgreSQL couvrent la preuve émise après login, les onglets concurrents,
+le mauvais CSRF/origin/session, le refus avant parsing JSON, le code TOTP non
+consommé lors d'un refus, le rejeu TOTP et la panne du stockage. Les fixtures
+HTTP ont chacune un schéma isolé pour ne pas contaminer les tests de rotation
+globale des clés MFA.
+
+Validation : `cargo check --workspace` sans avertissement ;
+`identity-service:test:database` passe avec 70 tests de bibliothèque, 22 tests
+du runtime et 3 contrôles de base isolée. Les tests exécutent les routes Axum
+et PostgreSQL ; aucun parcours de navigateur graphique n'est encore attesté.
+
+Les limites de tentatives HTTP, l'atomicité complète du login hébergé et
+le logout intersites restent à terminer avant ouverture publique.
+
 ## Renouvellement et DPoP — 2026-09-10
 
 Le refresh HTTP exige désormais le client enregistré et, pour un grant DPoP,

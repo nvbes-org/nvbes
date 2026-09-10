@@ -55,6 +55,30 @@ grant. Les réponses de jetons et erreurs de protocole portent `no-store` et
 ne prouve pas encore le support DPoP des SDK et des serveurs de ressources.
 La liaison du refresh à la clé suit la [RFC 9449, section 5](https://www.rfc-editor.org/rfc/rfc9449.html#section-5).
 
+## Preuve CSRF des sessions hébergées
+
+Les réponses JSON de l'autorisation avec session active et du login fournissent
+`session_csrf_token`. Le frontend Identity le renvoie dans `X-CSRF-Token`
+pour POST `/oauth/logout` et POST `/oauth/session/step-up/totp`. Le champ
+`csrf_token` reste réservé à l'interaction OAuth (login et consentement).
+Ces valeurs restent en mémoire dans le site Identity ; elles ne sont pas placées
+dans une URL ni transmises aux clients Account/Billing.
+
+La preuve de session est un HMAC-SHA256 utilisant le secret opaque de session
+comme clé et liant l'origine Identity et le cookie navigateur, avec séparation
+de domaine. Le secret de session aléatoire de 256 bits reste dans un cookie
+HttpOnly ; la preuve ne l'expose pas. Sa comparaison utilise la vérification
+en temps constant de la bibliothèque HMAC. Elle change avec la session ou le
+cookie navigateur et reste stable entre onglets d'une même session.
+
+Le middleware vérifie l'origine, les cookies et la preuve avant de lire le JSON.
+La validité cryptographique ne remplace pas l'état PostgreSQL : le step-up
+verrouille la session et le principal et refuse un compte suspendu. Le logout
+révoque uniquement la session présentée et écrit son audit dans la même
+transaction ; le répéter ne duplique pas l'audit. Une panne de stockage retourne
+503 sans prétendre avoir déconnecté la session. La déconnexion intersites et
+les limites de tentatives sur les parcours HTTP restent à terminer.
+
 ## Preuves d'authentification
 
 Le code capture les preuves de la session au moment de l'autorisation. Un MFA

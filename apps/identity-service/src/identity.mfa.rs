@@ -160,7 +160,7 @@ async fn active_session(
     now: DateTime<Utc>,
 ) -> anyhow::Result<(Uuid, Uuid)> {
     Ok(sqlx::query_as(
-        "SELECT id, principal_id FROM identity_sessions WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > $2 FOR UPDATE",
+        "SELECT s.id, s.principal_id FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > $2 AND p.status='active' FOR UPDATE OF s,p",
     )
     .bind(hash_token(session_token))
     .bind(now)

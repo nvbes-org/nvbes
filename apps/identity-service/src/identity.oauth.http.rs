@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::{
-    Form, Json, Router,
+    Extension, Form, Json, Router,
     extract::{Query, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
@@ -19,7 +19,7 @@ use serde::Deserialize;
 use sqlx::PgPool;
 
 use crate::{
-    browser::BrowserSecurity,
+    browser::{BrowserProof, BrowserSecurity, protect_mutation, protect_session_mutation},
     oauth::{
         clients::ClientRegistry,
         error::OAuthError,
@@ -54,7 +54,7 @@ struct AuthorizationState {
     mfa: Arc<crate::mfa_crypto::MfaCrypto>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct LoginForm {
     interaction: String,
     email: String,
@@ -88,13 +88,23 @@ pub fn authorization_router(
     browser: BrowserSecurity,
     mfa: Arc<crate::mfa_crypto::MfaCrypto>,
 ) -> Router {
+    let sessions = Router::new()
+        .route("/oauth/logout", post(logout))
+        .route("/oauth/session/step-up/totp", post(step_up_totp))
+        .route_layer(axum::middleware::from_fn_with_state(
+            browser.clone(),
+            protect_session_mutation,
+        ));
     Router::new()
-        .route("/oauth/authorize", get(authorize))
         .route("/oauth/authorize/login", post(login))
         .route("/oauth/authorize/approve", post(approve))
         .route("/oauth/authorize/deny", post(deny))
-        .route("/oauth/logout", post(logout))
-        .route("/oauth/session/step-up/totp", post(step_up_totp))
+        .route_layer(axum::middleware::from_fn_with_state(
+            browser.clone(),
+            protect_mutation,
+        ))
+        .merge(sessions)
+        .route("/oauth/authorize", get(authorize))
         .with_state(AuthorizationState {
             db,
             clients,
@@ -105,13 +115,9 @@ pub fn authorization_router(
 
 async fn login(
     State(state): State<AuthorizationState>,
-    headers: HeaderMap,
+    Extension(proof): Extension<BrowserProof>,
     Json(form): Json<LoginForm>,
 ) -> Result<impl IntoResponse, ProtocolError> {
-    let proof = state
-        .browser
-        .verify_mutation(&axum::http::Method::POST, &headers)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
     let session = crate::auth::authenticate(&state.db, &form.email, &form.password)
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
@@ -135,7 +141,9 @@ async fn login(
         ],
         Json(serde_json::json!({
             "interaction": form.interaction,
-            "csrf_token": csrf
+            "csrf_token": csrf,
+            "session_csrf_token": state.browser.session_csrf_token(&session, &proof.browser_token)
+                .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?
         })),
     ))
 }
@@ -145,20 +153,16 @@ struct InteractionForm {
     interaction: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct StepUpForm {
     code: String,
 }
 
 async fn approve(
     State(state): State<AuthorizationState>,
-    headers: HeaderMap,
+    Extension(proof): Extension<BrowserProof>,
     Json(form): Json<InteractionForm>,
 ) -> Result<Response, ProtocolError> {
-    let proof = state
-        .browser
-        .verify_mutation(&axum::http::Method::POST, &headers)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
     let code = crate::oauth::consent::approve(&state.db, &state.clients, &form.interaction, &proof)
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
@@ -172,13 +176,9 @@ async fn approve(
 
 async fn deny(
     State(state): State<AuthorizationState>,
-    headers: HeaderMap,
+    Extension(proof): Extension<BrowserProof>,
     Json(form): Json<InteractionForm>,
 ) -> Result<Response, ProtocolError> {
-    let proof = state
-        .browser
-        .verify_mutation(&axum::http::Method::POST, &headers)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
     let request = crate::oauth::consent::deny(&state.db, &state.clients, &form.interaction, &proof)
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
@@ -244,7 +244,10 @@ async fn authorize(
     let handle = store::create_request(&state.db, &request, RequestKind::Authorization)
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
-    let cookie = state.browser.browser_cookie();
+    let cookie = state
+        .browser
+        .existing_or_new_browser_cookie(&headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
     let session = state
         .browser
         .session_token(&headers)
@@ -314,6 +317,9 @@ async fn authorize(
         Json(serde_json::json!({
             "interaction": handle,
             "csrf_token": started.csrf_token,
+            "session_csrf_token": session.as_deref().filter(|_| !started.needs_login)
+                .map(|session| state.browser.session_csrf_token(session, &cookie.token))
+                .transpose().map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?,
             "needs_login": started.needs_login,
             "client_id": started.request.client_id(),
             "scope": started.request.scope(),
