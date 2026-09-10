@@ -213,7 +213,6 @@ async fn main() -> anyhow::Result<()> {
                 )
                 .map_err(|_| anyhow::anyhow!("invalid OIDC client registry"))?;
                 router = router.merge(nvbes_identity_service::oauth::http::token_router(
-                    &issuer,
                     db.clone(),
                     Arc::new(clients),
                     Arc::clone(&token_service),

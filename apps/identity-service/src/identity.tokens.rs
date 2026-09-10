@@ -2,7 +2,7 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::Utc;
 use jsonwebtoken::{Algorithm, Validation, decode, decode_header};
 use sha2::{Digest, Sha256};
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::{
@@ -18,6 +18,9 @@ use crate::{
 #[path = "identity.tokens.refresh.rs"]
 mod refresh;
 pub use refresh::RefreshRequest;
+#[path = "identity.tokens.exchange.rs"]
+mod exchange;
+pub use exchange::AuthorizationCodeRequest;
 
 pub const ACCESS_TOKEN_TTL_SECONDS: u64 = 15 * 60;
 
@@ -54,7 +57,18 @@ impl TokenService {
         grant: &AuthorizedGrant,
     ) -> Result<TokenSet, TokenError> {
         let mut tx = db.begin().await?;
-        let active = tokens_grants::load(&mut tx, clients, grant.id).await?;
+        let response = self.issue_grant_in(&mut tx, clients, grant).await?;
+        tx.commit().await?;
+        Ok(response)
+    }
+
+    async fn issue_grant_in(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+        clients: &ClientRegistry,
+        grant: &AuthorizedGrant,
+    ) -> Result<TokenSet, TokenError> {
+        let active = tokens_grants::load(tx, clients, grant.id).await?;
         if active.token_issued_at.is_some() {
             return Err(TokenError::InactiveGrant);
         }
@@ -64,7 +78,7 @@ impl TokenService {
             "UPDATE identity_oauth_grants SET token_issued_at=clock_timestamp() WHERE id=$1",
         )
         .bind(active.id)
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
         let refresh_token = if request_allows_refresh(request) {
             let value = crate::oauth::store::random_secret();
@@ -75,15 +89,13 @@ impl TokenService {
                 .bind(active.id)
                 .bind(active.principal_id)
                 .bind(request.client_id())
-                .execute(&mut *tx)
+                .execute(&mut **tx)
                 .await?;
             Some(value)
         } else {
             None
         };
-        crate::oauth::store::audit(&mut tx, active.principal_id, "identity.oauth.tokens_issued")
-            .await?;
-        tx.commit().await?;
+        crate::oauth::store::audit(tx, active.principal_id, "identity.oauth.tokens_issued").await?;
         Ok(TokenSet {
             refresh_token,
             ..response

@@ -7,6 +7,19 @@ restent à terminer dans les [lots A à D](identity-protocol-implementation.work
 ## Émission et révocation
 
 L'échange d'un code produit une capacité d'émission liée au grant PostgreSQL.
+Sur l'endpoint HTTP, `TokenService::exchange_code` conserve dans une transaction
+la consommation du code et de la preuve DPoP, le grant, les signatures, le refresh
+éventuel et les audits. Un échec annule ces changements et autorise une nouvelle
+tentative avec le même code et la même preuve tant qu'ils restent valides.
+La réponse n'est envoyée qu'après commit ; cela ne garantit pas sa réception
+par le client en cas de rupture réseau après commit.
+
+Un code rejoué avec ses preuves valides révoque son grant. La révocation et le
+marqueur d'une nouvelle preuve DPoP sont committés avant l'erreur `invalid_grant`.
+Le rejeu d'une preuve DPoP déjà consommée provoque au contraire un retour arrière,
+sans invalider les jetons du premier appel. La cryptographie utilise l'issuer
+canonique détenu par le service, sans URL de token indépendante dans le routeur.
+
 L'émission verrouille ce grant, la session et le principal, puis relit le registre
 des clients. Une seule réponse peut être émise, même avec deux appels concurrents.
 Une session expirée/révoquée, un principal suspendu, un client retiré ou une

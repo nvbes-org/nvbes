@@ -1,12 +1,7 @@
 use super::{ProtocolError, TokenState};
 use crate::{
-    oauth::{
-        codes::{self, CodeExchange},
-        dpop::verify_and_consume_code_proof,
-        error::OAuthError,
-        store::StoreError,
-    },
-    tokens::RefreshRequest,
+    oauth::error::OAuthError,
+    tokens::{AuthorizationCodeRequest, RefreshRequest},
     tokens_claims::TokenSet,
     tokens_error::TokenError,
 };
@@ -57,33 +52,19 @@ pub(super) async fn token(
     let code = required(form.code.as_deref())?;
     let redirect_uri = required(form.redirect_uri.as_deref())?;
     let verifier = required(form.code_verifier.as_deref())?;
-    let verified_dpop_jkt = match proof {
-        Some(proof) => Some(
-            verify_and_consume_code_proof(&state.db, proof, "POST", &state.endpoint)
-                .await
-                .map_err(ProtocolError::OAuth)?,
-        ),
-        None => None,
-    };
-    let grant = codes::exchange(
-        &state.db,
-        &state.clients,
-        CodeExchange {
-            code,
-            client_id,
-            redirect_uri,
-            verifier,
-            verified_dpop_jkt: verified_dpop_jkt.as_deref(),
-        },
-    )
-    .await
-    .map_err(|error| match error {
-        StoreError::Protocol(error) => ProtocolError::OAuth(error),
-        _ => ProtocolError::OAuth(OAuthError::Unavailable),
-    })?;
     let response = state
         .tokens
-        .issue_grant(&state.db, &state.clients, &grant)
+        .exchange_code(
+            &state.db,
+            &state.clients,
+            AuthorizationCodeRequest {
+                code,
+                client_id,
+                redirect_uri,
+                verifier,
+                dpop_proof: proof,
+            },
+        )
         .await
         .map_err(token_error)?;
     Ok(token_response(response))

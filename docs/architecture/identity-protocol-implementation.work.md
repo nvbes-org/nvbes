@@ -13,6 +13,30 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Échange de code atomique — 2026-09-10
+
+POST `/oauth/token` utilise désormais `TokenService::exchange_code` : validation
+cryptographique de la preuve DPoP sur l'URL canonique du service, puis une seule
+transaction pour la consommation du code, le grant, le marqueur anti-rejeu,
+la signature, le refresh éventuel et les audits. Un échec de signature ou
+d'insertion du refresh annule l'ensemble. Aucun jeton n'est retourné avant commit.
+
+Le rejeu authentifié d'un code consommé reste un résultat métier distinct :
+la révocation et la consommation de sa nouvelle preuve sont committées avant
+de retourner `invalid_grant`. Si la preuve elle-même a déjà été utilisée, la
+transaction annule la tentative de révocation et son audit. Deux requêtes
+identiques n'invalident donc pas le gagnant ; deux preuves fraîches sur le même
+code déclenchent bien la révocation attendue.
+
+Validation : `cargo check --workspace` sans avertissement ; la dernière cible
+Nx `identity-service:test:database` passe avec 97 tests de bibliothèque, 24 tests
+du runtime et 3 contrôles de base isolée. Les six nouveaux tests passent via le
+routeur HTTP et PostgreSQL, dont une panne SQL après signature. Une première
+exécution avait produit 12 échecs dans des tests de session/autorisation existants ;
+la relance et l'exécution finale passent. Leur cause intermittente reste à
+investiguer dans la validation globale, sans l'attribuer à l'environnement faute
+de preuve. UserInfo et les parcours SDK/navigateur restent à terminer.
+
 ## Autorisation directe et PAR — 2026-09-10
 
 Le décodage HTTP conserve les paires avant validation pour refuser les paramètres
@@ -33,7 +57,8 @@ sans redirection mensongère `login_required`.
 Les tests HTTP/PostgreSQL couvrent les doublons, `max_age`, les substitutions,
 le rejeu, la concurrence entre navigateurs, la panne injectée et le retour arrière.
 Cette tranche ne valide pas encore un parcours SDK/navigateur jusqu'aux API
-Account/Billing. UserInfo et l'atomicité de l'échange de code restent à terminer.
+Account/Billing. UserInfo reste à terminer ; l'échange de code atomique est
+documenté dans la tranche ci-dessus.
 
 Validation : `cargo check --workspace` sans avertissement et
 `identity-service:test:database` avec 91 tests de bibliothèque, 24 tests du runtime

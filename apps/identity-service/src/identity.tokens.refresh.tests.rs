@@ -73,7 +73,6 @@ impl Fixture {
 
     fn app(&self) -> Router {
         token_router(
-            self.service.issuer(),
             self.db.clone(),
             self.clients.clone(),
             self.service.clone(),
@@ -293,7 +292,6 @@ async fn failed_signing_rolls_back_proof_consumption_and_refresh_rotation() {
     bad_config.allowed_audiences.remove("nvbes-account-service");
     let bad_service = Arc::new(TokenService::new(bad_config).unwrap());
     let app = token_router(
-        bad_service.issuer(),
         f.db.clone(),
         f.clients.clone(),
         bad_service.clone(),

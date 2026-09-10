@@ -45,7 +45,6 @@ struct TokenState {
     db: PgPool,
     clients: Arc<ClientRegistry>,
     tokens: Arc<TokenService>,
-    endpoint: String,
 }
 
 #[derive(Clone)]
@@ -65,7 +64,6 @@ struct LoginForm {
 }
 
 pub fn token_router(
-    issuer: &str,
     db: PgPool,
     clients: Arc<ClientRegistry>,
     tokens: Arc<TokenService>,
@@ -90,7 +88,6 @@ pub fn token_router(
             db,
             clients,
             tokens,
-            endpoint: format!("{issuer}oauth/token"),
         })
 }
 

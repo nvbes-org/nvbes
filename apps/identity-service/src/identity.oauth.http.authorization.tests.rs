@@ -39,7 +39,6 @@ async fn push_raw(f: &Fixture, body: String) -> axum::response::Response {
     let tokens =
         Arc::new(crate::tokens::TokenService::new(crate::tokens::tests::config()).unwrap());
     let app = crate::oauth::http::token_router(
-        tokens.issuer(),
         f.db.clone(),
         Arc::new(clients()),
         tokens.clone(),

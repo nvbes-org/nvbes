@@ -8,7 +8,6 @@ use crate::{
 fn token_app(f: &Fixture) -> Router {
     let tokens = Arc::new(TokenService::new(crate::tokens::tests::config()).unwrap());
     token_router(
-        tokens.issuer(),
         f.db.clone(),
         Arc::new(clients()),
         tokens.clone(),
