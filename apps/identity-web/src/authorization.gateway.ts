@@ -11,6 +11,7 @@ import {
   registerHostedPasskey,
   startHostedTotpEnrollment,
   confirmHostedTotpEnrollment,
+  generateHostedRecoveryCodes,
   type HostedInteraction,
 } from '@nvbes/identity-sdk-web/oauth';
 
@@ -33,6 +34,7 @@ export function identityGateway(origin: string) {
     },
     registerPasskey: (csrf: string, label: string) => registerHostedPasskey(config, csrf, label),
     startTotp: (csrf: string) => startHostedTotpEnrollment(config, csrf),
+    recoveryCodes: (csrf: string) => generateHostedRecoveryCodes(config, csrf),
     confirmTotp: (csrf: string, factorId: string, code: string) =>
       confirmHostedTotpEnrollment(config, csrf, factorId, code),
     consent: (interaction: HostedInteraction, decision: 'approve' | 'deny') =>

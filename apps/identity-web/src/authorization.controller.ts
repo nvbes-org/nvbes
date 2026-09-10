@@ -8,13 +8,22 @@ import {
 import type { IdentityGateway } from './authorization.gateway';
 
 export interface AuthorizationState {
-  stage: 'loading' | 'login' | 'step-up' | 'enrollment' | 'consent' | 'leaving' | 'closed';
+  stage:
+    | 'loading'
+    | 'login'
+    | 'step-up'
+    | 'enrollment'
+    | 'recovery-codes'
+    | 'consent'
+    | 'leaving'
+    | 'closed';
   busy: boolean;
   interaction: HostedInteraction | null;
   authentication: HostedAuthenticationStatus | null;
   error: string | null;
   firstEnrollmentAvailable: boolean;
   totpEnrollment: HostedTotpEnrollment | null;
+  recoveryCodes: string[] | null;
 }
 
 /** One instance per document; never cache credentials, interactions or mutations. */
@@ -27,6 +36,7 @@ export class AuthorizationController {
     error: null,
     firstEnrollmentAvailable: false,
     totpEnrollment: null,
+    recoveryCodes: null,
   };
   private listeners = new Set<() => void>();
   private started = false;
@@ -70,6 +80,7 @@ export class AuthorizationController {
       authentication: null,
       firstEnrollmentAvailable: false,
       totpEnrollment: null,
+      recoveryCodes: null,
       error:
         'Cette connexion ne peut pas être poursuivie. Revenez à votre application pour recommencer.',
     });
@@ -83,7 +94,7 @@ export class AuthorizationController {
   private async refresh(interaction: HostedInteraction) {
     if (this.disposed) return;
     // Keep rotated CSRF before the next network request.
-    this.publish({ interaction });
+    this.publish({ interaction, recoveryCodes: null });
     const authentication = await this.gateway.status(interaction);
     if (this.disposed) return;
     const firstEnrollmentAvailable =
@@ -191,6 +202,7 @@ export class AuthorizationController {
         interaction: null,
         authentication: null,
         totpEnrollment: null,
+        recoveryCodes: null,
         firstEnrollmentAvailable: false,
       });
       this.navigate(destination);
@@ -200,6 +212,35 @@ export class AuthorizationController {
   beginEnrollment() {
     if (!this.state.busy && this.state.firstEnrollmentAvailable && this.state.stage === 'consent')
       this.publish({ stage: 'enrollment', error: null });
+  }
+
+  generateRecoveryCodes() {
+    const expiry = this.state.authentication?.proofExpiresAt;
+    if (this.state.stage !== 'consent' || !expiry || Date.parse(expiry) <= Date.now())
+      return Promise.resolve();
+    return this.mutate(async (interaction) => {
+      if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
+      const codes = await this.gateway.recoveryCodes(interaction.sessionCsrfToken);
+      if (this.disposed) return;
+      if (Date.parse(expiry) <= Date.now()) {
+        this.close();
+        return;
+      }
+      this.publish({ stage: 'recovery-codes', recoveryCodes: codes });
+    });
+  }
+
+  dismissRecoveryCodes() {
+    if (this.state.stage !== 'recovery-codes') return Promise.resolve();
+    return this.mutate(async (interaction) => {
+      this.publish({ recoveryCodes: null });
+      await this.refresh(interaction);
+    });
+  }
+
+  expireRecoveryCodes() {
+    const expiry = this.state.authentication?.proofExpiresAt;
+    if (this.state.recoveryCodes && (!expiry || Date.parse(expiry) <= Date.now())) this.close();
   }
 
   cancelEnrollment() {

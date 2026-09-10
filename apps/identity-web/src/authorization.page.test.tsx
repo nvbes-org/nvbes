@@ -36,6 +36,7 @@ describe('Identity login screen', () => {
       }),
       passkey: vi.fn(),
       hasFactors: vi.fn().mockResolvedValue(true),
+      recoveryCodes: vi.fn(),
       registerPasskey: vi.fn(),
       startTotp: vi.fn(),
       confirmTotp: vi.fn(),

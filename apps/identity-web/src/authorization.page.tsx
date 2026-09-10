@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { AuthenticationForms } from './authorization.forms';
 import { EnrollmentForm } from './authorization.enrollment';
+import { RecoveryCodes } from './authorization.recovery-codes';
 import type { AuthorizationController } from './authorization.controller';
 
 const titles = {
@@ -12,6 +13,7 @@ const titles = {
   login: 'Votre espace commence ici.',
   'step-up': 'Confirmez que c’est vous.',
   enrollment: 'Protégez votre compte.',
+  'recovery-codes': 'Gardez un accès de secours.',
   consent: 'Vous gardez le contrôle.',
   leaving: 'Retour à votre application',
   closed: 'Connexion interrompue',
@@ -92,6 +94,27 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
             )}
             {state.stage === 'enrollment' && (
               <EnrollmentForm controller={controller} state={state} />
+            )}
+            {state.stage === 'consent' && state.interaction && (
+              <>
+                {state.authentication?.proofExpiresAt && (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Générer des codes de secours remplace immédiatement tous vos anciens codes.
+                    </p>
+                    <Button
+                      variant="outline"
+                      disabled={state.busy}
+                      onClick={() => void controller.generateRecoveryCodes()}
+                    >
+                      Générer des codes de secours
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+            {state.stage === 'recovery-codes' && (
+              <RecoveryCodes controller={controller} state={state} />
             )}
             {state.stage === 'consent' && state.interaction && (
               <>

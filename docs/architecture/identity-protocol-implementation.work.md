@@ -13,6 +13,25 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Identity : préparation des codes de secours — 2026-09-10
+
+Le consentement permet de générer les dix codes de secours lorsque le statut
+serveur confirme une preuve forte fraîche pour la politique du client. L'écran
+annonce le remplacement des anciens codes avant la mutation. L'affichage demande
+une confirmation explicite puis retire les codes, sans localStorage, sessionStorage,
+copie automatique dans le presse-papiers ou téléchargement. La sortie de page,
+l'expiration et les réponses tardives ne conservent pas les codes dans l'état actif.
+Une réponse réseau incertaine ferme le parcours sans relancer la génération.
+L'autorisation de génération reste vérifiée par le serveur transactionnel.
+
+Validation : 28 tests du site et checks typecheck/lint/format/build réussis.
+Les scénarios HTTPS TOTP et passkey créent leur facteur depuis les écrans puis
+génèrent et masquent les codes, terminent le callback OIDC/DPoP et atteignent
+Account 200 avec le bon sujet. Chaque scénario utilise une nouvelle fixture
+isolée et un authentificateur synthétique, avec les services HTTP réels.
+La consommation d'un code, le remplacement du facteur et la réauthentification
+après récupération restent à raccorder à l'interface. Aucun Rust n'est modifié.
+
 ## Site Identity : ajout du premier facteur — 2026-09-10
 
 Les écrans permettent maintenant la création puis l'assertion d'une première

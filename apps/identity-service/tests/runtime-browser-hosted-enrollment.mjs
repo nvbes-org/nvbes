@@ -70,15 +70,26 @@ export async function verifyHostedEnrollment(browser, clientOrigin, method) {
     await page.getByRole('heading', { name: 'Accès demandés' }).waitFor();
     if (await page.getByLabel('Clé de configuration').count())
       throw new Error('Provisioning secret remained in consent DOM');
+    await page.getByRole('button', { name: 'Générer des codes de secours' }).click();
+    const codes = page.getByRole('list', { name: 'Codes de secours' });
+    await codes.waitFor();
+    if ((await codes.getByRole('listitem').count()) !== 10)
+      throw new Error('Recovery codes were not displayed');
+    if (await page.getByRole('button', { name: 'Autoriser et continuer' }).count())
+      throw new Error('Consent bypassed recovery code acknowledgement');
     const storageEmpty = await page.evaluate(
       () => localStorage.length === 0 && sessionStorage.length === 0,
     );
     if (!storageEmpty) throw new Error('Identity enrollment persisted browser storage');
+    await page.getByRole('button', { name: 'J’ai conservé mes codes' }).click();
+    await page.getByRole('heading', { name: 'Accès demandés' }).waitFor();
+    if (await codes.count()) throw new Error('Recovery codes remained after acknowledgement');
     await page.getByRole('button', { name: 'Autoriser et continuer' }).click();
     const result = await confirmHostedAccount(page, client);
     if (errors.length) throw new Error('Enrollment emitted JavaScript errors');
     return {
       builtUiEnrollment: method,
+      recoveryCodesDisplayed: true,
       ...result,
       syntheticAuthenticator: true,
     };

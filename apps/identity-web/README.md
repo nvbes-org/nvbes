@@ -24,6 +24,13 @@ l'authentification et l'autorisation à chaque mutation. La récupération, la g
 des facteurs supplémentaires et le site Account restent à raccorder à des écrans.
 Aucun lien d'inscription publique n'est exposé.
 
+Lorsqu'une politique OAuth exige une preuve forte fraîche et que le serveur la
+confirme, le consentement propose de générer dix codes de secours. Un avertissement
+précède la génération, qui remplace les anciens codes. L'affichage reste uniquement
+en mémoire jusqu'à confirmation, expiration de la preuve ou sortie de page.
+Le parcours de consommation d'un code et de remplacement du facteur reste à
+raccorder à l'interface ; générer les codes ne termine pas cette récupération.
+
 ## Développement
 
 Depuis la racine :
@@ -83,6 +90,8 @@ la confirmation, l'absence de secret dans le consentement et de stockage navigat
 Identity, puis le callback OIDC/DPoP et Account. TOTP couvre aussi l'abandon suivi
 d'une nouvelle configuration avec une nouvelle clé. Les authentificateurs restent
 synthétiques et les services HTTP réels.
+Ils génèrent également les dix codes de secours depuis l'écran, vérifient leur
+retrait après confirmation et l'absence de stockage navigateur sur Identity.
 
 ## Composants et exploitation
 
