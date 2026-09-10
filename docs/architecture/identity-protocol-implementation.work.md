@@ -13,6 +13,37 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## File durable et dispatcher des notifications MFA — 2026-09-10
+
+La migration 0023 et les modules queue/dispatch figent les destinataires vérifiés
+dans la transaction MFA. La clé d'idempotence inclut désormais le hash du
+destinataire pour notifier plusieurs emails sans conflit. La commande opérateur
+dispatch-security-notifications soumet au plus seize commandes à Email, avec
+baux persistés de soixante secondes, timeout vingt secondes, huit tentatives et
+backoff borné. Les adresses sont effacées à l'état terminal ; les métadonnées
+sont purgées après trente jours par lots bornés. Le reçu persiste uniquement
+une acceptation Email, pas une livraison. Aucun scheduler nouveau.
+
+Les états sans adresse vérifiée ou sans snapshot historique sont explicites.
+Les tests PostgreSQL couvrent concurrence, reprise avec commande stable après
+changement d'adresse, disparition du processus, fencing des réponses tardives,
+reçu incorrect, expiration/épuisement, enqueue MFA réel et rollback, rétention.
+Le [contrat d'exploitation](identity-security-notifications.md) précise les
+limites et le rapprochement avec Email. La preuve réseau avec le service Email,
+la livraison fournisseur et les gates d'exploitation restent ouverts.
+
+La base de test actuelle est nvbes_identity_test_notifications sur le conteneur
+local nvbes-identity-protocol-tests (port 15433). Elle remplace le nom précédent
+pour repartir d'un schéma neuf après finalisation de la migration non déployée.
+Le transport est substitué dans les tests du dispatcher ; aucun email réel
+n'est envoyé. Les interfaces, politiques opérateur et autres exigences A à D
+restent ouvertes.
+
+Validation finale : cargo check --workspace sans avertissement ; 193 tests
+bibliothèque Identity, 24 tests runtime et trois gardes PostgreSQL passent.
+Un test navigateur interactif reste ignoré dans Cargo. Aucun frontend ou SDK
+modifié, donc pas de nouvelle exécution navigateur pour cette tranche.
+
 ## Contrat des notifications de récupération MFA — 2026-09-10
 
 Le contrat Email possède maintenant quatre événements MFA distincts (valeurs

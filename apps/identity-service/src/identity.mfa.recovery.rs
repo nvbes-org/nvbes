@@ -131,16 +131,17 @@ async fn event(
     name: &str,
 ) -> Result<(), sqlx::Error> {
     crate::auth::audit(tx, principal, name).await?;
-    // Durable notification intent only; delivery is handled separately and contains no secrets.
-    sqlx::query(
-        "INSERT INTO identity_outbox(id,event_type,aggregate_id,payload) VALUES($1,$2,$3,$4)",
+    let event_id = Uuid::new_v4();
+    let occurred_at = sqlx::query_scalar(
+        "INSERT INTO identity_outbox(id,event_type,aggregate_id,payload) VALUES($1,$2,$3,$4) RETURNING occurred_at",
     )
-    .bind(Uuid::new_v4())
+    .bind(event_id)
     .bind(name)
     .bind(principal)
     .bind(serde_json::json!({"principal_id":principal}))
-    .execute(&mut **tx)
+    .fetch_one(&mut **tx)
     .await?;
+    crate::notification_queue::enqueue(tx, event_id, principal, name, occurred_at).await?;
     Ok(())
 }
 

@@ -3,6 +3,7 @@ use nvbes_email::{
     AccountSecurityEvent, EmailCategory, EmailCommand, EmailCommandError, EmailIdempotencyKey,
     EmailRecipient, EmailRequestContext, EmailTemplate,
 };
+use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
@@ -45,7 +46,10 @@ pub fn recovery_command(
             actor_principal_id: principal_id.to_string(),
         },
         producer: "identity-service".into(),
-        idempotency_key: EmailIdempotencyKey::new(format!("identity:mfa-notification:{event_id}"))?,
+        idempotency_key: EmailIdempotencyKey::new(format!(
+            "identity:mfa-notification:{event_id}:{:x}",
+            Sha256::digest(recipient.as_bytes())
+        ))?,
         recipient: EmailRecipient {
             email: recipient,
             name: None,

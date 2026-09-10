@@ -154,6 +154,19 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    if matches!(command.as_slice(), [action] if action == "dispatch-security-notifications") {
+        let database_url = config::database_url_from_env()?;
+        let email_config =
+            nvbes_email::EmailClientConfig::from_env(&config::environment_from_env())?;
+        let email_client = nvbes_email::EmailClient::connect(email_config).await?;
+        let pool = database::connect(&database_url, 2).await?;
+        let result =
+            nvbes_identity_service::notification_dispatch::run_batch(&pool, &email_client).await?;
+        println!("{}", serde_json::to_string(&result)?);
+        pool.close().await;
+        return Ok(());
+    }
+
     let config = config::IdentityConfig::from_env()?;
     if matches!(command.as_slice(), [action] if action == "validate-runtime") {
         database::connect_lazy(&config.database_url, config.database_max_connections)?;
@@ -162,7 +175,7 @@ async fn main() -> anyhow::Result<()> {
     }
     if !command.is_empty() {
         anyhow::bail!(
-            "usage: nvbes-identity-service [migrate|validate-runtime|error-reporting-smoke|synthetic-auth-smoke|synthetic-auth-email-smoke|synthetic-mfa-smoke|synthetic-invitation-smoke|synthetic-token-smoke|rotate-mfa-key]"
+            "usage: nvbes-identity-service [migrate|validate-runtime|error-reporting-smoke|synthetic-auth-smoke|synthetic-auth-email-smoke|synthetic-mfa-smoke|synthetic-invitation-smoke|synthetic-token-smoke|rotate-mfa-key|dispatch-security-notifications]"
         );
     }
 

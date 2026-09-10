@@ -120,13 +120,17 @@ l'identifiant du principal et doivent être traités par le futur dispatcher.
 
 ## Validation et raccordements requis
 
+Le [dispatcher durable](identity-security-notifications.md) fige les destinataires
+vérifiés dans la transaction MFA et expose une commande opérateur bornée. Son
+statut accepted atteste l'acceptation par Email, jamais la livraison finale.
+
 Le contrat Email AccountSecurityV1 dispose désormais d'événements distincts
 MfaRecoveryCodesGenerated, MfaRecoveryStarted, MfaRecovered et MfaRecoveryCancelled.
 Les messages texte/HTML décrivent les effets réels, sans code ni jeton ; notamment
 MfaRecovered ne prétend pas qu'un mot de passe a été changé. Le constructeur
-Identity fixe idempotence et échéance à partir de l'événement (24 heures), mais
-le dispatcher d'outbox et la livraison restent à raccorder. L'adresse vérifiée
-doit être figée avant le premier envoi pour conserver la même commande aux retries.
+Identity fixe idempotence par événement/destinataire et échéance à partir de
+l'événement (24 heures). La preuve réseau avec Email et la livraison restent
+à compléter ; la file conserve la même commande pendant les reprises.
 Le consommateur Email compatible doit précéder l'activation de ce producteur.
 
 Les tests vérifient remplacement des codes, propriété du compte, fraîcheur,
