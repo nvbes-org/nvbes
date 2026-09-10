@@ -78,7 +78,7 @@ impl TokenConfig {
         for audience in &allowed_audiences {
             if !matches!(
                 audience.as_str(),
-                "nvbes-account-service" | "nvbes-billing-service"
+                "nvbes-account-service" | "nvbes-billing-service" | "nvbes-identity-userinfo"
             ) {
                 return Err(TokenError::Configuration("unknown token audience"));
             }

@@ -38,6 +38,24 @@ fn audiences_are_deduplicated_and_exact() {
 }
 
 #[test]
+fn userinfo_audience_is_configurable_without_accepting_unknown_resources() {
+    for (audience, accepted) in [
+        ("nvbes-identity-userinfo", true),
+        ("nvbes-identity-userinfo-extra", false),
+    ] {
+        let result = TokenConfig::from_values(
+            "production",
+            "https://identity.example".into(),
+            "identity-key-1".into(),
+            "private".into(),
+            "public".into(),
+            audience.into(),
+        );
+        assert_eq!(result.is_ok(), accepted);
+    }
+}
+
+#[test]
 fn issuer_rejects_credentials_queries_paths_and_nonlocal_http() {
     for issuer in [
         "https://user:password@identity.example",

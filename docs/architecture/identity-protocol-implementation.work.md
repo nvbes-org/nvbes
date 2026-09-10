@@ -13,6 +13,42 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Parcours Chromium contre les vraies API Identity — 2026-09-10
+
+Le [harnais Rust](../../apps/identity-service/src/identity.browser.e2e_fixture.rs)
+monte les routeurs réels sur un port loopback aléatoire, dans un schéma PostgreSQL
+isolé et avec un compte synthétique. Il est compilé uniquement sous
+`cfg(test)` avec `database-tests`, jamais dans le runtime de production. La cible
+`identity-service:test:browser-fixture` lance ce test interactif explicitement ;
+le test est ignoré par la suite automatique standard car il attend un navigateur.
+
+Le [probe Playwright](../../apps/identity-service/tests/webauthn-api.playwright.js)
+reçoit l'origine affichée par le harnais. Dans un contexte Chromium neuf avec
+authentificateur CTAP2 virtuel, il appelle les vraies API, sans interception de
+requêtes : autorisation, login mot de passe, enrollment via `credentials.create`,
+logout, nouvelle autorisation, login passkey via `credentials.get` sans liste
+de credentials, consentement, échange Code/PKCE et lecture de UserInfo. Le
+navigateur produit lui-même les réponses WebAuthn et le userHandle. Aucun
+identifiant de credential n'est injecté dans la phase de login.
+
+Cette validation a révélé que `TokenConfig::from_values` refusait encore
+`nvbes-identity-userinfo`, bien que les tests internes ajoutent cette audience
+après parsing. Le parseur est corrigé avec un test d'acceptation exacte et de
+refus d'un nom voisin ; le harnais utilise maintenant ce chemin de configuration.
+
+Résultat observé : Chromium 152.0.7977.83 valide enrollment, login sans identifiant,
+échange du code et claims UserInfo. Le test Rust vérifie ensuite une session
+passkey active et un grant avec jeton émis, supprime son schéma et termine en
+succès. Compilation workspace sans avertissement ; suite PostgreSQL : 131 tests
+de bibliothèque, 24 tests du runtime et un test interactif ignoré par défaut.
+Ce dernier a été exécuté séparément et passe. Le script Playwright passe lint
+et format ; les secrets temporaires ne sont pas affichés dans les résultats.
+
+Limites : authentificateur virtuel et HTTP loopback en mode développement,
+authentification modale explicite. Ceci ne valide pas encore l'autofill
+conditional UI, HTTPS et navigation entre plusieurs sites en production,
+Firefox/Safari, clés physiques, apps natives, charge ni les autres lots A–D.
+
 ## Préférence de découvrabilité et preuve Chromium — 2026-09-10
 
 L'enrollment standard de webauthn-rs émet `residentKey: discouraged`. Le probe
