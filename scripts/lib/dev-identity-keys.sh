@@ -28,6 +28,15 @@ load_dev_identity_keys() {
   export NVBES_IDENTITY_TOKEN_AUDIENCES="${NVBES_IDENTITY_TOKEN_AUDIENCES:-nvbes-account-service,nvbes-billing-service}"
   export NVBES_IDENTITY_PUBLIC_KEY_PEM="${NVBES_IDENTITY_PUBLIC_KEY_PEM:-$NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM}"
 
+  # Keep the Account authority credential separate from Identity introspection.
+  # An explicitly configured remote authority must provide its own credential.
+  if [ -z "${NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET:-}" ] && [ -z "${NVBES_BILLING_ACCOUNT_ORIGIN:-}" ]; then
+    node "$(dirname "${BASH_SOURCE[0]}")/dev-identity-resources.mjs" "$key_dir"
+    NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET="$(<"$key_dir/identity-billing-authorization-resource.secret")"
+    export NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET
+  fi
+  export NVBES_BILLING_ACCOUNT_ORIGIN="${NVBES_BILLING_ACCOUNT_ORIGIN:-http://127.0.0.1:3070}"
+
   if [ -n "${NVBES_IDENTITY_RESOURCE_SERVERS_JSON:-}" ]; then
     # Custom registries and credentials are owned by the caller; do not replace them.
     return 0

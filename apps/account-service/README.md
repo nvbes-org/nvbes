@@ -30,3 +30,11 @@ leurs propres fragments et suppressions.
 
 Le runtime ne fournit aucune inscription, credential, abonnement ou capacité
 Enterprise.
+
+Account décide également de l'accès aux comptes facturés : propriétaire d'un
+profil personnel actif ou propriétaire d'une équipe active. Le endpoint interne
+`POST /internal/v1/billing/authorize` est activé uniquement par
+`NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET` (32 octets aléatoires en hexadécimal
+minuscule, partagé exclusivement avec Billing). Le helper local prépare ce
+secret séparément des credentials Identity. Voir le
+[contrat d'autorisation Billing](../../docs/architecture/billing-account-authorization.md).

@@ -13,6 +13,32 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Autorisation des comptes facturés — 2026-09-10
+
+Les handlers Billing consultent désormais l'autorité Account après validation
+et introspection Identity. Les scopes ne suffisent plus : le demandeur doit
+posséder le profil personnel actif ou être le propriétaire cohérent d'une équipe
+active. Les refus interviennent avant les lectures Billing et effets Stripe.
+Les routes typées distinguent `principal` et `team` ; les alias `workspaces`
+restent exclusivement des équipes. Les lectures SQL filtrent aussi le type.
+
+Le [contrat](billing-account-authorization.md) décrit l'authentification serveur
+dédiée, les limites et les refus en cas de panne. Le helper local génère un
+secret atomique privé distinct d'Identity ; aucune configuration de production
+n'est écrite. La décision Account n'est jamais mise en cache côté Billing.
+
+La validation réelle des trois runtimes est étendue aux tiers, membres, types
+incompatibles, changements de rôle et fermetures avec les mêmes JWT, ainsi qu'à
+la panne/reprise d'Account. Les refus ne créent ni customer, ni checkout, ni
+audit Billing. Les opérations autorisées utilisent le provider dummy local.
+Les tests PostgreSQL Account et adversariaux du client Billing complètent cette
+preuve. Les lots A à D restent ouverts, dont DPoP, logout intersites, frontend
+hébergé et gates de charge/FinOps.
+
+Validation : `cargo check --workspace`, check Billing toutes cibles, cinq tests
+Account avec PostgreSQL, dix tests Billing avec PostgreSQL, parcours des trois
+runtimes, deux tests du helper local, lint/format et syntaxe Bash réussis.
+
 ## Preuve entre les trois runtimes — 2026-09-10
 
 La cible Nx `identity-service:test:resource-runtimes` compile et lance les vrais

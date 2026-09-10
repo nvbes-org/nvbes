@@ -7,6 +7,10 @@ pub enum BillingError {
     Unauthorized,
     #[error("Identity activity verification is unavailable")]
     IdentityUnavailable,
+    #[error("Account authorization is unavailable")]
+    AccountUnavailable,
+    #[error("billing account access denied")]
+    AccountForbidden,
     #[error("insufficient scope")]
     Forbidden,
     #[error("resource not found")]
@@ -32,6 +36,8 @@ impl IntoResponse for BillingError {
         let (status, code) = match self {
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, "authentication_required"),
             Self::IdentityUnavailable => (StatusCode::SERVICE_UNAVAILABLE, "identity_unavailable"),
+            Self::AccountUnavailable => (StatusCode::SERVICE_UNAVAILABLE, "account_unavailable"),
+            Self::AccountForbidden => (StatusCode::FORBIDDEN, "account_access_denied"),
             Self::Forbidden => (StatusCode::FORBIDDEN, "insufficient_scope"),
             Self::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             Self::Invalid(_) => (StatusCode::BAD_REQUEST, "invalid_request"),

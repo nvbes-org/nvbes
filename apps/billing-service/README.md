@@ -38,6 +38,11 @@ Service Billing V1 minimal, opérant exclusivement avec Stripe en mode test.
 - Le client borne les consultations à 16 simultanées, 2,5 secondes et 16 Kio de
   réponse. Il refuse les redirections et exige que toutes les claims attendues
   correspondent au token vérifié. Les jetons liés à DPoP restent refusés en Bearer.
+- Après Identity, chaque opération consulte Account pour vérifier le propriétaire
+  du compte personnel ou de l'équipe. Configurer `NVBES_BILLING_ACCOUNT_ORIGIN`
+  et `NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET`, partagé avec Account et distinct
+  des credentials Identity. Sans cette paire, les opérations utilisateur donnent 503. Un refus métier donne 403 ; une panne Account donne 503, sans cache ni repli.
+  Voir le [contrat et les routes typées](../../docs/architecture/billing-account-authorization.md).
 - Le démarrage local prépare un secret de ressource privé partagé avec Identity
   dans `.temp/dev-runtime`, sans l'afficher. Un registre de ressources personnalisé
   exige des credentials Billing explicites et cohérents. La présence d'un registre

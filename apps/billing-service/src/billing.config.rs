@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 #[derive(Clone)]
 pub struct BillingConfig {
+    pub account_authority: Option<crate::authorization::AccountAuthority>,
     pub bind_addr: SocketAddr,
     pub database_url: String,
     pub stripe_secret_key: String,
@@ -19,6 +20,18 @@ pub struct BillingConfig {
 
 impl BillingConfig {
     pub fn from_env() -> anyhow::Result<Self> {
+        let account_authority = match (
+            std::env::var("NVBES_BILLING_ACCOUNT_ORIGIN").ok(),
+            std::env::var("NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET").ok(),
+        ) {
+            (None, None) => None,
+            (Some(origin), Some(secret)) => Some(crate::authorization::AccountAuthority::new(
+                &origin, &secret,
+            )?),
+            _ => anyhow::bail!(
+                "Account authorization origin and credential must be configured together"
+            ),
+        };
         let bind_addr: SocketAddr = std::env::var("NVBES_BILLING_BIND_ADDR")
             .unwrap_or_else(|_| "0.0.0.0:8080".to_string())
             .parse()?;
@@ -53,6 +66,7 @@ impl BillingConfig {
             std::env::var("NVBES_APP_URL").unwrap_or_else(|_| "https://nvbes.test".to_string());
 
         Ok(Self {
+            account_authority,
             bind_addr,
             database_url,
             stripe_secret_key,

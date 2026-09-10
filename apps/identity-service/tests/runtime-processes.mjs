@@ -38,6 +38,7 @@ export async function unusedPort() {
 
 export class RuntimeFixture {
   cleanups = [];
+  container;
 
   async database() {
     const name = `nvbes-identity-runtime-test-${randomUUID()}`;
@@ -59,6 +60,7 @@ export class RuntimeFixture {
       'postgres:17-alpine',
     ]);
     this.cleanups.push(() => command('docker', ['rm', '--force', name]));
+    this.container = name;
     const binding = await command('docker', ['port', name, '5432/tcp']);
     if (!/^127\.0\.0\.1:\d+$/.test(binding)) throw new Error('Database must bind only loopback');
     let ready = false;
@@ -101,6 +103,25 @@ export class RuntimeFixture {
       databases[service] = `postgres://identity_test:${password}@${binding}/${database}`;
     }
     return databases;
+  }
+
+  async sql(service, statement) {
+    if (!this.container || !['identity', 'account', 'billing'].includes(service)) {
+      throw new Error('Only fixture-owned databases are allowed');
+    }
+    return command('docker', [
+      'exec',
+      this.container,
+      'psql',
+      '-U',
+      'identity_test',
+      '-d',
+      `nvbes_${service}_test_runtime`,
+      '-v',
+      'ON_ERROR_STOP=1',
+      '-Atc',
+      statement,
+    ]);
   }
 
   async start(file, env, origin, readiness) {

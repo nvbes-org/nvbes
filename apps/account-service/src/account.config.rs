@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 #[derive(Clone, PartialEq)]
 pub struct AccountConfig {
+    pub billing_authorization_secret: Option<String>,
     pub environment: String,
     pub database_url: String,
     pub database_max_connections: u32,
@@ -21,6 +22,15 @@ pub struct AccountConfig {
 
 impl AccountConfig {
     pub fn from_env() -> Result<Self, ConfigError> {
+        let billing_authorization_secret = optional("NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET");
+        if billing_authorization_secret
+            .as_deref()
+            .is_some_and(|s| !crate::billing_authorization::valid_secret(s))
+        {
+            return Err(ConfigError::Invalid(
+                "NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET",
+            ));
+        }
         let environment = optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into());
         let development = matches!(environment.as_str(), "development" | "test");
         let database_url = optional("NVBES_ACCOUNT_DATABASE_URL")
@@ -69,6 +79,7 @@ impl AccountConfig {
             &metrics_token,
         )?;
         Ok(Self {
+            billing_authorization_secret,
             environment,
             database_url,
             database_max_connections,

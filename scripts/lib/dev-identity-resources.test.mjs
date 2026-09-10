@@ -44,6 +44,12 @@ test('concurrent local starters share one complete private resource key without 
     assert.equal(statSync(account).mode & 0o777, 0o600);
     assert.equal(Buffer.from(readFileSync(account, 'utf8'), 'base64url').length, 32);
     assert.notEqual(readFileSync(account, 'utf8'), before);
+    const authority = join(directory, 'identity-billing-authorization-resource.secret');
+    const authorityBefore = readFileSync(authority, 'utf8');
+    assert.match(authorityBefore, /^[0-9a-f]{64}$/);
+    assert.equal(statSync(authority).mode & 0o777, 0o600);
+    await run();
+    assert.equal(readFileSync(authority, 'utf8'), authorityBefore);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -62,7 +68,9 @@ test('the local key loader exports matching Billing and Identity credentials', (
     assert.equal(account.client_id, process.env.NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID);
     assert.equal(account.audience, 'nvbes-account-service');
     assert.notEqual(account.secret, entry.secret);
-    assert.equal(process.env.NVBES_IDENTITY_TOKEN_AUDIENCES, 'nvbes-account-service,nvbes-billing-service');`;
+    assert.equal(process.env.NVBES_IDENTITY_TOKEN_AUDIENCES, 'nvbes-account-service,nvbes-billing-service');
+    assert.match(process.env.NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET, /^[0-9a-f]{64}$/);
+    assert.equal(process.env.NVBES_BILLING_ACCOUNT_ORIGIN, 'http://127.0.0.1:3070');`;
   try {
     const result = spawnSync(
       'bash',

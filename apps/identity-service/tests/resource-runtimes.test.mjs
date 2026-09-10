@@ -3,6 +3,7 @@ import { createHash, generateKeyPairSync, randomBytes, randomUUID } from 'node:c
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { command, RuntimeFixture, runtimeEnvironment, unusedPort } from './runtime-processes.mjs';
+import { verifyBillingAuthorization } from './runtime-billing-authorization.mjs';
 
 const secret = () => randomBytes(32).toString('base64url');
 
@@ -47,7 +48,10 @@ test(
             origins[service],
             {
               audience: `nvbes-${service}-service`,
-              scopes: [`${service}:read`],
+              scopes:
+                service === 'account'
+                  ? ['account:read', 'account:write']
+                  : ['billing:read', 'billing:checkout'],
             },
           ]),
         ),
@@ -81,6 +85,10 @@ test(
       NVBES_IDENTITY_RATE_LIMIT_KEY: randomBytes(32).toString('base64'),
     });
     // Even an accidental future Stripe request cannot reach an external service.
+    const billingAuthorizationSecret = randomBytes(32).toString('hex');
+    environments.account.NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET = billingAuthorizationSecret;
+    environments.billing.NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET = billingAuthorizationSecret;
+    environments.billing.NVBES_BILLING_ACCOUNT_ORIGIN = origins.account;
     environments.billing.NVBES_STRIPE_API_BASE_URL = 'http://127.0.0.1:1';
     for (const service of Object.keys(binaries)) {
       await command(binaries[service], ['migrate'], environments[service]);
@@ -101,7 +109,12 @@ test(
       origins.identity,
       '/health/ready',
     );
-    await fixture.start(binaries.account, environments.account, origins.account, '/health/ready');
+    const accountRuntime = await fixture.start(
+      binaries.account,
+      environments.account,
+      origins.account,
+      '/health/ready',
+    );
     await fixture.start(binaries.billing, environments.billing, origins.billing, '/health/ready');
 
     // Explicit cookie jar models the hosted HTTP exchange; browser policy is tested separately.
@@ -137,14 +150,14 @@ test(
         body: JSON.stringify(body),
       });
     let sessionCsrf;
-    const issue = async (service, needsLogin) => {
+    const issue = async (service, needsLogin, scope = `${service}:read`) => {
       const verifier = secret();
       const state = secret();
       const query = new URLSearchParams({
         client_id: clients[0].client_id,
         redirect_uri: redirect,
         response_type: 'code',
-        scope: `openid ${service}:read`,
+        scope: `openid ${scope}`,
         resource: origins[service],
         state,
         nonce: secret(),
@@ -194,7 +207,7 @@ test(
     };
     const endpoints = {
       account: `${origins.account}/api/v1/profile`,
-      billing: `${origins.billing}/workspaces/${seed.principal_id}/billing/overview`,
+      billing: `${origins.billing}/accounts/principal/${seed.principal_id}/billing/overview`,
     };
     const access = async (service, token, expected) => {
       const response = await fetch(endpoints[service], {
@@ -210,6 +223,20 @@ test(
     assert.equal((await access('billing', billing, 200)).account_id, seed.principal_id);
     await access('account', billing, 401);
     await access('billing', account, 401);
+    const accountWrite = await issue('account', false, 'account:read account:write');
+    const billingCheckout = await issue('billing', false, 'billing:read billing:checkout');
+    await verifyBillingAuthorization({
+      fixture,
+      origins,
+      principalId: seed.principal_id,
+      accountToken: accountWrite,
+      billingToken: billingCheckout,
+      readOnlyToken: billing,
+    });
+    await accountRuntime.stop();
+    await access('billing', billing, 503);
+    await fixture.start(binaries.account, environments.account, origins.account, '/health/ready');
+    await access('billing', billing, 200);
     const logout = await post('/oauth/logout', {}, sessionCsrf);
     assert.equal(logout.status, 200);
     await logout.arrayBuffer();

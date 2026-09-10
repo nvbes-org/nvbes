@@ -15,6 +15,7 @@ async fn failed_delivery_rolls_back_then_retries_once() {
         .unwrap();
     crate::database::migrate(&pool).await.unwrap();
     let config = crate::config::BillingConfig {
+        account_authority: None,
         bind_addr: "127.0.0.1:0".parse().unwrap(),
         database_url: String::new(),
         stripe_secret_key: "sk_test_dummy".into(),

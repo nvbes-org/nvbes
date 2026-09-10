@@ -28,6 +28,10 @@ impl AccountState {
 
 pub fn router(state: AccountState) -> Router {
     crate::health::router(state.clone())
+        .merge(crate::billing_authorization::router(
+            state.db.clone(),
+            state.config.billing_authorization_secret.as_deref(),
+        ))
         .merge(crate::metrics::router(state.clone()))
         .merge(crate::profile::router(state.clone()))
         .merge(crate::preferences::router(state.clone()))

@@ -4,6 +4,8 @@ mod app;
 mod audit;
 #[path = "account.auth.rs"]
 mod auth;
+#[path = "account.billing_authorization.rs"]
+mod billing_authorization;
 #[path = "account.config.rs"]
 mod config;
 #[path = "account.database.rs"]
