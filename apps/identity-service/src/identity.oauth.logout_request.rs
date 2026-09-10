@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 /// Validated request policy, not permission to revoke a session. HTTP handlers
 /// must bind the browser/session and obtain confirmation before using the return.
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct LogoutRequest {
     pub client_id: Option<String>,
     pub hint: Option<LogoutHint>,
@@ -12,6 +13,25 @@ pub struct LogoutRequest {
 }
 
 impl LogoutRequest {
+    pub fn revalidate(&self, clients: &ClientRegistry) -> Result<(), OAuthError> {
+        let client = self
+            .client_id
+            .as_deref()
+            .map(|id| clients.get(id))
+            .transpose()?;
+        if self
+            .hint
+            .as_ref()
+            .is_some_and(|hint| self.client_id.as_deref() != Some(&hint.client_id))
+            || self.redirect_uri.as_ref().is_some_and(|uri| {
+                self.hint.is_none()
+                    || !client.is_some_and(|client| client.post_logout_redirect_uris.contains(uri))
+            })
+        {
+            return Err(OAuthError::InvalidRequest);
+        }
+        Ok(())
+    }
     /// GET query and POST form handlers must both use this duplicate-aware path.
     pub fn from_fields(
         fields: Vec<(String, String)>,

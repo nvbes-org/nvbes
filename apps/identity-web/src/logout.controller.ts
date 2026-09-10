@@ -1,10 +1,22 @@
-import { loadHostedLogoutContext, logoutHostedSession } from '@nvbes/identity-sdk-web/oauth';
+import {
+  loadHostedLogoutContext,
+  logoutHostedSession,
+  prepareHostedRpLogout,
+  confirmHostedRpLogout,
+} from '@nvbes/identity-sdk-web/oauth';
 
-export function logoutGateway(origin: string) {
+export function logoutGateway(origin: string, request?: string) {
   const config = { baseUrl: origin };
   return {
-    load: () => loadHostedLogoutContext(config),
-    confirm: (csrf: string) => logoutHostedSession(config, csrf),
+    load: async () => {
+      const csrf = await loadHostedLogoutContext(config);
+      if (csrf && request !== undefined) await prepareHostedRpLogout(config, csrf, request);
+      return csrf;
+    },
+    confirm: async (csrf: string) => {
+      if (request !== undefined) return confirmHostedRpLogout(config, csrf, request);
+      await logoutHostedSession(config, csrf);
+    },
   };
 }
 
@@ -18,7 +30,10 @@ export class LogoutController {
   private started = false;
   private disposed = false;
   private listeners = new Set<() => void>();
-  constructor(private gateway: ReturnType<typeof logoutGateway>) {}
+  constructor(
+    private gateway: ReturnType<typeof logoutGateway>,
+    private navigate: (url: string) => void = () => {},
+  ) {}
   snapshot = () => this.state;
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -49,8 +64,10 @@ export class LogoutController {
     this.proof = null;
     this.publish('leaving');
     try {
-      await this.gateway.confirm(proof);
+      const redirect = await this.gateway.confirm(proof);
+      if (this.disposed) return;
       this.publish('complete');
+      if (redirect) this.navigate(redirect);
     } catch {
       this.publish('failed');
     }

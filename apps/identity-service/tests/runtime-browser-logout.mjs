@@ -77,9 +77,23 @@ export async function verifyCrossClientLogout(page, config, observeAccount = fal
     await page.getByRole('button', { name: 'Se déconnecter avec Identity' }).click();
     await page.getByRole('button', { name: 'Rester connecté' }).click();
     assert.equal(await billingStatus(), 200);
-    await page.reload();
+    // Cancellation discards the in-memory request; start a fresh RP request.
+    await page.goto(config.origins.client);
+    await page.getByRole('button', { name: 'Se connecter avec Identity' }).click();
+    await page.getByRole('button', { name: 'Autoriser et continuer' }).click();
+    await page.getByRole('heading', { name: 'Votre profil.' }).waitFor();
+    const submission = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === '/oauth/end-session',
+    );
+    await page.getByRole('button', { name: 'Se déconnecter avec Identity' }).click();
+    const sent = await submission;
+    assert.equal(sent.method(), 'POST');
+    assert.equal(new URL(sent.url()).search, '');
+    assert.ok(new URLSearchParams(sent.postData()).has('id_token_hint'));
     await page.getByRole('button', { name: 'Confirmer la déconnexion' }).click();
-    await page.getByRole('heading', { name: 'Vous êtes déconnecté.' }).waitFor();
+    await page.getByText('Vous êtes déconnecté de votre session Identity.').waitFor();
+    assert.equal(page.url(), `${config.origins.client}/`);
+    assert.deepEqual(await page.evaluate(() => Object.keys(sessionStorage)), []);
     const revokedStatus = await billingStatus();
     assert.equal(revokedStatus, 401);
     const refreshRefused = await sibling.evaluate(async () => {
@@ -105,13 +119,20 @@ export async function verifyCrossClientLogout(page, config, observeAccount = fal
         0,
       );
     }
-    await page.reload();
+    await page.goto(`${config.origins.client}/oauth/logout/callback?state=forged`);
+    await page
+      .getByText('La connexion ou la lecture du compte n’a pas abouti.', { exact: false })
+      .waitFor();
+    assert.equal(page.url(), `${config.origins.client}/`);
+    await page.goto(`${config.origins.identity}/logout`);
     await page.getByText('Aucune session Identity à fermer', { exact: false }).waitFor();
     await page.goto(config.origins.client);
     await page.getByRole('button', { name: 'Se connecter avec Identity' }).click();
     await page.getByLabel('Adresse email').waitFor();
     return {
       identityLogoutConfirmed: true,
+      rpLogoutPostAndValidatedReturn: true,
+      forgedLogoutCallbackRefused: true,
       cancelledLogoutPreservesAccess: true,
       siblingBillingStatusAfterLogout: revokedStatus,
       siblingRefreshRefused: true,

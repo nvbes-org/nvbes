@@ -4,11 +4,30 @@ import { LogoutController } from './logout.controller';
 function setup() {
   const gateway = {
     load: vi.fn<() => Promise<string | null>>(async () => 'proof'),
-    confirm: vi.fn(async (_csrf: string) => {}),
+    confirm: vi.fn(async (_csrf: string) => undefined),
   };
   return { gateway, controller: new LogoutController(gateway) };
 }
 describe('Identity logout confirmation', () => {
+  it('only follows a server return after confirmation and never after disposal', async () => {
+    const navigate = vi.fn();
+    const gateway = {
+      load: async () => 'proof',
+      confirm: vi.fn(async () => 'https://account.example/returned'),
+    };
+    const controller = new LogoutController(gateway, navigate);
+    await controller.start();
+    expect(navigate).not.toHaveBeenCalled();
+    await controller.confirm();
+    expect(navigate).toHaveBeenCalledExactlyOnceWith('https://account.example/returned');
+    navigate.mockClear();
+    const closed = new LogoutController(gateway, navigate);
+    await closed.start();
+    const pending = closed.confirm();
+    closed.dispose();
+    await pending;
+    expect(navigate).not.toHaveBeenCalled();
+  });
   it('never revokes on load or cancellation', async () => {
     const { gateway, controller } = setup();
     await Promise.all([controller.start(), controller.start()]);

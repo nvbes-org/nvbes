@@ -13,7 +13,17 @@ const controller = new AuthorizationController(identityGateway(location.origin),
   location.assign(url),
 );
 const recovery = new RecoveryController(recoveryGateway(location.origin));
-const logout = new LogoutController(logoutGateway(location.origin));
+const logoutParams = new URLSearchParams(location.hash.slice(1));
+const logoutRequest =
+  location.pathname === '/logout' && location.hash
+    ? logoutParams.size === 1 && logoutParams.has('request')
+      ? logoutParams.get('request')!
+      : ''
+    : undefined;
+if (location.pathname === '/logout') history.replaceState(null, '', '/logout');
+const logout = new LogoutController(logoutGateway(location.origin, logoutRequest), (url) =>
+  location.assign(url),
+);
 window.addEventListener(
   'pagehide',
   () =>

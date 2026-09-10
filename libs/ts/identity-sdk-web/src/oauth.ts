@@ -5,6 +5,7 @@ export * from './storage';
 export * from './dpop.transaction-store';
 export { dpopFetch } from './dpop';
 export * from './hosted.logout';
+export * from './oauth.logout';
 export * from './oauth.session';
 export * from './hosted.client';
 export * from './hosted.authentication';

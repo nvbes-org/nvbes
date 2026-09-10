@@ -77,7 +77,7 @@ try {
       client_id: clientId,
       display_name: 'HTTPS browser test',
       redirect_uris: [redirectUri],
-      post_logout_redirect_uris: [],
+      post_logout_redirect_uris: accountWeb ? [`${origins.client}/oauth/logout/callback`] : [],
       allow_refresh: true,
       require_dpop: true,
       resources: Object.fromEntries(

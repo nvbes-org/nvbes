@@ -26,6 +26,8 @@ mod logout;
 #[path = "identity.tokens.userinfo.rs"]
 mod userinfo;
 pub use logout::LogoutHint;
+#[path = "identity.tokens.logout_ticket.rs"]
+mod logout_ticket;
 
 pub const ACCESS_TOKEN_TTL_SECONDS: u64 = 15 * 60;
 

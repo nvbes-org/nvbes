@@ -5,6 +5,8 @@ import {
   discardAuthorizationRequest,
   exchangeAuthorizationCode,
   type AuthorizationCodeTokenResponse,
+  BrowserLogoutTransaction,
+  type LogoutSubmission,
 } from '@nvbes/identity-sdk-web/oauth';
 import { loadAccountConfig, type AccountConfig } from './account.config';
 import { parseAccountCallback } from './account.callback';
@@ -17,7 +19,7 @@ export interface AccountGateway {
   callback(url: URL): Promise<'connected' | 'denied'>;
   profile(): Promise<AccountProfile>;
   expiration(): number;
-  logoutUrl(): string;
+  logoutRequest(): LogoutSubmission;
   clear(): void;
 }
 
@@ -42,7 +44,16 @@ export function accountGateway(siteOrigin: string): AccountGateway {
   };
   return {
     expiration: () => expiresAt,
-    logoutUrl: () => `${context().baseUrl}/logout`,
+    logoutRequest: () => {
+      const options = context();
+      if (!tokens?.idToken) throw new Error('Missing logout identity');
+      return new BrowserLogoutTransaction(sessionStorage).create({
+        baseUrl: options.baseUrl,
+        clientId: options.clientId,
+        idToken: tokens.idToken,
+        redirectUri: `${siteOrigin}/oauth/logout/callback`,
+      });
+    },
     async initialize() {
       config = await loadAccountConfig(
         AbortSignal.any([lifetime.signal, AbortSignal.timeout(10_000)]),

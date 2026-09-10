@@ -17,14 +17,45 @@ function setup() {
     callback: vi.fn<AccountGateway['callback']>(async () => 'connected'),
     profile: vi.fn<AccountGateway['profile']>(async () => profile),
     expiration: vi.fn(() => 0),
-    logoutUrl: vi.fn(() => 'https://identity.example/logout'),
+    logoutRequest: vi.fn(() => ({
+      action: 'https://identity.example/oauth/end-session',
+      fields: { state: 'test' },
+    })),
     clear: vi.fn(),
   };
   const navigate = vi.fn();
-  return { gateway, navigate, controller: new AccountController(gateway, navigate) };
+  const submitLogout = vi.fn();
+  return {
+    gateway,
+    navigate,
+    submitLogout,
+    controller: new AccountController(gateway, navigate, submitLogout),
+  };
 }
 const callback = new URL('https://account.example/oauth/callback?code=x&state=s');
 describe('Account document lifecycle', () => {
+  it('clears local credentials before submitting a single RP logout', async () => {
+    const { controller, gateway, submitLogout, navigate } = setup();
+    await controller.start(callback);
+    controller.logout();
+    controller.logout();
+    expect(gateway.clear).toHaveBeenCalledTimes(1);
+    expect(submitLogout).toHaveBeenCalledExactlyOnceWith(
+      gateway.logoutRequest.mock.results[0].value,
+    );
+    expect(navigate).not.toHaveBeenCalled();
+    expect(controller.snapshot().profile).toBeNull();
+  });
+  it('only announces logout after a verified callback', async () => {
+    const good = setup();
+    await good.controller.start(undefined, 'complete');
+    expect(good.controller.snapshot().message).toContain('déconnecté');
+    expect(good.gateway.profile).not.toHaveBeenCalled();
+    const bad = setup();
+    await bad.controller.start(undefined, 'invalid');
+    expect(bad.controller.snapshot().stage).toBe('error');
+    expect(bad.controller.snapshot().message).not.toContain('déconnecté');
+  });
   it('hides the profile during one coalesced foreground verification', async () => {
     const { controller, gateway } = setup();
     await controller.start(callback);

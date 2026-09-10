@@ -7,6 +7,7 @@ use uuid::Uuid;
 /// Signed identification only, never an authentication or revocation capability.
 /// The logout handler must separately bind it to the browser's current/recent
 /// session and obtain confirmation before changing any session state.
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct LogoutHint {
     pub client_id: String,
     pub principal_id: Uuid,

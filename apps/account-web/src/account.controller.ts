@@ -1,5 +1,6 @@
 import type { AccountGateway } from './account.gateway';
 import type { AccountProfile } from './account.profile';
+import type { LogoutSubmission } from '@nvbes/identity-sdk-web/oauth';
 
 export interface AccountState {
   stage: 'loading' | 'checking' | 'ready' | 'leaving' | 'profile' | 'error' | 'closed';
@@ -17,6 +18,7 @@ export class AccountController {
   constructor(
     private gateway: AccountGateway,
     private navigate: (url: string) => void,
+    private submitLogout: (request: LogoutSubmission) => void,
   ) {}
   snapshot = () => this.state;
   subscribe = (listener: () => void) => {
@@ -30,12 +32,21 @@ export class AccountController {
     this.state = state;
     for (const listener of this.listeners) listener();
   }
-  async start(callback?: URL) {
+  async start(callback?: URL, logoutResult?: 'complete' | 'invalid') {
     if (this.started || this.disposed) return;
     this.started = true;
     try {
       await this.gateway.initialize();
       if (this.disposed) return;
+      if (logoutResult === 'invalid') throw new Error('Invalid logout callback');
+      if (logoutResult === 'complete') {
+        this.publish({
+          stage: 'ready',
+          profile: null,
+          message: 'Vous êtes déconnecté de votre session Identity.',
+        });
+        return;
+      }
       if (!callback) {
         this.publish({ stage: 'ready', profile: null, message: null });
         return;
@@ -119,9 +130,13 @@ export class AccountController {
   }
   logout() {
     if (this.disposed || this.state.stage !== 'profile') return;
-    const url = this.gateway.logoutUrl();
-    this.close();
-    this.navigate(url);
+    try {
+      const request = this.gateway.logoutRequest();
+      this.close();
+      this.submitLogout(request);
+    } catch {
+      this.fail();
+    }
   }
   dispose() {
     this.close();

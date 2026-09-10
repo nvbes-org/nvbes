@@ -11,6 +11,9 @@ use axum::{
 mod authentication_status;
 #[path = "identity.oauth.http.cors.rs"]
 mod cors;
+#[path = "identity.oauth.http.discovery.rs"]
+mod discovery;
+pub use discovery::{router, router_with_logout};
 #[path = "identity.oauth.http.introspection.rs"]
 mod introspection;
 #[path = "identity.oauth.http.limits.rs"]
@@ -30,8 +33,11 @@ mod json;
 mod query;
 #[path = "identity.oauth.http.recovery.rs"]
 mod recovery;
+#[path = "identity.oauth.http.rp_logout.rs"]
+mod rp_logout;
 #[path = "identity.oauth.http.session.rs"]
 mod session;
+pub use rp_logout::router as rp_logout_router;
 #[path = "identity.oauth.http.token.rs"]
 mod token;
 #[path = "identity.oauth.http.totp.rs"]
@@ -55,18 +61,10 @@ use crate::{
         clients::ClientRegistry,
         error::OAuthError,
         interactions,
-        metadata::provider_metadata,
         store::{self, RequestKind},
     },
     tokens::TokenService,
-    tokens_claims::JsonWebKeySet,
 };
-
-#[derive(Clone)]
-struct PublicProtocolState {
-    issuer: String,
-    tokens: Arc<TokenService>,
-}
 
 #[derive(Clone)]
 struct TokenState {
@@ -464,28 +462,6 @@ impl IntoResponse for ProtocolError {
         }
         response
     }
-}
-
-/// Safe read-only protocol endpoints. Authorization and token mutations are
-/// mounted separately once their hosted-login boundary is enabled.
-pub fn router(issuer: &str, tokens: Arc<TokenService>) -> Router {
-    let state = PublicProtocolState {
-        issuer: issuer.to_owned(),
-        tokens,
-    };
-    Router::new()
-        .route("/.well-known/openid-configuration", get(discovery))
-        .route("/oauth/jwks", get(jwks))
-        .with_state(state)
-        .layer(cors::metadata())
-}
-
-async fn discovery(State(state): State<PublicProtocolState>) -> Json<impl serde::Serialize> {
-    Json(provider_metadata(&state.issuer))
-}
-
-async fn jwks(State(state): State<PublicProtocolState>) -> Json<JsonWebKeySet> {
-    Json(state.tokens.jwks())
 }
 
 #[cfg(test)]

@@ -8,6 +8,36 @@ use axum::{
     routing::{any, post},
 };
 
+#[tokio::test]
+async fn discovery_advertises_logout_only_when_its_runtime_is_enabled() {
+    use tower::ServiceExt;
+    for enabled in [false, true] {
+        let tokens =
+            std::sync::Arc::new(TokenService::new(crate::tokens::tests::config()).unwrap());
+        let app = super::router_with_logout("https://identity.example", tokens, enabled);
+        let response = app
+            .oneshot(
+                axum::http::Request::get("/.well-known/openid-configuration")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let body = axum::body::to_bytes(response.into_body(), 8192)
+            .await
+            .unwrap();
+        let metadata: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        if enabled {
+            assert_eq!(
+                metadata["end_session_endpoint"],
+                "https://identity.example/oauth/end-session"
+            );
+        } else {
+            assert!(metadata.get("end_session_endpoint").is_none());
+        }
+    }
+}
+
 struct TestServer {
     url: String,
     task: tokio::task::JoinHandle<()>,

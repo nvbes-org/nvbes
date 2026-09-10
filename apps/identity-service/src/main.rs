@@ -214,9 +214,11 @@ async fn main() -> anyhow::Result<()> {
             let token_service = tokens::TokenService::new(token_config)?;
             let issuer = token_service.issuer().to_owned();
             let token_service = Arc::new(token_service);
-            router = router.merge(nvbes_identity_service::oauth::http::router(
+            router = router.merge(nvbes_identity_service::oauth::http::router_with_logout(
                 &issuer,
                 Arc::clone(&token_service),
+                std::env::var("NVBES_IDENTITY_BROWSER_ORIGIN").is_ok()
+                    && std::env::var("NVBES_IDENTITY_OAUTH_CLIENTS_JSON").is_ok(),
             ));
             if let Ok(registry_json) = std::env::var("NVBES_IDENTITY_OAUTH_CLIENTS_JSON") {
                 let limiter = nvbes_identity_service::rate_limits::RateLimiter::from_base64(
@@ -268,6 +270,13 @@ async fn main() -> anyhow::Result<()> {
                         )
                         .map_err(|_| anyhow::anyhow!("invalid OIDC client registry"))?;
                     let clients = Arc::new(clients);
+                    router = router.merge(nvbes_identity_service::oauth::http::rp_logout_router(
+                        db.clone(),
+                        clients.clone(),
+                        token_service.clone(),
+                        browser.clone(),
+                        limiter.clone(),
+                    ));
                     router =
                         router.merge(nvbes_identity_service::oauth::http::authorization_router(
                             db.clone(),

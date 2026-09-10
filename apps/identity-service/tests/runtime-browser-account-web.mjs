@@ -19,7 +19,7 @@ export async function accountWebBuild(config) {
     if (request.method !== 'GET') return false;
     const url = new URL(request.url, config.origins.client);
     const document =
-      ['/', '/oauth/callback'].includes(url.pathname) &&
+      ['/', '/oauth/callback', '/oauth/logout/callback'].includes(url.pathname) &&
       request.headers.accept?.includes('text/html');
     const asset = assets.get(url.pathname);
     const configuration = url.pathname === '/account-config.json';
@@ -33,7 +33,7 @@ export async function accountWebBuild(config) {
       'cache-control': 'no-store',
       'referrer-policy': 'no-referrer',
       'x-content-type-options': 'nosniff',
-      'content-security-policy': `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' ${config.origins.identity} ${config.origins.account}; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,
+      'content-security-policy': `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' ${config.origins.identity} ${config.origins.account}; base-uri 'none'; frame-ancestors 'none'; form-action 'self' ${config.origins.identity}`,
     });
     response.end(
       configuration

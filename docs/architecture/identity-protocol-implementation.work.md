@@ -13,6 +13,43 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Lot consolidé : logout RP de bout en bout — 2026-09-10
+
+Le runtime expose GET/POST `/oauth/end-session`, puis deux opérations JSON
+protégées pour préparer et confirmer la déconnexion. L'ID Token est vérifié à
+l'entrée ; un contexte signé distinct, valable cinq minutes, transporte ensuite
+la demande vers le site Identity sans recopier cet ID Token. La confirmation
+revalide le registre et le contexte, lie principal/sid au cookie et révoque la
+session avec un audit dans une transaction verrouillée. Le résultat ne fournit
+le retour enregistré qu'après commit. Une panne d'audit annule la révocation.
+
+Account utilise le SDK pour envoyer un formulaire POST, ferme ses accès locaux,
+puis vérifie un state à usage unique sur `/oauth/logout/callback`. Aucun ID Token
+n'entre dans sessionStorage ou l'URL du client livré. Identity efface le fragment
+de navigation et garde le contexte en mémoire jusqu'au clic explicite. La
+découverte annonce l'endpoint seulement lorsque ses prérequis runtime sont montés.
+Le [contrat livré](identity-rp-logout.md) décrit les routes, la configuration des
+callbacks/CSP et le comportement sur annulation, expiration et erreur.
+
+Validation finale : `cargo check --workspace` ; suite PostgreSQL isolée avec
+219 tests bibliothèque et 24 tests binaire, plus les gardes de base ; un test
+interactif Cargo reste ignoré mais la fixture navigateur distincte est exécutée.
+Les 121 tests SDK, 58 tests Identity Web et 33 tests Account passent, ainsi que
+typecheck/lint/build des deux sites. Le graphe Nx des checks web attend désormais
+le build du SDK afin d'éviter la lecture de son répertoire en reconstruction.
+
+Chromium 153 avec focus réel valide les builds et services réels : POST sans
+ID Token en query, annulation sans révocation, retour Account reconnu, callback
+de logout falsifié refusé, ancien grant Billing HTTP 401, refresh refusé,
+reconnexion requise et profil retiré de la seconde fenêtre Account au retour.
+Les bases et processus synthétiques sont nettoyés. Aucun déploiement ni coût
+récurrent supplémentaire ; aucun changement de contrat Account/Billing métier.
+
+Ce lot ferme le parcours RP livré, sans déclarer A–D terminés. Les notifications
+back-channel proactives, les autres cycles de récupération, les opérations
+sensibles, les autres surfaces Account/Billing et les preuves d'exploitation
+restent ouverts. Aucune certification OIDC/FAPI n'est revendiquée.
+
 ## Logout RP : validation du hint et du retour enregistré — 2026-09-10
 
 Le service sépare maintenant la vérification d'un `id_token_hint` de celle d'un

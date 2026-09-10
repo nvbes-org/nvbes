@@ -4,6 +4,8 @@ use serde::Serialize;
 /// Endpoints that are not mounted are not advertised here.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct ProviderMetadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_session_endpoint: Option<String>,
     pub issuer: String,
     pub authorization_endpoint: String,
     pub token_endpoint: String,
@@ -21,6 +23,7 @@ pub struct ProviderMetadata {
 pub fn provider_metadata(issuer: &str) -> ProviderMetadata {
     let root = issuer.trim_end_matches('/');
     ProviderMetadata {
+        end_session_endpoint: None,
         issuer: issuer.into(),
         authorization_endpoint: format!("{root}/oauth/authorize"),
         token_endpoint: format!("{root}/oauth/token"),

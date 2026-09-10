@@ -42,6 +42,21 @@
       "type:app"
     ],
     "targets": {
+      "test": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
+      "typecheck": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
+      "lint": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
       "build": {
         "dependsOn": [
           "^build"

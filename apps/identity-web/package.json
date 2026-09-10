@@ -47,6 +47,21 @@
       "type:app"
     ],
     "targets": {
+      "test": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
+      "typecheck": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
+      "lint": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
       "test:browser": {
         "cache": false,
         "parallelism": false

@@ -26,6 +26,8 @@ mod login_tests;
 mod logout_context_tests;
 #[path = "identity.oauth.http.navigation.tests.rs"]
 mod navigation_tests;
+#[path = "identity.oauth.http.rp_logout.tests.rs"]
+mod rp_logout_tests;
 #[path = "identity.oauth.http.totp.tests.rs"]
 mod totp_tests;
 
