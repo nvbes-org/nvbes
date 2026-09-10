@@ -174,48 +174,51 @@ async fn verify_stored_password(
     password: &str,
     password_hash: &str,
 ) -> anyhow::Result<(bool, bool)> {
-    let permit = PASSWORD_VERIFY_PERMITS
-        .acquire()
-        .await
-        .map_err(|_| anyhow::anyhow!("password verification unavailable"))?;
     let password = password.to_owned();
     let password_hash = password_hash.to_owned();
-    let verified = tokio::task::spawn_blocking(move || {
+    password_work(&PASSWORD_VERIFY_PERMITS, move || {
         verify_and_check_rehash(&password, &password_hash, None)
     })
-    .await
-    .map_err(|_| anyhow::anyhow!("password verification unavailable"))?
-    .map_err(|_| anyhow::anyhow!("password verification failed"))?;
-    drop(permit);
-    Ok(verified)
+    .await?
+    .map_err(|_| anyhow::anyhow!("password verification failed"))
 }
 
 async fn hash_current_password(password: &str) -> anyhow::Result<String> {
-    let permit = PASSWORD_VERIFY_PERMITS
-        .acquire()
-        .await
-        .map_err(|_| anyhow::anyhow!("password hashing unavailable"))?;
     let password = password.to_owned();
-    let hash = tokio::task::spawn_blocking(move || hash_password(&password))
-        .await
-        .map_err(|_| anyhow::anyhow!("password hashing unavailable"))?
-        .map_err(|_| anyhow::anyhow!("password hashing failed"))?;
-    drop(permit);
-    Ok(hash)
+    password_work(&PASSWORD_VERIFY_PERMITS, move || hash_password(&password))
+        .await?
+        .map_err(|_| anyhow::anyhow!("password hashing failed"))
 }
 
 async fn verify_dummy_password(password: &str) -> anyhow::Result<()> {
-    let permit = PASSWORD_VERIFY_PERMITS
+    let password = password.to_owned();
+    password_work(&PASSWORD_VERIFY_PERMITS, move || {
+        dummy_verify_password(&password, None)
+    })
+    .await
+}
+
+async fn password_work<T: Send + 'static>(
+    permits: &'static Semaphore,
+    work: impl FnOnce() -> T + Send + 'static,
+) -> anyhow::Result<T> {
+    let permit = permits
         .acquire()
         .await
         .map_err(|_| anyhow::anyhow!("password verification unavailable"))?;
-    let password = password.to_owned();
-    tokio::task::spawn_blocking(move || dummy_verify_password(&password, None))
-        .await
-        .map_err(|_| anyhow::anyhow!("password verification unavailable"))?;
-    drop(permit);
-    Ok(())
+    tokio::task::spawn_blocking(move || {
+        // Tokio cannot cancel running blocking work. Keep its resource budget
+        // until it finishes, even when the HTTP request or waiter is dropped.
+        let _permit = permit;
+        work()
+    })
+    .await
+    .map_err(|_| anyhow::anyhow!("password verification unavailable"))
 }
+
+#[cfg(test)]
+#[path = "identity.auth.password-work.tests.rs"]
+mod password_work_tests;
 
 pub(super) async fn audit(
     tx: &mut Transaction<'_, Postgres>,

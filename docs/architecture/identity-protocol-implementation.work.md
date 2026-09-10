@@ -13,6 +13,21 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Calculs de mot de passe et annulation — 2026-09-10
+
+La vérification Argon2, la vérification factice et le renouvellement du hash
+conservent désormais leur permis de concurrence dans le travail bloquant.
+L'annulation de la requête HTTP ne libère donc pas de capacité tant que le calcul
+continue. Les tests pilotent explicitement un calcul en cours, annulent son
+appelant puis vérifient que le permis reste occupé jusqu'à sa fin. Une panique
+du calcul libère aussi le permis. Ce correctif ne remplace pas les quotas HTTP,
+qui restent à raccorder.
+
+Validation : `cargo check --workspace` sans avertissement ;
+`identity-service:test:database` passe avec 77 tests de bibliothèque, 24 tests
+du runtime et 3 contrôles de base isolée. Les deux nouveaux tests de capacité
+s'exécutent dans les deux cibles Rust qui compilent le module d'authentification.
+
 ## Login hébergé atomique — 2026-09-10
 
 Le login contrôle l'interaction et son CSRF avant le calcul de mot de passe.
