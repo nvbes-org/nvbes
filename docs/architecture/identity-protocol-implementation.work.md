@@ -13,10 +13,33 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
-## État vérifié au 2026-09-07
+## Correction HTTP vérifiée au 2026-09-10
 
-Le protocole public n'est **pas encore monté**. Les nouvelles primitives sont
-dans la bibliothèque du package Identity, pas dans une application archivée.
+Les retours d'autorisation utilisent désormais HTTP 303, avec `Cache-Control:
+no-store`, `Pragma: no-cache` et `Referrer-Policy: no-referrer`. Un test réseau
+local suit les redirections après acceptation et refus : le callback reçoit
+GET et aucun corps du POST initial. Les paramètres enregistrés et l'encodage
+de `state` sont vérifiés. Ce test porte sur la construction et le suivi HTTP
+de la réponse ; il ne prouve pas le parcours de consentement avec PostgreSQL.
+
+Les handlers de session sont extraits pour maintenir le module HTTP sous 500
+lignes. Les fonctions de récupération utilisées par le diagnostic interne
+sont séparées de la bibliothèque OAuth, sans changement de logique ni nouvelle
+route publique. `cargo check --workspace` passe sans avertissement.
+La cible Nx `identity-service:test` passe : 36 tests de bibliothèque et 16 du
+binaire, dont les deux nouveaux tests de redirection. Les tests PostgreSQL et
+navigateur ne sont pas exécutés dans cette tranche.
+
+Le tableau et les résultats ci-dessous restent un suivi historique partiel :
+ils ne constituent pas une validation de bout en bout des lots A à D. Le
+raccordement WebAuthn, les protections refresh/DPoP, UserInfo et les contrôles
+de session HTTP restent notamment à terminer et à tester.
+
+## État historique au 2026-09-07, enrichi pendant l'implémentation
+
+Les routes publiques sont montées sous configuration dans le runtime actif.
+Leur présence ne vaut pas validation pour une ouverture publique. Les nouvelles
+primitives sont dans la bibliothèque Identity, pas dans une application archivée.
 
 | Exigence                                                                                 | État et preuve                                                                                                                                                                    |
 | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

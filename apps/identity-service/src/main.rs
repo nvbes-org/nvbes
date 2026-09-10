@@ -22,6 +22,8 @@ mod mfa;
 mod mfa_crypto;
 #[path = "identity.mfa.rotation.rs"]
 mod mfa_rotation;
+#[path = "identity.recovery.rs"]
+mod recovery;
 #[path = "identity.synthetic.rs"]
 mod synthetic;
 #[path = "identity.tokens.synthetic.rs"]

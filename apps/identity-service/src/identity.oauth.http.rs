@@ -8,6 +8,10 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
 };
+#[path = "identity.oauth.http.session.rs"]
+mod session;
+use session::{logout, step_up_totp};
+
 use serde::Deserialize;
 use sqlx::PgPool;
 
@@ -159,7 +163,7 @@ async fn approve(
     State(state): State<AuthorizationState>,
     headers: HeaderMap,
     Json(form): Json<InteractionForm>,
-) -> Result<Redirect, ProtocolError> {
+) -> Result<Response, ProtocolError> {
     let proof = state
         .browser
         .verify_mutation(&axum::http::Method::POST, &headers)
@@ -179,7 +183,7 @@ async fn deny(
     State(state): State<AuthorizationState>,
     headers: HeaderMap,
     Json(form): Json<InteractionForm>,
-) -> Result<Redirect, ProtocolError> {
+) -> Result<Response, ProtocolError> {
     let proof = state
         .browser
         .verify_mutation(&axum::http::Method::POST, &headers)
@@ -195,78 +199,27 @@ async fn deny(
     )?)
 }
 
-async fn logout(
-    State(state): State<AuthorizationState>,
-    headers: HeaderMap,
-) -> Result<impl IntoResponse, ProtocolError> {
-    state
-        .browser
-        .verify_mutation(&axum::http::Method::POST, &headers)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    if let Some(session) = state
-        .browser
-        .session_token(&headers)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?
-    {
-        sqlx::query("UPDATE identity_sessions SET revoked_at=clock_timestamp() WHERE token_hash=$1 AND revoked_at IS NULL")
-            .bind(crate::oauth::store::hash(&session))
-            .execute(&state.db)
-            .await
-            .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
-    }
-    Ok((
-        [
-            ("set-cookie", state.browser.clear_session_cookie()),
-            ("cache-control", "no-store".parse().unwrap()),
-        ],
-        Json(serde_json::json!({"logged_out": true})),
-    ))
-}
-
-async fn step_up_totp(
-    State(state): State<AuthorizationState>,
-    headers: HeaderMap,
-    Json(form): Json<StepUpForm>,
-) -> Result<impl IntoResponse, ProtocolError> {
-    state
-        .browser
-        .verify_mutation(&axum::http::Method::POST, &headers)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    let session = state
-        .browser
-        .session_token(&headers)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?
-        .ok_or(ProtocolError::OAuth(OAuthError::LoginRequired))?;
-    if form.code.len() != 6 || !form.code.bytes().all(|value| value.is_ascii_digit()) {
-        return Err(ProtocolError::OAuth(OAuthError::InvalidRequest));
-    }
-    let expires_at = crate::mfa::grant_step_up(
-        &state.db,
-        &state.mfa,
-        &session,
-        &form.code,
-        chrono::Utc::now(),
-    )
-    .await
-    .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    Ok((
-        [("cache-control", "no-store")],
-        Json(serde_json::json!({"step_up": true, "expires_at": expires_at})),
-    ))
-}
-
 fn redirect_with_result(
     redirect_uri: &str,
     key: &str,
     value: &str,
     state: &str,
-) -> Result<Redirect, ProtocolError> {
+) -> Result<Response, ProtocolError> {
     let mut url = reqwest::Url::parse(redirect_uri)
         .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
     url.query_pairs_mut()
         .append_pair(key, value)
         .append_pair("state", state);
-    Ok(Redirect::temporary(url.as_str()))
+    // RFC 9700 section 4.12: never forward a hosted POST body to the client.
+    Ok((
+        [
+            ("cache-control", "no-store"),
+            ("pragma", "no-cache"),
+            ("referrer-policy", "no-referrer"),
+        ],
+        Redirect::to(url.as_str()),
+    )
+        .into_response())
 }
 
 async fn authorize(
