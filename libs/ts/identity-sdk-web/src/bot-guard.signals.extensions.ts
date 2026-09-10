@@ -111,9 +111,10 @@ async function probeExtensionResource(ext: ExtensionDef): Promise<boolean> {
 
 /** Detects active adblocker through DOM advertisement decoy blocking behavior */
 function probeAdblockerDOM(): boolean {
+  let adDecoy: HTMLDivElement | undefined;
   try {
     // Adblockers use strict selector lists to hide elements with specific ad classes or IDs.
-    const adDecoy = document.createElement('div');
+    adDecoy = document.createElement('div');
     adDecoy.className =
       'pub_300x250 pub_300x250m pub_728x90 text-ad textAd text_ad text_ads text-ads ad-banner';
     adDecoy.setAttribute(
@@ -128,10 +129,11 @@ function probeAdblockerDOM(): boolean {
       computedStyle.visibility === 'hidden' ||
       adDecoy.offsetHeight === 0;
 
-    document.body.removeChild(adDecoy);
     return isBlocked;
   } catch {
     return false;
+  } finally {
+    adDecoy?.remove();
   }
 }
 
@@ -202,10 +204,7 @@ export async function collectExtensionSignals(): Promise<ExtensionSignals> {
   const domTampered = probeDOMTampering();
 
   // Dev Mock/Debug Environment overrides (only allowed in development environment)
-  const isDev =
-    typeof import.meta !== 'undefined' &&
-    'env' in import.meta &&
-    (import.meta as unknown as { env: { DEV: boolean } }).env?.DEV === true;
+  const isDev = import.meta.env.DEV;
   const mockAllowed = isDev && typeof localStorage !== 'undefined';
 
   const mockBlacklisted =
