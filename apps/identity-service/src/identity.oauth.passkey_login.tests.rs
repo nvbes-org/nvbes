@@ -6,6 +6,9 @@ use crate::{
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use webauthn_authenticator_rs::{WebauthnAuthenticator, softpasskey::SoftPasskey};
 
+#[path = "identity.oauth.passkey_login.deadline.tests.rs"]
+mod deadline_tests;
+
 struct Fixture {
     db: PgPool,
     server: Webauthn,

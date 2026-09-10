@@ -13,6 +13,29 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## WebAuthn : échéances après attente de verrou — 2026-09-11
+
+La connexion passkey, le step-up et l'enrollment consomment maintenant leur
+challenge par une écriture conditionnelle sur son échéance PostgreSQL après
+les attentes de verrou. Le step-up revalide la session ; l'enrollment relit
+la politique de preuve récente avant de créer le credential. Un échec annule
+les compteurs, la session éventuelle, les liaisons, l'audit et la consommation.
+
+Sept scénarios isolent les échéances : challenge de chacun des trois parcours,
+session du step-up/de l'enrollment, preuve primaire du premier enrollment et
+preuve forte du suivant. Ils observent une attente réelle avec
+`pg_blocking_pids`, puis libèrent le verrou après expiration selon la base.
+Les trois tests initiaux échouent sur les anciennes implémentations, puis
+passent avec la correction ; ils ont ensuite été séparés en sept tests pour
+exécuter toutes les variantes indépendamment.
+
+Validation : `cargo check --workspace`, suite Nx Identity avec migrations
+PostgreSQL réelles, puis les sept tests ciblés après leur séparation. Aucun
+contrat HTTP ni frontend modifié : les parcours navigateur ne sont pas relancés
+pour cette correction transactionnelle. Pas de migration, de service ajouté,
+de déploiement ni de coût fixe supplémentaire. La charge, les preuves
+matérielles, la politique opérateur et les autres exigences A–D restent ouvertes.
+
 ## Notification durable après reset — 2026-09-11
 
 Le reset enregistre désormais son événement et ses notifications de sécurité

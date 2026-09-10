@@ -40,8 +40,12 @@ mod authentication;
 mod authentication_session;
 #[path = "identity.authentication.enrollment.rs"]
 mod enrollment_policy;
+
 #[path = "identity.authentication.management.rs"]
 mod factor_management;
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "identity.test.lock-waits.rs"]
+mod test_lock_waits;
 #[path = "identity.tokens.rs"]
 pub mod tokens;
 #[path = "identity.tokens.claims.rs"]

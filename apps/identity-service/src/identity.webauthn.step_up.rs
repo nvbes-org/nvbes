@@ -81,17 +81,16 @@ pub async fn finish(
     }
     sqlx::query("UPDATE identity_webauthn_credentials SET passkey=$1,sign_count=$2,backed_up=$3,last_used_at=clock_timestamp() WHERE id=$4")
         .bind(serde_json::to_value(passkey)?).bind(i64::from(verified.counter())).bind(verified.backup_state()).bind(id).execute(&mut *tx).await?;
-    sqlx::query(
-        "UPDATE identity_webauthn_challenges SET consumed_at=clock_timestamp() WHERE id=$1",
-    )
-    .bind(ceremony)
-    .execute(&mut *tx)
-    .await?;
+    // Challenge/credential locks may have outlived the session checked above.
+    active_session(&mut tx, token).await?;
     let expires: DateTime<Utc> = sqlx::query_scalar("UPDATE identity_sessions SET step_up_method='webauthn',step_up_at=clock_timestamp(),step_up_expires_at=LEAST(expires_at,clock_timestamp()+interval '10 minutes') WHERE id=$1 RETURNING step_up_expires_at")
         .bind(session).fetch_one(&mut *tx).await?;
     sqlx::query("INSERT INTO identity_session_webauthn_credentials(session_id,credential_id,principal_id,purpose) VALUES($1,$2,$3,'step_up') ON CONFLICT (session_id,credential_id,purpose) DO UPDATE SET authenticated_at=EXCLUDED.authenticated_at")
         .bind(session).bind(id).bind(principal).execute(&mut *tx).await?;
     store::audit(&mut tx, principal, "identity.step_up_granted").await?;
+    if !super::challenge::consume(&mut tx, ceremony, principal, "step_up").await? {
+        return Err(WebauthnError::InvalidCeremony);
+    }
     tx.commit().await?;
     Ok(expires)
 }

@@ -2,6 +2,9 @@ use super::*;
 use crate::test_fixtures::{isolated_database, session};
 use webauthn_authenticator_rs::{WebauthnAuthenticator, softpasskey::SoftPasskey};
 
+#[path = "identity.webauthn.registration.deadline.tests.rs"]
+mod deadline_tests;
+
 fn server() -> Webauthn {
     super::super::build_server("identity.example", "https://identity.example").unwrap()
 }

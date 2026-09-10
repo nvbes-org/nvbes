@@ -14,6 +14,9 @@ pub mod credentials;
 #[path = "identity.webauthn.step_up.rs"]
 pub mod step_up;
 
+#[path = "identity.webauthn.challenge.rs"]
+pub(crate) mod challenge;
+
 #[derive(Debug, thiserror::Error)]
 pub enum WebauthnError {
     #[error("invalid or expired WebAuthn ceremony")]

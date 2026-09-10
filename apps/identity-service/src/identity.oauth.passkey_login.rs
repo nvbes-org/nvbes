@@ -93,10 +93,11 @@ pub async fn finish(
         .bind(session).bind(principal).bind(hash(&token)).execute(&mut *tx).await?;
     sqlx::query("INSERT INTO identity_session_webauthn_credentials(session_id,credential_id,principal_id,purpose) VALUES($1,$2,$3,'primary')")
         .bind(session).bind(id).bind(principal).execute(&mut *tx).await?;
-    sqlx::query("UPDATE identity_webauthn_challenges SET consumed_at=clock_timestamp(),principal_id=$2 WHERE id=$1")
-        .bind(ceremony).bind(principal).execute(&mut *tx).await?;
     store::audit(&mut tx, principal, "identity.session.passkey_authenticated").await?;
     let csrf = interactions::attach_session(&mut tx, clients, handle, proof, &token).await?;
+    if !crate::webauthn::challenge::consume(&mut tx, ceremony, principal, "authentication").await? {
+        return Err(OAuthError::InvalidRequest.into());
+    }
     tx.commit().await?;
     Ok(AuthenticatedLogin { token, csrf })
 }

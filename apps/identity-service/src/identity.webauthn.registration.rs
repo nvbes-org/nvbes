@@ -95,18 +95,20 @@ pub async fn finish(
     if count >= 10 {
         return Err(WebauthnError::Limit);
     }
+    // The challenge lock and verification may outlive enrollment authorization.
+    if crate::enrollment_policy::owner(&mut tx, session_token).await? != Some((session, principal))
+    {
+        return Err(WebauthnError::InvalidSession);
+    }
     let id = Uuid::new_v4();
     sqlx::query("INSERT INTO identity_webauthn_credentials(id,principal_id,credential_id,public_key,passkey,label,discoverable) VALUES($1,$2,$3,$4,$5,$6,NULL)")
         .bind(id).bind(principal).bind(passkey.cred_id().as_ref())
         .bind(serde_json::to_value(passkey.get_public_key())?)
         .bind(serde_json::to_value(&passkey)?).bind(label).execute(&mut *tx).await?;
-    sqlx::query(
-        "UPDATE identity_webauthn_challenges SET consumed_at=clock_timestamp() WHERE id=$1",
-    )
-    .bind(ceremony_id)
-    .execute(&mut *tx)
-    .await?;
     store::audit(&mut tx, principal, "identity.webauthn.enrolled").await?;
+    if !super::challenge::consume(&mut tx, ceremony_id, principal, "registration").await? {
+        return Err(WebauthnError::InvalidCeremony);
+    }
     tx.commit().await?;
     Ok(id)
 }

@@ -61,6 +61,22 @@ ne remplace ni les scopes ni les permissions d'opérateur.
 
 ## Validation et limites
 
+Les terminaisons WebAuthn (connexion, step-up, enrollment) consomment le
+challenge avec une condition d'expiration relue sur l'horloge PostgreSQL après
+les attentes de verrou et la vérification cryptographique. Le step-up revalide
+sa session et l'enrollment sa preuve récente après l'acquisition des verrous.
+Un refus annule toute la transaction, y compris les compteurs de credential,
+la session créée, ses liaisons OAuth et l'audit. Un contrôle effectué seulement
+avant `SELECT ... FOR UPDATE` ne garantit pas que la preuve est encore valide
+après une attente sur une ligne non modifiée.
+
+Les tests retiennent explicitement un verrou de principal ou de challenge,
+observent le waiter via `pg_blocking_pids`, attendent l'expiration selon
+l'horloge de la base puis libèrent le verrou. Ils couvrent le challenge des
+trois parcours, la session du step-up et de l'enrollment, la fraîcheur primaire
+pour le premier facteur et la preuve forte pour un facteur supplémentaire.
+Ce sont des preuves de transactions sous contention, pas un benchmark de charge.
+
 Les tests PostgreSQL couvrent le refus du mot de passe, un vrai enrôlement et
 une confirmation TOTP permettant de reprendre le même consentement, le refus
 TOTP sous recent_webauthn, la limite d'expiration signée, le vieillissement du

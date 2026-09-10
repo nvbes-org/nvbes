@@ -5,6 +5,9 @@ use crate::{
 };
 use webauthn_authenticator_rs::{WebauthnAuthenticator, softpasskey::SoftPasskey};
 
+#[path = "identity.webauthn.step_up.deadline.tests.rs"]
+mod deadline_tests;
+
 struct Fixture {
     db: PgPool,
     server: Webauthn,
