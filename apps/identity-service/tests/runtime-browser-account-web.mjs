@@ -2,6 +2,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
+import { verifyCrossClientLogout } from './runtime-browser-logout.mjs';
 
 export async function accountWebBuild(config) {
   const root = resolve('apps/account-web/dist');
@@ -100,6 +101,11 @@ export async function verifyAccountWeb(config) {
       .waitFor();
     assert.equal(exchanges, 1);
     assert.equal(page.url(), `${config.origins.client}/`);
+    await page.goto(config.origins.client);
+    await page.getByRole('button', { name: 'Se connecter avec Identity' }).click();
+    await page.getByRole('button', { name: 'Autoriser et continuer' }).click();
+    await page.getByRole('heading', { name: 'Votre profil.' }).waitFor();
+    const logout = await verifyCrossClientLogout(page, config);
     assert.deepEqual(errors, []);
     return {
       browser: browser.version(),
@@ -111,6 +117,7 @@ export async function verifyAccountWeb(config) {
       invalidCallbackRefused: true,
       localCloseClearsProfile: true,
       mobileOverflow: false,
+      ...logout,
     };
   } finally {
     await browser.close();

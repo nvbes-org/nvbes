@@ -167,6 +167,10 @@ pub fn authorization_router(
             protect_mutation,
         ))
         .merge(sessions)
+        .route(
+            "/oauth/session/logout-context",
+            get(session::logout_context),
+        )
         .route("/oauth/authorize", get(authorize))
         .route_layer(axum::middleware::from_fn_with_state(
             limits::SourceLimit {

@@ -17,6 +17,7 @@ export interface AccountGateway {
   callback(url: URL): Promise<'connected' | 'denied'>;
   profile(): Promise<AccountProfile>;
   expiration(): number;
+  logoutUrl(): string;
   clear(): void;
 }
 
@@ -41,6 +42,7 @@ export function accountGateway(siteOrigin: string): AccountGateway {
   };
   return {
     expiration: () => expiresAt,
+    logoutUrl: () => `${context().baseUrl}/logout`,
     async initialize() {
       config = await loadAccountConfig(
         AbortSignal.any([lifetime.signal, AbortSignal.timeout(10_000)]),

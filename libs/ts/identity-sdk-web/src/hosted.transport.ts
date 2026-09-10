@@ -63,9 +63,11 @@ export async function hostedJsonRequest(
   path: string,
   body?: object,
   csrf?: string,
+  readHeaders?: HeadersInit,
 ): Promise<unknown> {
   const origin = hostedOrigin(config.baseUrl);
-  const headers = new Headers({ Accept: 'application/json' });
+  const headers = new Headers(readHeaders);
+  headers.set('Accept', 'application/json');
   if (body) {
     headers.set('Content-Type', 'application/json');
     headers.set('X-CSRF-Token', text(csrf));

@@ -75,6 +75,9 @@ function AccountPage({ controller }: { controller: AccountController }) {
             <Button variant="outline" className="w-fit" onClick={() => controller.close()}>
               Fermer Account sur cette page
             </Button>
+            <Button className="w-fit" onClick={() => controller.logout()}>
+              Se déconnecter avec Identity
+            </Button>
           </>
         )}
         {['error', 'closed'].includes(state.stage) && (

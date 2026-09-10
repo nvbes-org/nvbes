@@ -5,6 +5,7 @@ import { AuthorizationController } from './authorization.controller';
 import { identityGateway } from './authorization.gateway';
 import { RecoveryController, recoveryGateway } from './recovery.controller';
 import './styles.css';
+import { LogoutController, logoutGateway } from './logout.controller';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing application root');
@@ -12,16 +13,19 @@ const controller = new AuthorizationController(identityGateway(location.origin),
   location.assign(url),
 );
 const recovery = new RecoveryController(recoveryGateway(location.origin));
+const logout = new LogoutController(logoutGateway(location.origin));
 window.addEventListener(
   'pagehide',
   () =>
     flushSync(() => {
       controller.dispose();
       recovery.dispose();
+      logout.dispose();
     }),
   { once: true },
 );
 // Outside the React lifecycle: a PAR request is consumed only once per document.
 if (location.pathname === '/oauth/authorize') void controller.start(location.href);
 if (location.pathname === '/recovery') void recovery.start();
-createRoot(root).render(<App controller={controller} recovery={recovery} />);
+if (location.pathname === '/logout') void logout.start();
+createRoot(root).render(<App controller={controller} recovery={recovery} logout={logout} />);

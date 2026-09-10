@@ -44,7 +44,14 @@ subject OIDC vérifié. Aucun refresh/offline_access n'est demandé dans ce prem
 parcours. Expiration, fermeture locale et sortie de page retirent les données
 de l'interface et la référence aux jetons ; recharger exige une nouvelle
 autorisation. « Fermer Account sur cette page » ne révoque pas le grant serveur
-et n'est pas le logout intersites. Ce dernier reste une exigence du lot C.
+et n'est pas le logout intersites.
+
+« Se déconnecter avec Identity » efface les données locales puis navigue vers
+`/logout` sur l'origine Identity configurée. Une confirmation sur ce site révoque
+la session serveur et invalide ses grants, y compris dans les autres clients.
+L'annulation conserve la session Identity, mais ne restaure pas les jetons locaux
+d'Account. Le retour RP standardisé et les notifications back-channel restent
+des exigences ouvertes du lot C.
 
 ## Validation
 

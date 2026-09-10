@@ -2,6 +2,45 @@ use super::{AuthorizationState, OAuthError, ProtocolError, StepUpForm};
 use crate::{browser::SessionProof, oauth::store};
 use axum::{Extension, Json, extract::State, response::IntoResponse};
 
+pub(super) async fn logout_context(
+    State(state): State<AuthorizationState>,
+    headers: axum::http::HeaderMap,
+) -> Result<impl IntoResponse, axum::response::Response> {
+    let forbidden = |_| {
+        (
+            axum::http::StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error":"invalid_browser_request"})),
+        )
+            .into_response()
+    };
+    state
+        .browser
+        .verify_session_read(&headers)
+        .map_err(forbidden)?;
+    let session = state.browser.session_token(&headers).map_err(forbidden)?;
+    let browser = state.browser.browser_token(&headers).map_err(forbidden)?;
+    let csrf = match (session, browser) {
+        (Some(session), Some(browser)) => {
+            let exists: bool = sqlx::query_scalar(
+                "SELECT EXISTS(SELECT 1 FROM identity_sessions WHERE token_hash=$1 AND revoked_at IS NULL)",
+            ).bind(store::hash(&session)).fetch_one(&state.db).await
+                .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable).into_response())?;
+            if exists {
+                Some(
+                    state
+                        .browser
+                        .session_csrf_token(&session, &browser)
+                        .map_err(forbidden)?,
+                )
+            } else {
+                None
+            }
+        }
+        _ => None,
+    };
+    Ok(Json(serde_json::json!({"session_csrf_token": csrf})))
+}
+
 pub(super) async fn logout(
     State(state): State<AuthorizationState>,
     Extension(proof): Extension<SessionProof>,

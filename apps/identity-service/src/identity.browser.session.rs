@@ -2,7 +2,7 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
-use super::{BrowserError, BrowserProof, BrowserSecurity};
+use super::{BrowserError, BrowserProof, BrowserSecurity, single_header};
 use crate::oauth::pkce::is_sha256_base64url;
 
 #[derive(Clone)]
@@ -47,6 +47,24 @@ pub(crate) async fn protect_session_mutation(
 }
 
 impl BrowserSecurity {
+    /// A custom header makes this a non-simple request. No CORS policy permits
+    /// another origin to read session CSRF; navigation and embedded loads fail.
+    pub(crate) fn verify_session_read(
+        &self,
+        headers: &axum::http::HeaderMap,
+    ) -> Result<(), BrowserError> {
+        if single_header(headers, "x-nvbes-session-context")? != Some("1")
+            || single_header(headers, "origin")?.is_some_and(|v| v != self.origin)
+            || single_header(headers, "sec-fetch-site")?.is_some_and(|v| v != "same-origin")
+            || single_header(headers, "sec-fetch-mode")?
+                .is_some_and(|v| !matches!(v, "cors" | "same-origin"))
+            || single_header(headers, "sec-fetch-dest")?.is_some_and(|v| v != "empty")
+        {
+            return Err(BrowserError::Forbidden);
+        }
+        Ok(())
+    }
+
     /// Only return to the hosted UI in a no-store body. The random 256-bit
     /// HttpOnly session secret is the MAC key; it is never exposed to scripts.
     /// This token remains stable across tabs and rotates with either cookie.

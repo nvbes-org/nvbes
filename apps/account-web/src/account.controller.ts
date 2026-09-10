@@ -103,6 +103,12 @@ export class AccountController {
     });
     this.disposed = true;
   }
+  logout() {
+    if (this.disposed || this.state.stage !== 'profile') return;
+    const url = this.gateway.logoutUrl();
+    this.close();
+    this.navigate(url);
+  }
   dispose() {
     this.close();
     this.disposed = true;

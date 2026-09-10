@@ -150,6 +150,15 @@ Après login, utiliser l'interaction retournée : sa preuve CSRF a changé.
 ensuite appeler `location.assign(destination)`. La preuve CSRF de session est
 distincte et doit être passée à `logoutHostedSession`.
 
+Une page de déconnexion sur l'origine Identity peut appeler
+`loadHostedLogoutContext({ baseUrl: location.origin })` sans créer une nouvelle
+autorisation OAuth. Ce GET exige `X-Nvbes-Session-Context: 1`, refuse les autres
+origines et renvoie une preuve CSRF ou `null` si aucun contexte révocable n'est
+présent. La lecture ne révoque rien. Après confirmation explicite de l'utilisateur,
+passer cette preuve à `logoutHostedSession` ; un échec réseau ne prouve pas que
+la déconnexion est terminée. Aucun endpoint OpenID end_session n'est annoncé
+par cette seule capacité.
+
 `registerHostedPasskey(transport, sessionCsrf, label)` enregistre une clé avec
 les options du serveur et retourne son identifiant. `loginHostedPasskey(transport,
 interaction)` effectue une connexion découvrable et retourne les nouvelles preuves

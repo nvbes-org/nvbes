@@ -13,6 +13,39 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Déconnexion Identity depuis Account et révocation des autres clients — 2026-09-10
+
+Account propose une navigation vers la page `/logout` d'Identity après effacement
+de ses données locales. La page charge une preuve via GET
+`/oauth/session/logout-context`, sans mutation de session. Un header personnalisé
+obligatoire, les contrôles Origin/Fetch Metadata et l'absence de CORS empêchent
+la lecture cross-origin ; la preuve reste liée aux cookies navigateur/session.
+La réponse est non cachable et ne contient aucun secret de session.
+
+Seule la confirmation explicite appelle le POST `/oauth/logout` existant.
+La page distingue révocation confirmée, contexte absent, annulation et résultat
+incertain ; aucune mutation n'est automatiquement réessayée. Un changement de
+session entre préparation et confirmation invalide la preuve CSRF existante.
+Les autres appareils conservent leurs sessions. Aucun redirect utilisateur ni
+id_token_hint n'est consommé par cette page ; elle ne prétend pas implémenter
+l'ensemble du protocole OpenID RP-Initiated Logout et n'est pas annoncée comme
+end_session_endpoint. La conformité au protocole, les retours enregistrés et
+les notifications back-channel restent ouverts.
+
+Validation : `cargo check --workspace` passe ; la suite PostgreSQL Identity
+passe avec 205 tests bibliothèque, 24 tests binaire et les 3 gardes de base
+isolée. Un test interactif reste ignoré dans Cargo, mais une fixture HTTPS
+distincte exécute les builds des deux sites et les services réels sous Chromium 153. Un second client obtient un grant Billing DPoP : l'annulation du logout
+conserve HTTP 200 ; la confirmation depuis Identity produit HTTP 401 et refuse
+le refresh. Recharger Identity constate l'absence de session et une nouvelle
+autorisation exige les identifiants. Les tests/checks/builds TypeScript ciblés
+passent aussi. Les deux bases Docker de cette tranche sont nettoyées.
+
+Cette tranche avance le lot C sans clôturer A–D. La propagation proactive dans
+les interfaces déjà ouvertes, les notifications back-channel, la rotation
+opérationnelle et les autres gates restent à livrer. Aucune exposition publique
+ni ressource payante ajoutée.
+
 ## Site Account : premier client réel OAuth et profil — 2026-09-10
 
 Account Web est généré avec Nx React, aligné sur Vite+/TanStack Router et les

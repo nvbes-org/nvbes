@@ -17,6 +17,7 @@ function setup() {
     callback: vi.fn<AccountGateway['callback']>(async () => 'connected'),
     profile: vi.fn<AccountGateway['profile']>(async () => profile),
     expiration: vi.fn(() => 0),
+    logoutUrl: vi.fn(() => 'https://identity.example/logout'),
     clear: vi.fn(),
   };
   const navigate = vi.fn();

@@ -22,6 +22,8 @@ mod authorization_tests;
 mod limits_tests;
 #[path = "identity.oauth.http.login.tests.rs"]
 mod login_tests;
+#[path = "identity.oauth.http.logout_context.tests.rs"]
+mod logout_context_tests;
 #[path = "identity.oauth.http.navigation.tests.rs"]
 mod navigation_tests;
 #[path = "identity.oauth.http.totp.tests.rs"]

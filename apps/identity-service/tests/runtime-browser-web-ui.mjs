@@ -16,7 +16,7 @@ export async function identityWebBuild() {
     if (request.method !== 'GET') return false;
     const url = new URL(request.url, 'https://localhost');
     const document =
-      ['/', '/oauth/authorize', '/recovery'].includes(url.pathname) &&
+      ['/', '/oauth/authorize', '/recovery', '/logout'].includes(url.pathname) &&
       request.headers.accept?.includes('text/html') &&
       !url.searchParams.getAll('prompt').some((value) => value.split(' ').includes('none'));
     const asset = assets.get(url.pathname);
