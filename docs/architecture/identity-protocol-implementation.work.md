@@ -13,6 +13,31 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Identity : connexion et consentement — 2026-09-10
+
+[Identity Web](../../apps/identity-web/README.md) fournit une interface React active :
+connexion mot de passe, passkey existante, sélection du step-up suivant le statut
+serveur, consentement et annulation. Le contrôleur charge PAR une seule fois,
+conserve les CSRF renouvelés en mémoire, sérialise les mutations et invalide
+l'état à la sortie du document. Une réponse incertaine ferme le parcours.
+
+Le build réel a été servi sur l'origine Identity de la fixture HTTPS. Chromium
+153.0.8010.12 traverse les écrans mot de passe/consentement puis l'échange
+OIDC/DPoP et Account : HTTP 200, sujet attendu, une lecture d'autorisation,
+un consentement et aucune erreur JavaScript. La mise en page à 390 px ne
+déborde pas ; les captures desktop/mobile ont été inspectées. Les tests du
+nouveau site couvrent les transitions et refus, le routage HTML/JSON/silencieux,
+les champs accessibles et la sortie de document. Les cérémonies graphiques MFA
+du nouveau site restent à prouver, distinctement des scénarios SDK antérieurs.
+
+Les checks web racine et les suites SDK (110 tests) et http-client passent.
+Le manifeste http-client expose maintenant explicitement son entrée ESM.
+Vite+/core et Vitest/coverage sont alignés pour éviter deux moteurs incompatibles
+dans les plugins et tests du nouveau site. Aucun Rust modifié ; les trois
+binaires sont compilés par la fixture, sans relance de cargo check --workspace.
+Les écrans d'enrollment/récupération, Account Web, le bootstrap commun des sites,
+le routage de production et les autres exigences A à D restent ouverts.
+
 ## Preuve navigateur des profils OAuth forts — 2026-09-10
 
 La fixture HTTPS enregistre deux clients supplémentaires pour recent_mfa et

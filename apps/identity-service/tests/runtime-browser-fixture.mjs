@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { createServer } from 'vite-plus';
 import { command, RuntimeFixture, runtimeEnvironment, unusedPort } from './runtime-processes.mjs';
 import { testCertificates, tlsEndpoint } from './runtime-browser-tls.mjs';
+import { identityWebBuild } from './runtime-browser-web-ui.mjs';
 
 const fixture = new RuntimeFixture();
 let closed = false;
@@ -28,6 +29,7 @@ process.once('SIGINT', () => {
 });
 
 try {
+  const web = process.env.NVBES_IDENTITY_TEST_WEB_UI === '1' ? await identityWebBuild() : undefined;
   const tls = await testCertificates(fixture);
   const databases = await fixture.database();
   const vite = await createServer({
@@ -164,6 +166,7 @@ try {
       origin: origins[service],
       backend: backends[service],
       middleware: vite.middlewares,
+      web: service === 'identity' ? web : undefined,
       config,
     });
   for (const service of Object.keys(binaries))

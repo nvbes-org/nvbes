@@ -9,6 +9,12 @@
   "sideEffects": false,
   "module": "dist/index.mjs",
   "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
   "scripts": {
     "build": "node ../../../node_modules/vite-plus/bin/vp pack",
     "check": "pnpm run typecheck",

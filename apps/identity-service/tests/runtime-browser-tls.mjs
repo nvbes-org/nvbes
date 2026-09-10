@@ -66,13 +66,14 @@ export async function testCertificates(fixture) {
   };
 }
 
-export async function tlsEndpoint({ fixture, tls, origin, backend, middleware, config }) {
+export async function tlsEndpoint({ fixture, tls, origin, backend, middleware, config, web }) {
   const address = new URL(origin);
   const server = createServer(tls, (incoming, outgoing) => {
     if (incoming.headers.host !== address.host) {
       outgoing.writeHead(400).end();
       return;
     }
+    if (web?.(incoming, outgoing)) return;
     // Fixture-only pages and synthetic credentials; never included in a runtime binary.
     if (incoming.url === '/__fixture/config') {
       outgoing.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
