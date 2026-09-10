@@ -15,7 +15,7 @@ pub async fn deliver_recovery(
     Ok(())
 }
 
-fn recovery_command(
+pub(crate) fn recovery_command(
     recovery_base_url: &str,
     recovery: &RecoveryNotification,
 ) -> anyhow::Result<EmailCommand> {

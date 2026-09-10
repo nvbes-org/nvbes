@@ -39,6 +39,19 @@ impl MfaCrypto {
     }
 
     pub fn seal(&self, factor_id: Uuid, secret: &str) -> anyhow::Result<SealedSecret> {
+        self.seal_for(&associated_data(factor_id), secret)
+    }
+
+    pub fn seal_recovery(
+        &self,
+        principal: Uuid,
+        challenge: Uuid,
+        secret: &str,
+    ) -> anyhow::Result<SealedSecret> {
+        self.seal_for(&recovery_data(principal, challenge), secret)
+    }
+
+    fn seal_for(&self, aad: &[u8], secret: &str) -> anyhow::Result<SealedSecret> {
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
         let ciphertext = self
             .active
@@ -46,7 +59,7 @@ impl MfaCrypto {
                 &nonce,
                 Payload {
                     msg: secret.as_bytes(),
-                    aad: &associated_data(factor_id),
+                    aad,
                 },
             )
             .map_err(|_| anyhow::anyhow!("MFA secret encryption failed"))?;
@@ -60,6 +73,32 @@ impl MfaCrypto {
     pub fn open(
         &self,
         factor_id: Uuid,
+        key_version: i16,
+        ciphertext: &[u8],
+        nonce: &[u8],
+    ) -> anyhow::Result<String> {
+        self.open_for(&associated_data(factor_id), key_version, ciphertext, nonce)
+    }
+
+    pub fn open_recovery(
+        &self,
+        principal: Uuid,
+        challenge: Uuid,
+        key_version: i16,
+        ciphertext: &[u8],
+        nonce: &[u8],
+    ) -> anyhow::Result<String> {
+        self.open_for(
+            &recovery_data(principal, challenge),
+            key_version,
+            ciphertext,
+            nonce,
+        )
+    }
+
+    fn open_for(
+        &self,
+        aad: &[u8],
         key_version: i16,
         ciphertext: &[u8],
         nonce: &[u8],
@@ -81,7 +120,7 @@ impl MfaCrypto {
                 Nonce::from_slice(&nonce),
                 Payload {
                     msg: ciphertext,
-                    aad: &associated_data(factor_id),
+                    aad,
                 },
             )
             .map_err(|_| anyhow::anyhow!("MFA secret decryption failed"))?;
@@ -91,6 +130,10 @@ impl MfaCrypto {
 
 fn associated_data(factor_id: Uuid) -> Vec<u8> {
     format!("nvbes-identity:v1:{factor_id}:totp-secret").into_bytes()
+}
+
+fn recovery_data(principal: Uuid, challenge: Uuid) -> Vec<u8> {
+    format!("nvbes-identity:v1:{principal}:{challenge}:password-recovery-email").into_bytes()
 }
 
 #[cfg(test)]

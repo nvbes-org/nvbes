@@ -13,6 +13,39 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Récupération : file Email chiffrée et reprise — 2026-09-11
+
+La migration 0024 et le dispatcher dédié livrent la persistance chiffrée des
+commandes Email de récupération. L'émission du challenge, son audit et la file
+sont atomiques. Le chiffrement authentifié lie principal, challenge et domaine
+d'usage ; les clés active/précédente utilisent la rotation Identity existante.
+Le reset efface les secrets de livraison en attente dans sa propre transaction.
+
+Les commandes opérateur `request-password-recovery` et
+`dispatch-password-recovery` permettent respectivement de mettre en file et
+de traiter un lot. Aucun scheduler ni envoi externe n'est lancé par ce travail.
+Le traitement est limité à 16 prises en charge, avec leases, timeout, backoff,
+huit tentatives au maximum et échéance du lien. Une reprise conserve exactement
+la commande et sa clé d'idempotence. Les reçus incohérents ne valent pas succès.
+
+Les tests couvrent le chiffrement et sa rotation, les erreurs d'insertion,
+la concurrence, une perte d'accusé après acceptation Email, les liens invalidés,
+les destinataires non vérifiés, les limites et un échange gRPC réel avec un
+serveur Email local simulant une panne. Le [contrat de livraison](identity-password-recovery-delivery.md)
+détaille la reprise, le nettoyage et les limites opérationnelles.
+
+Validation finale : `cargo check --workspace`, format Rust et cibles Nx
+`identity-service:test:database` / `identity-service:test:contract` passent.
+La suite Rust exécute 220 tests bibliothèque et 37 tests binaire ; un test
+interactif reste ignoré. Le serveur gRPC est local et synthétique, sans envoi
+fournisseur. Le conteneur PostgreSQL de cette exécution est supprimé. Aucun
+frontend n'a changé, donc aucun nouveau test navigateur n'est revendiqué.
+
+Le parcours HTTP/web, ses quotas et protections anti-énumération, les
+notifications après changement et les preuves de livraison/exploitation restent
+à terminer. Cette capacité ne constitue ni un login email ni un contournement
+MFA. Le périmètre complet des lots A–D est conservé.
+
 ## Récupération du mot de passe : atomicité du cycle interne — 2026-09-10
 
 La primitive de reset révoque désormais tous les liens en attente du principal,

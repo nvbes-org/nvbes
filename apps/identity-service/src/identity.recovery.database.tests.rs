@@ -1,43 +1,13 @@
 use super::{request_recovery, reset_password};
-use crate::{auth, database};
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use crate::{
+    auth,
+    recovery_test_fixture::{INITIAL, fixture},
+};
+use sqlx::PgPool;
 use std::time::Duration;
 use uuid::Uuid;
 
-const INITIAL: &str = "Initial-recovery-database-password!";
 const REPLACEMENT: &str = "Replacement-recovery-database-password!";
-
-async fn fixture() -> (PgPool, Uuid, String) {
-    let url = std::env::var("DATABASE_URL").expect("DATABASE_URL required");
-    let admin = database::connect(&url, 1).await.unwrap();
-    let schema = format!("identity_password_recovery_{}", Uuid::new_v4().simple());
-    sqlx::query(&format!("CREATE SCHEMA {schema}"))
-        .execute(&admin)
-        .await
-        .unwrap();
-    admin.close().await;
-    let db = PgPoolOptions::new()
-        .max_connections(4)
-        .after_connect(move |connection, _| {
-            let schema = schema.clone();
-            Box::pin(async move {
-                sqlx::query("SELECT set_config('search_path',$1,false),set_config('application_name',$1,false)")
-                    .bind(schema)
-                    .execute(connection)
-                    .await?;
-                Ok(())
-            })
-        })
-        .connect(&url)
-        .await
-        .unwrap();
-    database::migrate(&db).await.unwrap();
-    let email = format!("recovery-{}@example.invalid", Uuid::new_v4());
-    let principal = auth::create_synthetic_identity(&db, &email, INITIAL)
-        .await
-        .unwrap();
-    (db, principal, email)
-}
 
 async fn live_sessions(db: &PgPool, principal: Uuid) -> i64 {
     sqlx::query_scalar(

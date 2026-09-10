@@ -24,6 +24,13 @@ mod mfa_crypto;
 mod mfa_rotation;
 #[path = "identity.recovery.rs"]
 mod recovery;
+#[path = "identity.recovery.commands.rs"]
+mod recovery_commands;
+#[path = "identity.recovery.delivery.rs"]
+mod recovery_delivery;
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "identity.recovery.test-fixture.rs"]
+mod recovery_test_fixture;
 #[path = "identity.sessions.lock.rs"]
 mod session_locks;
 #[path = "identity.synthetic.rs"]
@@ -36,6 +43,9 @@ use std::sync::Arc;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let command: Vec<String> = std::env::args().skip(1).collect();
+    if recovery_commands::run(&command).await? {
+        return Ok(());
+    }
     if matches!(command.as_slice(), [action] if action == "error-reporting-smoke") {
         let config = error_reporting::ErrorReportingRuntimeConfig::from_env()?;
         nvbes_observability::install_safe_panic_hook();
@@ -175,7 +185,7 @@ async fn main() -> anyhow::Result<()> {
     }
     if !command.is_empty() {
         anyhow::bail!(
-            "usage: nvbes-identity-service [migrate|validate-runtime|error-reporting-smoke|synthetic-auth-smoke|synthetic-auth-email-smoke|synthetic-mfa-smoke|synthetic-invitation-smoke|synthetic-token-smoke|rotate-mfa-key|dispatch-security-notifications]"
+            "usage: nvbes-identity-service [migrate|validate-runtime|error-reporting-smoke|synthetic-auth-smoke|synthetic-auth-email-smoke|synthetic-mfa-smoke|synthetic-invitation-smoke|synthetic-token-smoke|rotate-mfa-key|dispatch-security-notifications|request-password-recovery|dispatch-password-recovery]"
         );
     }
 
