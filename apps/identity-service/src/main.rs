@@ -241,10 +241,22 @@ async fn main() -> anyhow::Result<()> {
                         router.merge(nvbes_identity_service::oauth::http::authorization_router(
                             db.clone(),
                             Arc::new(clients),
-                            browser,
+                            browser.clone(),
                             Arc::new(mfa),
-                            limiter,
+                            limiter.clone(),
                         ));
+                    let rp_origin = reqwest::Url::parse(&origin)?;
+                    let rp_id = rp_origin
+                        .host_str()
+                        .ok_or_else(|| anyhow::anyhow!("missing WebAuthn RP hostname"))?;
+                    let webauthn = nvbes_identity_service::webauthn::build_server(rp_id, &origin)
+                        .map_err(|error| anyhow::anyhow!(error))?;
+                    router = router.merge(nvbes_identity_service::oauth::http::webauthn_router(
+                        db.clone(),
+                        browser,
+                        Arc::new(webauthn),
+                        limiter,
+                    ));
                     tracing::info!("OAuth authorization interaction endpoint enabled");
                 }
                 tracing::info!("OAuth authorization-code token endpoint enabled");

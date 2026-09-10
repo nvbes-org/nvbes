@@ -17,9 +17,12 @@ mod session;
 mod token;
 #[path = "identity.oauth.http.userinfo.rs"]
 mod userinfo;
+#[path = "identity.oauth.http.webauthn.rs"]
+mod webauthn;
 use session::{logout, step_up_totp};
 use token::token;
 use userinfo::userinfo;
+pub use webauthn::router as webauthn_router;
 
 use serde::Deserialize;
 use sqlx::PgPool;

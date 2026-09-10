@@ -13,6 +13,41 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Routes HTTP d'enrollment et step-up WebAuthn — 2026-09-10
+
+Le runtime monte désormais les quatre routes POST sous
+`/oauth/session/webauthn/` : `registration/options`, `registration/finish`,
+`step-up/options` et `step-up/finish`. Elles sont activées avec le protocole
+hébergé et `NVBES_IDENTITY_BROWSER_ORIGIN`. Le RP ID est exactement le hostname
+de cette origine, sans élargissement aux domaines parents ou sous-domaines.
+
+Ordre de protection : quota source TCP (protocole puis login), Origin/cookies
+et CSRF lié à la session, vérification de session active et quota MFA du
+principal, puis parsing JSON et opérations transactionnelles. Les quatre routes
+partagent le quota MFA existant avec TOTP, y compris options et tentatives
+invalides. Les corps sont bornés à 65536 octets ; les options exigent `{}` et
+les corps de finalisation refusent les champs inconnus. Les erreurs ne reflètent
+pas les détails SQL ni les credentials et toutes les réponses sont `no-store`.
+
+Contrats JSON : les options retournent `ceremony_id` et `options` à transmettre
+à l'API WebAuthn du navigateur. Registration finish reçoit `ceremony_id`,
+`credential` et `label`, puis retourne l'UUID interne `credential_id`. Step-up
+finish reçoit `ceremony_id` et `credential`, puis retourne `step_up` et
+`expires_at`. Le header `x-csrf-token` utilise le `session_csrf_token` obtenu
+dans le parcours d'autorisation hébergée, avec les cookies hôte Identity.
+
+Les tests HTTP/PostgreSQL font un enrollment puis un step-up avec un
+authentificateur logiciel et vérifient le rejeu. Ils couvrent les quatre routes
+contre mauvaise origine/CSRF et quota source, les corps invalides et trop gros,
+le quota de compte persistant après refus et la panne du stockage des quotas.
+Un test a révélé que Serde acceptait `[]` comme struct vide : les options exigent
+maintenant une map JSON vide. Le parcours navigateur graphique, le login
+primaire passkey et la gestion/récupération des facteurs restent à livrer.
+
+Validation : `cargo check --workspace` sans avertissement et cible Nx
+`identity-service:test:database` avec 122 tests de bibliothèque et 24 tests du
+runtime réussis. Aucun navigateur graphique n'a été exécuté pour cette tranche.
+
 ## Step-up WebAuthn transactionnel — 2026-09-10
 
 `step_up::start` crée une cérémonie de cinq minutes liée à une session active,
