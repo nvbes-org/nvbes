@@ -4,6 +4,7 @@ import { type DpopTransactionStore } from '../dpop.transaction-store';
 import { createAuthorizationRequest } from '../oauth.authorization-request';
 import { exchangeAuthorizationCode } from '../oauth.authorization-code';
 import { MemoryStorage } from '../storage';
+import { idToken, jwksResponse } from './oidc.fixture';
 
 class TestKeyStore implements DpopTransactionStore {
   keys = new Map<string, DpopMainKeyPair>();
@@ -23,10 +24,11 @@ const par = () =>
     JSON.stringify({ request_uri: 'urn:ietf:params:oauth:request_uri:test', expires_in: 300 }),
     { status: 201 },
   );
-const tokens = (tokenType: string) =>
+const tokens = (tokenType: string, identityToken?: string) =>
   new Response(
     JSON.stringify({
       access_token: 'token',
+      id_token: identityToken,
       token_type: tokenType,
       expires_in: 300,
       scope: 'openid account:read',
@@ -40,7 +42,7 @@ function setup() {
     resource: 'https://account-api.example',
     storage: new MemoryStorage(),
     dpopStore: new TestKeyStore(),
-    fetchImpl: vi.fn<typeof fetch>(),
+    fetchImpl: vi.fn<typeof fetch>().mockImplementation(jwksResponse),
   };
 }
 function decode(part: string): Record<string, unknown> {
@@ -72,7 +74,9 @@ describe('OAuth DPoP transaction binding', () => {
       exchangeAuthorizationCode(config, { state: request.state, code: 'code' }),
     ).rejects.toThrow('binding');
     expect(config.storage.getTransaction()).not.toBeNull();
-    config.fetchImpl.mockResolvedValueOnce(tokens('DPoP'));
+    config.fetchImpl.mockResolvedValueOnce(
+      tokens('DPoP', await idToken(config.storage.getTransaction()!.nonce!, 'token')),
+    );
     const result = await exchangeAuthorizationCode(config, { state: request.state, code: 'code' });
     const tokenProof = new Headers(config.fetchImpl.mock.calls[2]?.[1]?.headers).get('DPoP')!;
     expect(decode(parProof.split('.')[0]).jwk).toEqual(decode(tokenProof.split('.')[0]).jwk);

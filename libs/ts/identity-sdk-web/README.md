@@ -37,7 +37,17 @@ la liaison pour un client dont le registre le permet. `dpopStore` permet d'injec
 un stockage respectant le contrat `DpopTransactionStore` pour les tests.
 La persistance de clé a été vérifiée après rechargement dans Chromium ; les
 échanges OAuth de cette preuve utilisent des réponses simulées. La validation
-complète OIDC et le parcours navigateur HTTPS restent à valider.
+du parcours navigateur HTTPS reste à terminer.
+
+Le callback vérifie l'ID token avec `jose` avant de retourner les jetons : signature
+RS256, type JWT, issuer, audience client unique, `azp` éventuel, nonce, dates et
+liaison `at_hash`. Le résultat `identity` contient le sujet et le contexte vérifiés.
+Les clés viennent uniquement de `/oauth/jwks` sur l'issuer configuré, sans cookies
+ni redirections ; réponse limitée à 64 Kio et 32 clés, délai de dix secondes.
+Le SDK accepte le profil du service nvbes, pas tous les profils OIDC tiers.
+Le refresh d'une session issue du callback revérifie l'ID token et refuse un
+changement de sujet ou d'heure d'authentification. Construire `OAuthSession` avec
+le résultat du callback, jamais des claims décodés sans validation.
 
 ## Renouvellement en mémoire
 

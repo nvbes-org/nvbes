@@ -1,4 +1,5 @@
 import type { WebStorage } from './storage';
+import { verifyIdToken, type VerifiedIdentity } from './oidc.id-token';
 import { createDpopProof, type DpopMainKeyPair } from './dpop';
 import { IndexedDbDpopTransactionStore, type DpopTransactionStore } from './dpop.transaction-store';
 
@@ -13,6 +14,7 @@ export interface AuthorizationCodeTokenResponse {
   scope: string;
   returnTo: string;
   dpopKey?: DpopMainKeyPair;
+  identity?: VerifiedIdentity;
 }
 
 export interface ExchangeAuthorizationCodeInput {
@@ -89,9 +91,18 @@ export async function exchangeAuthorizationCode(
   const tokens = parseTokenResponse(payload);
   if (tokens.tokenType !== (key ? 'DPoP' : 'Bearer'))
     throw new Error('Unexpected OAuth token binding.');
+  const identity = await verifyIdToken({
+    token: tokens.idToken,
+    accessToken: tokens.accessToken,
+    issuer: config.baseUrl,
+    clientId: config.clientId,
+    nonce: transaction.nonce,
+    fetchImpl: config.fetchImpl,
+    now: config.now,
+  });
   if (transaction.dpop) await keyStore.remove(transaction.dpop.keyId);
   config.storage.clearTransaction();
-  return { ...tokens, returnTo: transaction.returnTo, ...(key ? { dpopKey: key } : {}) };
+  return { ...tokens, identity, returnTo: transaction.returnTo, ...(key ? { dpopKey: key } : {}) };
 }
 
 export function parseTokenResponse(

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { generateBrowserDpopKeyPair } from '../dpop';
 import { OAuthSession } from '../oauth.session';
+import { idToken, jwksResponse } from './oidc.fixture';
 
 async function fixture() {
   const dpopKey = await generateBrowserDpopKeyPair();
@@ -38,6 +39,36 @@ function response(refresh = 'refresh-2', overrides: Record<string, unknown> = {}
 }
 
 describe('OAuth session refresh', () => {
+  it('rejects a signed refresh ID token that switches the authenticated subject', async () => {
+    const { initial } = await fixture();
+    const authTime = Math.floor(Date.now() / 1000);
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockImplementation(jwksResponse)
+      .mockResolvedValueOnce(
+        response('refresh-2', {
+          id_token: await idToken('session-nonce', 'access-2', {
+            sub: 'other',
+            auth_time: authTime,
+          }),
+        }),
+      );
+    const session = new OAuthSession(
+      { baseUrl: 'https://identity.example', clientId: 'account-web', fetchImpl },
+      {
+        ...initial,
+        identity: {
+          issuer: 'https://identity.example',
+          clientId: 'account-web',
+          subject: 'principal',
+          nonce: 'session-nonce',
+          authTime,
+        },
+      },
+    );
+    await expect(session.refresh()).rejects.toThrow('identity changed');
+    expect(session.snapshot()).toBeNull();
+  });
   it('coalesces concurrent refreshes and uses the new secret and same key on the next rotation', async () => {
     const { fetchImpl, session, initial } = await fixture();
     fetchImpl.mockResolvedValueOnce(response()).mockResolvedValueOnce(response('refresh-3'));

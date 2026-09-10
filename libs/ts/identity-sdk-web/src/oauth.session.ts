@@ -1,4 +1,5 @@
 import { createDpopProof } from './dpop';
+import { verifyIdToken } from './oidc.id-token';
 import {
   parseTokenResponse,
   type AuthorizationCodeTokenResponse,
@@ -35,6 +36,12 @@ export class OAuthSession {
     }
     if (tokens.tokenType !== (tokens.dpopKey ? 'DPoP' : 'Bearer')) {
       throw new Error('OAuth session key does not match token binding.');
+    }
+    if (
+      tokens.identity &&
+      (tokens.identity.issuer !== url.origin || tokens.identity.clientId !== config.clientId)
+    ) {
+      throw new Error('OAuth session identity context mismatch.');
     }
     this.endpoint = `${url.origin}/oauth/token`;
     this.clientId = config.clientId;
@@ -98,8 +105,25 @@ export class OAuthSession {
       ) {
         throw new Error('Invalid OAuth refresh rotation response.');
       }
+      const identity = previous.identity
+        ? await verifyIdToken({
+            token: next.idToken,
+            accessToken: next.accessToken,
+            issuer: previous.identity.issuer,
+            clientId: this.clientId,
+            nonce: previous.identity.nonce,
+            fetchImpl: this.fetchImpl,
+          })
+        : undefined;
+      if (
+        identity &&
+        previous.identity &&
+        (identity.subject !== previous.identity.subject ||
+          identity.authTime !== previous.identity.authTime)
+      )
+        throw new Error('OAuth refreshed identity changed.');
       if (this.tokens !== previous) throw new Error('OAuth session was cleared.');
-      this.tokens = { ...next, returnTo: previous.returnTo, dpopKey: previous.dpopKey };
+      this.tokens = { ...next, identity, returnTo: previous.returnTo, dpopKey: previous.dpopKey };
       return { ...this.tokens };
     } catch (error) {
       // The server may have committed the rotation even when its response was lost.

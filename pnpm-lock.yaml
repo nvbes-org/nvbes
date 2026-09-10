@@ -220,6 +220,9 @@ importers:
       '@nvbes/identity-sdk-core':
         specifier: workspace:*
         version: link:../identity-sdk-core
+      jose:
+        specifier: 6.2.9
+        version: 6.2.9
       js-cookie:
         specifier: ^3.0.8
         version: 3.0.8

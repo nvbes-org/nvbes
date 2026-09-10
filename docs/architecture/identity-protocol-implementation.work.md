@@ -13,6 +13,33 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Validation des ID tokens côté SDK — 2026-09-10
+
+Le callback vérifie désormais la signature RS256 avec `jose` (6.2.9, version
+déjà présente dans le lockfile, déclarée comme dépendance directe). Profil du
+service actif : type JWT, issuer exact, audience client unique, `azp` cohérent
+s'il existe, nonce transactionnel, sujet non vide, expiration et dates entières,
+`auth_time` non futur par rapport à l'émission, liaison `at_hash` à l'access token.
+Le résultat contient une identité vérifiée distincte du jeton brut.
+
+Le refresh d'une session issue du callback revérifie chaque nouvel ID token et
+conserve sujet, client, issuer, nonce et heure d'authentification. Les JWKS sont
+chargés à l'adresse fixe de l'issuer configuré, sans URL issue des claims ou
+headers JWT, sans redirection/cookie/cache implicite : 10 secondes, 64 Kio,
+32 clés maximum. Une panne de clés n'accepte pas les claims sans signature.
+Référence : [validation OIDC](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation).
+
+Validation : 86 tests SDK, lint/typecheck et lockfile frozen/offline réussis.
+Les tests incluent signatures falsifiées, types et clés inconnus, mauvais
+issuer/client/nonce/dates/hash, clé indisponible ou réponse trop grande et
+changement de sujet au refresh. Le scénario des trois vrais services passe avec
+ces vérifications au callback et pendant les deux rotations. Aucun code Rust
+modifié ; les 17 tests DPoP et les compilations sont rejoués par cette cible.
+
+Le parcours navigateur HTTPS, la rotation opérationnelle des clés, les interfaces,
+la récupération MFA, le logout intersites et les gates charge/FinOps restent à
+livrer ou démontrer. Ce profil local ne revendique aucune certification OIDC/FAPI.
+
 ## Refresh SDK et intégration aux trois services — 2026-09-10
 
 `OAuthSession` conserve les jetons en mémoire avec la clé DPoP issue du callback.
