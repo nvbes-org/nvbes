@@ -1,6 +1,5 @@
-import type { HttpClient } from '@nvbes/http-client';
 import { describe, expect, it, vi } from 'vite-plus/test';
-import { BillingClient, type RequestOptions } from './billing.client';
+import { BillingClient, type BillingClientOptions, type RequestOptions } from './billing.client';
 import {
   BillingCheckoutRedirectSchema,
   BillingOperatorOverviewSchema,
@@ -21,7 +20,8 @@ import {
 function createHttpDouble() {
   const get = vi.fn().mockResolvedValue({});
   const post = vi.fn().mockResolvedValue({});
-  return { get, http: { get, post } as unknown as HttpClient, post };
+  const http = { get, post } as unknown as NonNullable<BillingClientOptions['http']>;
+  return { get, http, post };
 }
 
 describe('BillingClient transport contract', () => {

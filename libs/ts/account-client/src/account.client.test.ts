@@ -17,6 +17,7 @@ describe('AccountClient V1 contract', () => {
 
     const request = onlyRequest(recorder.calls);
     expect(request.url.pathname).toBe('/api/v1/profile');
+    expect(request.init.method).toBe('GET');
     expect(request.headers.get('Authorization')).toBe('Bearer account-access-token');
     expect(request.init.credentials).toBe('omit');
     expect(request.headers.has('Cookie')).toBe(false);
@@ -38,13 +39,17 @@ describe('AccountClient V1 contract', () => {
     const client = clientFor(recorder);
 
     await client.createTeam({ name: 'Invited team' });
-    await client.listTeams();
+    await expect(client.listTeams()).resolves.toEqual([team]);
     await client.joinTeam({ join_code: 'team_123' });
 
     expect(requestAt(recorder.calls, 0).url.pathname).toBe('/api/v1/teams');
     expect(requestAt(recorder.calls, 0).init.method).toBe('POST');
+    expect(requestAt(recorder.calls, 0).init.body).toBe(JSON.stringify({ name: 'Invited team' }));
+    expect(requestAt(recorder.calls, 1).url.pathname).toBe('/api/v1/teams');
     expect(requestAt(recorder.calls, 1).init.method).toBe('GET');
     expect(requestAt(recorder.calls, 2).url.pathname).toBe('/api/v1/teams/join');
+    expect(requestAt(recorder.calls, 2).init.method).toBe('POST');
+    expect(requestAt(recorder.calls, 2).init.body).toBe(JSON.stringify({ join_code: 'team_123' }));
   });
 
   it('uses durable export and cancellable closure resources', async () => {
@@ -65,8 +70,11 @@ describe('AccountClient V1 contract', () => {
     await client.cancelAccountClosure();
 
     expect(requestAt(recorder.calls, 0).url.pathname).toBe('/api/v1/privacy/exports');
+    expect(requestAt(recorder.calls, 0).init.method).toBe('POST');
     expect(requestAt(recorder.calls, 1).url.pathname).toBe('/api/v1/closure');
+    expect(requestAt(recorder.calls, 1).init.method).toBe('POST');
     expect(requestAt(recorder.calls, 2).url.pathname).toBe('/api/v1/closure/cancel');
+    expect(requestAt(recorder.calls, 2).init.method).toBe('POST');
   });
 
   it('fails locally without a token and exposes typed remote failures', async () => {
@@ -82,12 +90,26 @@ describe('AccountClient V1 contract', () => {
       { error: { message: 'Step-up required', request_id: 'request-1' } },
       () => 403,
     );
-    await expect(clientFor(forbidden).closeAccount()).rejects.toBeInstanceOf(AccountHttpError);
+    const forbiddenError = await clientFor(forbidden)
+      .closeAccount()
+      .catch((cause: unknown) => cause);
+    expect(forbiddenError).toBeInstanceOf(AccountHttpError);
+    expect(forbiddenError).toMatchObject({
+      message: 'Step-up required',
+      name: 'AccountHttpError',
+      requestId: 'request-1',
+      status: 403,
+    });
 
     const malformed = fetchRecorder({ unexpected: true });
-    await expect(clientFor(malformed).getProfile()).rejects.toBeInstanceOf(
-      AccountDtoValidationError,
-    );
+    const malformedError = await clientFor(malformed)
+      .getProfile()
+      .catch((cause: unknown) => cause);
+    expect(malformedError).toBeInstanceOf(AccountDtoValidationError);
+    expect(malformedError).toMatchObject({
+      message: 'Account response DTO validation failed',
+      name: 'AccountDtoValidationError',
+    });
   });
 });
 

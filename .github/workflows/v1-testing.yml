@@ -33,6 +33,8 @@ jobs:
             unit: '@nvbes/http-client'
           - package: billing-client
             unit: '@nvbes/billing-client'
+          - package: account-client
+            unit: '@nvbes/account-client'
     env:
       NVBES_COVERAGE_PACKAGE: ${{ matrix.package }}
       NVBES_MUTATION_PACKAGE: ${{ matrix.package }}
