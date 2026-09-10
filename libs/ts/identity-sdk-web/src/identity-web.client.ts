@@ -1,4 +1,5 @@
 import { logoutHostedSession } from './hosted.client';
+import { loginHostedSecurityKey, type HostedSecurityKeyLogin } from './hosted.security-key';
 import {
   listHostedTotpFactors,
   revokeHostedTotpFactor,
@@ -158,6 +159,19 @@ export class NvbesIdentityWeb {
     options?: WebauthnGetOptions,
   ): Promise<HostedInteraction> {
     return loginHostedPasskey({ baseUrl: this.config.baseUrl }, interaction, options);
+  }
+
+  loginWithSecurityKey(
+    interaction: HostedInteraction,
+    credentials: { email: string; password: string },
+    options?: WebauthnGetOptions,
+  ): Promise<HostedSecurityKeyLogin> {
+    return loginHostedSecurityKey(
+      { baseUrl: this.config.baseUrl },
+      interaction,
+      credentials,
+      options,
+    );
   }
 
   stepUpPasskey(sessionCsrf: string, options?: WebauthnGetOptions): Promise<string> {

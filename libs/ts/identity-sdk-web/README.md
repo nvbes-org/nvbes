@@ -225,6 +225,36 @@ plus de Bearer token ni de `kind` local ; elles exigent l'origine Identity et
 les preuves de session/interaction actives. Les fonctions `*HostedPasskey(s)`
 restent disponibles pour les interfaces qui préfèrent des fonctions autonomes.
 
+## Compatibilité des clés non découvrables
+
+`loginHostedSecurityKey(transport, interaction, { email, password }, options?)`
+et `NvbesIdentityWeb.loginWithSecurityKey(interaction, credentials, options?)`
+enchaînent le login mot de passe et un step-up WebAuthn avec vérification
+utilisateur obligatoire. Le résultat contient `interaction` et `stepUpExpiresAt`.
+Passer ensuite cette interaction à `completeHostedConsent`.
+
+La liste des credentials est obtenue après authentification. Ce choix évite
+l'exposition de `allowCredentials` sur le seul email, dont les risques de
+corrélation et d'énumération sont décrits par le
+[W3C](https://www.w3.org/TR/webauthn-3/#sctn-credential-id-privacy).
+La connexion sans mot de passe reste `loginPasskey` avec une clé découvrable.
+Ce parcours de compatibilité exige un mot de passe ; il ne livre pas une
+connexion passwordless par email avec clé non découvrable.
+
+Si la cérémonie échoue ou est annulée, le SDK tente de révoquer la session créée
+par le login et lève `HostedSecurityKeyLoginError`. Sa propriété
+`sessionRevocationConfirmed` distingue un logout confirmé d'une panne de cleanup.
+Aucune interaction de succès ni fallback mot de passe n'est retourné. En cas
+de panne de cleanup, l'interface ne doit pas affirmer que la session est fermée.
+Ces opérations restent des requêtes distinctes : cette orchestration SDK ne
+remplace pas une politique MFA obligatoire appliquée côté serveur.
+
+Le test `runtime-browser-security-key.mjs` expose
+`verifyBrowserSecurityKey(browser, clientOrigin)` sur une fixture HTTPS neuve.
+Il vérifie l'inscription d'une clé CTAP2 USB virtuelle sans capacité résidente,
+la fermeture de session après annulation, puis la connexion et l'accès Account.
+Il ne prouve pas la compatibilité d'un modèle de clé physique ou de tous les OS.
+
 ## Détection d’environnement
 
 ```typescript

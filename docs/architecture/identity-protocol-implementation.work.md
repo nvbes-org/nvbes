@@ -13,6 +13,30 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Compatibilité WebAuthn non découvrable via session authentifiée — 2026-09-10
+
+Le SDK expose loginWithSecurityKey et loginHostedSecurityKey : mot de passe,
+puis assertion WebAuthn avec UV obligatoire et allowCredentials obtenu derrière
+la session authentifiée. Le choix suit la prévention de fuite des credential IDs
+décrite par le [W3C](https://www.w3.org/TR/webauthn-3/#sctn-credential-id-privacy).
+Une erreur ou annulation tente le logout et ne retourne pas d'interaction de
+succès ; l'erreur distingue explicitement une révocation confirmée d'un cleanup
+non confirmé. Le login mot de passe et le step-up sont deux opérations serveur,
+pas une nouvelle politique MFA obligatoire.
+
+La preuve Chromium utilise une clé CTAP2 USB virtuelle avec hasResidentKey=false,
+sans modifier les options serveur. Elle vérifie inscription, annulation avec
+session révoquée, connexion suivie de step-up et accès Account OAuth/DPoP. Les
+tests SDK couvrent l'ordre des appels, le refus du mot de passe, l'annulation,
+le rejet d'assertion et la panne du logout. Les checks Nx test/typecheck/lint/build
+et format/lint des fichiers touchés passent. Aucun Rust modifié ; les trois
+binaires compilent dans la fixture. Pas de nouvelle infrastructure.
+
+Le parcours passwordless identifiant puis clé non découvrable n'est pas déclaré
+livré ; sa politique de confidentialité reste à trancher si ce besoin est retenu.
+Les clés physiques/mobile, récupération MFA, politique opérateur, interfaces,
+logout intersites et gates d'exploitation restent ouverts dans les lots A à D.
+
 ## Gestion du facteur TOTP et révocation des sessions — 2026-09-10
 
 Les routes hébergées TOTP factors/list et factors/revoke sont raccordées au SDK.

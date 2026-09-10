@@ -9,6 +9,7 @@ export * from './dpop';
 export * from './dpop.transaction-store';
 export * from './identity-web.client';
 export * from './hosted.client';
+export * from './hosted.security-key';
 export * from './hosted.totp';
 export * from './hosted.totp.management';
 export * from './hosted.webauthn';
