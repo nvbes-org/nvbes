@@ -47,6 +47,9 @@ export function createBrowserAnalyticsTransport(
   }
 
   async function ensurePostHog(): Promise<PostHog | null> {
+    if (!productAnalyticsEnabled || typeof window === 'undefined') {
+      return null;
+    }
     if (posthogInitialized) {
       if (posthogOptedOut && posthog) {
         posthog.opt_in_capturing();
@@ -55,9 +58,6 @@ export function createBrowserAnalyticsTransport(
       return posthog;
     }
 
-    if (!productAnalyticsEnabled || typeof window === 'undefined') {
-      return null;
-    }
     if (!normalizedOptional(options.posthogKey)) {
       reportMissingDevelopmentConfig(options);
       return null;
