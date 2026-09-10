@@ -247,7 +247,7 @@ const API_ERROR_MESSAGES: Record<string, string> = {
 
 function clientRuntimeErrorMessage(error: ClientRuntimeError, fallback: string): string {
   const code = readApiErrorCode(error.body);
-  if (code && API_ERROR_MESSAGES[code]) {
+  if (code && Object.hasOwn(API_ERROR_MESSAGES, code)) {
     return API_ERROR_MESSAGES[code];
   }
 

@@ -241,13 +241,13 @@ async function readResponseBody(response: Response): Promise<unknown> {
 }
 
 function readHttpErrorMessage(response: Response, body: unknown): string {
-  if (isErrorEnvelope(body)) {
-    return body.error.message ?? `${response.status} ${response.statusText}`;
+  if (isErrorEnvelope(body) && typeof body.error.message === 'string') {
+    return body.error.message;
   }
   return `${response.status} ${response.statusText}`;
 }
 
-function isErrorEnvelope(value: unknown): value is { error: { message?: string } } {
+function isErrorEnvelope(value: unknown): value is { error: { message?: unknown } } {
   return (
     typeof value === 'object' &&
     value !== null &&
