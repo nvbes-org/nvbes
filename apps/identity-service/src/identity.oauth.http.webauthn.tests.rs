@@ -15,6 +15,7 @@ const PATHS: [&str; 4] = [
 ];
 struct Fixture {
     db: PgPool,
+    principal: uuid::Uuid,
     app: Router,
     cookie: String,
     csrf: String,
@@ -23,7 +24,13 @@ struct Fixture {
 impl Fixture {
     async fn new() -> Self {
         let db = isolated_database().await;
-        let (_, token) = session(&db).await;
+        let (session_id, token) = session(&db).await;
+        let principal =
+            sqlx::query_scalar("SELECT principal_id FROM identity_sessions WHERE id=$1")
+                .bind(session_id)
+                .fetch_one(&db)
+                .await
+                .unwrap();
         let browser = BrowserSecurity::new("https://identity.example", false).unwrap();
         let browser_token = browser.browser_cookie().token;
         let csrf = browser.session_csrf_token(&token, &browser_token).unwrap();
@@ -35,6 +42,7 @@ impl Fixture {
         let app = router(db.clone(), browser, server, limiter.clone());
         Self {
             db,
+            principal,
             app,
             cookie,
             csrf,
@@ -181,12 +189,53 @@ async fn malformed_bodies_are_bounded_and_account_quota_persists_failures() {
         assert_eq!(result.0, StatusCode::BAD_REQUEST);
         assert_eq!(result.1, serde_json::json!({"error":"invalid_request"}));
     }
+    for _ in 5..20 {
+        assert_eq!(
+            f.send(PATHS[0], "null".into(), "https://identity.example", &f.csrf)
+                .await
+                .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
     assert_eq!(
         f.send(PATHS[0], "{}".into(), "https://identity.example", &f.csrf)
             .await
             .0,
         StatusCode::TOO_MANY_REQUESTS
     );
+}
+
+#[tokio::test]
+async fn webauthn_has_a_separate_budget_without_resetting_totp_attempts() {
+    let f = Fixture::new().await;
+    let subject = f.principal.to_string();
+    for _ in 0..5 {
+        f.limiter
+            .check(&f.db, Category::MfaAccount, &subject)
+            .await
+            .unwrap();
+    }
+    // Even an exhausted TOTP budget permits a cryptographic registration ceremony.
+    f.post(PATHS[0], serde_json::json!({})).await;
+    assert!(matches!(
+        f.limiter.check(&f.db, Category::MfaAccount, &subject).await,
+        Err(crate::rate_limits::LimitError::Exceeded)
+    ));
+    // The account budget is independent of source limits and shared by sessions.
+    for _ in 1..20 {
+        f.limiter
+            .check(&f.db, Category::WebauthnAccount, &subject)
+            .await
+            .unwrap();
+    }
+    for path in PATHS {
+        assert_eq!(
+            f.send(path, "{}".into(), "https://identity.example", &f.csrf)
+                .await
+                .0,
+            StatusCode::TOO_MANY_REQUESTS
+        );
+    }
 }
 
 #[tokio::test]

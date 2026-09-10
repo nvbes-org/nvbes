@@ -102,7 +102,7 @@ async fn account_limit(
     match crate::oauth::limits::enforce(
         &state.db,
         &state.limiter,
-        Category::MfaAccount,
+        Category::WebauthnAccount,
         &principal.to_string(),
     )
     .await

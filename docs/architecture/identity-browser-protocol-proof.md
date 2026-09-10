@@ -40,6 +40,16 @@ Playwright et lui passer l'objet Browser et cette URL. La fonction vérifie les
 assertions, retourne un résumé sans jeton ni mot de passe et ferme son contexte.
 La preuve enregistrée a été exécutée avec le connecteur Playwright local.
 
+Le scénario complémentaire `verifyBrowserWebauthn` dans
+`apps/identity-service/tests/runtime-browser-webauthn.mjs` utilise les mêmes
+arguments et une clé CTAP2 virtuelle dans Chromium. Il passe enregistrement et
+step-up via le SDK, logout, nouvelle autorisation, connexion découvrable sans
+mot de passe et second step-up, puis échange OIDC et accès Account avec DPoP.
+La session doit être absente avant chaque connexion ; le sujet vérifié reste
+celui du compte synthétique. Le compteur de signatures confirme trois assertions.
+Ce scénario a été exécuté avec succès le 2026-09-10, sans réponse serveur simulée,
+sans remise à zéro des quotas ni changement d'état en base pendant le parcours.
+
 Le serveur de test se ferme après dix minutes, à la perte de son lanceur ou sur
 SIGINT/SIGTERM. Le PID affiché permet aussi un arrêt explicite avec `kill -TERM`.
 Il supprime ses
@@ -62,4 +72,6 @@ Les sites Identity/Account, accessibilité, passkeys matérielles, Safari/Firefo
 mobile, backchannel logout, charge, restauration et budget restent à livrer ou
 vérifier. La révocation observée ne démontre pas une notification de logout aux
 interfaces inactives. Aucune certification OIDC/FAPI/AAL n'est revendiquée.
+La clé CTAP2 virtuelle prouve l'intégration cryptographique et navigateur, pas
+la compatibilité avec des clés physiques ou des fournisseurs de passkeys synchronisées.
 L'exécution navigateur n'est pas encore un gate CI automatique.

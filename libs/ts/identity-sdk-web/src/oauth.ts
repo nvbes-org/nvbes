@@ -4,3 +4,4 @@ export * from './storage';
 export * from './dpop.transaction-store';
 export * from './oauth.session';
 export * from './hosted.client';
+export * from './hosted.webauthn';

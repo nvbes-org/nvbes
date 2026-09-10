@@ -134,6 +134,17 @@ Après login, utiliser l'interaction retournée : sa preuve CSRF a changé.
 ensuite appeler `location.assign(destination)`. La preuve CSRF de session est
 distincte et doit être passée à `logoutHostedSession`.
 
+`registerHostedPasskey(transport, sessionCsrf, label)` enregistre une clé avec
+les options du serveur et retourne son identifiant. `loginHostedPasskey(transport,
+interaction)` effectue une connexion découvrable et retourne les nouvelles preuves
+CSRF. `stepUpHostedPasskey(transport, sessionCsrf)` retourne l'échéance confirmée
+par Identity. Les trois fonctions utilisent les routes WebAuthn `/oauth/*`,
+exigent le RP de l'hôte Identity et `userVerification: required`, et acceptent
+un dernier argument avec `signal`/`timeoutMs` pour la cérémonie native.
+Une annulation n'envoie pas de requête finish et ne déclenche aucun fallback.
+Ces fonctions sont exportées depuis le package et `./oauth` ; elles appartiennent
+exclusivement à l'interface hébergée sur l'origine Identity.
+
 `NvbesIdentityWeb.logout(sessionCsrfToken)` exige désormais cette preuve explicite
 et confirme réellement le succès serveur. Il ne peut pas être appelé depuis
 Account pour envoyer un cookie à Identity. Le parcours de déconnexion intersites

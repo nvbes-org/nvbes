@@ -13,6 +13,33 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## WebAuthn hébergé dans le SDK — 2026-09-10
+
+Les fonctions dédiées du SDK enregistrent une passkey, connectent un utilisateur
+sans identifiant et réalisent un step-up sur les routes actives. Elles valident
+les options JSON, le RP exact de l'hôte Identity et UV required, puis utilisent
+les conversions et appels natifs existants. Les cérémonies restent liées aux
+preuves CSRF d'interaction/session ; une annulation ne déclenche aucun finish.
+Les labels respectent la limite serveur de 128 caractères Unicode.
+
+Le parcours Chromium HTTPS réel a révélé que toutes les requêtes WebAuthn
+consommaient le quota TOTP de cinq tentatives : un enregistrement et deux step-up
+étaient impossibles en dix minutes. La catégorie WebAuthn admet désormais vingt
+requêtes par principal dans cette fenêtre, avec les quotas source conservés.
+La migration 0020 préserve les anciens compteurs ; TOTP garde ses cinq tentatives.
+Le test HTTP/PostgreSQL vérifie saturation, erreurs comptées et budgets distincts.
+
+Validation : 100 tests SDK, lint/typecheck/build, `cargo check --workspace`,
+155 tests de bibliothèque Identity, 24 du runtime et trois gardes de base réussis
+(un test navigateur interactif ignoré dans Cargo). Chromium vérifie via le SDK
+l'enregistrement, deux step-up, une connexion découvrable après logout, puis
+OIDC/DPoP/Account. Le scénario multisite Account/Billing passe aussi. La clé CTAP2
+est virtuelle ; aucune compatibilité matérielle ou mobile n'est déduite.
+
+Le SDK historique de gestion des facteurs, récupération MFA, interfaces produit,
+logout proactif intersites et gates d'exploitation restent ouverts. Les lots A à D
+ne sont pas déclarés terminés et aucune ouverture publique n'est effectuée.
+
 ## Client SDK des opérations hébergées — 2026-09-10
 
 Le SDK expose le chargement/validation d'interaction, login mot de passe,

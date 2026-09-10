@@ -242,6 +242,11 @@ topologie avant ouverture, ou définir et tester un contrat de proxy de confianc
 Après validation de l'interaction, le login autorise cinq tentatives par email
 normalisé sur 600 secondes, avant Argon2. TOTP utilise un quota distinct de cinq
 tentatives sur 600 secondes par principal, partagé entre ses sessions.
+WebAuthn utilise un compteur distinct de 20 requêtes par principal sur 600 secondes,
+incluant options, vérification et gestion des credentials. Une cérémonie prend
+deux requêtes : appliquer les cinq tentatives TOTP à ces appels empêchait un
+enregistrement suivi de deux step-up. Cette séparation conserve le plafond TOTP
+et compte aussi les échecs WebAuthn ; le quota source de 30/minute reste partagé.
 Les succès comptent également et les échecs métier ne remboursent pas une tentative.
 
 Les refus de quota retournent HTTP 429, `temporarily_unavailable`, `no-store`
@@ -250,9 +255,9 @@ une attente supérieure à deux secondes retourne 503. Une absence d'information
 de transport refuse aussi la requête. Les contrôles de source précèdent le parsing
 des corps, la cryptographie et les mutations métier.
 
-La migration 0014 ajoute la catégorie MFA sans modifier les compteurs existants.
-Elle est compatible avec l'ancien binaire ; un retour applicatif peut conserver
-la migration. PostgreSQL conserve au plus 4 × 4096 compteurs, sans email ni IP
+Les migrations 0014 et 0020 ajoutent les catégories MFA et WebAuthn sans modifier
+les compteurs existants. Elles sont compatibles avec l'ancien binaire ; un retour
+applicatif peut conserver ces migrations. PostgreSQL conserve au plus 5 × 4096 compteurs, sans email ni IP
 en clair. Les collisions HMAC refusent de manière conservatrice. Aucun Redis
 ni service payant supplémentaire n'est introduit ; la charge PostgreSQL et les
 seuils restent à mesurer dans les gates de résilience et de budget.
