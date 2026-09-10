@@ -13,6 +13,34 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Endpoint d'introspection authentifié — 2026-09-10
+
+Identity monte POST `/oauth/introspect` lorsque le registre des ressources
+`NVBES_IDENTITY_RESOURCE_SERVERS_JSON` est configuré avec le registre OAuth.
+HTTP Basic authentifie chaque API avec une clé de 32 octets distincte, comparée
+avec la primitive à temps constant de `subtle`. L'audience de consultation est
+imposée par le registre ; un service Billing ne peut pas introspecter un token
+Account. Aucun credential n'est enregistré dans les logs ni fourni par défaut.
+
+La requête est un formulaire borné avec un token et un hint facultatif ignoré.
+Les doublons, paramètres inconnus et query sont refusés. La réponse inactive
+ne révèle aucune claim. Une consultation valide relit l'état actuel de grant,
+session, principal et client. Les erreurs de store et le délai de deux secondes
+retournent 503 ; les réponses demandent `no-store`. Le quota protocolaire source
+existant s'applique. Le [contrat détaillé](identity-token-lifecycle.md) documente
+les limites et la configuration, sans revendiquer le branchement des API clientes.
+
+Validation : `cargo check --workspace` passe sans avertissement. La cible Nx
+PostgreSQL Identity passe avec 149 tests bibliothèque et 24 tests runtime ; le
+test navigateur interactif reste ignoré. Les nouveaux scénarios couvrent les
+credentials incorrects/ambigus, la mauvaise audience, les grants et sessions
+révoqués, les formulaires invalides, une table indisponible et un verrou qui
+dépasse le délai, suivi d'une requête réussie après libération. Aucun nouveau
+parcours navigateur ni déploiement n'est effectué.
+
+Les consommateurs Account/Billing, leur comportement en cas de panne et la
+validation des preuves DPoP restent les étapes suivantes du lot C/D.
+
 ## Contrat des jetons d'accès Billing — 2026-09-10
 
 L'intégration de révocation a révélé que le vérificateur Billing acceptait un

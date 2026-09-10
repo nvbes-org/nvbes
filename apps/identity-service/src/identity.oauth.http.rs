@@ -7,8 +7,11 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
 };
+#[path = "identity.oauth.http.introspection.rs"]
+mod introspection;
 #[path = "identity.oauth.http.limits.rs"]
 mod limits;
+pub use introspection::router as introspection_router;
 #[path = "identity.oauth.http.passkey_login.rs"]
 mod passkey_login;
 pub use passkey_login::router as passkey_login_router;

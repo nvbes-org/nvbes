@@ -214,9 +214,24 @@ async fn main() -> anyhow::Result<()> {
                     config.environment == "development" || config.environment == "test",
                 )
                 .map_err(|_| anyhow::anyhow!("invalid OIDC client registry"))?;
+                let clients = Arc::new(clients);
+                if let Ok(resources_json) = std::env::var("NVBES_IDENTITY_RESOURCE_SERVERS_JSON") {
+                    let resources =
+                        nvbes_identity_service::oauth::resources::ResourceServers::from_json(
+                            &resources_json,
+                        )?;
+                    router =
+                        router.merge(nvbes_identity_service::oauth::http::introspection_router(
+                            db.clone(),
+                            clients.clone(),
+                            token_service.clone(),
+                            Arc::new(resources),
+                            limiter.clone(),
+                        ));
+                }
                 router = router.merge(nvbes_identity_service::oauth::http::token_router(
                     db.clone(),
-                    Arc::new(clients),
+                    clients,
                     Arc::clone(&token_service),
                     limiter.clone(),
                 ));

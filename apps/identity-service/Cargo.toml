@@ -30,6 +30,7 @@ rsa = { version = "0.9.10", features = ["pem"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+subtle = "2.6.1"
 sqlx.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

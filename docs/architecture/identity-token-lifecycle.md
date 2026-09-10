@@ -76,6 +76,43 @@ l'introspection renvoie une erreur, jamais un résultat actif par défaut. Les
 consommateurs exigeant une autorisation actuelle devront refuser l'opération si
 ce contrôle est indisponible. Leur intégration fait encore partie des lots.
 
+### Introspection HTTP pour les API
+
+POST `/oauth/introspect` reçoit un formulaire `token` et éventuellement
+`token_type_hint` (ignoré). Les paramètres dupliqués, inconnus et les paramètres
+en query sont refusés. L'API suit le contrat requête/réponse de la
+[RFC 7662](https://www.rfc-editor.org/rfc/rfc7662) pour les access tokens ; les
+refresh tokens ne sont pas exposés aux serveurs de ressources.
+
+L'endpoint est monté uniquement lorsque `NVBES_IDENTITY_RESOURCE_SERVERS_JSON`
+et le registre OAuth sont configurés. Le registre des ressources est un tableau
+de un à huit objets contenant `client_id`, `audience` et `secret`. Les seules
+audiences admises sont `nvbes-account-service` et `nvbes-billing-service`.
+Le secret est constitué de 32 octets aléatoires encodés en base64url sans padding
+(43 caractères). Les identifiants utilisent uniquement lettres ASCII, chiffres,
+points, tirets et underscores. Aucun secret réel ne doit être versionné.
+
+Chaque API utilise HTTP Basic avec son `client_id` et son secret. Ces credentials
+sont distincts de ceux des clients OAuth publics. Les identifiants dupliqués et
+les secrets réutilisés sont rejetés au démarrage ; deux credentials distincts
+peuvent partager une audience pour permettre une rotation par configuration.
+L'audience de recherche provient exclusivement du registre de la ressource
+authentifiée, jamais du formulaire. En production, cet échange exige HTTPS.
+
+Un jeton inconnu, révoqué, expiré ou destiné à une autre audience produit
+uniquement `{"active":false}`. Une réponse active contient les identifiants,
+scopes, audience, émetteur et dates du token ; `cnf` est fourni seulement pour
+un jeton lié à une clé. Un résultat actif ne remplace pas la vérification de la
+preuve DPoP par l'API ressource. Les erreurs de credentials produisent 401 ; une
+panne du store ou un délai de consultation dépassant deux secondes produit 503.
+
+Le corps est borné à 20 480 octets, le token à 16 384 caractères. Le quota source
+protocolaire existant (120/minute, partagé par source réseau avec les autres
+routes protocolaires) s'applique ; un dépassement produit 429. Toutes les réponses
+interdisent le cache. La consultation relit grant, session, principal et registre
+OAuth à chaque appel. Aucun cache positif ni appel depuis Account/Billing n'est
+encore ajouté à ce stade.
+
 ### Révocation d'une passkey
 
 Chaque connexion primaire et step-up WebAuthn conserve le credential vérifié

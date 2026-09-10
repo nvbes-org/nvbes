@@ -24,6 +24,8 @@ pub mod metadata;
 pub mod passkey_login;
 #[path = "identity.oauth.pkce.rs"]
 pub mod pkce;
+#[path = "identity.oauth.resources.rs"]
+pub mod resources;
 #[path = "identity.oauth.session.rs"]
 mod session;
 #[path = "identity.oauth.store.rs"]
