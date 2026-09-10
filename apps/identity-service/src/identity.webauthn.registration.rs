@@ -19,7 +19,7 @@ pub async fn start(
     let mut tx = db.begin().await?;
     let (session, principal) = enrollment_session(&mut tx, session_token).await?;
     let credentials: Vec<Vec<u8>> = sqlx::query_scalar(
-        "SELECT credential_id FROM identity_webauthn_credentials WHERE principal_id=$1",
+        "SELECT credential_id FROM identity_webauthn_credentials WHERE principal_id=$1 AND revoked_at IS NULL",
     )
     .bind(principal)
     .fetch_all(&mut *tx)
@@ -75,7 +75,7 @@ pub async fn finish(
         .finish_passkey_registration(response, &state)
         .map_err(|_| WebauthnError::InvalidCeremony)?;
     let count: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM identity_webauthn_credentials WHERE principal_id=$1",
+        "SELECT count(*) FROM identity_webauthn_credentials WHERE principal_id=$1 AND revoked_at IS NULL",
     )
     .bind(principal)
     .fetch_one(&mut *tx)
@@ -108,7 +108,7 @@ async fn enrollment_session(
     let row: Option<(Uuid, Uuid, bool)> = sqlx::query_as("SELECT s.id,s.principal_id,COALESCE((s.primary_amr='webauthn' AND s.authenticated_at>clock_timestamp()-interval '5 minutes') OR (s.step_up_method IN ('totp','webauthn') AND s.step_up_at>clock_timestamp()-interval '5 minutes' AND s.step_up_expires_at>clock_timestamp()),false) FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' AND (s.authenticated_at>clock_timestamp()-interval '5 minutes' OR (s.step_up_at>clock_timestamp()-interval '5 minutes' AND s.step_up_expires_at>clock_timestamp())) FOR UPDATE OF s,p")
         .bind(store::hash(token)).fetch_optional(&mut **tx).await?;
     let (session, principal, strong) = row.ok_or(WebauthnError::InvalidSession)?;
-    let has_factor: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM identity_webauthn_credentials WHERE principal_id=$1) OR EXISTS(SELECT 1 FROM identity_auth_factors WHERE principal_id=$1 AND state='active')")
+    let has_factor: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM identity_webauthn_credentials WHERE principal_id=$1 AND revoked_at IS NULL) OR EXISTS(SELECT 1 FROM identity_auth_factors WHERE principal_id=$1 AND state='active')")
         .bind(principal).fetch_one(&mut **tx).await?;
     if has_factor && !strong {
         return Err(WebauthnError::InvalidSession);

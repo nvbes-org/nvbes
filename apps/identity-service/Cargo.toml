@@ -35,7 +35,8 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 uuid.workspace = true
-webauthn-rs.workspace = true
+# Read the current typed counter under a database lock; never alter ceremony policy.
+webauthn-rs = { workspace = true, features = ["danger-credential-internals"] }
 
 [dev-dependencies]
 webauthn-authenticator-rs = { version = "0.5.5", default-features = false, features = ["softpasskey"] }

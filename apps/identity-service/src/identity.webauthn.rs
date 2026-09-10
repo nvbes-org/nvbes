@@ -9,6 +9,9 @@ use webauthn_rs::{
 #[path = "identity.webauthn.registration.rs"]
 pub mod registration;
 
+#[path = "identity.webauthn.step_up.rs"]
+pub mod step_up;
+
 #[derive(Debug, thiserror::Error)]
 pub enum WebauthnError {
     #[error("invalid or expired WebAuthn ceremony")]

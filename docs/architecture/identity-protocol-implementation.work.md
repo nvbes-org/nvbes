@@ -13,6 +13,38 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Step-up WebAuthn transactionnel — 2026-09-10
+
+`step_up::start` crée une cérémonie de cinq minutes liée à une session active,
+avec les passkeys non révoquées de son principal. `step_up::finish` vérifie
+l'assertion et l'UV contre l'état serveur, relit le credential sous verrou,
+contrôle son compteur courant puis met à jour le Passkey, consomme le challenge
+et accorde le step-up dans une seule transaction avec audit. La preuve récente
+dure au plus dix minutes et ne dépasse pas l'expiration de la session.
+
+La migration 0016 ajoute la révocation individuelle des credentials. Une clé
+révoquée après le début de la cérémonie est refusée à la fin. Les anciens
+credentials sans Passkey complet restent exclus. Les limites d'enrollment et
+la présence d'un facteur existant portent désormais sur les clés non révoquées.
+
+L'option `danger-credential-internals` de webauthn-rs est utilisée uniquement
+pour lire le compteur typé du credential courant sous verrou, sans reconstruire
+ni affaiblir la politique cryptographique. La vérification initiale utilise une
+copie datant du début de cérémonie : ce second contrôle refuse une assertion
+devenue obsolète après l'utilisation de la même clé dans une autre session.
+La mise à jour reste faite par `Passkey::update_credential`.
+
+Validation : compilation workspace sans avertissement et cible Nx
+`identity-service:test:database` avec 117 tests de bibliothèque et 24 tests du
+runtime réussis. Six tests PostgreSQL exercent les assertions signées, le rejeu,
+la concurrence, la révocation, une autre session, l'expiration, une signature
+altérée, les compteurs entre sessions et une panne d'écriture de session. La
+panne annule aussi la mise à jour du credential et autorise la même preuve au retry.
+
+Ce module interne n'est pas encore un parcours HTTP livré. Restent les adapters
+Origin/CSRF/quotas, le login primaire passkey, la gestion des credentials,
+la récupération et les parcours navigateur. Les lots A–D restent ouverts.
+
 ## Enrollment WebAuthn transactionnel — 2026-09-10
 
 Les anciens helpers publics qui séparaient challenge aléatoire, état de
