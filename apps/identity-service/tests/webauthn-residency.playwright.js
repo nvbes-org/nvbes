@@ -1,7 +1,7 @@
-// Pass this function to Playwright's browser_run_code tool as code, or use its
-// filename input when this worktree belongs to the tool's allowed roots.
+// Exported Playwright probe. Pass the function source (without `export default`)
+// to browser_run_code's code input, or import it in a Playwright test runner.
 // This isolates browser option semantics; it does not call the Identity API.
-async (page) => {
+export default async function probeWebauthnResidency(page) {
   const context = await page.context().browser().newContext();
   try {
     const probe = await context.newPage();
@@ -75,4 +75,4 @@ async (page) => {
   } finally {
     await context.close();
   }
-};
+}
