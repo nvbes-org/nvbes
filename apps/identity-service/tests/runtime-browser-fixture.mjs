@@ -5,6 +5,7 @@ import { command, RuntimeFixture, runtimeEnvironment, unusedPort } from './runti
 import { testCertificates, tlsEndpoint } from './runtime-browser-tls.mjs';
 import { identityWebBuild } from './runtime-browser-web-ui.mjs';
 import { verifyHostedReauthentication } from './runtime-browser-hosted-reauth.mjs';
+import { accountWebBuild, verifyAccountWeb } from './runtime-browser-account-web.mjs';
 
 const fixture = new RuntimeFixture();
 let closed = false;
@@ -31,6 +32,8 @@ process.once('SIGINT', () => {
 
 try {
   const web = process.env.NVBES_IDENTITY_TEST_WEB_UI === '1' ? await identityWebBuild() : undefined;
+  const accountWeb = process.env.NVBES_IDENTITY_TEST_ACCOUNT_WEB === '1';
+  if (accountWeb && !web) throw new Error('Account verification requires the built Identity UI');
   if (process.env.NVBES_IDENTITY_TEST_WEB_REAUTH === '1' && !web)
     throw new Error('Reauthentication verification requires the built Identity UI');
   const tls = await testCertificates(fixture);
@@ -68,7 +71,7 @@ try {
     secret: secret(),
   }));
   const clientId = 'https-browser-test';
-  const redirectUri = `${origins.client}/callback`;
+  const redirectUri = `${origins.client}${accountWeb ? '/oauth/callback' : '/callback'}`;
   const clients = [
     {
       client_id: clientId,
@@ -162,6 +165,7 @@ try {
     password,
     subject: seed.principal_id,
   };
+  const accountSite = accountWeb ? await accountWebBuild(config) : undefined;
   for (const service of Object.keys(origins))
     await tlsEndpoint({
       fixture,
@@ -169,7 +173,7 @@ try {
       origin: origins[service],
       backend: backends[service],
       middleware: vite.middlewares,
-      web: service === 'identity' ? web : undefined,
+      web: service === 'identity' ? web : service === 'client' ? accountSite : undefined,
       config,
     });
   for (const service of Object.keys(binaries))
@@ -181,6 +185,10 @@ try {
     );
   // Only public test URLs are printed. Keys and synthetic credentials stay inside the fixture.
   console.log(JSON.stringify({ client: origins.client, pid: process.pid, expiresInSeconds: 600 }));
+  if (accountWeb) {
+    console.log(JSON.stringify(await verifyAccountWeb(config)));
+    await close();
+  }
   if (process.env.NVBES_IDENTITY_TEST_WEB_REAUTH === '1') {
     console.log(JSON.stringify(await verifyHostedReauthentication(fixture, origins.client)));
     await close();

@@ -13,6 +13,39 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Account : premier client réel OAuth et profil — 2026-09-10
+
+Account Web est généré avec Nx React, aligné sur Vite+/TanStack Router et les
+composants officiels shadcn après installation de Tailwind. Sa configuration
+publique exige des origines exactes et un client enregistré. La connexion passe
+par PAR/PKCE/DPoP et le site Identity existant ; le callback nettoie l'URL avant
+tout appel, refuse les paramètres dupliqués et vérifie state via la transaction
+du SDK. L'échange est unique, sans retry automatique après résultat incertain.
+
+Le profil Account est lu avec un token DPoP et doit correspondre au subject OIDC
+vérifié. Jetons et clé de session restent en mémoire ; expiration, fermeture
+locale et pagehide retirent le profil et les références aux jetons. La transaction
+temporaire utilise sessionStorage et la clé de redirection IndexedDB du SDK.
+Le transport OAuth est explicitement borné aux origines configurées, sans cookies,
+cache ni redirections, et n'ajoute pas les headers AJAX/CSRF applicatifs.
+L'entrée SDK `/oauth` expose désormais dpopFetch, sans importer le wrapper général
+et son worker PoW absent du build distribué. Aucun Rust n'est modifié.
+
+Validation : 26 tests Account, 113 tests SDK, builds ciblés et `pnpm check:web`
+passent. La fixture HTTPS utilise les deux builds réels et les services réels :
+profil HTTP 200 du bon sujet, un seul échange du callback, absence de jetons dans
+localStorage/sessionStorage, refus d'un callback falsifié, fermeture locale qui
+efface le profil et contrôle d'absence de débordement à 390 px. Chromium 153,
+identifiants synthétiques, PostgreSQL isolé ; nettoyage automatique effectué.
+
+`pnpm dev:account-web` est ajouté et Account entre dans les checks web racine.
+Le bootstrap conjoint, les écritures Account, Billing et sa façade de sécurité
+restent ouverts. Aucun offline_access/refresh n'est demandé par cette première
+page ; recharger requiert une nouvelle autorisation. La fermeture locale ne
+révoque pas le grant serveur et n'est pas le logout intersites : ce dernier,
+la rotation opérationnelle, les politiques opérateur et les autres gates A–D
+restent à terminer. Aucune ressource payante ni exposition publique ajoutée.
+
 ## Site Identity : reconnexion primaire avant enrollment — 2026-09-10
 
 L'écran de configuration peut désormais demander une reconnexion explicite sur

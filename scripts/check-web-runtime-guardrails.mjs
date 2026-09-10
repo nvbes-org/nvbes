@@ -12,7 +12,14 @@ const RULES = [
     pattern: /(?<![\w.])fetch\s*\(/u,
     message:
       'Use @nvbes/web-runtime verifiedFetch/verifiedFetchJson outside approved runtime files.',
-    allowed: [/(^|\/)sw\.ts$/u, /\.sw\./u, /service-worker/u, /\.test\./u],
+    allowed: [
+      /(^|\/)sw\.ts$/u,
+      /\.sw\./u,
+      /service-worker/u,
+      /\.test\./u,
+      // OAuth uses registered origins and protocol headers, not application AJAX/CSRF headers.
+      /apps\/account-web\/src\/account\.transport\.ts$/u,
+    ],
   },
   {
     name: 'native XMLHttpRequest',
