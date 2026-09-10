@@ -108,7 +108,8 @@ ni une preuve réutilisable depuis une exécution PR. L'assemblage ultérieur du
 paquet doit télécharger ce reçu, lui ajouter la référence d'artefact GitHub et
 vérifier le run complet avec le gate commun.
 
-Lors du même déclenchement manuel, une lane isolée mesure `@nvbes/http-client` :
+Le workflow manuel dédié `v1-testing.yml` mesure `@nvbes/http-client` dans une
+lane isolée, avec une concurrence distincte de la CI de PR :
 Vitest/V8 produit les compteurs de lignes et branches, puis Stryker produit les
 mutants avec les timeouts comptés comme non détectés. Le reçu et les deux
 rapports bruts sont publiés ensemble pendant sept jours sous le nom

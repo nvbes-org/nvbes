@@ -189,47 +189,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
         run: node tools/ci/scaleway-cache-manager.mjs save pnpm nx
 
-  typescript-measurement:
-    if: github.event_name == 'workflow_dispatch'
-    environment:
-      name: ci-no-secrets
-      deployment: false
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    env:
-      NVBES_COVERAGE_PACKAGE: http-client
-      NVBES_MUTATION_PACKAGE: http-client
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: CI/CD security gate
-        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
-      - uses: ./.github/actions/ci-setup
-        with:
-          node: 'true'
-          rust: 'false'
-          terraform: 'false'
-          caches: pnpm
-      - name: Measure HTTP client coverage
-        run: ./node_modules/.bin/nx run test-summary:coverage:typescript
-      - name: Measure HTTP client mutations
-        run: ./node_modules/.bin/nx run test-summary:mutation:typescript
-      - name: Produce HTTP client measurement receipt
-        run: >-
-          ./node_modules/.bin/nx run test-summary:measurement:typescript
-          --unit=@nvbes/http-client
-          --coverage=.temp/typescript/http-client/coverage/coverage-summary.json
-          --mutation=.temp/typescript/http-client/mutation.json
-      - name: Publish HTTP client measurement
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: v1-measurement-typescript-http-client-${{ github.sha }}
-          path: .temp/v1-measurements/typescript-http-client
-          if-no-files-found: error
-          retention-days: 7
-
   rust:
     needs: [authorize-cache, scope]
     if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.rust-required == 'true' }}

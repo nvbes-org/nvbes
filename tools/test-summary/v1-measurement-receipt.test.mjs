@@ -81,11 +81,16 @@ test('refuses a raw score below the applicable threshold', () => {
 });
 
 test('manual trusted CI publishes a bounded HTTP client measurement artifact', () => {
-  const workflow = parse(readFileSync('.github/workflows/ci.yml', 'utf8'));
+  const workflow = parse(readFileSync('.github/workflows/v1-testing.yml', 'utf8'));
+  assert.deepEqual(workflow.on, { workflow_dispatch: null });
+  assert.equal(workflow.concurrency['cancel-in-progress'], true);
+  assert.deepEqual(workflow.permissions, { actions: 'read', contents: 'read' });
   const job = workflow.jobs['typescript-measurement'];
-  assert.equal(job.if, "github.event_name == 'workflow_dispatch'");
   assert.equal(job['timeout-minutes'], 40);
   assert.equal(job.environment.name, 'ci-no-secrets');
+  const security = job.steps.findIndex((step) => step.name === 'CI/CD security gate');
+  const setup = job.steps.findIndex((step) => step.uses === './.github/actions/ci-setup');
+  assert.ok(security >= 0 && security < setup);
   const upload = job.steps.find((step) => step.name === 'Publish HTTP client measurement');
   assert.equal(upload.uses, 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02');
   assert.deepEqual(upload.with, {

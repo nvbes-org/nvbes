@@ -8,7 +8,7 @@ export function validateContinuousWorkflow(text, setupText) {
   const shell = 'bash --noprofile --norc -euo pipefail {0}';
   assert.deepEqual(
     Object.keys(jobs).sort(),
-    ['authorize-cache', 'scope', ...lanes, 'typescript-measurement', 'ci-gate'].sort(),
+    ['authorize-cache', 'scope', ...lanes, 'ci-gate'].sort(),
   );
   assert.deepEqual(workflow.defaults, { run: { shell } });
   assert.deepEqual(workflow.permissions, {
@@ -61,36 +61,6 @@ export function validateContinuousWorkflow(text, setupText) {
     assert.ok(job.environment.name.includes("needs.authorize-cache.outputs.trusted == 'true'"));
     assert.ok(job.environment.name.includes("'ci-no-secrets'"));
   }
-  const measurement = jobs['typescript-measurement'];
-  assert.equal(measurement.if, "github.event_name == 'workflow_dispatch'");
-  assert.deepEqual(measurement.environment, { name: 'ci-no-secrets', deployment: false });
-  assert.deepEqual(measurement.env, {
-    NVBES_COVERAGE_PACKAGE: 'http-client',
-    NVBES_MUTATION_PACKAGE: 'http-client',
-  });
-  const measurementSetup = measurement.steps.find(
-    (step) => step.uses === './.github/actions/ci-setup',
-  );
-  assert.deepEqual(measurementSetup.with, {
-    node: 'true',
-    rust: 'false',
-    terraform: 'false',
-    caches: 'pnpm',
-  });
-  const measurementSecurity = measurement.steps.findIndex(
-    (step) =>
-      step.run ===
-      'node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml',
-  );
-  assert.ok(
-    measurementSecurity >= 0 && measurementSecurity < measurement.steps.indexOf(measurementSetup),
-  );
-  const published = measurement.steps.find(
-    (step) => step.name === 'Publish HTTP client measurement',
-  );
-  assert.match(published.uses, /^actions\/upload-artifact@[a-f0-9]{40}$/u);
-  assert.equal(published.with['retention-days'], 7);
-  assert.equal(published.with['if-no-files-found'], 'error');
   const preflight = jobs.scope.steps.findIndex((step) => step.id === 'preflight');
   const setup = jobs.scope.steps.findIndex((step) => step.uses === './.github/actions/ci-setup');
   const finopsIndex = jobs.scope.steps.findIndex((step) => step.run === 'pnpm check:finops');
