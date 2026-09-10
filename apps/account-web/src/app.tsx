@@ -33,7 +33,7 @@ function AccountPage({ controller }: { controller: AccountController }) {
       </header>
       <section
         className="flex flex-1 flex-col justify-center gap-6 py-12"
-        aria-busy={['loading', 'leaving'].includes(state.stage)}
+        aria-busy={['loading', 'checking', 'leaving'].includes(state.stage)}
       >
         <p className="text-sm font-medium text-muted-foreground">VOTRE ESPACE PERSONNEL</p>
         <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
@@ -45,6 +45,7 @@ function AccountPage({ controller }: { controller: AccountController }) {
           </Alert>
         )}
         {state.stage === 'loading' && <p role="status">Ouverture de votre compte…</p>}
+        {state.stage === 'checking' && <p role="status">Vérification de votre accès…</p>}
         {state.stage === 'leaving' && <p role="status">Redirection vers Identity…</p>}
         {state.stage === 'ready' && (
           <>

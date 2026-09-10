@@ -2,7 +2,7 @@ import type { AccountGateway } from './account.gateway';
 import type { AccountProfile } from './account.profile';
 
 export interface AccountState {
-  stage: 'loading' | 'ready' | 'leaving' | 'profile' | 'error' | 'closed';
+  stage: 'loading' | 'checking' | 'ready' | 'leaving' | 'profile' | 'error' | 'closed';
   profile: AccountProfile | null;
   message: string | null;
 }
@@ -71,6 +71,20 @@ export class AccountController {
       return;
     }
     this.expiryTimer = setTimeout(() => this.checkExpiration(), Math.min(remaining, 2_147_483_647));
+  }
+  async revalidate() {
+    this.checkExpiration();
+    if (this.disposed || this.state.stage !== 'profile') return;
+    // Hide previously authorized data while the resource server checks the live grant.
+    // The stage also coalesces focus + visibility events into one request.
+    this.publish({ stage: 'checking', profile: null, message: null });
+    try {
+      const profile = await this.gateway.profile();
+      this.checkExpiration();
+      this.publish({ stage: 'profile', profile, message: null });
+    } catch {
+      this.fail();
+    }
   }
   async login() {
     if (this.disposed || this.busy || this.state.stage !== 'ready') return;

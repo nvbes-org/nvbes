@@ -15,8 +15,10 @@ const callback = location.pathname === '/oauth/callback' ? new URL(location.href
 if (callback) history.replaceState(null, '', '/');
 window.addEventListener('pagehide', () => flushSync(() => controller.dispose()), { once: true });
 void controller.start(callback);
-window.addEventListener('focus', () => controller.checkExpiration());
+window.addEventListener('focus', () => {
+  if (document.visibilityState === 'visible') void controller.revalidate();
+});
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') controller.checkExpiration();
+  if (document.visibilityState === 'visible') void controller.revalidate();
 });
 createRoot(root).render(<App controller={controller} />);

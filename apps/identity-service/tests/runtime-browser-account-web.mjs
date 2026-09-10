@@ -53,7 +53,8 @@ export async function accountWebBuild(config) {
 /** Actual built sites, real services and isolated synthetic credentials. */
 export async function verifyAccountWeb(config) {
   const { chromium } = createRequire(resolve('apps/identity-web/package.json'))('playwright');
-  const browser = await chromium.launch();
+  const realFocus = process.env.NVBES_IDENTITY_TEST_REAL_FOCUS === '1';
+  const browser = await chromium.launch({ headless: !realFocus });
   try {
     const context = await browser.newContext({ ignoreHTTPSErrors: true });
     const page = await context.newPage();
@@ -105,7 +106,7 @@ export async function verifyAccountWeb(config) {
     await page.getByRole('button', { name: 'Se connecter avec Identity' }).click();
     await page.getByRole('button', { name: 'Autoriser et continuer' }).click();
     await page.getByRole('heading', { name: 'Votre profil.' }).waitFor();
-    const logout = await verifyCrossClientLogout(page, config);
+    const logout = await verifyCrossClientLogout(page, config, realFocus);
     assert.deepEqual(errors, []);
     return {
       browser: browser.version(),

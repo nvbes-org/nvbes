@@ -25,6 +25,62 @@ function setup() {
 }
 const callback = new URL('https://account.example/oauth/callback?code=x&state=s');
 describe('Account document lifecycle', () => {
+  it('hides the profile during one coalesced foreground verification', async () => {
+    const { controller, gateway } = setup();
+    await controller.start(callback);
+    const next = {
+      id: 'subject',
+      displayName: 'Updated',
+      firstname: null,
+      lastname: null,
+      username: null,
+      region: null,
+    };
+    let resolve!: (profile: typeof next) => void;
+    gateway.profile.mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    const first = controller.revalidate();
+    const second = controller.revalidate();
+    expect(controller.snapshot()).toEqual({ stage: 'checking', profile: null, message: null });
+    expect(gateway.profile).toHaveBeenCalledTimes(2);
+    resolve(next);
+    await Promise.all([first, second]);
+    expect(controller.snapshot().profile?.displayName).toBe('Updated');
+  });
+  it('clears credentials on denied or unavailable foreground verification without retry', async () => {
+    const { controller, gateway } = setup();
+    await controller.start(callback);
+    gateway.profile.mockRejectedValue(new Error('resource refused access'));
+    await controller.revalidate();
+    await controller.revalidate();
+    expect(controller.snapshot().stage).toBe('error');
+    expect(controller.snapshot().profile).toBeNull();
+    expect(gateway.clear).toHaveBeenCalledTimes(1);
+    expect(gateway.profile).toHaveBeenCalledTimes(2);
+  });
+  it('does not refresh a profile before login or after local closure', async () => {
+    const { controller, gateway } = setup();
+    await controller.revalidate();
+    await controller.start();
+    await controller.revalidate();
+    controller.close();
+    await controller.revalidate();
+    expect(gateway.profile).not.toHaveBeenCalled();
+  });
+  it('ignores a foreground response after the page has closed', async () => {
+    const { controller, gateway } = setup();
+    await controller.start(callback);
+    const work = controller.revalidate();
+    controller.close();
+    await work;
+    expect(controller.snapshot().stage).toBe('closed');
+    expect(controller.snapshot().profile).toBeNull();
+    expect(gateway.clear).toHaveBeenCalled();
+  });
   it('removes the profile and credentials at expiry', async () => {
     vi.useFakeTimers();
     try {

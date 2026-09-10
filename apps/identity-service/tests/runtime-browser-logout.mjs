@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
 
 /** A second public client holds a real DPoP grant for the same Identity session. */
-export async function verifyCrossClientLogout(page, config) {
+export async function verifyCrossClientLogout(page, config, observeAccount = false) {
   const sibling = await page.context().newPage();
+  const accountObserver = observeAccount ? await page.context().newPage() : null;
   try {
+    // Playwright forces focus by default; disable it to exercise actual tab activation.
+    for (const target of [page, sibling, accountObserver].filter(Boolean)) {
+      const devtools = await page.context().newCDPSession(target);
+      await devtools.send('Emulation.setFocusEmulationEnabled', { enabled: false });
+    }
     await sibling.goto(config.origins.client2);
     const authorization = await sibling.evaluate(async (config) => {
       const { createAuthorizationRequest, BrowserSessionStorage } =
@@ -57,6 +63,17 @@ export async function verifyCrossClientLogout(page, config) {
         return response.status;
       }, config);
     assert.equal(await billingStatus(), 200);
+    if (accountObserver) {
+      await accountObserver.goto(config.origins.client);
+      await accountObserver.getByRole('button', { name: 'Se connecter avec Identity' }).click();
+      await accountObserver.getByRole('button', { name: 'Autoriser et continuer' }).click();
+      await accountObserver.getByRole('heading', { name: 'Votre profil.' }).waitFor();
+      // Cross-origin OAuth navigations create a new renderer and reapply Playwright emulation.
+      const devtools = await page.context().newCDPSession(accountObserver);
+      await devtools.send('Emulation.setFocusEmulationEnabled', { enabled: false });
+    }
+    await page.bringToFront();
+    if (accountObserver) await accountObserver.waitForFunction(() => !document.hasFocus());
     await page.getByRole('button', { name: 'Se déconnecter avec Identity' }).click();
     await page.getByRole('button', { name: 'Rester connecté' }).click();
     assert.equal(await billingStatus(), 200);
@@ -74,6 +91,20 @@ export async function verifyCrossClientLogout(page, config) {
       }
     });
     assert.equal(refreshRefused, true);
+    if (accountObserver) {
+      const revalidation = accountObserver.waitForResponse(
+        (response) => response.url() === `${config.origins.account}/api/v1/profile`,
+      );
+      await accountObserver.bringToFront();
+      assert.equal((await revalidation).status(), 401);
+      await accountObserver
+        .getByText('La connexion ou la lecture du compte n’a pas abouti.', { exact: false })
+        .waitFor();
+      assert.equal(
+        await accountObserver.getByRole('heading', { name: 'Votre profil.' }).count(),
+        0,
+      );
+    }
     await page.reload();
     await page.getByText('Aucune session Identity à fermer', { exact: false }).waitFor();
     await page.goto(config.origins.client);
@@ -85,8 +116,10 @@ export async function verifyCrossClientLogout(page, config) {
       siblingBillingStatusAfterLogout: revokedStatus,
       siblingRefreshRefused: true,
       freshLoginRequired: true,
+      openAccountProfileClearedOnReturn: accountObserver ? true : 'not-run',
     };
   } finally {
     await sibling.close();
+    await accountObserver?.close();
   }
 }

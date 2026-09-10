@@ -13,6 +13,34 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Account : révocation prise en compte au retour de l'onglet — 2026-09-10
+
+Le contrôleur Account vérifie le grant auprès de l'API au retour au premier plan
+(focus ou visibilité). Il masque le profil pendant cette lecture, regroupe les
+événements concurrents et ne restaure aucune donnée après expiration, fermeture,
+refus ou panne. Une réponse tardive ne réactive pas une page fermée. Aucun polling
+périodique ni refresh automatique n'est ajouté.
+
+Validation : 30 tests Account, typecheck/lint/build et `pnpm check:web` passent.
+La fixture HTTPS ajoute une seconde fenêtre du vrai site Account, connectée à la
+même session Identity. Après confirmation de logout dans la première fenêtre,
+le retour sur la seconde obtient HTTP 401 et retire son profil. Le client Billing
+distinct reste également refusé et son refresh échoue. Chromium 153 avec interface,
+services réels, base isolée et nettoyage automatique ; aucune donnée réelle.
+
+Playwright force normalement le focus, y compris après changement de renderer
+durant OAuth. La variante `NVBES_IDENTITY_TEST_REAL_FOCUS=1` désactive cette
+émulation après le callback et vérifie la perte effective de focus avant le
+retour. Les premières tentatives sans cette correction ont expiré ; elles ne
+constituent pas une preuve de comportement navigateur. Le scénario final passe
+sans événement focus synthétique. Sans session graphique/paramètre explicite,
+ce contrôle est déclaré `not-run` dans le résultat de la fixture standard.
+
+Cette tranche avance le lot C. Une page continuellement au premier plan ne reçoit
+pas encore de notification proactive : le back-channel, le retour RP standardisé
+et les autres exigences A–D restent ouverts. Aucun Rust modifié, donc aucun
+`cargo check --workspace` supplémentaire requis dans cette tranche.
+
 ## Déconnexion Identity depuis Account et révocation des autres clients — 2026-09-10
 
 Account propose une navigation vers la page `/logout` d'Identity après effacement

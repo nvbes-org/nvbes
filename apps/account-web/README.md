@@ -53,6 +53,13 @@ L'annulation conserve la session Identity, mais ne restaure pas les jetons locau
 d'Account. Le retour RP standardisé et les notifications back-channel restent
 des exigences ouvertes du lot C.
 
+Au retour de l'onglet au premier plan, Account retire le profil affiché pendant
+une nouvelle lecture authentifiée. L'API vérifie le grant et la session Identity
+actuels ; un refus ou une panne ferme l'accès local sans réutiliser le profil
+précédent. Les événements focus/visibilité concurrents partagent une seule lecture.
+Il n'y a pas de polling périodique. Une page restée continuellement au premier
+plan attend encore la notification proactive prévue par le lot C.
+
 ## Validation
 
 ```sh
@@ -65,6 +72,10 @@ NVBES_IDENTITY_TEST_WEB_UI=1 NVBES_IDENTITY_TEST_ACCOUNT_WEB=1 \
 
 La fixture sert les deux builds réels sur HTTPS, démarre les services et une base
 isolée, utilise des identifiants synthétiques et se nettoie automatiquement.
+Ajouter `NVBES_IDENTITY_TEST_REAL_FOCUS=1` pour vérifier le retour sur une seconde
+fenêtre Account après logout : cette variante lance Chromium avec interface et
+désactive l'émulation de focus de Playwright. Elle exige une session graphique.
+Sans ce paramètre, le résultat du contrôle de retour est explicitement `not-run`.
 Elle n'ouvre aucun service public et ne crée aucune ressource payante.
 Le bootstrap local conjoint, les écritures du profil, Billing et la façade de
 sécurité Account restent à raccorder aux contrats de leurs domaines.
