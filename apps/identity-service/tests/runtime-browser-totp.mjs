@@ -1,8 +1,22 @@
 // Real HTTPS services and SDK. WebCrypto emulates only the synthetic authenticator.
-export async function verifyBrowserTotp(browser, clientOrigin) {
+export async function verifyBrowserTotp(browser, clientOrigin, manageFactors = false) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   try {
     const page = await context.newPage();
+    if (manageFactors) {
+      const cdp = await context.newCDPSession(page);
+      await cdp.send('WebAuthn.enable');
+      await cdp.send('WebAuthn.addVirtualAuthenticator', {
+        options: {
+          protocol: 'ctap2',
+          transport: 'internal',
+          hasResidentKey: true,
+          hasUserVerification: true,
+          isUserVerified: true,
+          automaticPresenceSimulation: true,
+        },
+      });
+    }
     await page.goto(clientOrigin);
     const config = await page.evaluate(async () => (await fetch('/__fixture/config')).json());
     const authorizationUrl = await page.evaluate(async (config) => {
@@ -26,8 +40,8 @@ export async function verifyBrowserTotp(browser, clientOrigin) {
     if (response.status() !== 200) throw new Error('Authorization failed');
     const interaction = await response.json();
     await page.goto(`${config.origins.identity}/__fixture/hosted`);
-    const redirect = await page.evaluate(
-      async ({ config, interaction }) => {
+    const authorized = await page.evaluate(
+      async ({ config, interaction, manageFactors }) => {
         const { parseHostedInteraction, loginHostedPassword, completeHostedConsent } =
           await import('/libs/ts/identity-sdk-web/src/hosted.client.ts');
         const { NvbesIdentityWeb } =
@@ -89,17 +103,35 @@ export async function verifyBrowserTotp(browser, clientOrigin) {
           }
           throw new Error('Consumed TOTP accepted twice');
         };
-        await expectReplay(first);
-        // Exercise the documented +1 tolerance without a wall-clock sleep or server clock change.
-        const next = await totp(Math.floor(Date.now() / 30_000) + 1);
-        const nextExpiry = await client.stepUpTotp(state.sessionCsrfToken, next);
-        if (Date.parse(nextExpiry) <= Date.now()) throw new Error('Fresh step-up failed');
-        await expectReplay(next);
-        return completeHostedConsent(transport, state, 'approve');
+        if (manageFactors) {
+          const factors = await client.listTotpFactors(state.sessionCsrfToken);
+          if (factors.length !== 1 || factors[0].id !== enrollment.factorId)
+            throw new Error('Owned factor metadata missing');
+          let refused = false;
+          try {
+            await client.revokeTotpFactor(state.sessionCsrfToken, enrollment.factorId);
+          } catch (error) {
+            refused = error instanceof HostedIdentityError && error.status === 409;
+          }
+          if (!refused) throw new Error('Last strong factor must be preserved');
+          await client.registerPasskey(state.sessionCsrfToken, 'Backup for TOTP removal');
+        } else {
+          await expectReplay(first);
+          // Exercise the documented +1 tolerance without a wall-clock sleep or server clock change.
+          const next = await totp(Math.floor(Date.now() / 30_000) + 1);
+          const nextExpiry = await client.stepUpTotp(state.sessionCsrfToken, next);
+          if (Date.parse(nextExpiry) <= Date.now()) throw new Error('Fresh step-up failed');
+          await expectReplay(next);
+        }
+        return {
+          redirect: await completeHostedConsent(transport, state, 'approve'),
+          csrf: state.sessionCsrfToken,
+          factorId: enrollment.factorId,
+        };
       },
-      { config, interaction },
+      { config, interaction, manageFactors },
     );
-    await page.goto(redirect);
+    await page.goto(authorized.redirect);
     const result = await page.evaluate(async (config) => {
       const { exchangeAuthorizationCode } =
         await import('/libs/ts/identity-sdk-web/src/oauth.authorization-code.ts');
@@ -120,17 +152,57 @@ export async function verifyBrowserTotp(browser, clientOrigin) {
         key: tokens.dpopKey,
         accessToken: tokens.accessToken,
       });
+      window.fixtureTotpAccess = {
+        tokens,
+        dpopFetch,
+        endpoint: `${config.origins.account}/api/v1/profile`,
+      };
       return { status: response.status, subject: tokens.identity.subject };
     }, config);
     if (result.status !== 200 || result.subject !== config.subject)
       throw new Error('Account identity mismatch');
+    if (manageFactors) {
+      const management = await context.newPage();
+      await management.goto(`${config.origins.identity}/__fixture/hosted`);
+      await management.evaluate(
+        async ({ config, authorized }) => {
+          const { NvbesIdentityWeb } =
+            await import('/libs/ts/identity-sdk-web/src/identity-web.client.ts');
+          const { HostedIdentityError } =
+            await import('/libs/ts/identity-sdk-web/src/hosted.transport.ts');
+          const client = new NvbesIdentityWeb({
+            baseUrl: config.origins.identity,
+            clientId: config.clientId,
+            redirectUri: config.redirectUri,
+            resource: config.origins.account,
+          });
+          await client.revokeTotpFactor(authorized.csrf, authorized.factorId);
+          try {
+            await client.listTotpFactors(authorized.csrf);
+          } catch (error) {
+            if (error instanceof HostedIdentityError && error.status === 400) return;
+            throw error;
+          }
+          throw new Error('TOTP revocation must end the requester session');
+        },
+        { config, authorized },
+      );
+      const status = await page.evaluate(async () => {
+        const { tokens, dpopFetch, endpoint } = window.fixtureTotpAccess;
+        return (await dpopFetch(endpoint, { key: tokens.dpopKey, accessToken: tokens.accessToken }))
+          .status;
+      });
+      if (status !== 401)
+        throw new Error('TOTP revocation must invalidate existing Account access');
+    }
     return {
       browser: browser.version(),
       enrollment: true,
       confirmation: true,
-      stepUp: true,
-      confirmationCodeReplayRefused: true,
-      stepUpCodeReplayRefused: true,
+      stepUp: !manageFactors,
+      confirmationCodeReplayRefused: !manageFactors,
+      stepUpCodeReplayRefused: !manageFactors,
+      factorManagementAndApiRevocation: manageFactors,
       oidcAndAccount: true,
       syntheticAuthenticator: true,
     };

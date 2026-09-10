@@ -75,10 +75,9 @@ async fn owner(
     token: &str,
     strong: bool,
 ) -> Result<Uuid, WebauthnError> {
-    crate::session_locks::session(tx, token).await?;
-    let row:Option<Uuid>=sqlx::query_scalar("SELECT s.principal_id FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' AND (NOT $2 OR (s.primary_amr='webauthn' AND s.authenticated_at>clock_timestamp()-interval '5 minutes') OR (s.step_up_method IN ('totp','webauthn') AND s.step_up_at>clock_timestamp()-interval '5 minutes' AND s.step_up_expires_at>clock_timestamp())) FOR UPDATE OF s,p")
-        .bind(store::hash(token)).bind(strong).fetch_optional(&mut **tx).await?;
-    row.ok_or(WebauthnError::InvalidSession)
+    crate::factor_management::owner(tx, token, strong)
+        .await?
+        .ok_or(WebauthnError::InvalidSession)
 }
 
 #[cfg(all(test, feature = "database-tests"))]

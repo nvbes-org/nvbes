@@ -193,6 +193,18 @@ TOTP réelle n'est testée. Lancer une fixture neuve avec
 `verifyBrowserTotp(browser, clientOrigin)` dans Playwright. La fixture est isolée
 et doit être arrêtée après le test. Ce parcours interactif ne tourne pas en CI.
 
+`listTotpFactors(sessionCsrf)` retourne zéro ou un facteur actif (`id`, `createdAt`).
+`revokeTotpFactor(sessionCsrf, id)` exige une preuve forte récente et une passkey
+active en remplacement ; le serveur refuse le dernier facteur avec HTTP 409.
+Le succès confirme aussi la révocation de **toutes les sessions du compte** :
+engager une nouvelle autorisation OAuth. Le secret chiffré du facteur est effacé.
+Les exports autonomes sont `listHostedTotpFactors` et `revokeHostedTotpFactor`.
+Les anciennes méthodes génériques `listMfaFactors`/`removeMfaFactor` restent
+historiques ; utiliser ces méthodes dédiées pour le TOTP actif.
+Le mode `verifyBrowserTotp(browser, clientOrigin, true)` sur une fixture neuve
+teste la gestion : liste, refus du dernier facteur, ajout d'une passkey virtuelle,
+révocation TOTP puis refus de la session et du jeton Account déjà émis.
+
 ### Migration des méthodes WebAuthn
 
 Les anciennes méthodes WebAuthn et leurs exports autonomes ont été supprimés :

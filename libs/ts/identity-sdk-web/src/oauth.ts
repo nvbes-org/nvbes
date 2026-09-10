@@ -5,5 +5,6 @@ export * from './dpop.transaction-store';
 export * from './oauth.session';
 export * from './hosted.client';
 export * from './hosted.totp';
+export * from './hosted.totp.management';
 export * from './hosted.webauthn';
 export * from './hosted.webauthn.credentials';

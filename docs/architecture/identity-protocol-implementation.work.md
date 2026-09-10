@@ -13,6 +13,33 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Gestion du facteur TOTP et révocation des sessions — 2026-09-10
+
+Les routes hébergées TOTP factors/list et factors/revoke sont raccordées au SDK.
+La liste expose uniquement les métadonnées actives du propriétaire. Révoquer
+exige une authentification forte récente et une passkey active en remplacement.
+La politique de gestion est extraite et partagée avec WebAuthn sans changer
+ses exigences. Le verrou principal sérialise les suppressions de facteurs.
+
+La révocation efface le ciphertext, révoque toutes les sessions du principal
+et écrit l'audit atomiquement. La rotation MFA exclut désormais les facteurs
+révoqués pour ne pas tenter de déchiffrer un secret effacé ; un test vérifie
+qu'elle continue à traiter les autres facteurs. Le contrat détaille le besoin
+de reconnexion et le refus du dernier facteur avec HTTP 409.
+
+Chromium avec services HTTPS réels vérifie liste, conflit du dernier facteur,
+ajout d'une passkey virtuelle et révocation TOTP, puis refus de la session et
+de son access token Account. La fixture est arrêtée après cette preuve. Les
+tests PostgreSQL couvrent ownership, fraîcheur, suspension, concurrence entre
+TOTP/passkey et rollback en cas d'échec d'audit. Le SDK passe ses 106 tests
+ainsi que lint/typecheck/build ; aucun coût d'infrastructure supplémentaire.
+`cargo check --workspace` et la suite Nx Identity PostgreSQL passent : 169 tests
+bibliothèque, 24 runtime et trois gardes de base ; un test interactif ignoré.
+
+La récupération MFA, les anciennes méthodes génériques du SDK, les interfaces,
+notifications, politique opérateur et gates d'exploitation restent ouverts.
+Cette tranche ne clôture pas les lots A à D.
+
 ## SDK et preuve navigateur TOTP — 2026-09-10
 
 Le SDK expose start/confirm/step-up TOTP sur les routes hébergées actives, avec

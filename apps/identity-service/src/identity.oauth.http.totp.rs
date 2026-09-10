@@ -20,6 +20,12 @@ pub(super) struct Confirm {
     code: String,
 }
 
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Revoke {
+    factor_id: uuid::Uuid,
+}
+
 // Serde-derived structs also accept positional JSON arrays. This HTTP contract
 // accepts objects only, while retaining the derived duplicate/unknown-field checks.
 pub(super) struct Object<T>(T);
@@ -98,4 +104,38 @@ pub(super) async fn confirm(
     Ok(Json(
         serde_json::json!({"enrolled":true,"step_up":true,"expires_at":expires}),
     ))
+}
+
+pub(super) async fn list(
+    State(state): State<AuthorizationState>,
+    Extension(proof): Extension<SessionProof>,
+    body: Result<Json<Object<Start>>, JsonRejection>,
+) -> Result<impl IntoResponse, ProtocolError> {
+    let Json(Object(Start {})) =
+        body.map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    Ok(Json(
+        totp::management::list(&state.db, proof.token())
+            .await
+            .map_err(failure)?,
+    ))
+}
+
+pub(super) async fn revoke(
+    State(state): State<AuthorizationState>,
+    Extension(proof): Extension<SessionProof>,
+    body: Result<Json<Object<Revoke>>, JsonRejection>,
+) -> Result<axum::response::Response, ProtocolError> {
+    quota(&state, &proof).await?;
+    let Json(Object(form)) = body.map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    match totp::management::revoke(&state.db, proof.token(), form.factor_id).await {
+        Err(TotpError::LastFactor) => Ok((
+            axum::http::StatusCode::CONFLICT,
+            Json(serde_json::json!({"error":"last_strong_factor"})),
+        )
+            .into_response()),
+        result => {
+            result.map_err(failure)?;
+            Ok(Json(serde_json::json!({"revoked":true,"sessions_revoked":true})).into_response())
+        }
+    }
 }

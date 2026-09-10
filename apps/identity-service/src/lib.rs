@@ -24,6 +24,8 @@ pub mod webauthn;
 mod authentication;
 #[path = "identity.authentication.enrollment.rs"]
 mod enrollment_policy;
+#[path = "identity.authentication.management.rs"]
+mod factor_management;
 #[path = "identity.tokens.rs"]
 pub mod tokens;
 #[path = "identity.tokens.claims.rs"]

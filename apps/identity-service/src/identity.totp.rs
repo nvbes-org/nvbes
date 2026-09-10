@@ -4,12 +4,17 @@ use nvbes_core::mfa::{TOTP_WINDOW, generate_totp_secret, provisioning_uri, verif
 use sqlx::PgPool;
 use uuid::Uuid;
 
+#[path = "identity.totp.management.rs"]
+pub mod management;
+
 #[derive(Debug, thiserror::Error)]
 pub enum TotpError {
     #[error("invalid TOTP ceremony or authentication")]
     Invalid,
     #[error("TOTP factor already active")]
     AlreadyActive,
+    #[error("cannot revoke the last strong factor")]
+    LastFactor,
     #[error("TOTP secret protection unavailable")]
     Crypto,
     #[error("TOTP persistence unavailable")]

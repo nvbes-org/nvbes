@@ -1,5 +1,10 @@
 import { logoutHostedSession } from './hosted.client';
 import {
+  listHostedTotpFactors,
+  revokeHostedTotpFactor,
+  type HostedTotpFactor,
+} from './hosted.totp.management';
+import {
   startHostedTotpEnrollment,
   confirmHostedTotpEnrollment,
   stepUpHostedTotp,
@@ -117,6 +122,14 @@ export class NvbesIdentityWeb {
 
   startTotpEnrollment(sessionCsrf: string): Promise<HostedTotpEnrollment> {
     return startHostedTotpEnrollment({ baseUrl: this.config.baseUrl }, sessionCsrf);
+  }
+
+  listTotpFactors(sessionCsrf: string): Promise<HostedTotpFactor[]> {
+    return listHostedTotpFactors({ baseUrl: this.config.baseUrl }, sessionCsrf);
+  }
+
+  revokeTotpFactor(sessionCsrf: string, id: string): Promise<void> {
+    return revokeHostedTotpFactor({ baseUrl: this.config.baseUrl }, sessionCsrf, id);
   }
 
   confirmTotpEnrollment(sessionCsrf: string, factorId: string, code: string): Promise<string> {

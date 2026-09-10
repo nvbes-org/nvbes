@@ -128,6 +128,14 @@ pub fn authorization_router(
         .route("/oauth/logout", post(logout))
         .route("/oauth/session/step-up/totp", post(step_up_totp))
         .route(
+            "/oauth/session/totp/factors/list",
+            post(totp::list).layer(axum::extract::DefaultBodyLimit::max(4096)),
+        )
+        .route(
+            "/oauth/session/totp/factors/revoke",
+            post(totp::revoke).layer(axum::extract::DefaultBodyLimit::max(4096)),
+        )
+        .route(
             "/oauth/session/totp/enrollment/start",
             post(totp::start).layer(axum::extract::DefaultBodyLimit::max(4096)),
         )
