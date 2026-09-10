@@ -31,7 +31,7 @@ impl TokenService {
     ) -> Result<TokenSet, TokenError> {
         let proof = input
             .dpop_proof
-            .map(|proof| verify_token_proof(proof, "POST", &format!("{}oauth/token", self.issuer)))
+            .map(|proof| verify_token_proof(proof, "POST", &self.endpoint("oauth/token")))
             .transpose()?;
         let mut tx = db.begin().await?;
         let outcome = codes::exchange_in(

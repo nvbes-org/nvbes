@@ -73,7 +73,7 @@ impl Fixture {
         create_dpop_proof(
             &self.key,
             "POST",
-            &format!("{}oauth/token", self.service.issuer()),
+            &self.service.endpoint("oauth/token"),
             None,
             None,
         )

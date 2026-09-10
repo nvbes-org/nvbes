@@ -4,6 +4,7 @@ use crate::tokens_error::TokenError;
 
 pub const ACCOUNT_AUDIENCE: &str = "nvbes-account-service";
 pub const BILLING_AUDIENCE: &str = "nvbes-billing-service";
+pub const USERINFO_AUDIENCE: &str = "nvbes-identity-userinfo";
 
 const ACCOUNT_SCOPES: [&str; 4] = [
     "account:read",
@@ -30,10 +31,25 @@ pub fn validate_scopes(audience: &str, scope: &str) -> Result<(), TokenError> {
         return Err(TokenError::InvalidPolicy);
     }
     let allowed = allowed_scopes(audience)?;
-    if requested.iter().any(|item| !allowed.contains(item)) {
+    if requested.iter().any(|item| !allowed.contains(item))
+        || (audience == USERINFO_AUDIENCE && !requested.contains("openid"))
+    {
         return Err(TokenError::InvalidPolicy);
     }
     Ok(())
+}
+
+pub(crate) fn access_scope(audience: &str, requested: &str) -> Result<String, TokenError> {
+    let scope = requested
+        .split(' ')
+        .filter(|s| {
+            *s != "offline_access"
+                && (audience == USERINFO_AUDIENCE || !matches!(*s, "openid" | "profile" | "email"))
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    validate_scopes(audience, &scope)?;
+    Ok(scope)
 }
 
 pub fn validate_amr(amr: &[String]) -> Result<(), TokenError> {
@@ -56,6 +72,7 @@ fn allowed_scopes(audience: &str) -> Result<&'static [&'static str], TokenError>
     match audience {
         ACCOUNT_AUDIENCE => Ok(&ACCOUNT_SCOPES),
         BILLING_AUDIENCE => Ok(&BILLING_SCOPES),
+        USERINFO_AUDIENCE => Ok(&["openid", "profile", "email"]),
         _ => Err(TokenError::InvalidPolicy),
     }
 }
@@ -63,6 +80,28 @@ fn allowed_scopes(audience: &str) -> Result<&'static [&'static str], TokenError>
 #[cfg(test)]
 mod tests {
     use super::{ACCOUNT_AUDIENCE, BILLING_AUDIENCE, validate_amr, validate_scopes};
+
+    #[test]
+    fn userinfo_requires_openid_and_never_accepts_api_permissions() {
+        use super::{USERINFO_AUDIENCE, access_scope};
+        assert_eq!(
+            access_scope(USERINFO_AUDIENCE, "openid email offline_access").unwrap(),
+            "openid email"
+        );
+        for scope in [
+            "email",
+            "openid account:read",
+            "openid billing:read",
+            "openid openid",
+        ] {
+            assert!(access_scope(USERINFO_AUDIENCE, scope).is_err());
+        }
+        assert_eq!(
+            access_scope(ACCOUNT_AUDIENCE, "openid email account:read offline_access").unwrap(),
+            "account:read"
+        );
+        assert!(access_scope(ACCOUNT_AUDIENCE, "openid email").is_err());
+    }
 
     #[test]
     fn scopes_are_bound_to_their_audience() {

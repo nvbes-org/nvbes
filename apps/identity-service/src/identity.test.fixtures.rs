@@ -30,6 +30,35 @@ pub async fn database() -> PgPool {
     db
 }
 
+/// Isolate schema mutations and encryption-key fixtures from concurrent tests.
+pub async fn isolated_database() -> PgPool {
+    let db = database().await;
+    let schema = format!("identity_test_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE SCHEMA {schema}"))
+        .execute(&db)
+        .await
+        .unwrap();
+    let options = db.connect_options().as_ref().clone();
+    db.close().await;
+    let db = PgPoolOptions::new()
+        .max_connections(4)
+        .after_connect(move |connection, _| {
+            let schema = schema.clone();
+            Box::pin(async move {
+                sqlx::query("SELECT set_config('search_path',$1,false)")
+                    .bind(schema)
+                    .execute(connection)
+                    .await?;
+                Ok(())
+            })
+        })
+        .connect_with(options)
+        .await
+        .unwrap();
+    sqlx::migrate!("./migrations").run(&db).await.unwrap();
+    db
+}
+
 pub fn clients() -> ClientRegistry {
     ClientRegistry::from_json(
         r#"[{

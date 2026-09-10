@@ -15,8 +15,11 @@ mod query;
 mod session;
 #[path = "identity.oauth.http.token.rs"]
 mod token;
+#[path = "identity.oauth.http.userinfo.rs"]
+mod userinfo;
 use session::{logout, step_up_totp};
 use token::token;
+use userinfo::userinfo;
 
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -75,7 +78,7 @@ pub fn token_router(
             "/oauth/par",
             post(par).layer(axum::extract::DefaultBodyLimit::max(8192)),
         )
-        .route("/oauth/userinfo", get(userinfo))
+        .route("/oauth/userinfo", get(userinfo).post(userinfo))
         .route_layer(axum::middleware::from_fn_with_state(
             limits::SourceLimit {
                 db: db.clone(),
@@ -375,47 +378,6 @@ async fn par(
             "expires_in": 300
         })),
     ))
-}
-
-async fn userinfo(
-    State(state): State<TokenState>,
-    headers: HeaderMap,
-) -> Result<impl IntoResponse, ProtocolError> {
-    let value = headers
-        .get("authorization")
-        .and_then(|value| value.to_str().ok())
-        .filter(|value| value.len() > 7 && value[..7].eq_ignore_ascii_case("bearer "))
-        .map(|value| value[7..].trim())
-        .filter(|value| !value.is_empty())
-        .ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    let claims = state
-        .tokens
-        .introspect(
-            &state.db,
-            &state.clients,
-            value,
-            crate::tokens_policy::ACCOUNT_AUDIENCE,
-        )
-        .await
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?
-        .ok_or(ProtocolError::OAuth(OAuthError::InvalidGrant))?;
-    let principal_id = uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidGrant))?;
-    let email: Option<String> = if claims.scope.split(' ').any(|scope| scope == "email") {
-        sqlx::query_scalar("SELECT normalized_value FROM identity_login_identifiers WHERE principal_id=$1 AND kind='email' AND verified_at IS NOT NULL ORDER BY created_at LIMIT 1")
-            .bind(principal_id)
-            .fetch_optional(&state.db)
-            .await
-            .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?
-    } else {
-        None
-    };
-    let mut response = serde_json::json!({"sub": claims.sub});
-    if let Some(email) = email {
-        response["email"] = serde_json::Value::String(email);
-        response["email_verified"] = serde_json::Value::Bool(true);
-    }
-    Ok(([("cache-control", "no-store")], Json(response)))
 }
 
 #[derive(Debug)]

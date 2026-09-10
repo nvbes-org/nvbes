@@ -57,6 +57,10 @@ impl AuthorizationInput {
         let allowed = &resource_policy.scopes;
         let scopes = parse_scopes(&self.scope)?;
         if !scopes.contains("openid")
+            || (resource_policy.audience == crate::tokens_policy::USERINFO_AUDIENCE
+                && scopes
+                    .iter()
+                    .any(|s| *s != "offline_access" && !allowed.iter().any(|a| a == s)))
             || !scopes.iter().any(|s| allowed.iter().any(|a| a == s))
             || scopes.iter().any(|s| {
                 !matches!(*s, "openid" | "profile" | "email")

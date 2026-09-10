@@ -84,7 +84,7 @@ impl Fixture {
         create_dpop_proof(
             &self.key,
             "POST",
-            &format!("{}oauth/token", self.service.issuer()),
+            &self.service.endpoint("oauth/token"),
             None,
             None,
         )
@@ -145,7 +145,7 @@ async fn refresh_http_checks_key_method_uri_and_unique_header_before_rotation() 
     let other_key = create_dpop_proof(
         &generate_key_pair(),
         "POST",
-        &format!("{}oauth/token", f.service.issuer()),
+        &f.service.endpoint("oauth/token"),
         None,
         None,
     )
@@ -153,7 +153,7 @@ async fn refresh_http_checks_key_method_uri_and_unique_header_before_rotation() 
     let wrong_method = create_dpop_proof(
         &f.key,
         "GET",
-        &format!("{}oauth/token", f.service.issuer()),
+        &f.service.endpoint("oauth/token"),
         None,
         None,
     )

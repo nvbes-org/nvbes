@@ -1,6 +1,27 @@
 use super::provider_metadata;
 
 #[test]
+fn endpoints_have_one_slash_without_rewriting_the_issuer_claim() {
+    for issuer in ["https://identity.example", "https://identity.example/"] {
+        let metadata = provider_metadata(issuer);
+        assert_eq!(metadata.issuer, issuer);
+        assert_eq!(
+            metadata.authorization_endpoint,
+            "https://identity.example/oauth/authorize"
+        );
+        assert_eq!(
+            metadata.token_endpoint,
+            "https://identity.example/oauth/token"
+        );
+        assert_eq!(
+            metadata.userinfo_endpoint,
+            "https://identity.example/oauth/userinfo"
+        );
+        assert_eq!(metadata.jwks_uri, "https://identity.example/oauth/jwks");
+    }
+}
+
+#[test]
 fn discovery_uses_the_exact_issuer_and_only_mounted_capabilities() {
     let metadata = provider_metadata("https://identity.example/");
     assert_eq!(metadata.issuer, "https://identity.example/");

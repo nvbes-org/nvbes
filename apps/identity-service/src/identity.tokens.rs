@@ -21,6 +21,8 @@ pub use refresh::RefreshRequest;
 #[path = "identity.tokens.exchange.rs"]
 mod exchange;
 pub use exchange::AuthorizationCodeRequest;
+#[path = "identity.tokens.userinfo.rs"]
+mod userinfo;
 
 pub const ACCESS_TOKEN_TTL_SECONDS: u64 = 15 * 60;
 
@@ -42,6 +44,10 @@ impl TokenService {
 
     pub fn issuer(&self) -> &str {
         &self.issuer
+    }
+
+    pub(crate) fn endpoint(&self, path: &str) -> String {
+        format!("{}/{path}", self.issuer.trim_end_matches('/'))
     }
 
     pub fn jwks(&self) -> JsonWebKeySet {
@@ -115,13 +121,12 @@ impl TokenService {
             return Err(TokenError::InvalidPolicy);
         }
         // OIDC scopes authorize identity claims, not operations on resource APIs.
-        let api_scope = request
-            .scope()
-            .split(' ')
-            .filter(|s| !matches!(*s, "openid" | "profile" | "email" | "offline_access"))
-            .collect::<Vec<_>>()
-            .join(" ");
-        tokens_policy::validate_scopes(request.audience(), &api_scope)?;
+        if request.audience() == tokens_policy::USERINFO_AUDIENCE
+            && request.resource() != self.endpoint("oauth/userinfo")
+        {
+            return Err(TokenError::InvalidPolicy);
+        }
+        let api_scope = tokens_policy::access_scope(request.audience(), request.scope())?;
         grant.authentication.validate(now)?;
         let amr = grant.authentication.amr(now);
         tokens_policy::validate_amr(&amr)?;

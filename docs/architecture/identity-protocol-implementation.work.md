@@ -13,6 +13,29 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## UserInfo et construction des endpoints — 2026-09-10
+
+UserInfo dispose d'une audience dédiée, exige `openid` et ne retourne l'email
+que si le scope est accordé et l'identifiant actuellement vérifié. Les jetons
+Account/Billing et les ID tokens sont refusés. La session, le grant et la
+politique client sont relus à chaque appel. Le traitement DPoP vérifie la clé,
+la méthode, l'URL et `ath`, puis consomme la preuve dans la transaction de
+lecture des claims. Un échec SQL annule cette consommation.
+
+Les tests HTTP/PostgreSQL couvrent GET/POST, scopes, suspension, révocation,
+réduction de politique, transport des credentials, headers dupliqués, preuves
+invalides, rejeu concurrent et panne SQL avec nouvelle tentative de même preuve.
+Les fixtures UserInfo utilisent des schémas privés pour isoler la panne injectée.
+La construction des endpoints corrige aussi un défaut avec les issuers sans
+slash final : discovery et cibles DPoP ont désormais un séparateur explicite,
+sans modifier le claim `iss` configuré.
+
+Validation : `cargo check --workspace` passe sans avertissement ; la cible Nx
+`identity-service:test:database` passe avec 106 tests de bibliothèque et 24 tests
+du runtime. Les parcours SDK/navigateur, WebAuthn et les autres exigences A–D
+restent ouverts. Les échecs intermittents précédemment observés restent à
+investiguer ; cette exécution verte ne démontre pas leur résolution.
+
 ## Échange de code atomique — 2026-09-10
 
 POST `/oauth/token` utilise désormais `TokenService::exchange_code` : validation

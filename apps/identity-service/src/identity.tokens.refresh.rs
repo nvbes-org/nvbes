@@ -29,9 +29,7 @@ impl TokenService {
         clients.get(request.client_id)?;
         let proof = request
             .dpop_proof
-            .map(|proof| {
-                dpop::verify_token_proof(proof, "POST", &format!("{}oauth/token", self.issuer()))
-            })
+            .map(|proof| dpop::verify_token_proof(proof, "POST", &self.endpoint("oauth/token")))
             .transpose()?;
         let hash = store::hash(request.refresh_token);
         let mut tx = db.begin().await?;

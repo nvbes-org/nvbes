@@ -44,10 +44,28 @@ pub(crate) fn verify_token_proof(
     method: &str,
     url: &str,
 ) -> Result<VerifiedTokenProof, OAuthError> {
+    verify_proof(proof, method, url, None)
+}
+
+pub(crate) fn verify_resource_proof(
+    proof: &str,
+    method: &str,
+    url: &str,
+    token: &str,
+) -> Result<VerifiedTokenProof, OAuthError> {
+    verify_proof(proof, method, url, Some(token))
+}
+
+fn verify_proof(
+    proof: &str,
+    method: &str,
+    url: &str,
+    token: Option<&str>,
+) -> Result<VerifiedTokenProof, OAuthError> {
     if proof.is_empty() || proof.len() > 16_384 || method.is_empty() || url.is_empty() {
         return Err(OAuthError::InvalidDpopProof);
     }
-    let verified = verify_dpop_proof(proof, method, url, None, PROOF_SKEW_SECONDS)
+    let verified = verify_dpop_proof(proof, method, url, token, PROOF_SKEW_SECONDS)
         .map_err(|_| OAuthError::InvalidDpopProof)?;
     if verified.claims.jti.is_empty() || verified.claims.jti.len() > 256 {
         return Err(OAuthError::InvalidDpopProof);

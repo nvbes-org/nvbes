@@ -36,6 +36,38 @@ et [id-token.v1](../../contracts/identity/id-token.v1.schema.json). Cette sépar
 reprend les audiences et types définis par [OIDC Core](https://openid.net/specs/openid-connect-core-1_0.html#IDToken)
 et le [profil JWT d'access token](https://www.rfc-editor.org/rfc/rfc9068.html).
 
+### Ressource UserInfo
+
+GET et POST `/oauth/userinfo` acceptent uniquement un access token dans
+`Authorization`. Les query strings, corps non vides et headers Authorization ou
+DPoP dupliqués sont refusés. Les réponses portent `Cache-Control: no-store`.
+
+Pour utiliser cette ressource, ajouter `nvbes-identity-userinfo` à
+`NVBES_IDENTITY_TOKEN_AUDIENCES` et enregistrer dans les ressources du client
+l'URL exacte de l'endpoint UserInfo, avec cette audience et les scopes autorisés
+parmi `openid`, `profile`, `email`. `openid` est obligatoire. L'autorisation doit
+demander cette ressource explicitement ; un jeton Account ou Billing ne donne
+pas accès à UserInfo. `offline_access`, lorsqu'autorisé pour le client, contrôle
+l'émission du refresh et n'est jamais inclus dans les scopes de l'access token.
+
+La réponse contient `sub`. Avec `email`, elle peut ajouter l'identifiant email
+actuellement vérifié et `email_verified: true`. Aucun profil Account n'est
+inventé ni exposé : `profile` n'ajoute actuellement aucun claim. Le grant, la
+session, le principal et la politique courante du client sont vérifiés à chaque
+appel. Une révocation ou un retrait des scopes interdit donc l'accès immédiatement.
+
+Un jeton lié à DPoP exige le schéma `Authorization: DPoP` et une preuve liée à
+sa clé, la méthode HTTP, l'URL canonique et son hash `ath`. La consommation
+anti-rejeu et la lecture des claims partagent une transaction : une panne SQL
+renvoie 503 et ne consomme pas la preuve. Aucun repli Bearer n'est accepté.
+
+L'issuer conserve exactement sa valeur configurée pour `iss`. Les URL des
+endpoints sont construites avec un séparateur `/`, même sans slash final dans
+l'issuer. Les SDK et parcours navigateur doivent encore intégrer la demande
+explicite de cette ressource ; ces tests serveur ne prouvent pas leur livraison.
+
+### Durée de vie et introspection
+
 La durée de vie est plafonnée à 900 secondes et à l'expiration de la session.
 La vérification cryptographique seule ne lit pas l'état PostgreSQL. L'introspection
 relit le grant, la session, le principal et le registre courant : le rejeu valide

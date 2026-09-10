@@ -69,7 +69,7 @@ fn validate_client(client: &PublicClient, development: bool) -> Result<(), OAuth
         || client.display_name.len() > 100
         || client.display_name.chars().any(char::is_control)
         || client.resources.is_empty()
-        || client.resources.len() > 2
+        || client.resources.len() > 3
     {
         return Err(OAuthError::InvalidClient);
     }
@@ -86,9 +86,12 @@ fn validate_client(client: &PublicClient, development: bool) -> Result<(), OAuth
                 "account:close",
             ],
             "nvbes-billing-service" => &["billing:read", "billing:checkout"],
+            "nvbes-identity-userinfo" => &["openid", "profile", "email"],
             _ => return Err(OAuthError::InvalidTarget),
         };
         if scopes.is_empty()
+            || (policy.audience == crate::tokens_policy::USERINFO_AUDIENCE
+                && !scopes.iter().any(|s| s == "openid"))
             || scopes.len() > allowed.len()
             || scopes.iter().collect::<BTreeSet<_>>().len() != scopes.len()
             || scopes.iter().any(|s| !allowed.contains(&s.as_str()))

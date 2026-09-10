@@ -19,12 +19,13 @@ pub struct ProviderMetadata {
 }
 
 pub fn provider_metadata(issuer: &str) -> ProviderMetadata {
+    let root = issuer.trim_end_matches('/');
     ProviderMetadata {
         issuer: issuer.into(),
-        authorization_endpoint: format!("{issuer}oauth/authorize"),
-        token_endpoint: format!("{issuer}oauth/token"),
-        userinfo_endpoint: format!("{issuer}oauth/userinfo"),
-        jwks_uri: format!("{issuer}oauth/jwks"),
+        authorization_endpoint: format!("{root}/oauth/authorize"),
+        token_endpoint: format!("{root}/oauth/token"),
+        userinfo_endpoint: format!("{root}/oauth/userinfo"),
+        jwks_uri: format!("{root}/oauth/jwks"),
         response_types_supported: vec!["code"],
         response_modes_supported: vec!["query"],
         grant_types_supported: vec!["authorization_code", "refresh_token"],
