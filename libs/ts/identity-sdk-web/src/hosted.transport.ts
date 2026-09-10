@@ -54,6 +54,16 @@ export async function hostedRequest(
   body?: object,
   csrf?: string,
 ): Promise<Record<string, unknown>> {
+  return record(await hostedJsonRequest(config, path, body, csrf));
+}
+
+/** Bounded JSON transport; each caller validates its endpoint's response shape. */
+export async function hostedJsonRequest(
+  config: HostedTransport,
+  path: string,
+  body?: object,
+  csrf?: string,
+): Promise<unknown> {
   const origin = hostedOrigin(config.baseUrl);
   const headers = new Headers({ Accept: 'application/json' });
   if (body) {
@@ -104,7 +114,7 @@ export async function hostedRequest(
     offset += chunk.length;
   }
   try {
-    return record(JSON.parse(new TextDecoder().decode(bytes)));
+    return JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     throw new Error('Invalid hosted Identity response.');
   }

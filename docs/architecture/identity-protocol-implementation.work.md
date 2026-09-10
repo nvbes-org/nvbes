@@ -13,6 +13,28 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Gestion des passkeys via le SDK — 2026-09-10
+
+Le SDK expose liste, renommage et révocation sur les routes Identity actives,
+avec CSRF de session, origine exacte et transport borné sans retry. La liste
+JSON est validée (dix clés maximum, identifiants distincts, labels et dates),
+puis projetée sur les seules métadonnées publiques. Les mutations exigent un
+accusé positif ; les erreurs HTTP, dont le conflit du dernier facteur, remontent
+au client. Le transport accepte désormais une valeur JSON inconnue pour cette
+liste ; les autres endpoints gardent leur validation d'objet obligatoire.
+
+Validation : 106 tests SDK, lint/typecheck/build et parcours Chromium HTTPS
+réussis. Le scénario WebAuthn utilise deux authentificateurs CTAP2 virtuels et
+prouve renommage, protection du dernier facteur, ajout d'une deuxième clé et
+révocation de la première avec refus de sa session et de son jeton Account.
+Le parcours multisite Account/Billing est rejoué avec succès après extraction
+du transport JSON. Aucun Rust modifié ; pas de relance de la suite Cargo complète.
+Les trois binaires sont recompilés par la fixture et les migrations réelles passent.
+
+Restent le remplacement des anciennes méthodes du wrapper, les parcours TOTP
+et récupération, les interfaces produit, le logout proactif et les gates
+d'exploitation. Cette tranche ne clôture aucun lot A à D à elle seule.
+
 ## WebAuthn hébergé dans le SDK — 2026-09-10
 
 Les fonctions dédiées du SDK enregistrent une passkey, connectent un utilisateur

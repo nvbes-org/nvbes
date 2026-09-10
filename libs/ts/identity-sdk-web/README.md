@@ -145,6 +145,17 @@ Une annulation n'envoie pas de requête finish et ne déclenche aucun fallback.
 Ces fonctions sont exportées depuis le package et `./oauth` ; elles appartiennent
 exclusivement à l'interface hébergée sur l'origine Identity.
 
+`listHostedPasskeys(transport, sessionCsrf)` retourne les métadonnées des clés
+actives (`id`, `label`, `createdAt`, `lastUsedAt`), sans données cryptographiques.
+`renameHostedPasskey(transport, sessionCsrf, id, label)` et
+`revokeHostedPasskey(transport, sessionCsrf, id)` exigent une confirmation serveur.
+Le serveur exige une authentification forte récente pour ces mutations et refuse
+la suppression du dernier facteur fort avec `HostedIdentityError.status === 409`.
+Révoquer une clé ferme toutes les sessions qui l'ont utilisée, y compris celle
+du demandeur le cas échéant : l'interface doit alors engager une reconnexion.
+Les erreurs ne sont pas réessayées automatiquement. Ces fonctions utilisent les
+routes actives et sont également disponibles depuis `./oauth`.
+
 `NvbesIdentityWeb.logout(sessionCsrfToken)` exige désormais cette preuve explicite
 et confirme réellement le succès serveur. Il ne peut pas être appelé depuis
 Account pour envoyer un cookie à Identity. Le parcours de déconnexion intersites

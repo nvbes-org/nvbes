@@ -4,6 +4,7 @@ import { hostedCreationOptions, hostedRequestOptions } from './hosted.webauthn.o
 import { createWebAuthnCredential, getWebAuthnCredential } from './webauthn.credentials';
 import { serializeCredential } from './webauthn.codec';
 import type { WebauthnCreateOptions, WebauthnGetOptions } from './webauthn.types';
+import { credentialLabel } from './hosted.webauthn.fields';
 
 export async function registerHostedPasskey(
   config: HostedTransport,
@@ -11,10 +12,7 @@ export async function registerHostedPasskey(
   label: string,
   browserOptions?: WebauthnCreateOptions,
 ): Promise<string> {
-  const checkedLabel = text(label, 256);
-  // Match Rust's char count (Unicode scalar values), not grapheme clusters.
-  if (Array.from(checkedLabel).length > 128 || /\p{Cc}/u.test(checkedLabel))
-    throw new Error('Invalid Identity credential label.');
+  const checkedLabel = credentialLabel(label);
   const start = await hostedRequest(
     config,
     '/oauth/session/webauthn/registration/options',

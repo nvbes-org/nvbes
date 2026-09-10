@@ -100,12 +100,80 @@ export async function verifyBrowserWebauthn(browser, clientOrigin) {
           key: tokens.dpopKey,
           accessToken: tokens.accessToken,
         });
+        window.fixturePasskeyAccess = {
+          tokens,
+          dpopFetch,
+          endpoint: `${config.origins.account}/api/v1/profile`,
+        };
         return { status: response.status, subject: tokens.identity.subject };
       }, config);
       check(
         result.status === 200 && result.subject === config.subject,
         'Authenticated API identity must match',
       );
+      if (method === 'passkey') {
+        const management = await context.newPage();
+        const secondCdp = await context.newCDPSession(management);
+        await secondCdp.send('WebAuthn.enable');
+        await secondCdp.send('WebAuthn.addVirtualAuthenticator', {
+          options: {
+            protocol: 'ctap2',
+            transport: 'internal',
+            hasResidentKey: true,
+            hasUserVerification: true,
+            isUserVerified: true,
+            automaticPresenceSimulation: true,
+          },
+        });
+        await management.goto(`${config.origins.identity}/__fixture/hosted`);
+        await management.evaluate(async (csrf) => {
+          const { listHostedPasskeys, renameHostedPasskey, revokeHostedPasskey } =
+            await import('/libs/ts/identity-sdk-web/src/hosted.webauthn.credentials.ts');
+          const { registerHostedPasskey } =
+            await import('/libs/ts/identity-sdk-web/src/hosted.webauthn.ts');
+          const { HostedIdentityError } =
+            await import('/libs/ts/identity-sdk-web/src/hosted.transport.ts');
+          const transport = { baseUrl: location.origin };
+          const keys = await listHostedPasskeys(transport, csrf);
+          if (keys.length !== 1 || !keys[0].lastUsedAt)
+            throw new Error('Used key metadata required');
+          const first = keys[0].id;
+          await renameHostedPasskey(transport, csrf, first, 'Renamed in Chromium');
+          const renamed = await listHostedPasskeys(transport, csrf);
+          if (renamed[0].label !== 'Renamed in Chromium') throw new Error('Rename not persisted');
+          let lastFactorRefused = false;
+          try {
+            await revokeHostedPasskey(transport, csrf, first);
+          } catch (error) {
+            lastFactorRefused = error instanceof HostedIdentityError && error.status === 409;
+          }
+          if (!lastFactorRefused) throw new Error('Last strong factor must be preserved');
+          const second = await registerHostedPasskey(transport, csrf, 'Recovery key');
+          const both = await listHostedPasskeys(transport, csrf);
+          if (both.length !== 2 || !both.some((key) => key.id === second))
+            throw new Error('Second key not persisted');
+          await revokeHostedPasskey(transport, csrf, first);
+          let sessionRefused = false;
+          try {
+            await listHostedPasskeys(transport, csrf);
+          } catch (error) {
+            sessionRefused = error instanceof HostedIdentityError && error.status === 400;
+          }
+          if (!sessionRefused)
+            throw new Error('Revoking the authenticating key must end its session');
+        }, sessionCsrf);
+        const revoked = await page.evaluate(async () => {
+          const { tokens, dpopFetch, endpoint } = window.fixturePasskeyAccess;
+          const response = await dpopFetch(endpoint, {
+            key: tokens.dpopKey,
+            accessToken: tokens.accessToken,
+          });
+          return response.status === 401;
+        });
+        check(revoked, 'Credential revocation must invalidate the issued API access token');
+        await management.close();
+        continue;
+      }
       await page.goto(`${config.origins.identity}/__fixture/hosted`);
       await page.evaluate(async (csrf) => {
         const { logoutHostedSession } =
@@ -127,6 +195,8 @@ export async function verifyBrowserWebauthn(browser, clientOrigin) {
       stepUp: true,
       oidcAndAccount: true,
       virtualAuthenticator: true,
+      credentialManagement: true,
+      credentialRevocationEndsSessionAndApi: true,
     };
   } finally {
     await context.close();

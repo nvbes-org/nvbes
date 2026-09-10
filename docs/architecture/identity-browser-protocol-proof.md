@@ -49,6 +49,10 @@ La session doit être absente avant chaque connexion ; le sujet vérifié reste
 celui du compte synthétique. Le compteur de signatures confirme trois assertions.
 Ce scénario a été exécuté avec succès le 2026-09-10, sans réponse serveur simulée,
 sans remise à zéro des quotas ni changement d'état en base pendant le parcours.
+Il vérifie également la liste des clés, le renommage persistant, le refus HTTP 409
+de révoquer le dernier facteur, puis l'enregistrement d'une seconde clé virtuelle.
+La révocation de la première clé invalide la session qui l'a utilisée et le jeton
+Account déjà émis ; le SDK observe ces refus par les vraies routes.
 
 Le serveur de test se ferme après dix minutes, à la perte de son lanceur ou sur
 SIGINT/SIGTERM. Le PID affiché permet aussi un arrêt explicite avec `kill -TERM`.
