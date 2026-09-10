@@ -126,6 +126,9 @@ async fn verified_passkey_creates_passwordless_session_and_rotates_interaction_c
     .await
     .unwrap();
     assert_eq!(row, (f.principal, "webauthn".into()));
+    let binding: (Uuid, Uuid, String) = sqlx::query_as("SELECT b.credential_id,b.principal_id,b.purpose FROM identity_session_webauthn_credentials b JOIN identity_sessions s ON s.id=b.session_id WHERE s.token_hash=$1")
+        .bind(hash(&authenticated.token)).fetch_one(&f.db).await.unwrap();
+    assert_eq!(binding, (f.credential, f.principal, "primary".into()));
     assert_ne!(authenticated.csrf, f.proof.csrf_token);
     assert!(f.finish(id, &response).await.is_err());
     let proof = test_fixtures::browser_proof(
@@ -224,6 +227,12 @@ async fn failed_oauth_binding_rolls_back_session_counter_and_challenge() {
             .await
             .unwrap();
     assert_eq!(count, 0);
+    let bindings: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM identity_session_webauthn_credentials")
+            .fetch_one(&f.db)
+            .await
+            .unwrap();
+    assert_eq!(bindings, 0);
     let after: serde_json::Value =
         sqlx::query_scalar("SELECT passkey FROM identity_webauthn_credentials WHERE id=$1")
             .bind(f.credential)

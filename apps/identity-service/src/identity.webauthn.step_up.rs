@@ -89,6 +89,8 @@ pub async fn finish(
     .await?;
     let expires: DateTime<Utc> = sqlx::query_scalar("UPDATE identity_sessions SET step_up_method='webauthn',step_up_at=clock_timestamp(),step_up_expires_at=LEAST(expires_at,clock_timestamp()+interval '10 minutes') WHERE id=$1 RETURNING step_up_expires_at")
         .bind(session).fetch_one(&mut *tx).await?;
+    sqlx::query("INSERT INTO identity_session_webauthn_credentials(session_id,credential_id,principal_id,purpose) VALUES($1,$2,$3,'step_up') ON CONFLICT (session_id,credential_id,purpose) DO UPDATE SET authenticated_at=EXCLUDED.authenticated_at")
+        .bind(session).bind(id).bind(principal).execute(&mut *tx).await?;
     store::audit(&mut tx, principal, "identity.step_up_granted").await?;
     tx.commit().await?;
     Ok(expires)

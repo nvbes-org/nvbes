@@ -65,6 +65,9 @@ async fn assertion_grants_fresh_step_up_and_cannot_be_replayed() {
     .await
     .unwrap();
     assert_eq!(stored, ("webauthn".into(), true));
+    let binding: (Uuid, String) = sqlx::query_as("SELECT credential_id,purpose FROM identity_session_webauthn_credentials WHERE session_id=$1")
+        .bind(f.session).fetch_one(&f.db).await.unwrap();
+    assert_eq!(binding, (f.credential, "step_up".into()));
     assert!(
         finish(&f.db, &f.server, &f.token, ceremony, &response)
             .await
@@ -206,6 +209,94 @@ async fn later_counter_from_another_session_invalidates_an_older_pending_asserti
             .await
             .unwrap();
     assert!(!granted);
+}
+
+#[tokio::test]
+async fn session_credential_binding_is_atomic_and_cannot_cross_principals() {
+    let mut f = Fixture::new().await;
+    let (ceremony, response) = f.assertion().await;
+    sqlx::query("ALTER TABLE identity_audit_events ADD CONSTRAINT injected_binding_audit_failure CHECK (event_type<>'identity.step_up_granted')")
+        .execute(&f.db).await.unwrap();
+    assert!(matches!(
+        finish(&f.db, &f.server, &f.token, ceremony, &response).await,
+        Err(WebauthnError::Database(_))
+    ));
+    let count: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM identity_session_webauthn_credentials")
+            .fetch_one(&f.db)
+            .await
+            .unwrap();
+    assert_eq!(count, 0);
+    sqlx::query("ALTER TABLE identity_audit_events DROP CONSTRAINT injected_binding_audit_failure")
+        .execute(&f.db)
+        .await
+        .unwrap();
+    finish(&f.db, &f.server, &f.token, ceremony, &response)
+        .await
+        .unwrap();
+    let (other, _) = session(&f.db).await;
+    // Both ways of supplying a mismatched owner must fail at the database boundary.
+    for owner_session in [f.session, other] {
+        let error = sqlx::query("INSERT INTO identity_session_webauthn_credentials(session_id,credential_id,principal_id,purpose) SELECT $1,$2,principal_id,'step_up' FROM identity_sessions WHERE id=$3")
+            .bind(other).bind(f.credential).bind(owner_session).execute(&f.db).await.unwrap_err();
+        assert_eq!(
+            error.as_database_error().unwrap().code().as_deref(),
+            Some("23503")
+        );
+    }
+    // Re-authentication refreshes the association rather than duplicating it.
+    let (ceremony, response) = f.assertion().await;
+    finish(&f.db, &f.server, &f.token, ceremony, &response)
+        .await
+        .unwrap();
+    let count: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM identity_session_webauthn_credentials WHERE session_id=$1",
+    )
+    .bind(f.session)
+    .fetch_one(&f.db)
+    .await
+    .unwrap();
+    assert_eq!(count, 1);
+}
+
+#[tokio::test]
+async fn using_a_second_key_retains_the_first_keys_session_association() {
+    let mut f = Fixture::new().await;
+    let (ceremony, response) = f.assertion().await;
+    finish(&f.db, &f.server, &f.token, ceremony, &response)
+        .await
+        .unwrap();
+    let enrollment = registration::start(&f.db, &f.server, &f.token)
+        .await
+        .unwrap();
+    // A separate authenticator can only sign with its newly registered key.
+    f.authenticator = WebauthnAuthenticator::new(SoftPasskey::new(true));
+    let response = f
+        .authenticator
+        .do_registration(
+            "https://identity.example".parse().unwrap(),
+            enrollment.options,
+        )
+        .unwrap();
+    let second = registration::finish(
+        &f.db,
+        &f.server,
+        &f.token,
+        enrollment.ceremony_id,
+        &response,
+        "Second device",
+    )
+    .await
+    .unwrap();
+    let (ceremony, response) = f.assertion().await;
+    finish(&f.db, &f.server, &f.token, ceremony, &response)
+        .await
+        .unwrap();
+    let mut expected = vec![f.credential, second];
+    expected.sort();
+    let actual: Vec<Uuid> = sqlx::query_scalar("SELECT credential_id FROM identity_session_webauthn_credentials WHERE session_id=$1 ORDER BY credential_id")
+        .bind(f.session).fetch_all(&f.db).await.unwrap();
+    assert_eq!(actual, expected);
 }
 
 #[tokio::test]

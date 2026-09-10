@@ -88,8 +88,11 @@ pub async fn finish(
     sqlx::query("UPDATE identity_webauthn_credentials SET passkey=$1,sign_count=$2,backed_up=$3,last_used_at=clock_timestamp() WHERE id=$4")
         .bind(serde_json::to_value(passkey)?).bind(i64::from(verified.counter())).bind(verified.backup_state()).bind(id).execute(&mut *tx).await?;
     let token = random_secret();
+    let session = Uuid::new_v4();
     sqlx::query("INSERT INTO identity_sessions(id,principal_id,token_hash,expires_at,authenticated_at,primary_amr) VALUES($1,$2,$3,clock_timestamp()+interval '1 hour',clock_timestamp(),'webauthn')")
-        .bind(Uuid::new_v4()).bind(principal).bind(hash(&token)).execute(&mut *tx).await?;
+        .bind(session).bind(principal).bind(hash(&token)).execute(&mut *tx).await?;
+    sqlx::query("INSERT INTO identity_session_webauthn_credentials(session_id,credential_id,principal_id,purpose) VALUES($1,$2,$3,'primary')")
+        .bind(session).bind(id).bind(principal).execute(&mut *tx).await?;
     sqlx::query("UPDATE identity_webauthn_challenges SET consumed_at=clock_timestamp(),principal_id=$2 WHERE id=$1")
         .bind(ceremony).bind(principal).execute(&mut *tx).await?;
     store::audit(&mut tx, principal, "identity.session.passkey_authenticated").await?;

@@ -13,6 +13,34 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Attribution des sessions aux credentials — 2026-09-10
+
+La migration 0018 conserve les clés ayant contribué à une session dans
+`identity_session_webauthn_credentials`. Chaque association précise le
+propriétaire et le rôle primaire ou step-up. Les clés étrangères composites
+interdisent une association entre comptes distincts. Un index par credential
+prépare la sélection des sessions concernées par une révocation.
+
+La connexion passkey et le step-up écrivent cette association dans leur
+transaction existante, après vérification cryptographique. Une authentification
+répétée avec la même clé actualise sa date ; une autre clé ajoute une association
+sans effacer la première. Une panne ultérieure d'audit ou de liaison OAuth annule
+aussi l'association. L'enrollment seul ne constitue pas une authentification
+et n'écrit donc pas d'association.
+
+Cette étape fournit l'attribution nécessaire au lot C ; elle ne propage pas
+encore la révocation aux sessions ou jetons. Les sessions antérieures à cette
+migration n'ont pas d'attribution fiable : aucune clé n'est inventée à partir
+de leur méthode `webauthn`. La politique de transition devra invalider ces
+sessions sans attribution avant de revendiquer une révocation complète.
+
+Validation : compilation workspace réussie ; cible Nx PostgreSQL avec 139 tests
+de bibliothèque et 24 tests runtime réussis, un test navigateur interactif ignoré.
+Les assertions vérifient l'association primaire, le rollback après panne OAuth
+ou audit, le refus des associations entre comptes, l'absence de doublon et la
+conservation de deux clés utilisées depuis deux authentificateurs logiciels.
+Le parcours navigateur n'a pas été rejoué pour cette modification de persistance.
+
 ## Gestion des credentials WebAuthn — 2026-09-10
 
 POST `/oauth/session/webauthn/credentials/list`, `/rename` et `/revoke` sont
