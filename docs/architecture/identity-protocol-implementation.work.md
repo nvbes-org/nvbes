@@ -13,6 +13,25 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Parcours HTTPS de deux clients dans Chromium — 2026-09-10
+
+Le SDK réel passe le parcours PAR → login/consentement → callback → refresh →
+Account/Billing depuis deux origines clientes distinctes, avec deux clés DPoP
+indépendantes. IndexedDB conserve les clés pendant la navigation intersites ;
+les ID tokens sont vérifiés, les transactions consommées et les cookies Identity
+isolés. Chromium applique le refus CORS pour une origine non enregistrée.
+Après logout, les deux API et les refresh sont refusés.
+
+La [preuve et sa procédure](identity-browser-protocol-proof.md) décrivent les
+assertions et limites : certificat local accepté dans le seul contexte Chromium,
+certificat vérifié par les clients Rust via une autorité éphémère, pages de test
+sans UI produit, exécution interactive hors CI. Les trois binaires et migrations
+sont réels ; aucune réponse OAuth, introspection ou autorisation n'est simulée.
+
+Validation : Chromium 152.0.7977.83, lint/format des trois modules JavaScript.
+Aucun changement Rust dans cette tranche. Les interfaces, récupération MFA,
+logout intersites proactif et gates d'exploitation restent ouverts.
+
 ## Navigation après consentement hébergé — 2026-09-10
 
 La préparation du parcours navigateur a identifié un écart : approve/deny

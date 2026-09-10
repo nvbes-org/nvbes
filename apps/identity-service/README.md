@@ -83,6 +83,11 @@ secrets ni les tokens éphémères.
 
 ### Test avec les API Account et Billing
 
+Le parcours HTTPS dans Chromium est décrit dans la
+[preuve navigateur](../../docs/architecture/identity-browser-protocol-proof.md).
+La cible `identity-service:test:https-browser-fixture` prépare ses trois services
+isolés ; le scénario Playwright doit ensuite être exécuté pour valider le parcours.
+
 Avec Docker actif et l'image `postgres:17-alpine` déjà présente localement :
 
 ```bash
