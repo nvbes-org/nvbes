@@ -16,6 +16,9 @@ impl RecoveryProof {
 }
 
 impl BrowserSecurity {
+    pub(crate) fn recovery_token(&self, headers: &HeaderMap) -> Result<String, BrowserError> {
+        read_cookie(headers, self.recovery_name())?.ok_or(BrowserError::Forbidden)
+    }
     fn recovery_name(&self) -> &'static str {
         if self.secure {
             "__Host-nvbes-recovery"
@@ -57,7 +60,7 @@ impl BrowserSecurity {
         headers: &HeaderMap,
     ) -> Result<RecoveryProof, BrowserError> {
         let browser = self.verify_mutation(method, headers)?;
-        let token = read_cookie(headers, self.recovery_name())?.ok_or(BrowserError::Forbidden)?;
+        let token = self.recovery_token(headers)?;
         let signature = URL_SAFE_NO_PAD
             .decode(&browser.csrf_token)
             .map_err(|_| BrowserError::Forbidden)?;

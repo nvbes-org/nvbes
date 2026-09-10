@@ -280,7 +280,12 @@ est exposée au JavaScript, à conserver en mémoire pendant les cinq minutes du
 parcours. Aucune preuve de step-up ou session OAuth n'est accordée par un code.
 Une erreur ou annulation ne déclenche aucun retry automatique. Après une erreur
 réseau, ne pas affirmer qu'une mutation a été annulée : son résultat peut être
-inconnu. La reprise après rechargement et l'abandon explicite restent à livrer.
+inconnu. `resumeMfaRecovery()` restitue une récupération encore active après
+rechargement, sans prolonger son expiration ni nécessiter un CSRF persisté.
+`cancelMfaRecovery(recovery)` invalide la récupération et efface son cookie,
+sans réactiver les sessions ni rendre le code consommé réutilisable. Les fonctions
+autonomes `resumeHostedMfaRecovery` et `cancelHostedMfaRecovery` sont aussi exportées.
+Une récupération absente, expirée ou annulée ne peut pas être reprise (HTTP 400).
 
 L'ancien export autonome `generateRecoveryCodes(baseUrl, password?, token?)`
 sur `/auth/mfa/recovery-codes` est supprimé. La méthode homonyme de la classe
@@ -290,8 +295,9 @@ ni Bearer. Les tests SDK vérifient contrats et erreurs. Le scénario
 sur une fixture HTTPS neuve. Il vérifie perte d'une clé virtuelle, consommation
 du code, révocation de l'accès Account, annulation native, remplacement puis
 reconnexion avec la nouvelle passkey et nouvel accès Account OIDC/DPoP. Seuls
-les authentificateurs CTAP2 sont virtuels. L'interface, la reprise/annulation
-explicite côté serveur et les notifications effectivement délivrées restent ouvertes.
+les authentificateurs CTAP2 sont virtuels. Il vérifie aussi un vrai rechargement
+sans renouvellement du délai et l'abandon explicite sans restauration d'accès.
+L'interface et les notifications effectivement délivrées restent ouvertes.
 
 ## Détection d’environnement
 

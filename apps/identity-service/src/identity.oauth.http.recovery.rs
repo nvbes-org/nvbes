@@ -1,8 +1,8 @@
 use super::{OAuthError, ProtocolError, json::Object, limits};
 use crate::{
     browser::{
-        BrowserSecurity, RecoveryProof, SessionProof, protect_recovery_mutation,
-        protect_session_mutation,
+        BrowserProof, BrowserSecurity, RecoveryProof, SessionProof, protect_mutation,
+        protect_recovery_mutation, protect_session_mutation,
     },
     mfa_recovery::{self, RecoveryError},
     rate_limits::{Category, RateLimiter},
@@ -43,6 +43,10 @@ pub fn router(
         ));
     let recovering = Router::new()
         .route(
+            "/oauth/recovery/cancel",
+            post(cancel).layer(DefaultBodyLimit::max(4096)),
+        )
+        .route(
             "/oauth/recovery/registration/options",
             post(options).layer(DefaultBodyLimit::max(4096)),
         )
@@ -56,6 +60,15 @@ pub fn router(
         ));
     regular
         .merge(recovering)
+        .merge(
+            Router::new()
+                .route("/oauth/recovery/resume", post(resume))
+                .layer(DefaultBodyLimit::max(4096))
+                .route_layer(middleware::from_fn_with_state(
+                    browser.clone(),
+                    protect_mutation,
+                )),
+        )
         .route_layer(middleware::from_fn_with_state(
             limits::SourceLimit {
                 db: db.clone(),
@@ -209,6 +222,51 @@ async fn finish(
     response
         .headers_mut()
         .append(header::SET_COOKIE, state.browser.clear_session_cookie());
+    Ok(response)
+}
+
+// Bootstrap is read-only. Exact Origin, JSON/custom header and Fetch Metadata
+// checks establish same-origin access; no previous CSRF proof survives a reload.
+// BrowserProof must never be reused to authorize recovery mutations.
+async fn resume(
+    State(state): State<RecoveryState>,
+    Extension(proof): Extension<BrowserProof>,
+    headers: HeaderMap,
+    body: Result<Json<Object<Empty>>, JsonRejection>,
+) -> Result<impl IntoResponse, ProtocolError> {
+    let token = state
+        .browser
+        .recovery_token(&headers)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::LoginRequired))?;
+    quota(&state, &token, true).await?;
+    let Empty {} = decode(body)?;
+    let expires_at = mfa_recovery::lifecycle::expires_at(&state.db, &token)
+        .await
+        .map_err(failure)?;
+    let csrf = state
+        .browser
+        .recovery_csrf_token(&token, &proof.browser_token)
+        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    Ok(Json(
+        serde_json::json!({"recovery":true,"csrf_token":csrf,"expires_at":expires_at}),
+    ))
+}
+
+async fn cancel(
+    State(state): State<RecoveryState>,
+    Extension(proof): Extension<RecoveryProof>,
+    body: Result<Json<Object<Empty>>, JsonRejection>,
+) -> Result<Response, ProtocolError> {
+    quota(&state, proof.token(), true).await?;
+    let Empty {} = decode(body)?;
+    mfa_recovery::lifecycle::cancel(&state.db, proof.token())
+        .await
+        .map_err(failure)?;
+    let mut response =
+        Json(serde_json::json!({"cancelled":true,"must_reauthenticate":true})).into_response();
+    response
+        .headers_mut()
+        .append(header::SET_COOKIE, state.browser.clear_recovery_cookie());
     Ok(response)
 }
 

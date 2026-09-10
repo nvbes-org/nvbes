@@ -13,6 +13,29 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Reprise et abandon de récupération MFA — 2026-09-10
+
+Les routes resume/cancel et leurs méthodes SDK complètent le cycle de vie.
+La reprise est une lecture same-origin du cookie HttpOnly avec JSON et header
+personnalisé ; elle restitue la preuve CSRF dédiée sans modifier l'expiration.
+L'abandon exige cette preuve et supprime récupération/cérémonie atomiquement
+avec audit et intention de notification, sans restaurer code ou sessions.
+Les contrôles existants de source, compte, taille et objets stricts s'appliquent.
+
+Les tests PostgreSQL vérifient expiration constante, principal suspendu,
+récupération expirée, refus de la preuve d'amorçage sur l'abandon, rejet de
+l'attestation après abandon, conservation du facteur et du code consommé,
+quotas et rollback après panne de l'outbox. Chromium 152.0.7977.83 exécute le
+parcours HTTPS complet avec rechargement réel, récupération de la preuve,
+remplacement puis nouvelle récupération annulée ; Account demeure révoqué.
+
+Validation : cargo check --workspace, 186 tests bibliothèque Identity, 24 runtime,
+trois gardes PostgreSQL, 120 tests SDK, cibles Nx typecheck/lint/build et format/lint
+des fichiers TS/scénario passent. Un test interactif reste ignoré dans Cargo ;
+la preuve navigateur est exécutée séparément. Fixture arrêtée et conteneur
+supprimé. Pas de coût d'infrastructure nouveau. Notifications effectivement
+délivrées, interfaces, politique opérateur et autres exigences A à D restent ouverts.
+
 ## Preuve navigateur HTTPS de récupération MFA — 2026-09-10
 
 Le scénario runtime-browser-recovery.mjs traverse Identity et Account réels

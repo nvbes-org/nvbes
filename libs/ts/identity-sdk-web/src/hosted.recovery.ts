@@ -4,6 +4,7 @@ import { hostedCreationOptions } from './hosted.webauthn.options';
 import { createWebAuthnCredential } from './webauthn.credentials';
 import { serializeCredential } from './webauthn.codec';
 import type { WebauthnCreateOptions } from './webauthn.types';
+import { generateCodeVerifier } from './pkce';
 
 /** Keep in memory on Identity only. This proof never authorizes OAuth or step-up. */
 export interface HostedMfaRecovery {
@@ -14,6 +15,25 @@ export interface HostedMfaRecovery {
 export interface HostedMfaRecovered {
   credentialId: string;
   mustReauthenticate: true;
+}
+
+/** Read-only bootstrap after reload; the nonce is a custom header, not an authorization proof. */
+export async function resumeHostedMfaRecovery(config: HostedTransport): Promise<HostedMfaRecovery> {
+  const result = await hostedRequest(config, '/oauth/recovery/resume', {}, generateCodeVerifier());
+  if (result.recovery !== true) throw new Error('Identity did not confirm recovery.');
+  return { csrfToken: recoveryProof(result.csrf_token), expiresAt: liveExpiry(result.expires_at) };
+}
+
+/** Cancels recovery without restoring the consumed code or previously revoked sessions. */
+export async function cancelHostedMfaRecovery(
+  config: HostedTransport,
+  recovery: HostedMfaRecovery,
+): Promise<void> {
+  const csrf = recoveryProof(recovery.csrfToken);
+  liveExpiry(recovery.expiresAt);
+  const result = await hostedRequest(config, '/oauth/recovery/cancel', {}, csrf);
+  if (result.cancelled !== true || result.must_reauthenticate !== true)
+    throw new Error('Identity did not confirm recovery cancellation.');
 }
 
 function recoveryCode(value: unknown): string {

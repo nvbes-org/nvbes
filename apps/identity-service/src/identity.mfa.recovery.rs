@@ -4,6 +4,8 @@ use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
+#[path = "identity.mfa.recovery.lifecycle.rs"]
+pub mod lifecycle;
 #[path = "identity.mfa.recovery.registration.rs"]
 pub mod registration;
 

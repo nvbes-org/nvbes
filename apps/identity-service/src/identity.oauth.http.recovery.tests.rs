@@ -17,6 +17,9 @@ const OPTIONS: &str = "/oauth/recovery/registration/options";
 const FINISH: &str = "/oauth/recovery/registration/finish";
 const ORIGIN: &str = "https://identity.example";
 
+#[path = "identity.oauth.http.recovery.lifecycle.tests.rs"]
+mod lifecycle;
+
 struct Fixture {
     db: PgPool,
     app: Router,

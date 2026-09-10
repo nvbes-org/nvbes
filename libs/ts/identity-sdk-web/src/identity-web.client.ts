@@ -3,6 +3,8 @@ import {
   generateHostedRecoveryCodes,
   redeemHostedRecoveryCode,
   completeHostedMfaRecovery,
+  resumeHostedMfaRecovery,
+  cancelHostedMfaRecovery,
   type HostedMfaRecovery,
   type HostedMfaRecovered,
 } from './hosted.recovery';
@@ -199,6 +201,14 @@ export class NvbesIdentityWeb {
 
   generateRecoveryCodes(sessionCsrf: string): Promise<string[]> {
     return generateHostedRecoveryCodes({ baseUrl: this.config.baseUrl }, sessionCsrf);
+  }
+
+  resumeMfaRecovery(): Promise<HostedMfaRecovery> {
+    return resumeHostedMfaRecovery({ baseUrl: this.config.baseUrl });
+  }
+
+  cancelMfaRecovery(recovery: HostedMfaRecovery): Promise<void> {
+    return cancelHostedMfaRecovery({ baseUrl: this.config.baseUrl }, recovery);
   }
 
   async redeemRecoveryCode(sessionCsrf: string, code: string): Promise<HostedMfaRecovery> {

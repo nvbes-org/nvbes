@@ -25,6 +25,22 @@ accepté pour effectuer ces opérations.
 | `/oauth/recovery/registration/options`   | Cookie de récupération et CSRF dédiée | `{}`                                 | `ceremony_id`, `options` WebAuthn                               |
 | `/oauth/recovery/registration/finish`    | Cookie de récupération et CSRF dédiée | `ceremony_id`, `credential`, `label` | `recovered: true`, `credential_id`, `must_reauthenticate: true` |
 
+`POST /oauth/recovery/resume` reçoit `{}` avec les cookies navigateur/récupération,
+Origin exact et un nonce de 43 caractères dans X-CSRF-Token. Cette lecture
+restitue `recovery: true`, `csrf_token`, `expires_at`. Le nonce est un header
+personnalisé, pas une preuve d'autorisation ; Origin, JSON et Fetch Metadata
+protègent l'accès same-origin au cookie HttpOnly. Le principal et la récupération
+doivent être actifs. Aucun Set-Cookie ni renouvellement d'expiration n'a lieu.
+Cette amorce ne doit jamais autoriser une mutation.
+
+`POST /oauth/recovery/cancel` reçoit `{}` avec la véritable preuve CSRF de
+récupération et retourne `cancelled: true`, `must_reauthenticate: true`.
+Il supprime récupération/cérémonie par cascade et écrit audit et intention
+`identity.mfa_recovery_cancelled` atomiquement. Seul le cookie de récupération
+est effacé après commit. Le code reste consommé, les sessions révoquées et les
+facteurs inchangés. Reprise/abandon d'une récupération expirée, annulée ou
+remplacée renvoie 400 ; une panne renvoie 503 sans effacer le cookie.
+
 La consommation réussie pose `__Host-nvbes-recovery` (HttpOnly, Secure,
 SameSite=Lax, Path=/, Max-Age=300, sans Domain) et efface le cookie de session
 ordinaire. Le jeton de récupération n'apparaît pas dans le JSON. La preuve CSRF
@@ -39,8 +55,8 @@ Les corps sont limités à 4096 octets, sauf la réponse d'attestation finale
 
 Le quota source de connexion (30/minute) et le quota protocole (120/minute)
 précèdent l'analyse navigateur. Génération et consommation utilisent le quota
-MFA partagé de cinq requêtes par principal sur dix minutes ; options et finish
-utilisent le quota WebAuthn de vingt requêtes. Recréer une session normale ou de
+MFA partagé de cinq requêtes par principal sur dix minutes ; options, finish,
+reprise et abandon utilisent le quota WebAuthn de vingt requêtes. Recréer une session normale ou de
 récupération ne réinitialise pas ces compteurs. Les corps invalides sont comptés.
 Ces plafonds sont partagés avec les autres opérations MFA/WebAuthn existantes.
 
@@ -120,6 +136,6 @@ les cookies isolés, l'annulation, le remplacement, la reconnexion par la nouvel
 clé et un nouvel accès Account OIDC/DPoP. Il ne prouve pas la compatibilité des
 clés physiques ni celle de tous les navigateurs. Compléter ensuite interfaces
 et notifications réellement délivrées.
-La reprise de l'interface après rechargement et l'abandon explicite du parcours
-restent à définir ; l'autorisation actuelle expire au bout de cinq minutes.
+La reprise après un vrai rechargement et l'abandon explicite sont aussi vérifiés
+dans Chromium ; l'autorisation expire toujours au bout de cinq minutes.
 Les gates d'exploitation et le plafond global de 30 EUR TTC/mois restent ouverts.

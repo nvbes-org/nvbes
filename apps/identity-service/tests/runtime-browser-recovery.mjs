@@ -137,6 +137,29 @@ export async function verifyBrowserRecovery(browser, clientOrigin) {
     });
     if (rejected !== 401) throw new Error('Recovery must revoke previously issued Account access');
     await cdp.send('WebAuthn.addVirtualAuthenticator', { options: authenticatorOptions });
+    const beforeReload = await identityPage.evaluate(() => ({
+      oldKey: window.fixtureRecovery.oldKey,
+      expiresAt: window.fixtureRecovery.recovery.expiresAt,
+    }));
+    await identityPage.reload();
+    await identityPage.evaluate(
+      async ({ config, beforeReload }) => {
+        if (window.fixtureRecovery) throw new Error('Reload must discard in-memory recovery state');
+        const { NvbesIdentityWeb } =
+          await import('/libs/ts/identity-sdk-web/src/identity-web.client.ts');
+        const client = new NvbesIdentityWeb({
+          baseUrl: config.origins.identity,
+          clientId: config.clientId,
+          redirectUri: config.redirectUri,
+          resource: config.origins.account,
+        });
+        const recovery = await client.resumeMfaRecovery();
+        if (recovery.expiresAt !== beforeReload.expiresAt)
+          throw new Error('Resume extended recovery expiry');
+        window.fixtureRecovery = { client, recovery, oldKey: beforeReload.oldKey };
+      },
+      { config, beforeReload },
+    );
     await identityPage.evaluate(async () => {
       const { client, recovery } = window.fixtureRecovery;
       const { WebauthnBrowserError } =
@@ -194,12 +217,40 @@ export async function verifyBrowserRecovery(browser, clientOrigin) {
           factors.some((factor) => factor.id === keys.old)
         )
           throw new Error('Old key survived recovery or replacement is missing');
-        await client.generateRecoveryCodes(state.sessionCsrfToken);
+        const codes = await client.generateRecoveryCodes(state.sessionCsrfToken);
+        window.fixtureRecoveryCancellation = { client, codes, csrf: state.sessionCsrfToken };
         return completeHostedConsent({ baseUrl: config.origins.identity }, state, 'approve');
       },
       { config, next, keys },
     );
     await exchange(finalRedirect);
+    await identityPage.evaluate(async () => {
+      const { client, codes, csrf } = window.fixtureRecoveryCancellation;
+      const recovery = await client.redeemRecoveryCode(csrf, codes[0]);
+      await client.cancelMfaRecovery(recovery);
+      const { HostedIdentityError } =
+        await import('/libs/ts/identity-sdk-web/src/hosted.transport.ts');
+      try {
+        await client.resumeMfaRecovery();
+      } catch (error) {
+        if (error instanceof HostedIdentityError && error.status === 400) return;
+        throw error;
+      }
+      throw new Error('Cancelled recovery was resumed');
+    });
+    const afterCancel = await context.cookies(config.origins.identity);
+    if (
+      afterCancel.some((value) =>
+        ['__Host-nvbes-session', '__Host-nvbes-recovery'].includes(value.name),
+      )
+    )
+      throw new Error('Cancellation retained or restored an authentication cookie');
+    const cancelledAccess = await clientPage.evaluate(async () => {
+      const { tokens, dpopFetch, endpoint } = window.fixtureRecoveryAccess;
+      return (await dpopFetch(endpoint, { key: tokens.dpopKey, accessToken: tokens.accessToken }))
+        .status;
+    });
+    if (cancelledAccess !== 401) throw new Error('Cancellation restored revoked Account access');
     return {
       browser: browser.version(),
       syntheticAuthenticators: true,
@@ -211,6 +262,8 @@ export async function verifyBrowserRecovery(browser, clientOrigin) {
       freshPasskeyLogin: true,
       oldFactorRevoked: true,
       newRecoveryCodes: true,
+      reloadWithoutExtendingExpiry: true,
+      explicitCancellation: true,
       oidcAndAccount: true,
     };
   } finally {
