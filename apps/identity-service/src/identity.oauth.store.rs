@@ -36,10 +36,21 @@ pub async fn create_request(
     request: &AuthorizationRequest,
     kind: RequestKind,
 ) -> Result<String, StoreError> {
+    let mut tx = db.begin().await?;
+    let handle = create_request_in(&mut tx, request, kind).await?;
+    tx.commit().await?;
+    Ok(handle)
+}
+
+pub(super) async fn create_request_in(
+    tx: &mut Transaction<'_, Postgres>,
+    request: &AuthorizationRequest,
+    kind: RequestKind,
+) -> Result<String, StoreError> {
     let handle = random_secret();
     sqlx::query("INSERT INTO identity_oauth_requests(handle_hash,kind,client_id,parameters) VALUES($1,$2,$3,$4)")
         .bind(hash(&handle)).bind(kind.as_str()).bind(&request.client_id)
-        .bind(serde_json::to_value(request)?).execute(db).await?;
+        .bind(serde_json::to_value(request)?).execute(&mut **tx).await?;
     Ok(handle)
 }
 
@@ -52,15 +63,25 @@ pub async fn consume_par(
     client_id: &str,
 ) -> Result<String, StoreError> {
     let mut tx = db.begin().await?;
+    let next = consume_par_in(&mut tx, clients, handle, client_id).await?;
+    tx.commit().await?;
+    Ok(next)
+}
+
+pub(super) async fn consume_par_in(
+    tx: &mut Transaction<'_, Postgres>,
+    clients: &ClientRegistry,
+    handle: &str,
+    client_id: &str,
+) -> Result<String, StoreError> {
     let value: serde_json::Value = sqlx::query_scalar("DELETE FROM identity_oauth_requests WHERE handle_hash=$1 AND kind='par' AND client_id=$2 AND expires_at>clock_timestamp() RETURNING parameters")
-        .bind(hash(handle)).bind(client_id).fetch_optional(&mut *tx).await?
+        .bind(hash(handle)).bind(client_id).fetch_optional(&mut **tx).await?
         .ok_or(OAuthError::InvalidRequest)?;
     let request = AuthorizationRequest::restore(value, clients)?;
     let next = random_secret();
     sqlx::query("INSERT INTO identity_oauth_requests(handle_hash,kind,client_id,parameters) VALUES($1,'authorization',$2,$3)")
         .bind(hash(&next)).bind(&request.client_id).bind(serde_json::to_value(&request)?)
-        .execute(&mut *tx).await?;
-    tx.commit().await?;
+        .execute(&mut **tx).await?;
     Ok(next)
 }
 

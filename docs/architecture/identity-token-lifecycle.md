@@ -31,6 +31,28 @@ l'introspection renvoie une erreur, jamais un résultat actif par défaut. Les
 consommateurs exigeant une autorisation actuelle devront refuser l'opération si
 ce contrôle est indisponible. Leur intégration fait encore partie des lots.
 
+## Autorisation directe et PAR
+
+GET `/oauth/authorize` refuse les paramètres dupliqués après décodage des noms.
+`max_age` accepte un entier décimal entre 0 et 86400. Les queries et les corps
+PAR sont limités à 8192 octets et 32 paramètres. Les objets JAR via `request`
+restent absents et leur présence provoque un refus explicite.
+
+POST `/oauth/par` accepte le formulaire d'autorisation et retourne HTTP 201,
+`request_uri` et `expires_in`. Il refuse un `request_uri` fourni dans son corps,
+conformément à la [RFC 9126](https://www.rfc-editor.org/rfc/rfc9126.html#section-2.1).
+Le navigateur présente ensuite uniquement `client_id` et `request_uri` à
+`/oauth/authorize` ; tout paramètre supplémentaire est refusé dans ce profil.
+
+La consommation PAR, la création d'une interaction unique et sa liaison au
+navigateur sont atomiques. Un mauvais client, un cookie ambigu ou un échec SQL
+pendant cette création/liaison ne détruit pas le PAR. Deux rédemptions concurrentes
+n'en créent qu'une, et un
+rejeu est refusé. La création directe et sa liaison ont la même atomicité.
+En mode `prompt=none`, une panne PostgreSQL renvoie 503 sans la présenter comme
+un besoin de reconnexion. Ces garanties ne prouvent pas encore le parcours
+complet avec consentement, échange de code et consommateur de ressources.
+
 ## Renouvellement lié au client et à DPoP
 
 POST `/oauth/token` avec `grant_type=refresh_token` exige `client_id` et

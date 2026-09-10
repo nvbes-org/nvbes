@@ -14,6 +14,8 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use tower::ServiceExt;
 
+#[path = "identity.oauth.http.authorization.tests.rs"]
+mod authorization_tests;
 #[path = "identity.oauth.http.limits.tests.rs"]
 mod limits_tests;
 #[path = "identity.oauth.http.login.tests.rs"]

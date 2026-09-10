@@ -1,15 +1,16 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::{
     Extension, Form, Json, Router,
-    extract::{Query, State},
+    extract::{RawQuery, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
 };
 #[path = "identity.oauth.http.limits.rs"]
 mod limits;
+#[path = "identity.oauth.http.query.rs"]
+mod query;
 #[path = "identity.oauth.http.session.rs"]
 mod session;
 #[path = "identity.oauth.http.token.rs"]
@@ -27,7 +28,6 @@ use crate::{
         error::OAuthError,
         interactions,
         metadata::provider_metadata,
-        request::AuthorizationInput,
         store::{self, RequestKind},
     },
     tokens::TokenService,
@@ -73,7 +73,10 @@ pub fn token_router(
 ) -> Router {
     Router::new()
         .route("/oauth/token", post(token))
-        .route("/oauth/par", post(par))
+        .route(
+            "/oauth/par",
+            post(par).layer(axum::extract::DefaultBodyLimit::max(8192)),
+        )
         .route("/oauth/userinfo", get(userinfo))
         .route_layer(axum::middleware::from_fn_with_state(
             limits::SourceLimit {
@@ -242,34 +245,10 @@ fn redirect_with_result(
 async fn authorize(
     State(state): State<AuthorizationState>,
     headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
+    RawQuery(query): RawQuery,
 ) -> Result<Response, ProtocolError> {
-    let client_id = query
-        .get("client_id")
-        .ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    let request = if let Some(uri) = query.get("request_uri") {
-        let prefix = "urn:ietf:params:oauth:request_uri:";
-        let handle = uri
-            .strip_prefix(prefix)
-            .ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-        let handle = store::consume_par(&state.db, &state.clients, handle, client_id)
-            .await
-            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-        store::load_request(&state.db, &state.clients, &handle)
-            .await
-            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?
-    } else {
-        let value = serde_json::to_value(&query)
-            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-        let input: AuthorizationInput = serde_json::from_value(value)
-            .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-        input
-            .validate(&state.clients)
-            .map_err(ProtocolError::OAuth)?
-    };
-    let handle = store::create_request(&state.db, &request, RequestKind::Authorization)
-        .await
-        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    let query = query::AuthorizationQuery::decode(query.as_deref().unwrap_or_default())
+        .map_err(ProtocolError::OAuth)?;
     let cookie = state
         .browser
         .existing_or_new_browser_cookie(&headers)
@@ -278,15 +257,35 @@ async fn authorize(
         .browser
         .session_token(&headers)
         .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    let started = interactions::begin(
-        &state.db,
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    let handle = match query {
+        query::AuthorizationQuery::Direct(input) => {
+            let request = input
+                .validate(&state.clients)
+                .map_err(ProtocolError::OAuth)?;
+            store::create_request_in(&mut tx, &request, RequestKind::Authorization).await
+        }
+        query::AuthorizationQuery::Par { client_id, handle } => {
+            store::consume_par_in(&mut tx, &state.clients, &handle, &client_id).await
+        }
+    }
+    .map_err(protocol_store_error)?;
+    let started = interactions::begin_in(
+        &mut tx,
         &state.clients,
         &handle,
         &cookie.token,
         session.as_deref(),
     )
     .await
-    .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    .map_err(protocol_store_error)?;
+    tx.commit()
+        .await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
     if started.request.prompt.as_deref() == Some("none") {
         let Some(session) = session.as_deref() else {
             return Ok(redirect_with_result(
@@ -324,7 +323,7 @@ async fn authorize(
                 )?
                 .into_response());
             }
-            Err(_) => {
+            Err(store::StoreError::Protocol(OAuthError::LoginRequired)) => {
                 return Ok(redirect_with_result(
                     started.request.redirect_uri(),
                     "error",
@@ -333,6 +332,7 @@ async fn authorize(
                 )?
                 .into_response());
             }
+            Err(error) => return Err(protocol_store_error(error)),
         }
     }
     Ok((
@@ -356,8 +356,14 @@ async fn authorize(
 
 async fn par(
     State(state): State<TokenState>,
-    Form(input): Form<AuthorizationInput>,
+    form: Result<Form<Vec<(String, String)>>, axum::extract::rejection::FormRejection>,
 ) -> Result<impl IntoResponse, ProtocolError> {
+    let Form(fields) = form.map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
+    let query::AuthorizationQuery::Direct(input) =
+        query::AuthorizationQuery::from_fields(fields).map_err(ProtocolError::OAuth)?
+    else {
+        return Err(ProtocolError::OAuth(OAuthError::InvalidRequest));
+    };
     let request = input
         .validate(&state.clients)
         .map_err(ProtocolError::OAuth)?;
@@ -365,6 +371,7 @@ async fn par(
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
     Ok((
+        StatusCode::CREATED,
         [("cache-control", "no-store"), ("pragma", "no-cache")],
         Json(serde_json::json!({
             "request_uri": format!("urn:ietf:params:oauth:request_uri:{request_uri}"),
@@ -417,6 +424,13 @@ async fn userinfo(
 #[derive(Debug)]
 enum ProtocolError {
     OAuth(OAuthError),
+}
+
+fn protocol_store_error(error: store::StoreError) -> ProtocolError {
+    ProtocolError::OAuth(match error {
+        store::StoreError::Protocol(error) => error,
+        _ => OAuthError::Unavailable,
+    })
 }
 
 impl IntoResponse for ProtocolError {

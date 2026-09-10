@@ -13,6 +13,33 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Autorisation directe et PAR — 2026-09-10
+
+Le décodage HTTP conserve les paires avant validation pour refuser les paramètres
+dupliqués, y compris leurs noms encodés. `max_age` est converti explicitement en
+entier et conserve la limite de 86400 secondes. La query directe et le corps PAR
+sont bornés à 8192 octets et 32 paramètres. Un paramètre `request` non pris en
+charge est refusé, sans repli silencieux vers un autre parcours.
+
+PAR renvoie 201 avec une référence opaque. Sa rédemption accepte seulement
+`client_id` et `request_uri`, sans paramètres capables de modifier la requête
+enregistrée. La consommation du PAR, la création de l'unique interaction et sa
+liaison navigateur/CSRF/session se font dans une même transaction PostgreSQL.
+Un navigateur invalide ne consomme rien ; un échec de liaison annule aussi la
+consommation et permet de réessayer. La création directe utilise la même frontière
+transactionnelle. Une panne de consentement en mode silencieux renvoie 503,
+sans redirection mensongère `login_required`.
+
+Les tests HTTP/PostgreSQL couvrent les doublons, `max_age`, les substitutions,
+le rejeu, la concurrence entre navigateurs, la panne injectée et le retour arrière.
+Cette tranche ne valide pas encore un parcours SDK/navigateur jusqu'aux API
+Account/Billing. UserInfo et l'atomicité de l'échange de code restent à terminer.
+
+Validation : `cargo check --workspace` sans avertissement et
+`identity-service:test:database` avec 91 tests de bibliothèque, 24 tests du runtime
+et 3 contrôles de base isolée réussis. Aucun test graphique de navigateur n'est
+inclus dans cette tranche.
+
 ## Quotas HTTP — 2026-09-10
 
 Les routeurs OAuth exigent désormais un limiteur à clé stable ; le runtime exige

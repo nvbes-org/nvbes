@@ -35,21 +35,32 @@ pub async fn begin(
     browser_token: &str,
     session_token: Option<&str>,
 ) -> Result<StartedInteraction, StoreError> {
+    let mut tx = db.begin().await?;
+    let started = begin_in(&mut tx, clients, handle, browser_token, session_token).await?;
+    tx.commit().await?;
+    Ok(started)
+}
+
+pub(super) async fn begin_in(
+    tx: &mut Transaction<'_, Postgres>,
+    clients: &ClientRegistry,
+    handle: &str,
+    browser_token: &str,
+    session_token: Option<&str>,
+) -> Result<StartedInteraction, StoreError> {
     if !is_sha256_base64url(handle) || !is_sha256_base64url(browser_token) {
         return Err(OAuthError::InvalidRequest.into());
     }
-    let mut tx = db.begin().await?;
     let stored: StoredInteraction = sqlx::query_as("SELECT parameters,created_at,bound_session_id FROM identity_oauth_requests WHERE handle_hash=$1 AND kind='authorization' AND browser_hash IS NULL AND expires_at>clock_timestamp() FOR UPDATE")
-        .bind(hash(handle)).fetch_optional(&mut *tx).await?.ok_or(OAuthError::InvalidRequest)?;
+        .bind(hash(handle)).fetch_optional(&mut **tx).await?.ok_or(OAuthError::InvalidRequest)?;
     let request = AuthorizationRequest::restore(stored.parameters, clients)?;
-    let session = session::load(&mut tx, session_token)
+    let session = session::load(tx, session_token)
         .await?
         .filter(|s| session::is_fresh(s, &request, stored.created_at));
     let csrf_token = random_secret();
     sqlx::query("UPDATE identity_oauth_requests SET browser_hash=$2,csrf_hash=$3,bound_session_id=$4 WHERE handle_hash=$1")
         .bind(hash(handle)).bind(hash(browser_token)).bind(hash(&csrf_token)).bind(session.as_ref().map(|s| s.id))
-        .execute(&mut *tx).await?;
-    tx.commit().await?;
+        .execute(&mut **tx).await?;
     Ok(StartedInteraction {
         request,
         csrf_token,
