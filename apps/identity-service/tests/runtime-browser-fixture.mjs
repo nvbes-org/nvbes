@@ -6,6 +6,7 @@ import { testCertificates, tlsEndpoint } from './runtime-browser-tls.mjs';
 import { identityWebBuild } from './runtime-browser-web-ui.mjs';
 import { verifyHostedReauthentication } from './runtime-browser-hosted-reauth.mjs';
 import { accountWebBuild, verifyAccountWeb } from './runtime-browser-account-web.mjs';
+import { verifyPasswordRecovery } from './runtime-browser-password-recovery.mjs';
 
 const fixture = new RuntimeFixture();
 let closed = false;
@@ -33,6 +34,10 @@ process.once('SIGINT', () => {
 try {
   const web = process.env.NVBES_IDENTITY_TEST_WEB_UI === '1' ? await identityWebBuild() : undefined;
   const accountWeb = process.env.NVBES_IDENTITY_TEST_ACCOUNT_WEB === '1';
+  const passwordRecovery = process.env.NVBES_IDENTITY_TEST_PASSWORD_RECOVERY === '1';
+  if (passwordRecovery && (!web || accountWeb))
+    throw new Error('Password recovery needs its own built Identity fixture');
+  const recoveryKey = randomBytes(32);
   if (accountWeb && !web) throw new Error('Account verification requires the built Identity UI');
   if (process.env.NVBES_IDENTITY_TEST_WEB_REAUTH === '1' && !web)
     throw new Error('Reauthentication verification requires the built Identity UI');
@@ -138,6 +143,11 @@ try {
     NVBES_IDENTITY_RESOURCE_SERVERS_JSON: JSON.stringify(resources),
     NVBES_IDENTITY_RATE_LIMIT_KEY: randomBytes(32).toString('base64'),
   });
+  if (passwordRecovery)
+    Object.assign(environments.identity, {
+      NVBES_IDENTITY_PASSWORD_RECOVERY_ENABLED: '1',
+      NVBES_IDENTITY_MFA_ENCRYPTION_KEY: recoveryKey.toString('base64'),
+    });
   Object.assign(environments.billing, {
     NVBES_BILLING_ACCOUNT_ORIGIN: origins.account,
     NVBES_STRIPE_API_BASE_URL: 'http://127.0.0.1:1',
@@ -185,6 +195,10 @@ try {
     );
   // Only public test URLs are printed. Keys and synthetic credentials stay inside the fixture.
   console.log(JSON.stringify({ client: origins.client, pid: process.pid, expiresInSeconds: 600 }));
+  if (passwordRecovery) {
+    console.log(JSON.stringify(await verifyPasswordRecovery(fixture, config, recoveryKey)));
+    await close();
+  }
   if (accountWeb) {
     console.log(JSON.stringify(await verifyAccountWeb(config)));
     await close();

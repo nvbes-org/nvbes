@@ -6,6 +6,11 @@ import { identityGateway } from './authorization.gateway';
 import { RecoveryController, recoveryGateway } from './recovery.controller';
 import './styles.css';
 import { LogoutController, logoutGateway } from './logout.controller';
+import {
+  PasswordRecoveryController,
+  passwordRecoveryGateway,
+  recoveryLink,
+} from './password-recovery.controller';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing application root');
@@ -13,6 +18,17 @@ const controller = new AuthorizationController(identityGateway(location.origin),
   location.assign(url),
 );
 const recovery = new RecoveryController(recoveryGateway(location.origin));
+const passwordRecovery = new PasswordRecoveryController(
+  passwordRecoveryGateway(location.origin),
+  location.pathname === '/password-recovery' ? recoveryLink(new URL(location.href)) : undefined,
+);
+if (location.pathname === '/password-recovery')
+  history.replaceState(null, '', '/password-recovery');
+// A mail link opened in this same document may only change the fragment.
+// Restart the document so bootstrap consumes it once, before any API request.
+window.addEventListener('hashchange', () => {
+  if (location.pathname === '/password-recovery' && location.hash) location.reload();
+});
 const logoutParams = new URLSearchParams(location.hash.slice(1));
 const logoutRequest =
   location.pathname === '/logout' && location.hash
@@ -31,6 +47,7 @@ window.addEventListener(
       controller.dispose();
       recovery.dispose();
       logout.dispose();
+      passwordRecovery.dispose();
     }),
   { once: true },
 );
@@ -38,4 +55,12 @@ window.addEventListener(
 if (location.pathname === '/oauth/authorize') void controller.start(location.href);
 if (location.pathname === '/recovery') void recovery.start();
 if (location.pathname === '/logout') void logout.start();
-createRoot(root).render(<App controller={controller} recovery={recovery} logout={logout} />);
+if (location.pathname === '/password-recovery') void passwordRecovery.start();
+createRoot(root).render(
+  <App
+    controller={controller}
+    recovery={recovery}
+    logout={logout}
+    passwordRecovery={passwordRecovery}
+  />,
+);

@@ -56,6 +56,14 @@ export function PasswordLogin({
               className="h-11 rounded-xl px-3.5"
             />
           </Field>
+          <div className="flex justify-end">
+            <a
+              href="/password-recovery"
+              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Mot de passe oublié ?
+            </a>
+          </div>
         </>
       ) : (
         <Field>

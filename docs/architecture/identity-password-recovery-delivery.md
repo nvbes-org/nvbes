@@ -37,7 +37,8 @@ Les deux commandes nécessitent la configuration de base et de chiffrement
 Identity ; le dispatcher nécessite aussi la configuration Email. Le mode
 production impose les clés explicites existantes. Appliquer la migration avant
 de démarrer le nouveau binaire. Configurer une destination web effective avant
-tout usage réel : ce travail ne livre pas encore le parcours public de reset.
+tout usage réel : le [parcours HTTP/web](identity-password-recovery-http.md)
+requiert son activation explicite et le routage du document Identity.
 
 ## Reprise et limites
 
@@ -74,7 +75,8 @@ concurrents, un échec d'accusé en base, une rotation de clé et un serveur gRP
 Email local simulant une indisponibilité. Les liens expirés, consommés et les
 destinataires devenus non vérifiés ne sont pas soumis au service Email.
 
-Restent le parcours HTTP/web, ses protections anti-énumération et quotas, les
-notifications après changement, la cadence opérateur démontrée et la livraison
+Le [parcours HTTP/web](identity-password-recovery-http.md) décrit les protections
+et quotas désormais raccordés. Restent les notifications après changement,
+la cadence opérateur démontrée et la livraison
 fournisseur. Cette file ne constitue pas un login par email ni une preuve MFA.
 Les lots A–D restent ouverts.

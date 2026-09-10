@@ -13,6 +13,35 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Récupération : parcours HTTP, SDK et Identity Web — 2026-09-11
+
+Les routes de contexte, demande et reset sont raccordées à la file chiffrée et
+au reset atomique. Elles exigent l'activation explicite
+`NVBES_IDENTITY_PASSWORD_RECOVERY_ENABLED=1` et HTTPS. La preuve CSRF HMAC est
+liée au cookie navigateur. Les limites dédiées par source, email et token ne
+consomment pas les quotas de connexion ; la migration 0025 conserve les buckets
+bornés. Les demandes éligibles, inconnues et inactives ont le même accusé 202,
+avec plancher de latence sans revendication de temps constant sous contention.
+
+Le SDK utilise le transport hébergé borné, sans retry. Identity Web propose le
+lien de récupération depuis l'étape mot de passe, reprend le design archivé et
+efface le fragment avant le bootstrap. Une navigation par fragment dans le même
+document relance ce bootstrap, cas révélé puis corrigé par Chromium. Les champs
+secrets sont effacés avant envoi et les résultats tardifs ne réouvrent pas une
+page quittée. Le succès exige l'accusé du commit et une nouvelle connexion.
+
+Validation : `cargo check --workspace`, format Rust et suite PostgreSQL réelle
+(220 tests bibliothèque, 41 binaire, un test interactif ignoré) ; 124 tests SDK,
+62 tests Identity Web, typecheck/lint/build et contrat du service. Chromium 153
+valide demande, lecture de la file chiffrée synthétique, ouverture du lien,
+effacement URL/stockages, reset, connexion avec le nouveau mot de passe et rejeu
+refusé. Captures 1280 × 800 / 390 × 844, sans débordement horizontal.
+
+Le [contrat HTTP/web](identity-password-recovery-http.md) décrit l'activation,
+les quotas, les réponses et les limites. Aucun email fournisseur ni déploiement
+n'a été réalisé. Les notifications après changement, la cadence opérateur,
+les preuves d'exploitation et les autres exigences A–D restent ouvertes.
+
 ## Récupération : file Email chiffrée et reprise — 2026-09-11
 
 La migration 0024 et le dispatcher dédié livrent la persistance chiffrée des

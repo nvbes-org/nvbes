@@ -57,12 +57,13 @@ async fn enqueue_commits_only_encrypted_commands_and_rolls_back_invalid_delivery
     let nvbes_email::EmailTemplate::PasswordResetV1 { reset_url, .. } = command.template else {
         panic!("wrong template")
     };
-    let token = reqwest::Url::parse(&reset_url)
+    let parsed = reqwest::Url::parse(&reset_url).unwrap();
+    assert!(parsed.query().is_none());
+    let token = parsed
+        .fragment()
         .unwrap()
-        .query_pairs()
-        .find(|(k, _)| k == "token")
+        .strip_prefix("token=")
         .unwrap()
-        .1
         .to_string();
     let stored: Vec<u8> =
         sqlx::query_scalar("SELECT token_hash FROM identity_recovery_challenges WHERE id=$1")

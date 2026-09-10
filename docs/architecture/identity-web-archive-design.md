@@ -27,9 +27,11 @@ directe par passkey et l'annulation restent proposées.
 
 Ce port restaure l'habillage archivé ; il ne constitue pas une preuve de
 parité pixel par pixel pour tous les écrans. Les contenus et contrôles des
-capacités actives diffèrent de l'ancien runtime. Les liens d'inscription,
-de mot de passe oublié et légaux de l'archive ne sont pas repris sans
-destination active configurée. Aucun parcours public supplémentaire n'est ouvert.
+capacités actives diffèrent de l'ancien runtime. Le lien de mot de passe oublié
+conduit désormais au [parcours de récupération](identity-password-recovery-http.md),
+qui nécessite son activation HTTP explicite. Les liens d'inscription et légaux
+de l'archive attendent une destination active configurée. Aucun déploiement
+public supplémentaire n'est effectué.
 
 ## Validation
 

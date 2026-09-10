@@ -19,6 +19,9 @@ pub enum Category {
     ProtocolSource,
     MfaAccount,
     WebauthnAccount,
+    RecoveryAccount,
+    RecoverySource,
+    RecoveryToken,
 }
 
 impl Category {
@@ -29,6 +32,9 @@ impl Category {
             Self::ProtocolSource => ("protocol_source", 120, 60),
             Self::MfaAccount => ("mfa_account", 5, 600),
             Self::WebauthnAccount => ("webauthn_account", 20, 600),
+            Self::RecoveryAccount => ("recovery_account", 3, 900),
+            Self::RecoverySource => ("recovery_source", 30, 900),
+            Self::RecoveryToken => ("recovery_token", 5, 900),
         }
     }
 
@@ -38,7 +44,7 @@ impl Category {
 }
 
 /// Share the same stable secret across replicas. No raw IP, email or unkeyed
-/// identifier hash is stored. 5 * 4096 slots is the maximum table cardinality.
+/// identifier hash is stored. 8 * 4096 slots is the maximum table cardinality.
 #[derive(Clone)]
 pub struct RateLimiter {
     key: [u8; 32],

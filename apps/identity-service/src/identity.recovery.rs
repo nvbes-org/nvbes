@@ -7,6 +7,10 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+#[derive(Debug, thiserror::Error)]
+#[error("recovery unavailable")]
+pub(crate) struct RecoveryUnavailable;
+
 pub(super) async fn request_recovery(
     db: &PgPool,
     email: &str,
@@ -26,8 +30,9 @@ pub(crate) async fn issue(
         "SELECT i.principal_id FROM identity_login_identifiers i JOIN identity_principals p ON p.id=i.principal_id JOIN identity_password_credentials c ON c.principal_id=p.id WHERE i.kind='email' AND i.normalized_value=$1 AND i.verified_at IS NOT NULL AND p.status='active' AND p.kind='human'",
     )
     .bind(&email)
-    .fetch_one(&mut **tx)
-    .await?;
+    .fetch_optional(&mut **tx)
+    .await?
+    .ok_or(RecoveryUnavailable)?;
     let token = random_token();
     let challenge_id = Uuid::new_v4();
     crate::session_locks::principal(tx, principal_id).await?;
@@ -39,7 +44,7 @@ pub(crate) async fn issue(
     .bind(&email)
     .fetch_one(&mut **tx)
     .await?;
-    anyhow::ensure!(eligible, "recovery unavailable");
+    anyhow::ensure!(eligible, RecoveryUnavailable);
     let expires_at: DateTime<Utc> = sqlx::query_scalar(
         "INSERT INTO identity_recovery_challenges (id, principal_id, token_hash, expires_at) VALUES ($1, $2, $3, clock_timestamp()+interval '15 minutes') RETURNING expires_at",
     )

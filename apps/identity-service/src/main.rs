@@ -28,6 +28,8 @@ mod recovery;
 mod recovery_commands;
 #[path = "identity.recovery.delivery.rs"]
 mod recovery_delivery;
+#[path = "identity.recovery.http.rs"]
+mod recovery_http;
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.recovery.test-fixture.rs"]
 mod recovery_test_fixture;
@@ -266,6 +268,28 @@ async fn main() -> anyhow::Result<()> {
                         config.environment == "development" || config.environment == "test",
                     )
                     .map_err(|_| anyhow::anyhow!("invalid Identity browser origin"))?;
+                    if std::env::var("NVBES_IDENTITY_PASSWORD_RECOVERY_ENABLED").as_deref()
+                        == Ok("1")
+                    {
+                        anyhow::ensure!(
+                            origin.starts_with("https://"),
+                            "password recovery requires HTTPS"
+                        );
+                        let crypto = mfa_crypto::MfaCrypto::with_rotation(
+                            config.mfa_key_version,
+                            config.mfa_encryption_key,
+                            config
+                                .mfa_previous_key_version
+                                .zip(config.mfa_previous_encryption_key),
+                        )?;
+                        router = router.merge(recovery_http::router(
+                            db.clone(),
+                            browser.clone(),
+                            limiter.clone(),
+                            Arc::new(crypto),
+                            format!("{}/password-recovery", origin.trim_end_matches('/')),
+                        ));
+                    }
                     let mfa = nvbes_identity_service::mfa_crypto::MfaCrypto::with_rotation(
                         config.mfa_key_version,
                         config.mfa_encryption_key,
