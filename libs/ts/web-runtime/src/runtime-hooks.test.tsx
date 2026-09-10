@@ -5,9 +5,32 @@ import { afterEach, beforeEach, expect, it, vi } from 'vite-plus/test';
 import { RelativeTime, formatRelativeDateTime, formatAbsoluteDateTime } from './relative-time';
 import { LiveRegionProvider, useLiveRegion } from './live-region';
 import { useNetworkQuality } from './use-network-quality';
+import { getBrowserVisibilityState, useVisibilityAwareInterval } from './live-updates';
 
 let root: Root;
 let host: HTMLDivElement;
+function VisibilityProbe({ hidden }: { hidden?: number | false }) {
+  return <output>{String(useVisibilityAwareInterval(1000, hidden))}</output>;
+}
+it('updates polling cadence on visibility changes and removes its listener', async () => {
+  const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+  const remove = vi.spyOn(document, 'removeEventListener');
+  await act(async () => root.render(<VisibilityProbe />));
+  expect(host.textContent).toBe('1000');
+  visibility.mockReturnValue('hidden');
+  await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+  expect(host.textContent).toBe('false');
+  await act(async () => root.render(<VisibilityProbe hidden={10000} />));
+  expect(host.textContent).toBe('10000');
+  await act(async () => root.render(null));
+  expect(remove).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
+});
+it('defaults to visible without a browser document', () => {
+  vi.stubGlobal('document', undefined);
+  expect(getBrowserVisibilityState()).toBe('visible');
+  vi.unstubAllGlobals();
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+});
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.useFakeTimers();
