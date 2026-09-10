@@ -35,6 +35,8 @@ jobs:
             unit: '@nvbes/billing-client'
           - package: account-client
             unit: '@nvbes/account-client'
+          - package: identity-sdk
+            unit: '@nvbes/identity-sdk'
     env:
       NVBES_COVERAGE_PACKAGE: ${{ matrix.package }}
       NVBES_MUTATION_PACKAGE: ${{ matrix.package }}

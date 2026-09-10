@@ -96,6 +96,7 @@ test('manual trusted CI publishes bounded TypeScript measurement artifacts', () 
         { package: 'http-client', unit: '@nvbes/http-client' },
         { package: 'billing-client', unit: '@nvbes/billing-client' },
         { package: 'account-client', unit: '@nvbes/account-client' },
+        { package: 'identity-sdk', unit: '@nvbes/identity-sdk' },
       ],
     },
   });

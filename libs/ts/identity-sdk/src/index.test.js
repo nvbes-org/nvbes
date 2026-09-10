@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('@nvbes/http-client', () => ({
-  createRequestHeaders: (_method, headers) => headers,
+  createRequestHeaders: (method, headers) => ({ ...headers, 'X-Test-Method': method }),
 }));
 
 import { NvbesIdentity } from './index';
@@ -31,18 +31,42 @@ describe('NvbesIdentity', () => {
     expect(url.searchParams.get('response_type')).toBe('code');
     expect(url.searchParams.get('client_id')).toBe('cloud-web');
     expect(url.searchParams.get('redirect_uri')).toBe('https://drive.example/callback');
+    expect(url.searchParams.get('state')).toBe('state-1');
     expect(url.searchParams.get('code_challenge')).toBe('challenge-1');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(url.searchParams.get('nonce')).toBe('nonce-1');
   });
 
   it.each([
-    { challenge: 'challenge', missing: 'state', nonce: 'nonce', state: '' },
-    { challenge: ' ', missing: 'challenge', nonce: 'nonce', state: 'state' },
-    { challenge: 'challenge', missing: 'nonce', nonce: '\t', state: 'state' },
-  ])('rejects a missing OAuth $missing correlation value', ({ state, challenge, nonce }) => {
-    expect(() => identity().getAuthorizationUrl('openid', state, challenge, nonce)).toThrow();
-  });
+    {
+      challenge: 'challenge',
+      message: 'OAuth state is required.',
+      missing: 'state',
+      nonce: 'nonce',
+      state: ' ',
+    },
+    {
+      challenge: ' ',
+      message: 'PKCE code challenge is required.',
+      missing: 'challenge',
+      nonce: 'nonce',
+      state: 'state',
+    },
+    {
+      challenge: 'challenge',
+      message: 'OIDC nonce is required.',
+      missing: 'nonce',
+      nonce: '\t',
+      state: 'state',
+    },
+  ])(
+    'rejects a missing OAuth $missing correlation value',
+    ({ state, challenge, nonce, message }) => {
+      expect(() => identity().getAuthorizationUrl('openid', state, challenge, nonce)).toThrow(
+        message,
+      );
+    },
+  );
 
   it('exchanges an authorization code with PKCE and maps the token response', async () => {
     const fetchMock = tokenFetch();
@@ -62,6 +86,11 @@ describe('NvbesIdentity', () => {
       tokenType: 'Bearer',
     });
     const body = fetchMock.mock.calls[0][1].body;
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST');
+    expect(fetchMock.mock.calls[0][1].headers).toEqual({
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-Test-Method': 'POST',
+    });
     expect(body.get('grant_type')).toBe('authorization_code');
     expect(body.get('code')).toBe('authorization-code');
     expect(body.get('code_verifier')).toBe('pkce-verifier');
@@ -82,7 +111,7 @@ describe('NvbesIdentity', () => {
     const fetchMock = tokenFetch();
     vi.stubGlobal('fetch', fetchMock);
 
-    const token = await identity().refreshToken('refresh-1');
+    const token = await identity({ clientSecret: 'refresh-secret' }).refreshToken('refresh-1');
 
     expect(token.accessToken).toBe('access-2');
     expect(fetchMock).toHaveBeenCalledWith(
@@ -95,6 +124,11 @@ describe('NvbesIdentity', () => {
     const body = fetchMock.mock.calls[0][1].body;
     expect(body.get('grant_type')).toBe('refresh_token');
     expect(body.get('refresh_token')).toBe('refresh-1');
+    expect(body.get('client_secret')).toBe('refresh-secret');
+    expect(fetchMock.mock.calls[0][1].headers).toEqual({
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-Test-Method': 'POST',
+    });
   });
 
   it.each([
@@ -179,11 +213,30 @@ describe('NvbesIdentity', () => {
     expect(fetchMock.mock.calls[1][0]).toBe(
       'https://identity.example/legal/consents?limit=25&cursor=next%2Fpage',
     );
+    expect(fetchMock.mock.calls[1][1]).toEqual({
+      headers: { Authorization: 'Bearer access-2' },
+    });
+    expect(fetchMock.mock.calls[2][0]).toBe('https://identity.example/legal/consent');
+    expect(fetchMock.mock.calls[2][1].method).toBe('POST');
+    expect(fetchMock.mock.calls[2][1].headers).toEqual({
+      Authorization: 'Bearer access-2',
+      'Content-Type': 'application/json',
+      'X-Test-Method': 'POST',
+    });
     expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({
       consent_type: 'analytics',
       document_version: '2026-07',
     });
     expect(fetchMock.mock.calls[3][0]).toBe('https://identity.example/legal/consent/revoke');
+    expect(fetchMock.mock.calls[3][1]).toEqual({
+      body: JSON.stringify({ consent_type: 'analytics', document_version: '2026-07' }),
+      headers: {
+        Authorization: 'Bearer access-2',
+        'Content-Type': 'application/json',
+        'X-Test-Method': 'POST',
+      },
+      method: 'POST',
+    });
   });
 });
 
