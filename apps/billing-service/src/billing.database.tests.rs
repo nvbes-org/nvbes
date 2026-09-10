@@ -70,6 +70,7 @@ async fn billing_lifecycle_is_isolated_deduplicated_and_audited() {
         identity_public_key_pem: None,
         identity_token_issuer: None,
         identity_token_key_id: None,
+        identity_verification_keys: "[]".into(),
         identity_resource_client_id: None,
         identity_resource_secret: None,
         metrics_token: None,

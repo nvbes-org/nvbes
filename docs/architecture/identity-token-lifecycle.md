@@ -293,18 +293,41 @@ la bibliothèque retire la clé du JWKS et de sa vérification, sans redémarrag
 
 La rotation opérateur suit ces étapes :
 
-1. Ajouter la future clé publique au tableau, en conservant l'ancienne clé active.
-2. Vérifier sa publication et attendre la durée maximale de cache des consommateurs.
+1. Ajouter la future clé publique au tableau d'Identity, en conservant l'ancienne
+   clé active. Préconfigurer aussi cette clé dans
+   `NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS` sur Account et Billing, puis redémarrer
+   ces consommateurs : ils utilisent des clés publiques épinglées par l'opérateur,
+   sans téléchargement JWKS automatique.
+2. Vérifier sa publication et le maintien des accès aux deux API. Pour les autres
+   consommateurs utilisant un cache JWKS, attendre sa durée maximale avant bascule.
 3. Activer la nouvelle paire ; conserver l'ancienne clé publique dans le tableau
    jusqu'à l'expiration des jetons émis avec elle, en incluant la marge d'horloge
    et le délai de déploiement retenus pour les consommateurs.
-4. Retirer l'ancienne clé après cette échéance et vérifier le JWKS.
+4. Promouvoir la nouvelle clé publique et son identifiant dans Account et Billing,
+   avec l'ancienne clé dans leur tableau de transition et la même échéance. Après
+   redémarrage, vérifier les jetons des deux générations sur les deux API.
+5. À l'échéance, Identity retire automatiquement l'ancienne clé du JWKS et les
+   trois services refusent les jetons portant son identifiant, même non expirés.
+   Nettoyer ensuite les anciennes entrées de configuration.
+
+Account et Billing partagent `PinnedKeySet` du SDK Rust : trois clés de transition
+au maximum, JSON borné à 64 Kio, PEM à 16 Kio, identifiants uniques et échéances
+obligatoires. Un `kid` absent, inconnu ou retiré ne déclenche aucun repli. Les
+contrôles de signature, audience, DPoP et introspection restent cumulatifs.
 
 Lors d'une compromission, retirer immédiatement la clé concernée et invalider
 les autorisations touchées ; la rotation normale ne garantit pas une révocation
 immédiate dans un consommateur qui utilise encore un ancien JWKS en cache.
-Les politiques HTTP de cache, la révocation administrative et les parcours
-consommateurs restent à raccorder avant ouverture publique.
+Les politiques HTTP de cache des autres consommateurs et la révocation
+administrative restent à raccorder avant ouverture publique.
+
+La cible Nx `identity-service:test:resource-runtimes` exécute une fixture dédiée
+avec deux paires RSA distinctes, les trois binaires et leurs bases isolées. Elle
+vérifie prépublication, bascule, coexistence et retrait automatique avec refus
+des anciens jetons encore non expirés. La rotation possède sa propre fixture
+pour respecter les quotas de consentement sans modifier leur configuration.
+Cette preuve utilise des redémarrages contrôlés ; elle ne démontre pas une
+rotation sans interruption, un rollback ni la distribution des secrets en production.
 
 Ces capacités utilisent la base Identity existante et des clés injectées dans
 le runtime. Aucun Redis, KMS ni abonnement supplémentaire n'a été ajouté.

@@ -1,8 +1,9 @@
 use super::Principal;
 use crate::{config::AccountConfig, error::AccountError};
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use jsonwebtoken::{Algorithm, Validation, decode, decode_header};
 use nvbes_dpop::resource::{Credentials, ResourceVerifier, binding};
 use nvbes_identity_sdk::introspection::{ExpectedToken, IntrospectionClient};
+use nvbes_identity_sdk::pinned_keys::PinnedKeySet;
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use uuid::Uuid;
@@ -18,9 +19,8 @@ struct AccessTokenClaims {
 }
 
 pub struct TokenVerifier {
-    key: DecodingKey,
+    keys: PinnedKeySet,
     issuer: String,
-    key_id: String,
     introspection: IntrospectionClient,
     dpop: Option<ResourceVerifier>,
 }
@@ -37,9 +37,12 @@ impl TokenVerifier {
                 .as_deref()
                 .map(ResourceVerifier::new)
                 .transpose()?,
-            key: DecodingKey::from_rsa_pem(config.token_public_key_pem.as_bytes())?,
+            keys: PinnedKeySet::new(
+                &config.token_key_id,
+                &config.token_public_key_pem,
+                &config.token_verification_keys,
+            )?,
             issuer: config.token_issuer.clone(),
-            key_id: config.token_key_id.clone(),
             introspection: IntrospectionClient::new(
                 &config.token_issuer,
                 &config.identity_resource_client_id,
@@ -86,7 +89,6 @@ impl TokenVerifier {
         let header = decode_header(token).map_err(|_| invalid())?;
         if header.alg != Algorithm::RS256
             || header.typ.as_deref() != Some("at+jwt")
-            || header.kid.as_deref() != Some(&self.key_id)
             || header.jku.is_some()
             || header.jwk.is_some()
             || header.x5u.is_some()
@@ -99,10 +101,14 @@ impl TokenVerifier {
         validation.set_required_spec_claims(&["exp", "iat", "nbf", "iss", "aud", "sub"]);
         validation.validate_nbf = true;
         validation.leeway = 0;
-        let claims = decode::<AccessTokenClaims>(token, &self.key, &validation)
+        let now = chrono::Utc::now().timestamp() as u64;
+        let key = self
+            .keys
+            .key(header.kid.as_deref(), now)
+            .map_err(|_| invalid())?;
+        let claims = decode::<AccessTokenClaims>(token, key, &validation)
             .map_err(|_| invalid())?
             .claims;
-        let now = chrono::Utc::now().timestamp() as u64;
         let mut expected = claims.token;
         if expected.iss != self.issuer
             || expected.aud != "nvbes-account-service"

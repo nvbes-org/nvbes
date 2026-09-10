@@ -131,6 +131,7 @@ fn config() -> BillingConfig {
         identity_public_key_pem: Some(keys().1.clone()),
         identity_token_issuer: Some("https://identity.example/".into()),
         identity_token_key_id: Some("identity-test".into()),
+        identity_verification_keys: "[]".into(),
         identity_resource_client_id: Some("billing-api".into()),
         identity_resource_secret: Some("A".repeat(43)),
         metrics_token: None,

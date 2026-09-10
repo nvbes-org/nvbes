@@ -7,6 +7,8 @@ use rsa::{
 };
 use serde_json::{Value, json};
 use std::sync::OnceLock;
+#[path = "account.auth.key_rotation.tests.rs"]
+mod key_rotation;
 
 fn keys() -> &'static (String, String) {
     static KEYS: OnceLock<(String, String)> = OnceLock::new();
@@ -33,6 +35,7 @@ fn config() -> AccountConfig {
         token_audience: "nvbes-account-service".into(),
         token_key_id: "identity-test".into(),
         token_public_key_pem: keys().1.clone(),
+        token_verification_keys: "[]".into(),
         identity_resource_client_id: "account-api".into(),
         identity_resource_secret: "A".repeat(43),
         metrics_token: "test-metrics-token-not-used".into(),

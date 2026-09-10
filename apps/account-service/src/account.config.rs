@@ -13,6 +13,7 @@ pub struct AccountConfig {
     pub token_audience: String,
     pub token_key_id: String,
     pub token_public_key_pem: String,
+    pub token_verification_keys: String,
     pub identity_resource_client_id: String,
     pub identity_resource_secret: String,
     pub metrics_token: String,
@@ -97,6 +98,15 @@ impl AccountConfig {
             token_audience,
             token_key_id,
             token_public_key_pem,
+            token_verification_keys: match std::env::var("NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS") {
+                Ok(value) => value,
+                Err(std::env::VarError::NotPresent) => "[]".into(),
+                Err(_) => {
+                    return Err(ConfigError::Invalid(
+                        "NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS",
+                    ));
+                }
+            },
             identity_resource_client_id,
             identity_resource_secret,
             metrics_token,

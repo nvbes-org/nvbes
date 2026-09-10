@@ -1,8 +1,9 @@
 use super::BillingPrincipal;
 use crate::{config::BillingConfig, error::BillingError};
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use jsonwebtoken::{Algorithm, Validation, decode, decode_header};
 use nvbes_dpop::resource::{Credentials, ResourceVerifier, binding};
 use nvbes_identity_sdk::introspection::{ExpectedToken, IntrospectionClient};
+use nvbes_identity_sdk::pinned_keys::PinnedKeySet;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -31,9 +32,8 @@ struct Claims {
 
 #[derive(Clone)]
 struct ConfiguredVerifier {
-    key: DecodingKey,
+    keys: PinnedKeySet,
     issuer: String,
-    key_id: String,
     introspection: IntrospectionClient,
     dpop: Option<ResourceVerifier>,
 }
@@ -50,7 +50,9 @@ impl TokenVerifier {
             &config.identity_resource_client_id,
             &config.identity_resource_secret,
         ) {
-            (None, None, None, None, None) => Ok(Self(None)),
+            (None, None, None, None, None) if config.identity_verification_keys == "[]" => {
+                Ok(Self(None))
+            }
             (Some(pem), Some(issuer), Some(key_id), Some(client_id), Some(secret)) => {
                 let url = reqwest::Url::parse(issuer)?;
                 anyhow::ensure!(
@@ -81,9 +83,8 @@ impl TokenVerifier {
                         .as_deref()
                         .map(ResourceVerifier::new)
                         .transpose()?,
-                    key: DecodingKey::from_rsa_pem(pem.as_bytes())?,
+                    keys: PinnedKeySet::new(key_id, pem, &config.identity_verification_keys)?,
                     issuer: issuer.clone(),
-                    key_id: key_id.clone(),
                     introspection: IntrospectionClient::new(issuer, client_id, secret)?,
                 })))
             }
@@ -137,7 +138,6 @@ impl TokenVerifier {
         let header = decode_header(token).map_err(|_| BillingError::Unauthorized)?;
         if header.alg != Algorithm::RS256
             || header.typ.as_deref() != Some("at+jwt")
-            || header.kid.as_deref() != Some(&verifier.key_id)
             || header.jku.is_some()
             || header.jwk.is_some()
             || header.x5u.is_some()
@@ -150,10 +150,14 @@ impl TokenVerifier {
         validation.set_required_spec_claims(&["iss", "aud", "sub", "exp", "iat", "nbf"]);
         validation.validate_nbf = true;
         validation.leeway = 0;
-        let claims = decode::<Claims>(token, &verifier.key, &validation)
+        let now = chrono::Utc::now().timestamp() as u64;
+        let key = verifier
+            .keys
+            .key(header.kid.as_deref(), now)
+            .map_err(|_| BillingError::Unauthorized)?;
+        let claims = decode::<Claims>(token, key, &validation)
             .map_err(|_| BillingError::Unauthorized)?
             .claims;
-        let now = chrono::Utc::now().timestamp() as u64;
         if claims.iss != verifier.issuer
             || claims.aud != AUDIENCE
             || claims.token_type != "access"

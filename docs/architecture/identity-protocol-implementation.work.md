@@ -13,6 +13,34 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Rotation des clés : consommateurs Account et Billing — 2026-09-10
+
+Les deux API acceptent désormais un ensemble borné de clés publiques épinglées,
+avec échéance obligatoire pour chaque clé de transition. Le SDK Rust mutualise
+la sélection stricte du `kid` ; aucune URL provenant du jeton n'est chargée et
+aucune clé inconnue ne déclenche de repli. Une configuration invalide bloque le
+démarrage. L'introspection Identity et les contrôles DPoP restent obligatoires
+selon le type de jeton, en complément de la signature locale.
+
+La fixture réelle vérifie deux paires RSA distinctes : prépublication, changement
+du signataire Identity, acceptation des deux générations par Account et Billing,
+puis retrait automatique à une échéance partagée. Les anciens jetons encore non
+expirés obtiennent HTTP 401 ; les nouveaux conservent HTTP 200 et le JWKS ne
+publie plus l'ancienne clé. Le scénario de rotation utilise une base isolée
+distincte : son ajout initial au scénario général atteignait HTTP 429 pendant
+le consentement. Aucun quota de production n'a été diminué ou contourné.
+
+Validation : `cargo check --workspace`, check Billing avec tous les targets,
+tests Nx Account (6), Billing et SDK Rust passent. La cible réelle
+`identity-service:test:resource-runtimes` passe avec les deux scénarios, dont
+l'autorisation, la déconnexion et la panne Identity existantes. La procédure
+opérateur décrit aussi la préconfiguration des consommateurs avant la bascule.
+
+Cette tranche avance le lot C. Elle prouve des redémarrages contrôlés, pas une
+rotation sans interruption ni un rollback en production. La distribution des
+secrets, les autres consommateurs JWKS, le logout standardisé et les autres
+exigences A–D restent ouverts. Aucun service payant ni déploiement ajouté.
+
 ## Account : révocation prise en compte au retour de l'onglet — 2026-09-10
 
 Le contrôleur Account vérifie le grant auprès de l'API au retour au premier plan

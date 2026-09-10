@@ -9,13 +9,12 @@ import { oauthClient } from './runtime-oauth-client.mjs';
 import { verifySdkRefresh } from './runtime-sdk-refresh.mjs';
 import { verifyIdentityCors } from './runtime-identity-cors.mjs';
 import { verifyResourceCors } from './runtime-resource-cors.mjs';
+import { verifySigningRotation } from './runtime-key-rotation.mjs';
 
 const secret = () => randomBytes(32).toString('base64url');
 
-test(
-  'real Identity tokens, resource audiences, logout and Identity outage',
-  { timeout: 120_000 },
-  async (t) => {
+for (const scenario of ['resource authorization, logout and outage', 'signing key rotation'])
+  test(`real Identity, Account and Billing: ${scenario}`, { timeout: 120_000 }, async (t) => {
     const fixture = new RuntimeFixture();
     t.after(() => fixture.close());
     const databases = await fixture.database();
@@ -110,7 +109,7 @@ test(
         NVBES_IDENTITY_SYNTHETIC_RECOVERED_PASSWORD: password,
       }),
     );
-    const identity = await fixture.start(
+    let identity = await fixture.start(
       binaries.identity,
       environments.identity,
       origins.identity,
@@ -158,6 +157,31 @@ test(
     assert.equal((await access('billing', billing, 200)).account_id, seed.principal_id);
     await access('account', billing, 401);
     await access('billing', account, 401);
+    if (scenario === 'signing key rotation') {
+      await verifySigningRotation({
+        origins,
+        environments,
+        issue,
+        access,
+        before: { account, billing },
+        restart: async (service) => {
+          await { identity, account: accountRuntime, billing: billingRuntime }[service].stop();
+          const runtime = await fixture.start(
+            binaries[service],
+            environments[service],
+            origins[service],
+            '/health/ready',
+          );
+          if (service === 'identity') identity = runtime;
+          else if (service === 'account') accountRuntime = runtime;
+          else billingRuntime = runtime;
+        },
+      });
+      t.diagnostic(
+        'Signing rotation: prepublication, overlapping old/new grants and timed retirement verified on Identity, Account and Billing.',
+      );
+      return;
+    }
     const accountWrite = await issue('account', false, 'account:read account:write');
     const billingCheckout = await issue('billing', false, 'billing:read billing:checkout');
     await verifyBillingAuthorization({
@@ -228,7 +252,7 @@ test(
     await identity.stop();
     await access('account', nextAccount, 503);
     await access('billing', nextBilling, 503);
-    await fixture.start(
+    identity = await fixture.start(
       binaries.identity,
       environments.identity,
       origins.identity,
@@ -238,5 +262,4 @@ test(
     await access('billing', nextBilling, 200);
     await access('account', account, 401);
     await access('billing', billing, 401);
-  },
-);
+  });

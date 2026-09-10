@@ -4,6 +4,8 @@ pub mod error;
 pub mod introspection;
 #[path = "jwt.verifier.rs"]
 pub mod jwt;
+#[path = "jwt.pinned_keys.rs"]
+pub mod pinned_keys;
 pub mod types;
 
 pub use client::IdentityClient;

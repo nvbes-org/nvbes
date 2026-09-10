@@ -26,6 +26,7 @@ async fn failed_delivery_rolls_back_then_retries_once() {
         identity_public_key_pem: None,
         identity_token_issuer: None,
         identity_token_key_id: None,
+        identity_verification_keys: "[]".into(),
         identity_resource_client_id: None,
         identity_resource_secret: None,
         metrics_token: None,

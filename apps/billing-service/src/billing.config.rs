@@ -13,6 +13,7 @@ pub struct BillingConfig {
     pub identity_public_key_pem: Option<String>,
     pub identity_token_issuer: Option<String>,
     pub identity_token_key_id: Option<String>,
+    pub identity_verification_keys: String,
     pub identity_resource_client_id: Option<String>,
     pub identity_resource_secret: Option<String>,
     pub metrics_token: Option<String>,
@@ -85,6 +86,13 @@ impl BillingConfig {
             identity_public_key_pem,
             identity_token_issuer,
             identity_token_key_id,
+            identity_verification_keys: match std::env::var(
+                "NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS",
+            ) {
+                Ok(value) => value,
+                Err(std::env::VarError::NotPresent) => "[]".into(),
+                Err(_) => anyhow::bail!("invalid Identity verification key encoding"),
+            },
             identity_resource_client_id,
             identity_resource_secret,
             metrics_token,
