@@ -34,7 +34,7 @@ export interface AuthConfig {
   baseUrl: string;
   clientId: string;
   redirectUri: string;
-  audience?: string;
+  resource: string;
 }
 
 export interface IdentityWebConfig extends AuthConfig {
@@ -63,7 +63,7 @@ export class NvbesIdentityWeb {
         baseUrl: this.config.baseUrl,
         clientId: this.config.clientId,
         redirectUri: this.config.redirectUri,
-        audience: this.config.audience,
+        resource: this.config.resource,
         storage: this.storage,
       },
       options,

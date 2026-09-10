@@ -13,6 +13,20 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Paramètres PAR du SDK — 2026-09-10
+
+La configuration publique du SDK utilise désormais `resource`, URL exacte du
+registre Identity, au lieu de l'ancien `audience`. Les requêtes exigent `openid`,
+un nonce et un state ASCII de 16 à 512 caractères. Le README utilise les scopes
+actifs Account. Les origines Identity non sûres et les chemins de retour ambigus
+sont refusés avant sauvegarde de transaction et appel réseau. PAR refuse les
+redirections et son résultat doit contenir un URI de requête au préfixe attendu.
+
+Validation : 73 tests SDK réussis, typecheck et lint ciblés. Ces tests examinent
+les formulaires émis avec un transport simulé ; ils ne constituent pas un parcours
+navigateur avec le serveur. Le stockage de clé DPoP et le raccordement complet
+PAR/token/refresh/API restent ouverts, ainsi que les autres lots A à D.
+
 ## Primitive DPoP navigateur — 2026-09-10
 
 Suppression du fallback réseau de `dpopFetch` : un échec crypto n'envoie aucune

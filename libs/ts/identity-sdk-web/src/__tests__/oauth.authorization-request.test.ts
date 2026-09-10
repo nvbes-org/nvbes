@@ -3,7 +3,39 @@ import { createAuthorizationRequest } from '../oauth.authorization-request';
 import { MemoryStorage } from '../storage';
 
 describe('pushed authorization requests', () => {
-  it('uses PAR, PKCE S256, an explicit audience, and no credentials', async () => {
+  it('rejects invalid protocol inputs before saving state or making a request', async () => {
+    const storage = new MemoryStorage();
+    const fetchImpl = vi.fn<typeof fetch>();
+    const config = {
+      baseUrl: 'https://identity.example',
+      clientId: 'account-web',
+      redirectUri: 'https://account.example/oauth/callback',
+      resource: 'https://api.example/account',
+      storage,
+      fetchImpl,
+    };
+    for (const input of [
+      { scope: 'account:read' },
+      { state: 'short' },
+      { nonce: 'short' },
+      { resource: 'https://api.example/account#fragment' },
+      { returnTo: '/\\attacker.example' },
+      { returnTo: '/\n/attacker.example' },
+    ]) {
+      await expect(createAuthorizationRequest(config, input)).rejects.toThrow();
+      expect(storage.getTransaction()).toBeNull();
+    }
+    for (const baseUrl of [
+      'http://identity.example',
+      'https://user:pass@identity.example',
+      'https://identity.example/path',
+    ]) {
+      await expect(createAuthorizationRequest({ ...config, baseUrl })).rejects.toThrow();
+    }
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('uses PAR, PKCE S256, an explicit resource, and no credentials', async () => {
     const storage = new MemoryStorage();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
@@ -20,14 +52,14 @@ describe('pushed authorization requests', () => {
         baseUrl: 'https://identity.example/',
         clientId: 'account-web',
         redirectUri: 'https://account.example/oauth/callback',
-        audience: 'nvbes-account-service',
+        resource: 'https://api.example/account',
         storage,
         fetchImpl,
         now: () => 1_000,
       },
       {
-        scope: 'account:profile:read account:profile:write',
-        state: 'state-1',
+        scope: 'openid account:read account:write',
+        state: 'transaction-state-1',
         returnTo: '/privacy',
       },
     );
@@ -36,8 +68,8 @@ describe('pushed authorization requests', () => {
       'https://identity.example/oauth/authorize?client_id=account-web&request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Arequest-1',
     );
     expect(storage.getTransaction()).toMatchObject({
-      state: 'state-1',
-      nonce: null,
+      state: 'transaction-state-1',
+      nonce: expect.any(String),
       createdAt: 1_000,
       returnTo: '/privacy',
     });
@@ -50,10 +82,12 @@ describe('pushed authorization requests', () => {
     if (!(body instanceof URLSearchParams)) {
       throw new Error('Expected a form-encoded PAR body.');
     }
-    expect(body.get('audience')).toBe('nvbes-account-service');
+    expect(body.get('resource')).toBe('https://api.example/account');
+    expect(body.has('audience')).toBe(false);
+    expect(init?.redirect).toBe('error');
     expect(body.get('code_challenge_method')).toBe('S256');
     expect(body.get('code_challenge')).toBeTruthy();
-    expect(body.get('nonce')).toBeNull();
+    expect(body.get('nonce')).toBe(storage.getTransaction()?.nonce);
   });
 
   it('adds an OIDC nonce when openid is requested', async () => {
@@ -71,20 +105,21 @@ describe('pushed authorization requests', () => {
     await createAuthorizationRequest(
       {
         baseUrl: 'https://identity.example',
-        clientId: 'cloud-web',
-        redirectUri: 'https://cloud.example/oauth/callback',
+        clientId: 'account-web',
+        redirectUri: 'https://account.example/oauth/callback',
+        resource: 'https://identity.example/oauth/userinfo',
         storage,
         fetchImpl,
       },
-      { scope: 'openid profile', state: 'state-2', nonce: 'nonce-2' },
+      { scope: 'openid profile', state: 'transaction-state-2', nonce: 'transaction-nonce-2' },
     );
 
     const body = fetchImpl.mock.calls[0]?.[1]?.body;
     if (!(body instanceof URLSearchParams)) {
       throw new Error('Expected a form-encoded PAR body.');
     }
-    expect(body.get('nonce')).toBe('nonce-2');
-    expect(storage.getTransaction()?.nonce).toBe('nonce-2');
+    expect(body.get('nonce')).toBe('transaction-nonce-2');
+    expect(storage.getTransaction()?.nonce).toBe('transaction-nonce-2');
   });
 
   it('rejects cross-origin return targets before contacting Identity', async () => {
@@ -95,6 +130,7 @@ describe('pushed authorization requests', () => {
         {
           baseUrl: 'https://identity.example',
           clientId: 'account-web',
+          resource: 'https://api.example/account',
           redirectUri: 'https://account.example/oauth/callback',
           storage: new MemoryStorage(),
           fetchImpl,

@@ -22,8 +22,8 @@ limité à 32 entrées et 1 024 caractères par nonce. Les preuves excluent quer
 fragment de `htu`. Le mode worker conserve le contrat de son fournisseur crypto.
 
 Cette primitive reste à raccorder au parcours OAuth ci-dessous. La conservation
-de la clé au retour de redirection et l'alignement des paramètres/scopes avec le
-service actif restent à terminer ; cet exemple ne prouve pas ce parcours complet.
+de la clé au retour de redirection reste à terminer ; cet exemple ne prouve pas
+le parcours complet avec le service actif.
 
 ```typescript
 import { NvbesIdentityWeb } from '@nvbes/identity-sdk-web';
@@ -32,17 +32,22 @@ const identity = new NvbesIdentityWeb({
   baseUrl: 'https://identity.nvbes.eu',
   clientId: 'account-web',
   redirectUri: 'https://account.nvbes.eu/oauth/callback',
-  audience: 'nvbes-account-service',
+  resource: 'https://account-api.example', // URL exacte du registre OAuth Identity
 });
 
 await identity.redirectToLogin({
-  scope: 'account:profile:read account:profile:write account:privacy:read',
+  scope: 'openid account:read account:write',
   returnTo: '/profile',
 });
 ```
 
 `redirectToLogin` pousse d’abord la requête sur `/oauth/par`, crée une transaction PKCE à usage
 unique, puis navigue vers `/oauth/authorize` avec seulement `client_id` et `request_uri`.
+`resource` remplace l'ancien paramètre SDK `audience` : l'audience du jeton est
+dérivée du registre côté serveur. `openid` est obligatoire ; les scopes métier
+doivent être enregistrés pour cette ressource. PAR refuse les redirections HTTP
+et omet cookies et cache. L'issuer configuré doit être une origine HTTPS (HTTP
+loopback uniquement en développement).
 
 Dans la route de callback :
 
