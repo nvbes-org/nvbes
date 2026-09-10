@@ -16,6 +16,8 @@ export interface AuthorizationRequestConfig {
 }
 
 export interface AuthorizationRequestInput {
+  prompt?: 'login' | 'consent' | 'none';
+  maxAge?: number;
   scope?: string;
   resource?: string;
   state?: string;
@@ -37,6 +39,13 @@ export async function createAuthorizationRequest(
   config: AuthorizationRequestConfig,
   input: AuthorizationRequestInput = {},
 ): Promise<AuthorizationRequest> {
+  if (input.prompt !== undefined && !['login', 'consent', 'none'].includes(input.prompt))
+    throw new Error('Unsupported authorization prompt.');
+  if (
+    input.maxAge !== undefined &&
+    (!Number.isInteger(input.maxAge) || input.maxAge < 0 || input.maxAge > 86_400)
+  )
+    throw new Error('Authorization maxAge must be an integer between 0 and 86400.');
   const state = transactionValue(input.state ?? generateRandomValue());
   const scope = input.scope?.trim() || 'openid';
   if (!scope.split(' ').includes('openid')) {
@@ -72,6 +81,8 @@ export async function createAuthorizationRequest(
   if (nonce) {
     body.set('nonce', nonce);
   }
+  if (input.prompt !== undefined) body.set('prompt', input.prompt);
+  if (input.maxAge !== undefined) body.set('max_age', String(input.maxAge));
 
   const keyStore = config.dpopStore ?? new IndexedDbDpopTransactionStore();
   const key = config.dpop === false ? undefined : await generateBrowserDpopKeyPair();

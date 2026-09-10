@@ -14,6 +14,12 @@ SDK navigateur pour les parcours nvbes Identity et les clients OAuth publics.
 
 ## Client OAuth public
 
+`createAuthorizationRequest(config, { prompt: 'login', maxAge: 0 })` demande une
+authentification fraîche via PAR. Les prompts `login`, `consent` et `none` sont
+acceptés ; `maxAge` est un entier entre 0 et 86400 secondes. Sans ces options,
+le comportement SSO reste celui du serveur. Ces paramètres ne remplacent pas
+la politique MFA enregistrée du client.
+
 Après abandon d'un parcours (par exemple une récupération MFA qui révoque la
 session Identity), une nouvelle connexion explicite doit d'abord appeler
 `discardAuthorizationRequest({ storage, dpopStore? })`, exporté par l'entrée

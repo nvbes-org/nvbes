@@ -3,6 +3,35 @@ import { createAuthorizationRequest } from '../oauth.authorization-request';
 import { MemoryStorage } from '../storage';
 
 describe('pushed authorization requests', () => {
+  it('sends explicit freshness requirements through PAR, including max_age zero', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          request_uri: 'urn:ietf:params:oauth:request_uri:fresh',
+          expires_in: 90,
+        }),
+        { status: 201 },
+      ),
+    );
+    const config = {
+      storage: new MemoryStorage(),
+      fetchImpl,
+      dpop: false,
+      baseUrl: 'https://identity.example',
+      clientId: 'account',
+      redirectUri: 'https://account.example/callback',
+      resource: 'https://api.example',
+    };
+    for (const maxAge of [-1, 0.5, Number.NaN, Infinity, 86401])
+      await expect(createAuthorizationRequest(config, { maxAge })).rejects.toThrow();
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(config.storage.getTransaction()).toBeNull();
+    await createAuthorizationRequest(config, { prompt: 'login', maxAge: 0 });
+    const body = fetchImpl.mock.calls[0]?.[1]?.body;
+    expect(body).toBeInstanceOf(URLSearchParams);
+    expect((body as URLSearchParams).get('prompt')).toBe('login');
+    expect((body as URLSearchParams).get('max_age')).toBe('0');
+  });
   it('rejects invalid protocol inputs before saving state or making a request', async () => {
     const storage = new MemoryStorage();
     const fetchImpl = vi.fn<typeof fetch>();
