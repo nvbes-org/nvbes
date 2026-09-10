@@ -13,6 +13,23 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Header DPoP sur PAR — 2026-09-10
+
+Le endpoint PAR accepte une preuve ES256 liée à POST et à l'URL de l'issuer
+configuré. Sa clé est injectée avant validation de la politique du client ;
+un `dpop_jkt` simultané différent ou des headers dupliqués sont refusés.
+La consommation anti-rejeu et la création PAR partagent une transaction.
+Un échec de stockage permet de réessayer la même preuve sans état partiel.
+Les deux mécanismes correspondent au contrat de la
+[RFC 9449, section 10.1](https://www.rfc-editor.org/rfc/rfc9449.html#section-10.1).
+
+Validation : `cargo check --workspace` réussi ; la cible Nx
+`identity-service:test:database` passe avec 151 tests de bibliothèque et
+24 tests runtime, plus trois contrôles de base isolée. Le test navigateur
+interactif reste ignoré. Les nouveaux tests traversent HTTP et PostgreSQL
+pour la liaison de clé, le mismatch, les doublons, la concurrence et le rollback.
+Le SDK navigateur et les parcours multisites restent à livrer.
+
 ## DPoP dans les API ressources — 2026-09-10
 
 Account et Billing acceptent maintenant les tokens liés à DPoP avec preuve

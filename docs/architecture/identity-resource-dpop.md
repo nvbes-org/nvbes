@@ -70,6 +70,8 @@ Les suites PostgreSQL Identity, Account et Billing restent des gates de régress
 Cette preuve utilise HTTP loopback ; elle ne remplace pas les essais navigateur
 HTTPS, clients natifs ou charge. Le SDK navigateur PAR/DPoP reste à intégrer.
 Les nonces émis par les serveurs de ressources ne sont pas activés dans ce profil.
-La prise en charge du header DPoP sur PAR reste aussi à compléter côté Identity ;
-la liaison `dpop_jkt` et la preuve au token endpoint ne suffisent pas à clore
-l'intégralité du lot D. Aucune certification FAPI/AAL n'est revendiquée.
+Identity accepte aussi le header DPoP sur PAR : sa clé devient le `dpop_jkt`
+persisté, une divergence entre les deux mécanismes est refusée et la preuve
+est consommée dans la transaction de création PAR. Les tests HTTP/PostgreSQL
+couvrent concurrence et rollback. Cela ne clôt pas l'intégration navigateur
+du lot D. Aucune certification FAPI/AAL n'est revendiquée.

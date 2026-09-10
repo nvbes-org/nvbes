@@ -36,6 +36,10 @@ async fn get(f: &Fixture, query: &str, cookie: &str) -> (StatusCode, HeaderMap, 
 }
 
 async fn push_raw(f: &Fixture, body: String) -> axum::response::Response {
+    push_proof(f, body, &[]).await
+}
+
+async fn push_proof(f: &Fixture, body: String, proofs: &[&str]) -> axum::response::Response {
     let tokens =
         Arc::new(crate::tokens::TokenService::new(crate::tokens::tests::config()).unwrap());
     let app = crate::oauth::http::token_router(
@@ -44,14 +48,103 @@ async fn push_raw(f: &Fixture, body: String) -> axum::response::Response {
         tokens.clone(),
         crate::rate_limits::RateLimiter::new([53; 32]).unwrap(),
     );
-    let request = Request::post("/oauth/par")
+    let mut request = Request::post("/oauth/par")
         .extension(axum::extract::ConnectInfo(
             "127.0.0.1:4000".parse::<std::net::SocketAddr>().unwrap(),
         ))
-        .header("content-type", "application/x-www-form-urlencoded")
-        .body(Body::from(body))
-        .unwrap();
+        .header("content-type", "application/x-www-form-urlencoded");
+    for proof in proofs {
+        request = request.header("dpop", *proof);
+    }
+    let request = request.body(Body::from(body)).unwrap();
     app.oneshot(request).await.unwrap()
+}
+
+#[tokio::test]
+async fn par_proof_binds_key_rejects_mismatch_and_commits_once() {
+    let f = Fixture::new().await;
+    let key = nvbes_dpop::generate_key_pair();
+    let proof = nvbes_dpop::proof::create_dpop_proof(
+        &key,
+        "POST",
+        "http://localhost:3000/oauth/par",
+        None,
+        None,
+    )
+    .unwrap();
+    let wrong = nvbes_dpop::generate_key_pair();
+    for (body, proofs) in [
+        (
+            format!("{}&dpop_jkt={}", direct_query(), wrong.jkt),
+            vec![proof.as_str()],
+        ),
+        (direct_query(), vec![proof.as_str(), proof.as_str()]),
+    ] {
+        assert_eq!(
+            push_proof(&f, body, &proofs).await.status(),
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(rows(&f).await, (0, 0, 0));
+    }
+    let proofs = [proof.as_str()];
+    let (a, b) = tokio::join!(
+        push_proof(&f, direct_query(), &proofs),
+        push_proof(&f, direct_query(), &proofs),
+    );
+    assert_ne!(
+        a.status() == StatusCode::CREATED,
+        b.status() == StatusCode::CREATED
+    );
+    assert_eq!(
+        if a.status() == StatusCode::CREATED {
+            b.status()
+        } else {
+            a.status()
+        },
+        StatusCode::BAD_REQUEST
+    );
+    let stored: String =
+        sqlx::query_scalar("SELECT parameters->>'dpop_jkt' FROM identity_oauth_requests")
+            .fetch_one(&f.db)
+            .await
+            .unwrap();
+    assert_eq!(stored, key.jkt);
+}
+
+#[tokio::test]
+async fn par_storage_failure_preserves_proof_for_retry() {
+    let f = Fixture::new().await;
+    let key = nvbes_dpop::generate_key_pair();
+    let proof = nvbes_dpop::proof::create_dpop_proof(
+        &key,
+        "POST",
+        "http://localhost:3000/oauth/par",
+        None,
+        None,
+    )
+    .unwrap();
+    sqlx::query("ALTER TABLE identity_oauth_requests RENAME TO unavailable_requests")
+        .execute(&f.db)
+        .await
+        .unwrap();
+    assert_eq!(
+        push_proof(&f, direct_query(), &[&proof]).await.status(),
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    sqlx::query("ALTER TABLE unavailable_requests RENAME TO identity_oauth_requests")
+        .execute(&f.db)
+        .await
+        .unwrap();
+    assert_eq!(
+        push_proof(
+            &f,
+            format!("{}&dpop_jkt={}", direct_query(), key.jkt),
+            &[&proof]
+        )
+        .await
+        .status(),
+        StatusCode::CREATED
+    );
 }
 
 async fn push(f: &Fixture) -> String {

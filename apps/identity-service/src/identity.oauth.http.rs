@@ -356,18 +356,50 @@ async fn authorize(
 
 async fn par(
     State(state): State<TokenState>,
+    headers: HeaderMap,
     form: Result<Form<Vec<(String, String)>>, axum::extract::rejection::FormRejection>,
 ) -> Result<impl IntoResponse, ProtocolError> {
     let Form(fields) = form.map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    let query::AuthorizationQuery::Direct(input) =
+    let query::AuthorizationQuery::Direct(mut input) =
         query::AuthorizationQuery::from_fields(fields).map_err(ProtocolError::OAuth)?
     else {
         return Err(ProtocolError::OAuth(OAuthError::InvalidRequest));
     };
+    let proof = token::dpop_header(&headers)?
+        .map(|proof| {
+            crate::oauth::dpop::verify_token_proof(
+                proof,
+                "POST",
+                &format!("{}/oauth/par", state.tokens.issuer().trim_end_matches('/')),
+            )
+        })
+        .transpose()
+        .map_err(ProtocolError::OAuth)?;
+    if let Some(proof) = &proof {
+        if input
+            .dpop_jkt
+            .as_deref()
+            .is_some_and(|jkt| jkt != proof.thumbprint())
+        {
+            return Err(ProtocolError::OAuth(OAuthError::InvalidDpopProof));
+        }
+        input.dpop_jkt = Some(proof.thumbprint().to_owned());
+    }
     let request = input
         .validate(&state.clients)
         .map_err(ProtocolError::OAuth)?;
-    let request_uri = store::create_request(&state.db, &request, RequestKind::Par)
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
+    if let Some(proof) = proof {
+        proof.consume(&mut tx).await.map_err(ProtocolError::OAuth)?;
+    }
+    let request_uri = store::create_request_in(&mut tx, &request, RequestKind::Par)
+        .await
+        .map_err(protocol_store_error)?;
+    tx.commit()
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;
     Ok((

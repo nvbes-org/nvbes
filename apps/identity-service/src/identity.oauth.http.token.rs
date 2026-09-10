@@ -76,7 +76,7 @@ fn required(value: Option<&str>) -> Result<&str, ProtocolError> {
         .ok_or(ProtocolError::OAuth(OAuthError::InvalidRequest))
 }
 
-fn dpop_header(headers: &HeaderMap) -> Result<Option<&str>, ProtocolError> {
+pub(super) fn dpop_header(headers: &HeaderMap) -> Result<Option<&str>, ProtocolError> {
     let mut values = headers.get_all("dpop").iter();
     let value = values.next();
     if values.next().is_some() {
