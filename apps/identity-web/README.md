@@ -20,8 +20,13 @@ L'ajout du premier facteur dispose d'écrans : création puis assertion passkey,
 ou clé TOTP à saisir manuellement puis confirmation par code. Les secrets restent
 en mémoire et sont retirés à expiration, annulation, confirmation ou sortie de page.
 Les listes de facteurs orientent l'écran ; le serveur revérifie la fraîcheur de
-l'authentification et l'autorisation à chaque mutation. La gestion des facteurs
-supplémentaires et le site Account restent à raccorder à des écrans.
+l'authentification et l'autorisation à chaque mutation. Après une preuve forte
+fraîche confirmée pour le client, le consentement permet également l'ajout de
+facteurs supplémentaires. Un TOTP déjà actif n'est pas proposé à nouveau.
+Configurer TOTP comme facteur supplémentaire ne satisfait pas une politique
+WebAuthn : le serveur doit encore confirmer une preuve passkey avant consentement.
+Le renommage, la révocation des facteurs et le site Account restent à raccorder
+à des écrans.
 Aucun lien d'inscription publique n'est exposé.
 
 Lorsqu'une politique OAuth exige une preuve forte fraîche et que le serveur la
@@ -101,6 +106,8 @@ Ils utilisent ensuite un code depuis l'écran de step-up, rechargent `/recovery`
 annulent une première fenêtre de création puis enregistrent une passkey de
 remplacement. Une nouvelle connexion avec cette passkey atteint Account ; les
 anciennes transactions clientes sont abandonnées explicitement avec le SDK.
+Avant la récupération, ces scénarios ajoutent aussi un second facteur : passkey
+après TOTP ou TOTP après passkey, avec le step-up WebAuthn requis par le client.
 
 ## Composants et exploitation
 

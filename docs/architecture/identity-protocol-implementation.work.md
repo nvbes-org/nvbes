@@ -13,6 +13,27 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Site Identity : facteurs supplémentaires — 2026-09-10
+
+Après preuve forte fraîche confirmée pour le client OAuth, le consentement
+permet d'ajouter une autre passkey ou TOTP. La liste TOTP est lue à l'ouverture
+pour ne pas proposer un deuxième facteur TOTP actif ; le serveur revérifie chaque
+mutation. L'expiration de la preuve bloque l'ajout supplémentaire. La première
+méthode conserve sa politique de preuve primaire récente côté serveur.
+
+La configuration TOTP supplémentaire est distincte de la satisfaction d'une
+politique recent_webauthn : après confirmation TOTP, le statut serveur peut exiger
+une nouvelle assertion passkey avant consentement. Un code TOTP refusé conserve
+le matériel de configuration tant que les preuves et l'expiration le permettent.
+
+Validation : 39 tests du site, typecheck/lint/format/build réussis. Deux fixtures
+HTTPS neuves avec Chromium 153 valident TOTP puis passkey supplémentaire, et
+passkey puis TOTP supplémentaire avec step-up WebAuthn. Chaque parcours génère
+ses codes de secours, récupère le compte et atteint Account HTTP 200 après une
+nouvelle connexion. Services réels, authentificateurs synthétiques. Aucun Rust
+modifié. Renommage/révocation via UI, Account Web, sessions intersites et gates
+d'exploitation restent ouverts ; les lots A–D ne sont pas clos.
+
 ## Site Identity : récupération MFA hébergée — 2026-09-10
 
 Le step-up permet de consommer un code de secours après connexion primaire.

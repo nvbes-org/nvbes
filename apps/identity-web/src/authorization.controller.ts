@@ -24,6 +24,7 @@ export interface AuthorizationState {
   firstEnrollmentAvailable: boolean;
   totpEnrollment: HostedTotpEnrollment | null;
   recoveryCodes: string[] | null;
+  hasTotp: boolean;
 }
 
 /** One instance per document; never cache credentials, interactions or mutations. */
@@ -37,6 +38,7 @@ export class AuthorizationController {
     firstEnrollmentAvailable: false,
     totpEnrollment: null,
     recoveryCodes: null,
+    hasTotp: false,
   };
   private listeners = new Set<() => void>();
   private started = false;
@@ -81,6 +83,7 @@ export class AuthorizationController {
       firstEnrollmentAvailable: false,
       totpEnrollment: null,
       recoveryCodes: null,
+      hasTotp: false,
       error:
         'Cette connexion ne peut pas être poursuivie. Revenez à votre application pour recommencer.',
     });
@@ -103,18 +106,20 @@ export class AuthorizationController {
       interaction.sessionCsrfToken !== null &&
       !(await this.gateway.hasFactors(interaction.sessionCsrfToken));
     if (this.disposed) return;
+    const enrollmentAvailable = firstEnrollmentAvailable || authentication.proofExpiresAt !== null;
     this.publish({
       authentication,
       firstEnrollmentAvailable,
       totpEnrollment:
-        firstEnrollmentAvailable && authentication.minimumAuthentication !== 'recent_webauthn'
+        enrollmentAvailable &&
+        !(firstEnrollmentAvailable && authentication.minimumAuthentication === 'recent_webauthn')
           ? this.state.totpEnrollment
           : null,
       error: null,
       stage: authentication.needsLogin
         ? 'login'
-        : firstEnrollmentAvailable &&
-            (authentication.needsStepUp || this.state.totpEnrollment !== null)
+        : (firstEnrollmentAvailable && authentication.needsStepUp) ||
+            (enrollmentAvailable && this.state.totpEnrollment !== null)
           ? 'enrollment'
           : authentication.needsStepUp
             ? 'step-up'
@@ -210,8 +215,20 @@ export class AuthorizationController {
   }
 
   beginEnrollment() {
-    if (!this.state.busy && this.state.firstEnrollmentAvailable && this.state.stage === 'consent')
-      this.publish({ stage: 'enrollment', error: null });
+    if (this.state.stage !== 'consent' || !this.canEnroll()) return Promise.resolve();
+    return this.mutate(async (interaction) => {
+      if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
+      const hasTotp = await this.gateway.hasTotp(interaction.sessionCsrfToken);
+      if (!this.disposed) this.publish({ stage: 'enrollment', hasTotp });
+    });
+  }
+
+  private canEnroll() {
+    const expiry = this.state.authentication?.proofExpiresAt;
+    return (
+      this.state.firstEnrollmentAvailable ||
+      (expiry !== null && expiry !== undefined && Date.parse(expiry) > Date.now())
+    );
   }
 
   generateRecoveryCodes() {
@@ -264,8 +281,7 @@ export class AuthorizationController {
   }
 
   registerPasskey(label: string) {
-    if (this.state.stage !== 'enrollment' || !this.state.firstEnrollmentAvailable)
-      return Promise.resolve();
+    if (this.state.stage !== 'enrollment' || !this.canEnroll()) return Promise.resolve();
     return this.mutate(async (interaction) => {
       if (!interaction.sessionCsrfToken) throw new Error('Missing session proof');
       this.publish({ totpEnrollment: null });
@@ -280,8 +296,10 @@ export class AuthorizationController {
   startTotp() {
     if (
       this.state.stage !== 'enrollment' ||
-      !this.state.firstEnrollmentAvailable ||
-      this.state.authentication?.minimumAuthentication === 'recent_webauthn' ||
+      !this.canEnroll() ||
+      this.state.hasTotp ||
+      (this.state.firstEnrollmentAvailable &&
+        this.state.authentication?.minimumAuthentication === 'recent_webauthn') ||
       this.state.totpEnrollment
     )
       return Promise.resolve();
@@ -299,7 +317,8 @@ export class AuthorizationController {
     if (
       this.state.stage !== 'enrollment' ||
       !enrollment ||
-      this.state.authentication?.minimumAuthentication === 'recent_webauthn'
+      (this.state.firstEnrollmentAvailable &&
+        this.state.authentication?.minimumAuthentication === 'recent_webauthn')
     )
       return Promise.resolve();
     return this.mutate(async (interaction) => {

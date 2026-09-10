@@ -25,6 +25,7 @@ function setup(policy: HostedAuthenticationStatus['minimumAuthentication'] = 're
     proofExpiresAt: null,
   });
   const hasFactors = vi.spyOn(gateway, 'hasFactors').mockResolvedValue(false);
+  const hasTotp = vi.spyOn(gateway, 'hasTotp').mockResolvedValue(false);
   const register = vi.spyOn(gateway, 'registerPasskey').mockResolvedValue('credential');
   const stepUp = vi.spyOn(gateway, 'stepUpPasskey').mockResolvedValue('2030-01-01T00:00:00Z');
   const material = {
@@ -40,6 +41,7 @@ function setup(policy: HostedAuthenticationStatus['minimumAuthentication'] = 're
     controller,
     status,
     hasFactors,
+    hasTotp,
     register,
     stepUp,
     startTotp,
@@ -147,4 +149,80 @@ it('does not spend factor-list quotas after the server confirms fresh strong pro
   expect(test.hasFactors).not.toHaveBeenCalled();
   expect(test.controller.snapshot().stage).toBe('consent');
   expect(test.controller.snapshot().firstEnrollmentAvailable).toBe(false);
+});
+
+it('adds another passkey only after fresh strong proof', async () => {
+  const test = setup();
+  test.status.mockResolvedValue({
+    minimumAuthentication: 'recent_mfa',
+    needsLogin: false,
+    needsStepUp: false,
+    proofExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+  await test.controller.start('authorization');
+  await test.controller.beginEnrollment();
+  expect(test.controller.snapshot().stage).toBe('enrollment');
+  expect(test.controller.snapshot().firstEnrollmentAvailable).toBe(false);
+  await test.controller.registerPasskey('Backup key');
+  expect(test.register).toHaveBeenCalledExactlyOnceWith('session', 'Backup key');
+  expect(test.controller.snapshot().stage).toBe('consent');
+});
+
+it('does not offer another TOTP configuration when one is already active', async () => {
+  const test = setup();
+  test.status.mockResolvedValue({
+    minimumAuthentication: 'recent_mfa',
+    needsLogin: false,
+    needsStepUp: false,
+    proofExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+  test.hasTotp.mockResolvedValue(true);
+  await test.controller.start('authorization');
+  await test.controller.beginEnrollment();
+  await test.controller.startTotp();
+  expect(test.startTotp).not.toHaveBeenCalled();
+});
+
+it('retains a supplementary TOTP secret after rejected confirmation without treating it as WebAuthn', async () => {
+  const test = setup('recent_webauthn');
+  test.status.mockResolvedValue({
+    minimumAuthentication: 'recent_webauthn',
+    needsLogin: false,
+    needsStepUp: false,
+    proofExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+  await test.controller.start('authorization');
+  await test.controller.beginEnrollment();
+  await test.controller.startTotp();
+  test.confirmTotp.mockRejectedValueOnce(new HostedIdentityError(400));
+  await test.controller.confirmTotp('000000');
+  expect(test.controller.snapshot().stage).toBe('enrollment');
+  expect(test.controller.snapshot().totpEnrollment).toEqual(test.material);
+  test.status.mockResolvedValue({
+    minimumAuthentication: 'recent_webauthn',
+    needsLogin: false,
+    needsStepUp: true,
+    proofExpiresAt: null,
+  });
+  test.hasFactors.mockResolvedValue(true);
+  await test.controller.confirmTotp('123456');
+  expect(test.controller.snapshot().stage).toBe('step-up');
+});
+
+it('refuses a supplementary enrollment after its strong proof expires', async () => {
+  vi.useFakeTimers();
+  const test = setup();
+  test.status.mockResolvedValue({
+    minimumAuthentication: 'recent_mfa',
+    needsLogin: false,
+    needsStepUp: false,
+    proofExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+  await test.controller.start('authorization');
+  await test.controller.beginEnrollment();
+  vi.advanceTimersByTime(60_000);
+  await test.controller.registerPasskey('key');
+  await test.controller.startTotp();
+  expect(test.register).not.toHaveBeenCalled();
+  expect(test.startTotp).not.toHaveBeenCalled();
 });

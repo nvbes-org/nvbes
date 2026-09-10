@@ -97,8 +97,8 @@ export function EnrollmentForm({
       ) : (
         <>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Ajoutez votre première méthode de sécurité. Une passkey utilise le déverrouillage de
-            votre appareil ou une clé de sécurité compatible.
+            Ajoutez une méthode de sécurité. Une passkey utilise le déverrouillage de votre appareil
+            ou une clé de sécurité compatible.
           </p>
           <form onSubmit={register}>
             <FieldGroup>
@@ -122,19 +122,23 @@ export function EnrollmentForm({
               </FieldDescription>
             </FieldGroup>
           </form>
-          {state.authentication?.minimumAuthentication !== 'recent_webauthn' && (
-            <>
-              <FieldSeparator>ou</FieldSeparator>
-              <Button
-                size="lg"
-                variant="outline"
-                disabled={state.busy}
-                onClick={() => void controller.startTotp()}
-              >
-                Configurer une application d’authentification
-              </Button>
-            </>
-          )}
+          {!state.hasTotp &&
+            !(
+              state.firstEnrollmentAvailable &&
+              state.authentication?.minimumAuthentication === 'recent_webauthn'
+            ) && (
+              <>
+                <FieldSeparator>ou</FieldSeparator>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  disabled={state.busy}
+                  onClick={() => void controller.startTotp()}
+                >
+                  Configurer une application d’authentification
+                </Button>
+              </>
+            )}
           {!state.authentication?.needsStepUp && (
             <Button
               variant="ghost"

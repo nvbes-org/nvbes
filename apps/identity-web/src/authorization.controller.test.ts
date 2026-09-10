@@ -43,6 +43,7 @@ function setup() {
     passkey: vi.fn<IdentityGateway['passkey']>().mockResolvedValue(loggedIn),
     hasFactors: vi.fn<IdentityGateway['hasFactors']>().mockResolvedValue(true),
     recoveryCodes: vi.fn<IdentityGateway['recoveryCodes']>(),
+    hasTotp: vi.fn<IdentityGateway['hasTotp']>().mockResolvedValue(false),
     redeemRecovery: vi.fn<IdentityGateway['redeemRecovery']>(),
     registerPasskey: vi.fn<IdentityGateway['registerPasskey']>(),
     startTotp: vi.fn<IdentityGateway['startTotp']>(),

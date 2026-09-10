@@ -5,6 +5,7 @@ import {
   logoutHostedUi,
 } from './runtime-browser-hosted-auth.mjs';
 import { verifyRecoveryFromUi } from './runtime-browser-hosted-recovery.mjs';
+import { addHostedFactor } from './runtime-browser-hosted-additional-factor.mjs';
 
 /** Fresh fixture per method: neither factor is seeded through the SDK. */
 export async function verifyHostedEnrollment(browser, clientOrigin, method) {
@@ -80,6 +81,8 @@ export async function verifyHostedEnrollment(browser, clientOrigin, method) {
     await page.getByRole('heading', { name: 'Accès demandés' }).waitFor();
     if (await page.getByLabel('Clé de configuration').count())
       throw new Error('Provisioning secret remained in consent DOM');
+    const additionalAuthenticator = await addHostedFactor(page, context, method);
+    oldAuthenticator ??= additionalAuthenticator;
     await page.getByRole('button', { name: 'Générer des codes de secours' }).click();
     const codes = page.getByRole('list', { name: 'Codes de secours' });
     await codes.waitFor();
@@ -107,6 +110,7 @@ export async function verifyHostedEnrollment(browser, clientOrigin, method) {
     return {
       builtUiEnrollment: method,
       recoveryCodesDisplayed: true,
+      additionalFactor: method === 'totp' ? 'passkey' : 'totp',
       recovered,
       ...result,
       syntheticAuthenticator: true,

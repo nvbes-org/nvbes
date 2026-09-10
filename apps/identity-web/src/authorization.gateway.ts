@@ -36,6 +36,7 @@ export function identityGateway(origin: string) {
     registerPasskey: (csrf: string, label: string) => registerHostedPasskey(config, csrf, label),
     startTotp: (csrf: string) => startHostedTotpEnrollment(config, csrf),
     recoveryCodes: (csrf: string) => generateHostedRecoveryCodes(config, csrf),
+    hasTotp: async (csrf: string) => (await listHostedTotpFactors(config, csrf)).length > 0,
     redeemRecovery: (csrf: string, code: string) => redeemHostedRecoveryCode(config, csrf, code),
     confirmTotp: (csrf: string, factorId: string, code: string) =>
       confirmHostedTotpEnrollment(config, csrf, factorId, code),

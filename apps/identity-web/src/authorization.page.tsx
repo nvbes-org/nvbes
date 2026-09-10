@@ -137,11 +137,11 @@ export function AuthorizationPage({ controller }: { controller: AuthorizationCon
                 >
                   Autoriser et continuer
                 </Button>
-                {state.firstEnrollmentAvailable && (
+                {(state.firstEnrollmentAvailable || state.authentication?.proofExpiresAt) && (
                   <Button
                     variant="outline"
                     disabled={state.busy}
-                    onClick={() => controller.beginEnrollment()}
+                    onClick={() => void controller.beginEnrollment()}
                   >
                     Ajouter une méthode de sécurité
                   </Button>
