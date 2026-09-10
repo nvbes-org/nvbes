@@ -29,7 +29,7 @@ function loadHealthRelease(healthUrl: string): Promise<HealthRelease> {
   const check = verifiedFetchJson(healthUrl, HealthReleaseSchema, {
     allowedOrigins: [healthUrl],
     cache: 'no-store',
-  });
+  }).finally(() => healthReleaseChecks.delete(healthUrl));
   healthReleaseChecks.set(healthUrl, check);
   return check;
 }
@@ -59,8 +59,8 @@ export function VersionMismatchBanner({
           recordVersionMismatchPrompt({
             storageKey: `nvbes.version-mismatch.${appName}.lastPromptAt`,
           });
-          setResult(mismatch);
         }
+        setResult(mismatch.shouldPrompt ? mismatch : null);
       } catch {
         // Version checks must never block the app shell.
       }
