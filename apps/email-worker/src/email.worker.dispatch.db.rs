@@ -23,7 +23,7 @@ pub struct ClaimedEmail {
 
 #[derive(Debug)]
 pub enum ClaimResult {
-    Claimed(ClaimedEmail),
+    Claimed(Box<ClaimedEmail>),
     Busy,
     Settled,
     Missing,
@@ -131,7 +131,7 @@ pub async fn claim_message(pool: &PgPool, id: Uuid) -> Result<ClaimResult, sqlx:
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    Ok(ClaimResult::Claimed(claimed))
+    Ok(ClaimResult::Claimed(Box::new(claimed)))
 }
 
 pub async fn suppress_due_messages(pool: &PgPool) -> Result<u64, sqlx::Error> {

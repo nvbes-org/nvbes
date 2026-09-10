@@ -144,9 +144,9 @@ impl IdentityJwtVerifier {
 
     async fn cached_key(&self, kid: &str) -> Option<DecodingKey> {
         let cache = self.cache.read().await;
-        if !cache
+        if cache
             .fetched_at
-            .is_some_and(|fetched_at| fetched_at.elapsed() <= self.cache_ttl)
+            .is_none_or(|fetched_at| fetched_at.elapsed() > self.cache_ttl)
         {
             return None;
         }
