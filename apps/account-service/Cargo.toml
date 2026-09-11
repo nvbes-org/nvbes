@@ -19,7 +19,7 @@ path = "src/account.maintenance.tests.rs"
 anyhow.workspace = true
 axum.workspace = true
 chrono.workspace = true
-jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
+jsonwebtoken = { version = "11.0.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 metrics-exporter-prometheus.workspace = true
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
 serde.workspace = true
