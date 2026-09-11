@@ -1,6 +1,17 @@
 name: V1 testing campaign
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        description: Execution backend (local is an explicit fallback for trusted code)
+        type: choice
+        options: [github, local]
+        default: github
+        required: true
+      candidate_sha:
+        description: Full expected commit SHA (required when runner is local)
+        type: string
+        required: false
 concurrency:
   group: v1-testing-${{ github.ref }}
   cancel-in-progress: true
@@ -12,6 +23,7 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 env:
   CI: 'true'
+  NVBES_CI_EXPECTED_SHA: ${{ inputs.candidate_sha }}
   NVBES_ENV: ci
   NX_NO_CLOUD: 'true'
   NX_DAEMON: 'false'
@@ -22,7 +34,7 @@ jobs:
     environment:
       name: ci-no-secrets
       deployment: false
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -51,6 +63,12 @@ jobs:
       NVBES_COVERAGE_PACKAGE: ${{ matrix.package }}
       NVBES_MUTATION_PACKAGE: ${{ matrix.package }}
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0

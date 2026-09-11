@@ -6,6 +6,16 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      runner:
+        description: Execution backend (local is an explicit fallback for trusted code)
+        type: choice
+        options: [github, local]
+        default: github
+        required: true
+      candidate_sha:
+        description: Full expected commit SHA (required when runner is local)
+        type: string
+        required: false
       base_sha:
         description: Optional full base SHA (otherwise last successful branch CI)
         type: string
@@ -30,6 +40,7 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 env:
   CI: 'true'
+  NVBES_CI_EXPECTED_SHA: ${{ inputs.candidate_sha }}
   NVBES_ENV: ci
   NX_NO_CLOUD: 'true'
   NX_DAEMON: 'false'
@@ -37,11 +48,17 @@ env:
   TF_PLUGIN_CACHE_DIR: /tmp/nvbes-terraform-plugin-cache
 jobs:
   authorize-cache:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 5
     outputs:
       trusted: ${{ steps.authorize.outputs.trusted }}
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: github.event_name == 'pull_request'
         with:
@@ -67,7 +84,7 @@ jobs:
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 10
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -82,6 +99,12 @@ jobs:
       terraform-required: ${{ steps.plan.outputs.terraform-required }}
       containers-required: ${{ steps.plan.outputs.containers-required }}
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
@@ -121,7 +144,7 @@ jobs:
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -129,6 +152,12 @@ jobs:
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
       NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
@@ -158,7 +187,7 @@ jobs:
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -166,6 +195,12 @@ jobs:
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
       NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
@@ -195,7 +230,7 @@ jobs:
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 45
     services:
       redis:
@@ -215,6 +250,12 @@ jobs:
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
       NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
@@ -270,7 +311,7 @@ jobs:
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 45
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -278,6 +319,12 @@ jobs:
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
       NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
@@ -312,7 +359,7 @@ jobs:
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -320,6 +367,12 @@ jobs:
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
       NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
@@ -349,7 +402,7 @@ jobs:
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -357,6 +410,12 @@ jobs:
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
       NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
@@ -384,9 +443,15 @@ jobs:
     name: ci-gate
     if: always()
     needs: [authorize-cache, scope, contracts, typescript, rust, database, terraform, containers]
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted", "Linux", "ARM64", "docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
+      - name: Verify local runner and candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.runner == 'local'
+        run: |
+          [[ "$RUNNER_OS" == "Linux" && "$(uname -s)" == "Linux" ]] || exit 1
+          [[ "$NVBES_CI_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_SHA" == "$NVBES_CI_EXPECTED_SHA" ]] || exit 1
+          [[ "$(docker info --format '{{.OSType}}')" == "linux" ]] || exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0

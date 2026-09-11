@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { parse } from 'yaml';
 import { lanes } from './scope-plan.mjs';
+import { validateRunnerFallback } from './runner-fallback-contract.mjs';
 
 export function validateContinuousWorkflow(text, setupText) {
   const workflow = parse(text);
+  validateRunnerFallback(workflow);
   const jobs = workflow.jobs;
   const shell = 'bash --noprofile --norc -euo pipefail {0}';
   assert.deepEqual(
@@ -20,7 +22,6 @@ export function validateContinuousWorkflow(text, setupText) {
   assert.deepEqual(jobs['ci-gate'].needs, ['authorize-cache', 'scope', ...lanes]);
   assert.equal(jobs['ci-gate'].steps.at(-1).run, 'node tools/ci/ci-gate.mjs');
   for (const [name, job] of Object.entries(jobs)) {
-    assert.equal(job['runs-on'], 'ubuntu-latest');
     assert.ok(job['timeout-minutes'] > 0 && job['timeout-minutes'] <= 45);
     assert.equal(job['continue-on-error'], undefined);
     assert.equal(job.defaults, undefined);

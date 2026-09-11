@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { parse, stringify } from 'yaml';
 import { validateContinuousWorkflow } from './continuous-workflow.core.mjs';
+import { spawnSync } from 'node:child_process';
+import { localGuardCommand, validateRunnerFallback } from './runner-fallback-contract.mjs';
 
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const setup = readFileSync('.github/actions/ci-setup/action.yml', 'utf8');
@@ -61,5 +63,100 @@ for (const [name, mutate] of [
     const changed = parse(workflow);
     mutate(changed);
     assert.throws(() => validateContinuousWorkflow(stringify(changed), setup));
+  });
+}
+
+for (const file of ['ci.yml', 'v1-testing.yml']) {
+  const original = parse(readFileSync(`.github/workflows/${file}`, 'utf8'));
+  test(`${file} offers manual local fallback for every job with hosted default`, () => {
+    validateRunnerFallback(original);
+  });
+  for (const [label, mutate] of [
+    [
+      'automatic local default',
+      (w) => {
+        w.on.workflow_dispatch.inputs.runner.default = 'local';
+      },
+    ],
+    [
+      'arbitrary runner labels',
+      (w) => {
+        w.on.workflow_dispatch.inputs.runner.type = 'string';
+      },
+    ],
+    [
+      'stranded hosted job',
+      (w) => {
+        Object.values(w.jobs)[0]['runs-on'] = 'ubuntu-latest';
+      },
+    ],
+    [
+      'unconditional self-hosted job',
+      (w) => {
+        Object.values(w.jobs)[0]['runs-on'] = ['self-hosted'];
+      },
+    ],
+    [
+      'missing platform guard',
+      (w) => {
+        Object.values(w.jobs)[0].steps.shift();
+      },
+    ],
+    [
+      'ignored platform failure',
+      (w) => {
+        Object.values(w.jobs)[0].steps[0]['continue-on-error'] = true;
+      },
+    ],
+    [
+      'candidate override',
+      (w) => {
+        Object.values(w.jobs)[0].env = { NVBES_CI_EXPECTED_SHA: 'other' };
+      },
+    ],
+  ]) {
+    assert.equal(typeof label, 'string');
+    test(`${file} rejects ${String(label)}`, () => {
+      const changed = structuredClone(original);
+      mutate(changed);
+      assert.throws(() => validateRunnerFallback(changed));
+    });
+  }
+}
+
+for (const [label, overrides, succeeds] of [
+  ['matching Linux candidate', {}, true],
+  ['wrong commit', { NVBES_CI_EXPECTED_SHA: 'b'.repeat(40) }, false],
+  ['missing candidate', { NVBES_CI_EXPECTED_SHA: '' }, false],
+  ['short candidate', { NVBES_CI_EXPECTED_SHA: 'a'.repeat(7) }, false],
+  ['mislabeled runner', { RUNNER_OS: 'macOS' }, false],
+  ['wrong kernel', { FIXTURE_KERNEL: 'Darwin' }, false],
+  ['non-Linux Docker', { FIXTURE_DOCKER: 'windows' }, false],
+]) {
+  if (typeof label !== 'string') throw new Error('Invalid fixture label');
+  test(`local runner guard handles ${label}`, () => {
+    const result = spawnSync(
+      'bash',
+      [
+        '--noprofile',
+        '--norc',
+        '-euo',
+        'pipefail',
+        '-c',
+        `uname() { printf '%s' "$FIXTURE_KERNEL"; }; docker() { printf '%s' "$FIXTURE_DOCKER"; };\n${localGuardCommand}`,
+      ],
+      {
+        env: {
+          PATH: process.env.PATH,
+          RUNNER_OS: 'Linux',
+          FIXTURE_KERNEL: 'Linux',
+          FIXTURE_DOCKER: 'linux',
+          GITHUB_SHA: 'a'.repeat(40),
+          NVBES_CI_EXPECTED_SHA: 'a'.repeat(40),
+          ...overrides,
+        },
+      },
+    );
+    assert.equal(result.status === 0, succeeds);
   });
 }
