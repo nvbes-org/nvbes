@@ -26,6 +26,23 @@ impl Principal {
             .then_some(())
             .ok_or(AccountError::Forbidden)
     }
+
+    /// Revalidate after all potentially blocking SQL, before commit or disclosure.
+    pub async fn require_step_up_at_database(
+        &self,
+        connection: &mut sqlx::PgConnection,
+    ) -> Result<(), AccountError> {
+        let until = self
+            .strong_until
+            .and_then(|until| i64::try_from(until).ok())
+            .and_then(|until| chrono::DateTime::from_timestamp(until, 0))
+            .ok_or(AccountError::Forbidden)?;
+        let fresh: bool = sqlx::query_scalar("SELECT clock_timestamp() < $1")
+            .bind(until)
+            .fetch_one(connection)
+            .await?;
+        fresh.then_some(()).ok_or(AccountError::Forbidden)
+    }
 }
 impl FromRequestParts<AccountState> for Principal {
     type Rejection = AccountError;

@@ -61,6 +61,23 @@ ne remplace ni les scopes ni les permissions d'opérateur.
 
 ## Validation et limites
 
+Les opérations sensibles Account (demande/export du document, demande et
+annulation de fermeture) revalident l'échéance forte signée sur l'horloge
+PostgreSQL après leurs lectures/écritures bloquantes. La vérification précède
+le commit ou la remise du document ; les réponses idempotentes sont aussi
+concernées. La création éventuelle du profil et de ses préférences participe
+à la transaction de demande : un refus annule ces écritures, l'audit et l'outbox.
+Les scopes et l'introspection restent vérifiés à l'entrée HTTP. Ce contrôle
+d'échéance n'ajoute pas d'atomicité distribuée avec une révocation Identity
+survenant après l'introspection, ni de politique d'autorisation opérateur.
+
+Les tests Account utilisent les routes HTTP réelles, des JWT signés et un
+serveur d'introspection synthétique. Des verrous sur les tables d'audit,
+d'outbox et de ressources prouvent le refus après expiration et l'absence
+d'écritures persistées. Une preuve fraîche permet les mêmes opérations après
+une attente réelle. Exécution via `account-service:test:database` avec une base
+locale dédiée et les migrations actives ; aucun fournisseur externe requis.
+
 Les terminaisons WebAuthn (connexion, step-up, enrollment) consomment le
 challenge avec une condition d'expiration relue sur l'horloge PostgreSQL après
 les attentes de verrou et la vérification cryptographique. Le step-up revalide

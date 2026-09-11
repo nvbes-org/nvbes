@@ -13,6 +13,29 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Account sensible : fraîcheur après les attentes SQL — 2026-09-11
+
+Les demandes d'export/fermeture, l'annulation de fermeture et le téléchargement
+du document revalident l'échéance forte sur l'horloge PostgreSQL après les
+lectures/écritures potentiellement bloquantes. Les chemins idempotents appliquent
+le même refus. Le bootstrap du profil participe désormais à la transaction
+sensible, avec préférences, audit et outbox, pour être annulé avec la demande.
+
+Sept régressions ont d'abord reproduit des réponses 200/202/204 après expiration
+sur l'ancien code. La suite finale couvre neuf scénarios d'expiration, dont
+l'attente sur l'outbox et les deux parcours de premier profil, ainsi que les
+mêmes neuf actions avec une preuve fraîche. Les attentes sont observées via
+pg_blocking_pids, puis libérées après échéance DB ; aucun délai seul ne tient
+lieu de preuve de contention.
+
+Validation : 18 tests Account avec migrations réelles et cinq gardes de base
+locale réussis via Nx ; cargo check --workspace et format Rust réussis.
+Les routes HTTP sont réelles ; l'introspection Identity est synthétique dans
+ces tests. Aucun frontend modifié, donc aucune nouvelle campagne navigateur.
+La [politique](identity-client-authentication-policy.md) conserve explicitement
+les limites d'atomicité distribuée et la politique opérateur encore ouverte.
+Les lots A à D restent actifs ; aucune infrastructure ni exposition ajoutée.
+
 ## Account visible : revalidation périodique — 2026-09-11
 
 Account relit son profil toutes les 60 secondes lorsque le document est visible

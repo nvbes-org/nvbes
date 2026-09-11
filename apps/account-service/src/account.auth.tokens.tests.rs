@@ -9,6 +9,9 @@ use serde_json::{Value, json};
 use std::sync::OnceLock;
 #[path = "account.auth.key_rotation.tests.rs"]
 mod key_rotation;
+#[cfg(feature = "database-tests")]
+#[path = "account.privacy.deadline.tests.rs"]
+mod privacy_deadline;
 
 fn keys() -> &'static (String, String) {
     static KEYS: OnceLock<(String, String)> = OnceLock::new();
