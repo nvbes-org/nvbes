@@ -46,11 +46,11 @@ pub async fn create_checkout_handler(
         return Err(BillingError::Invalid("invalid_idempotency_key"));
     }
     let idempotency_key = format!(
-        "checkout_{:x}",
-        Sha256::digest(format!(
+        "checkout_{}",
+        hex::encode(Sha256::digest(format!(
             "{workspace_id}:{account_type}:{}:{idempotency_key}",
             payload.plan_code
-        ))
+        )))
     );
 
     // Check existing idempotent checkout
