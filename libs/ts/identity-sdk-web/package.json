@@ -36,7 +36,7 @@
     "@nvbes/identity-sdk-core": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.9.5",
+    "@types/node": "^26.4.0",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   },
