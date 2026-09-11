@@ -27,7 +27,7 @@ async fn accept(pool: &PgPool, key: &str, email: &str) -> uuid::Uuid {
 
 async fn claim(pool: &PgPool, id: uuid::Uuid) -> ClaimedEmail {
     match claim_message(pool, id).await.unwrap() {
-        ClaimResult::Claimed(claim) => claim,
+        ClaimResult::Claimed(claim) => *claim,
         result => panic!("message {id} was not claimable: {result:?}"),
     }
 }

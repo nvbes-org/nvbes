@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "description": "Seuils de couverture cargo llvm-cov par crate du workspace Cargo racine. Mesure : `cargo llvm-cov --workspace --all-targets --locked --json --summary-only` sans feature `database-tests`. La mesure de reference est realisee sans service Redis provisionne (etat CI deterministe) : les tests d'integration Redis sont ignores et ne contribuent pas au score. Marge : seuil = baseline mesure - 2 points arrondis (absorbe le bruit run-to-run de llvm-cov), plancher 0. nvbes-email conserve le seuil produit explicite 95/90/90.",
+  "baseline": {
+    "commit": "6af12ea1",
+    "date": "2026-09-09"
+  },
+  "crates": {
+    "nvbes-email": {
+      "threshold": { "lines": 95, "functions": 90, "regions": 90 },
+      "baseline": { "lines": 98.0, "functions": 95.2, "regions": 97.4 }
+    },
+    "nvbes-email-worker": {
+      "threshold": { "lines": 33, "functions": 41, "regions": 38 },
+      "baseline": { "lines": 34.7, "functions": 42.5, "regions": 40.0 }
+    },
+    "nvbes-email-scaleway": {
+      "threshold": { "lines": 85, "functions": 89, "regions": 84 },
+      "baseline": { "lines": 86.6, "functions": 91.3, "regions": 86.4 }
+    },
+    "nvbes-account-service": {
+      "threshold": { "lines": 0, "functions": 2, "regions": 0 },
+      "baseline": { "lines": 2.4, "functions": 3.5, "regions": 2.3 }
+    },
+    "nvbes-identity-service": {
+      "threshold": { "lines": 33, "functions": 41, "regions": 28 },
+      "baseline": { "lines": 35.0, "functions": 43.3, "regions": 29.9 }
+    },
+    "nvbes-trust-risk-service": {
+      "threshold": { "lines": 14, "functions": 17, "regions": 15 },
+      "baseline": { "lines": 15.6, "functions": 19.4, "regions": 17.0 }
+    },
+    "nvbes-core": {
+      "threshold": { "lines": 43, "functions": 43, "regions": 43 },
+      "baseline": { "lines": 45.1, "functions": 44.6, "regions": 45.1 }
+    },
+    "nvbes-billing": {
+      "threshold": { "lines": 34, "functions": 41, "regions": 40 },
+      "baseline": { "lines": 35.8, "functions": 43.0, "regions": 41.9 }
+    },
+    "nvbes-audit": {
+      "threshold": { "lines": 34, "functions": 54, "regions": 43 },
+      "baseline": { "lines": 36.4, "functions": 55.6, "regions": 44.9 }
+    },
+    "nvbes-region": {
+      "threshold": { "lines": 40, "functions": 42, "regions": 44 },
+      "baseline": { "lines": 41.6, "functions": 43.8, "regions": 45.9 }
+    },
+    "nvbes-dpop": {
+      "threshold": { "lines": 70, "functions": 62, "regions": 66 },
+      "baseline": { "lines": 71.9, "functions": 64.1, "regions": 67.9 }
+    },
+    "nvbes-platform": {
+      "threshold": { "lines": 53, "functions": 54, "regions": 49 },
+      "baseline": { "lines": 54.7, "functions": 55.5, "regions": 50.7 }
+    },
+    "nvbes-observability": {
+      "threshold": { "lines": 13, "functions": 18, "regions": 12 },
+      "baseline": { "lines": 14.5, "functions": 20.2, "regions": 14.0 }
+    },
+    "nvbes-ports": {
+      "threshold": { "lines": 70, "functions": 65, "regions": 79 },
+      "baseline": { "lines": 72.4, "functions": 66.7, "regions": 80.9 }
+    },
+    "nvbes-identity-sdk": {
+      "threshold": { "lines": 18, "functions": 11, "regions": 19 },
+      "baseline": { "lines": 20.4, "functions": 13.0, "regions": 20.7 }
+    },
+    "nvbes-product-account": {
+      "threshold": { "lines": 24, "functions": 26, "regions": 37 },
+      "baseline": { "lines": 26.1, "functions": 27.5, "regions": 39.1 }
+    },
+    "nvbes-product-analytics": {
+      "threshold": { "lines": 76, "functions": 75, "regions": 75 },
+      "baseline": { "lines": 77.9, "functions": 76.9, "regions": 77.0 }
+    },
+    "nvbes-product-identity": {
+      "threshold": { "lines": 22, "functions": 25, "regions": 29 },
+      "baseline": { "lines": 23.6, "functions": 26.9, "regions": 30.6 }
+    },
+    "nvbes-analytics-posthog": {
+      "threshold": { "lines": 24, "functions": 20, "regions": 20 },
+      "baseline": { "lines": 26.4, "functions": 22.2, "regions": 21.9 }
+    },
+    "nvbes-storage": {
+      "threshold": { "lines": 43, "functions": 20, "regions": 46 },
+      "baseline": { "lines": 45.4, "functions": 21.7, "regions": 48.0 }
+    },
+    "nvbes-tenancy": {
+      "threshold": { "lines": 61, "functions": 66, "regions": 60 },
+      "baseline": { "lines": 63.2, "functions": 67.9, "regions": 62.0 }
+    },
+    "nvbes-trust-risk": {
+      "threshold": { "lines": 62, "functions": 55, "regions": 57 },
+      "baseline": { "lines": 64.0, "functions": 57.1, "regions": 59.0 }
+    }
+  },
+  "excluded": [
+    {
+      "crate": "nvbes-scan",
+      "reason": "Crate squelette (trait/mock ClamAV) sans logique testable en production V1 ; aucun test cible."
+    },
+    {
+      "crate": "nvbes-product-developer",
+      "reason": "Produit Developer archivé ; squelette de ports, aucun test cible."
+    },
+    {
+      "crate": "nvbes-test-utils",
+      "reason": "Bibliothèque utilitaire de tests uniquement (support keyword runner, pools de test) ; hors périmètre de production, non mesurée."
+    },
+    {
+      "crate": "nvbes-redis",
+      "reason": "Redis hors périmètre V1 ; tests d'intégration dépendants d'un service Redis non provisionné en CI, couverture non représentative sans service. Crate actif utilisé en runtime par core/dpop/billing/products : reste compilé et testé, exclu du gate de couverture."
+    }
+  ]
+}

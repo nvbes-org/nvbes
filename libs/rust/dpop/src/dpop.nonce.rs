@@ -69,14 +69,7 @@ mod tests {
     use super::*;
 
     async fn test_redis_pool() -> Option<RedisPool> {
-        let redis_config = nvbes_redis::RedisConfig::from_env();
-        let pool = nvbes_redis::connection::create_pool(&redis_config)
-            .await
-            .ok()?;
-        if nvbes_redis::connection::health_check(&pool).await.is_err() {
-            return None;
-        }
-        Some(pool)
+        nvbes_test_utils::redis::test_redis_pool().await
     }
 
     #[tokio::test]

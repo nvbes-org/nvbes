@@ -181,11 +181,7 @@ export async function collectFingerprintSignals(): Promise<FingerprintSignals> {
 
   const webgl = probeWebGL();
 
-  const isDev =
-    typeof import.meta !== 'undefined' &&
-    'env' in import.meta &&
-    (import.meta as unknown as { env: { DEV: boolean } }).env?.DEV === true;
-  const mockAllowed = isDev && typeof localStorage !== 'undefined';
+  const mockAllowed = import.meta.env.DEV && typeof localStorage !== 'undefined';
 
   const mockCanvasHash = (mockAllowed && localStorage.getItem('__bg_mock_canvas_hash')) || null;
   const mockWebglVendor = (mockAllowed && localStorage.getItem('__bg_mock_webgl_vendor')) || null;

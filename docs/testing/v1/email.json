@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "domain": "email",
+  "project": "email-worker",
+  "cargoPackage": "nvbes-email-worker",
+  "suites": [
+    {
+      "id": "email.unit",
+      "requirement": "email: unit behavior",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "email-worker:test",
+      "cases": ["email.unit.complete-run"]
+    },
+    {
+      "id": "email.check",
+      "requirement": "email: compilation",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "email-worker:check",
+      "cases": ["email.check.complete-run"]
+    },
+    {
+      "id": "email.database",
+      "requirement": "email: persistent business invariants",
+      "risk": "Unauthorized access, corrupted state or lost events",
+      "execution": "automated",
+      "target": "email-worker:test:database",
+      "cases": [
+        "email.ingestion",
+        "email.dispatch",
+        "email.suppression",
+        "email.provider-failure-replay",
+        "email.dead-letter"
+      ]
+    },
+    {
+      "id": "email.contract",
+      "requirement": "email: deployable runtime contract",
+      "risk": "Invalid runtime or exposed unsupported interface",
+      "execution": "automated",
+      "target": "email-worker:test:contract",
+      "cases": ["email.runtime-contract"]
+    },
+    {
+      "id": "email.acceptance",
+      "requirement": "email: operator acceptance in isolated environment",
+      "risk": "An automated assertion does not prove the operational procedure",
+      "execution": "human",
+      "target": "docs/operations/platform-operations-manual-runbook.md",
+      "cases": ["email.operator-acceptance"]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "email.complete-candidate-evidence",
+      "owner": "nvbes solo operator",
+      "risk": "Current commands and historical reports do not prove every case on the final candidate",
+      "reviewDate": "2026-09-17",
+      "closure": "Execute every declared case, link actual test identifiers and verified artifacts, reach all 90% gates and complete operator acceptance.",
+      "status": "open"
+    }
+  ]
+}

@@ -34,7 +34,11 @@ const AUTOFILL_ANIM_DURATION = '1ms';
 // CSS injection dynamique — classe et animation avec noms aléatoires
 // ---------------------------------------------------------------------------
 
-function injectDecoyStyles(): { hiddenClass: string; autofillAnim: string } {
+function injectDecoyStyles(): {
+  hiddenClass: string;
+  autofillAnim: string;
+  style: HTMLStyleElement;
+} {
   const rand = () => `_${Math.random().toString(36).slice(2, 10)}`;
   const hiddenClass = rand();
   const autofillAnim = rand();
@@ -69,7 +73,7 @@ function injectDecoyStyles(): { hiddenClass: string; autofillAnim: string } {
   `;
   document.head.appendChild(el);
 
-  return { hiddenClass, autofillAnim };
+  return { hiddenClass, autofillAnim, style: el };
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +96,7 @@ export interface DecoyField {
 }
 
 export function createDecoyField(): DecoyField {
-  const { hiddenClass, autofillAnim } = injectDecoyStyles();
+  const { hiddenClass, autofillAnim, style } = injectDecoyStyles();
 
   // --- Wrapper ---
   const wrapper = document.createElement('div');
@@ -165,13 +169,14 @@ export function createDecoyField(): DecoyField {
   const observer = new MutationObserver(() => {
     if (!document.contains(wrapper)) {
       destroy();
-      observer.disconnect();
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
   const destroy = () => {
     clearInterval(interval);
+    observer.disconnect();
+    style.remove();
     input.removeEventListener('animationstart', onAutofillDetected);
     input.removeEventListener('paste', onFill);
     input.removeEventListener('input', onFill);

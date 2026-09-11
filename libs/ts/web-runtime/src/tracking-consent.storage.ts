@@ -1,5 +1,6 @@
 import { type AnalyticsPurposeConsent, EMPTY_ANALYTICS_CONSENT } from './analytics';
 import { getSafeLocalStorage } from './safe-storage';
+import { z } from 'zod';
 
 export interface CookieConsentState {
   categories: {
@@ -29,22 +30,6 @@ export interface TrackingConsentStoredValue {
 type ConsentCategory = keyof CookieConsentState['categories'];
 type ConsentVendor = keyof CookieConsentState['vendors'];
 type AnalyticsPurpose = keyof AnalyticsPurposeConsent;
-
-type LegacyConsentCandidate = {
-  categories?: Partial<Record<ConsentCategory | 'marketing', boolean>>;
-  vendors?: Partial<
-    Record<ConsentVendor | 'analytics' | 'errorReporting' | 'marketingVendor', boolean>
-  >;
-  analytics?: Partial<Record<AnalyticsPurpose, boolean>>;
-};
-
-type StoredConsentCandidate = {
-  version?: number;
-  savedAt?: string;
-  expiresAt?: string;
-  source?: string;
-  consent?: unknown;
-};
 
 export const TRACKING_CONSENT_CHANGED_EVENT = 'nvbes:tracking-consent-changed';
 const CONSENT_TTL_DAYS = 183;
@@ -203,71 +188,22 @@ function createStoredConsent(
   };
 }
 
-function booleanValue(value: unknown, fallback = false): boolean {
-  return typeof value === 'boolean' ? value : fallback;
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function normalizeAnalyticsConsent(
-  candidate: LegacyConsentCandidate,
-  legacyProductOnly: boolean,
-): AnalyticsPurposeConsent {
-  const legacyAnalyticsGranted =
-    booleanValue(candidate.categories?.analytics, false) ||
-    booleanValue(candidate.vendors?.posthog, false) ||
-    booleanValue(candidate.vendors?.analytics, false);
-  const legacyErrorReportingGranted =
-    booleanValue(candidate.categories?.performance, false) ||
-    booleanValue(candidate.vendors?.sentry, false) ||
-    booleanValue(candidate.vendors?.grafana, false) ||
-    booleanValue(candidate.vendors?.errorReporting, false);
-
-  if (legacyProductOnly) {
-    return {
-      ...EMPTY_ANALYTICS_CONSENT,
-      productAnalytics: legacyAnalyticsGranted,
-      errorTracking: legacyErrorReportingGranted,
-    };
-  }
-
-  return {
-    productAnalytics: booleanValue(candidate.analytics?.productAnalytics, legacyAnalyticsGranted),
-    autocaptureHeatmaps: booleanValue(candidate.analytics?.autocaptureHeatmaps, false),
-    sessionReplay: booleanValue(candidate.analytics?.sessionReplay, false),
-    surveysFeedback: booleanValue(candidate.analytics?.surveysFeedback, false),
-    errorTracking: booleanValue(candidate.analytics?.errorTracking, legacyErrorReportingGranted),
-    featureFlags: booleanValue(candidate.analytics?.featureFlags, false),
-  };
-}
-
-function normalizeConsent(value: unknown, legacyProductOnly: boolean): CookieConsentState | null {
-  if (!isObject(value)) {
-    return null;
-  }
-
-  const candidate = value as LegacyConsentCandidate;
-  return consentStateFromPurposes(normalizeAnalyticsConsent(candidate, legacyProductOnly));
-}
-
-function parseStoredConsent(value: string, legacyProductOnly: boolean): CookieConsentState | null {
-  const parsed = JSON.parse(value) as StoredConsentCandidate | CookieConsentState;
-  const expiresAt =
-    isObject(parsed) && 'expiresAt' in parsed ? Date.parse(String(parsed.expiresAt)) : Number.NaN;
-
-  if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
-    clearStoredTrackingConsentVersions();
-    return null;
-  }
-
-  if (isObject(parsed) && 'consent' in parsed) {
-    return normalizeConsent(parsed.consent, legacyProductOnly);
-  }
-
-  return normalizeConsent(parsed, legacyProductOnly);
-}
+const storedConsentSchema = z.object({
+  version: z.literal(4),
+  savedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  source: z.string().trim().min(1),
+  consent: z.object({
+    analytics: z.object({
+      productAnalytics: z.boolean(),
+      autocaptureHeatmaps: z.boolean(),
+      sessionReplay: z.boolean(),
+      surveysFeedback: z.boolean(),
+      errorTracking: z.boolean(),
+      featureFlags: z.boolean(),
+    }),
+  }),
+});
 
 export function readTrackingConsentStoredValue(): TrackingConsentStoredValue | null {
   const storage = getSafeLocalStorage();
@@ -277,33 +213,27 @@ export function readTrackingConsentStoredValue(): TrackingConsentStoredValue | n
   }
 
   try {
-    const parsed = JSON.parse(value) as TrackingConsentStoredValue;
+    const parsed = storedConsentSchema.parse(JSON.parse(value));
     const expiresAt = Date.parse(parsed.expiresAt);
-    if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+    const savedAt = Date.parse(parsed.savedAt);
+    if (
+      expiresAt <= Date.now() ||
+      expiresAt <= savedAt ||
+      expiresAt > Date.parse(consentExpiry(new Date(savedAt)))
+    ) {
       clearStoredTrackingConsentVersions();
       return null;
     }
 
-    return parsed;
+    return { ...parsed, consent: consentStateFromPurposes(parsed.consent.analytics) };
   } catch {
-    storage.removeItem(STORAGE_KEY_V4);
+    clearStoredTrackingConsentVersions();
     return null;
   }
 }
 
 export function getTrackingConsent(): CookieConsentState | null {
-  const storage = getSafeLocalStorage();
-
-  const valueV4 = storage.getItem(STORAGE_KEY_V4);
-  if (valueV4) {
-    try {
-      return parseStoredConsent(valueV4, false);
-    } catch {
-      storage.removeItem(STORAGE_KEY_V4);
-    }
-  }
-
-  return null;
+  return readTrackingConsentStoredValue()?.consent ?? null;
 }
 
 export function getAnalyticsConsent(): AnalyticsPurposeConsent {

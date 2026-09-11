@@ -159,7 +159,6 @@ if command -v watchexec >/dev/null 2>&1; then
     --watch apps/billing-service/src \
     --watch libs/rust/billing \
     --watch libs/rust/core \
-    --watch libs/rust/products/enterprise \
     --exts rs,toml,json \
     -- node "$SCRIPT_DIR/stripe-dev.mjs" &
 else

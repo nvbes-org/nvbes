@@ -32,7 +32,7 @@ allowBuilds:
   workerd: true
 
 overrides:
-  '@babel/core': 7.29.7
+  '@babel/core@<8': 7.29.7
   '@hono/node-server': 2.0.12
   axios: 1.18.1
   brace-expansion: 5.0.9
@@ -71,3 +71,6 @@ minimumReleaseAgeExclude:
   - '@hono/node-server@2.0.12'
 
 nodeLinker: hoisted
+
+patchedDependencies:
+  '@stryker-mutator/instrumenter@10.0.0': patches/@stryker-mutator__instrumenter@10.0.0.patch

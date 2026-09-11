@@ -19,14 +19,13 @@ members = [
   "libs/rust/ports",
   "libs/rust/product-analytics",
   "libs/rust/products/account",
-  "libs/rust/products/cloud",
   "libs/rust/products/developer",
-  "libs/rust/products/enterprise",
   "libs/rust/products/identity",
   "libs/rust/scan",
   "libs/rust/storage",
   "libs/rust/tenancy",
   "libs/rust/trust-risk",
+  "libs/rust/test-utils",
 ]
 resolver = "2"
 
@@ -88,6 +87,8 @@ tower-http = { version = "0.6", features = ["cors", "timeout", "compression-full
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
+serde_yaml_ng = "0.10"
+async-trait = "0.1"
 
 [profile.dev]
 incremental = true

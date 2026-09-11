@@ -4,18 +4,19 @@ use uuid::Uuid;
 
 use crate::provider::ProviderCode;
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Subscription activation mirrors provider payload and internal billing projection."
-)]
+#[derive(Debug, Clone)]
+pub struct ActivateMollieSubscriptionInput<'a> {
+    pub workspace_id: Uuid,
+    pub plan_id: Uuid,
+    pub provider_customer_id: &'a str,
+    pub provider_subscription_id: &'a str,
+    pub current_period_start: DateTime<Utc>,
+    pub current_period_end: DateTime<Utc>,
+}
+
 pub async fn activate_mollie_subscription_after_initial_payment_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    workspace_id: Uuid,
-    plan_id: Uuid,
-    provider_customer_id: &str,
-    provider_subscription_id: &str,
-    current_period_start: DateTime<Utc>,
-    current_period_end: DateTime<Utc>,
+    input: ActivateMollieSubscriptionInput<'_>,
 ) -> Result<bool, sqlx::Error> {
     let result = sqlx::query(
         r#"
@@ -35,12 +36,12 @@ pub async fn activate_mollie_subscription_after_initial_payment_tx(
           )
         "#,
     )
-    .bind(workspace_id)
-    .bind(plan_id)
-    .bind(provider_customer_id)
-    .bind(provider_subscription_id)
-    .bind(current_period_start)
-    .bind(current_period_end)
+    .bind(input.workspace_id)
+    .bind(input.plan_id)
+    .bind(input.provider_customer_id)
+    .bind(input.provider_subscription_id)
+    .bind(input.current_period_start)
+    .bind(input.current_period_end)
     .execute(tx.as_mut())
     .await?;
 
@@ -96,24 +97,25 @@ pub async fn workspace_id_for_provider_subscription_tx(
     .await
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Provider subscription projection mirrors provider webhook state."
-)]
+#[derive(Debug, Clone)]
+pub struct UpsertProviderSubscriptionInput<'a> {
+    pub workspace_id: Uuid,
+    pub provider: ProviderCode,
+    pub provider_customer_id: &'a str,
+    pub provider_subscription_id: &'a str,
+    pub status: &'a str,
+    pub current_period_start: Option<DateTime<Utc>>,
+    pub current_period_end: Option<DateTime<Utc>>,
+    pub primary_for_subscription: bool,
+    pub metadata: Value,
+}
+
 pub async fn upsert_provider_subscription_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    workspace_id: Uuid,
-    provider: ProviderCode,
-    provider_customer_id: &str,
-    provider_subscription_id: &str,
-    status: &str,
-    current_period_start: Option<DateTime<Utc>>,
-    current_period_end: Option<DateTime<Utc>>,
-    primary_for_subscription: bool,
-    metadata: Value,
+    input: UpsertProviderSubscriptionInput<'_>,
 ) -> Result<(), sqlx::Error> {
     let fallback_eligible =
-        provider_subscription_fallback_eligible(status, primary_for_subscription);
+        provider_subscription_fallback_eligible(input.status, input.primary_for_subscription);
     sqlx::query(
         r#"
         WITH billing_account AS (
@@ -238,15 +240,15 @@ pub async fn upsert_provider_subscription_tx(
             updated_at = NOW()
         "#,
     )
-    .bind(workspace_id)
-    .bind(provider.as_str())
-    .bind(provider_customer_id)
-    .bind(provider_subscription_id)
-    .bind(status)
-    .bind(current_period_start)
-    .bind(current_period_end)
-    .bind(primary_for_subscription)
-    .bind(metadata)
+    .bind(input.workspace_id)
+    .bind(input.provider.as_str())
+    .bind(input.provider_customer_id)
+    .bind(input.provider_subscription_id)
+    .bind(input.status)
+    .bind(input.current_period_start)
+    .bind(input.current_period_end)
+    .bind(input.primary_for_subscription)
+    .bind(input.metadata)
     .bind(fallback_eligible)
     .execute(tx.as_mut())
     .await?;

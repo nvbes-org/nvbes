@@ -34,10 +34,7 @@ export function collectAutomationSignals(): AutomationSignals {
 }
 
 function readDevelopmentMocks() {
-  const isDevelopment =
-    typeof import.meta !== 'undefined' &&
-    'env' in import.meta &&
-    (import.meta as unknown as { env: { DEV: boolean } }).env?.DEV === true;
+  const isDevelopment = import.meta.env.DEV;
   const read = (key: string): boolean =>
     isDevelopment && typeof localStorage !== 'undefined' && localStorage.getItem(key) === 'true';
 

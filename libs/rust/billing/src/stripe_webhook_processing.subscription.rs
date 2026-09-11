@@ -3,7 +3,8 @@ use uuid::Uuid;
 
 use crate::provider::ProviderCode;
 use crate::stripe_webhook_persistence::{
-    persist_stripe_payment_method_if_present, persist_stripe_subscription_if_present,
+    PersistStripeSubscriptionInput, persist_stripe_payment_method_if_present,
+    persist_stripe_subscription_if_present,
 };
 use crate::stripe_webhook_processing::{
     BillingWebhookProcessingError, BillingWebhookProcessingResult,
@@ -11,7 +12,8 @@ use crate::stripe_webhook_processing::{
 };
 use crate::stripe_webhook_validators_subscription as subscription;
 use crate::stripe_webhook_workspace_effects::{
-    apply_subscription_deleted_workspace_effects, apply_subscription_upsert_workspace_effects,
+    SubscriptionUpsertWorkspaceEffectsInput, apply_subscription_deleted_workspace_effects,
+    apply_subscription_upsert_workspace_effects,
 };
 use crate::{required_string, stripe_subscription_status, timestamp_field};
 
@@ -45,27 +47,31 @@ pub async fn process_subscription_upsert(
     .await?;
     persist_stripe_subscription_if_present(
         tx,
-        workspace_id,
-        object,
-        &stripe_subscription_id,
-        status,
-        current_period_start,
-        current_period_end,
-        subscription_context.primary_for_subscription,
-        "subscription_upsert",
+        PersistStripeSubscriptionInput {
+            workspace_id,
+            object,
+            provider_subscription_id: &stripe_subscription_id,
+            status,
+            current_period_start,
+            current_period_end,
+            primary_for_subscription: subscription_context.primary_for_subscription,
+            event_name: "subscription_upsert",
+        },
     )
     .await?;
 
     crate::db::insert_billing_audit_tx(tx, workspace_id, "billing.updated", object.clone()).await?;
     apply_subscription_upsert_workspace_effects(
         tx,
-        workspace_id,
-        &stripe_subscription_id,
-        status,
-        current_period_start,
-        current_period_end,
-        object,
-        subscription_context.primary_for_subscription,
+        SubscriptionUpsertWorkspaceEffectsInput {
+            workspace_id,
+            provider_subscription_id: &stripe_subscription_id,
+            status,
+            current_period_start,
+            current_period_end,
+            object,
+            primary_for_subscription: subscription_context.primary_for_subscription,
+        },
     )
     .await?;
 
@@ -89,14 +95,16 @@ pub async fn process_subscription_deleted(
     subscription::ensure_subscription_deleted_consistency(object, workspace_id)?;
     persist_stripe_subscription_if_present(
         tx,
-        workspace_id,
-        object,
-        &stripe_subscription_id,
-        "canceled",
-        timestamp_field(object, "current_period_start"),
-        timestamp_field(object, "current_period_end"),
-        false,
-        "subscription_deleted",
+        PersistStripeSubscriptionInput {
+            workspace_id,
+            object,
+            provider_subscription_id: &stripe_subscription_id,
+            status: "canceled",
+            current_period_start: timestamp_field(object, "current_period_start"),
+            current_period_end: timestamp_field(object, "current_period_end"),
+            primary_for_subscription: false,
+            event_name: "subscription_deleted",
+        },
     )
     .await?;
     crate::db::insert_billing_audit_tx(

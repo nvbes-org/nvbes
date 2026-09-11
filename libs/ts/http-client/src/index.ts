@@ -114,7 +114,7 @@ export class HttpClient {
       }
       applyAjaxRequestHeader(headers, method);
       applyIdempotencyKey(headers, method, options.idempotencyKey ?? this.idempotencyKey);
-      if (credentials && isMutatingMethod(method) && !headers.has('X-CSRF-Token')) {
+      if (credentials !== 'omit' && isMutatingMethod(method) && !headers.has('X-CSRF-Token')) {
         const csrfToken = readCsrfToken(authuser);
         if (csrfToken) {
           headers.set('X-CSRF-Token', csrfToken);

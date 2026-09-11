@@ -100,7 +100,8 @@ export function MultiAccountSwitcher({
         return;
       }
 
-      if ((target as Element).closest('[data-switcher-portal]')) {
+      const element = target instanceof Element ? target : target.parentElement;
+      if (element?.closest('[data-switcher-portal]')) {
         return;
       }
 

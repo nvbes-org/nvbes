@@ -1,0 +1,40 @@
+diff --git a/dist/src/util/syntax-helpers.js b/dist/src/util/syntax-helpers.js
+index 9318ad6d9b1856c7dc5c4b7f2e6a677a2f8ae6b9..da53f6fb4496d944cd480803d665705817b028ea 100644
+--- a/dist/src/util/syntax-helpers.js
++++ b/dist/src/util/syntax-helpers.js
+@@ -115,6 +115,7 @@ export function mutationCoverageSequenceExpression(mutants, targetExpression) {
+ }
+ export function isTypeNode(path) {
+     return (path.isTypeAnnotation() ||
++        path.isTSType() ||
+         flowTypeAnnotationNodeTypes.includes(path.node.type) ||
+         tsTypeAnnotationNodeTypes.includes(path.node.type) ||
+         isDeclareVariableStatement(path) ||
+@@ -137,7 +138,6 @@ function isDeclareModule(path) {
+     return path.isTSModuleDeclaration() && (path.node.declare ?? false);
+ }
+ const tsTypeAnnotationNodeTypes = Object.freeze([
+-    'TSAsExpression',
+     'TSInterfaceDeclaration',
+     'TSTypeAnnotation',
+     'TSTypeAliasDeclaration',
+diff --git a/src/util/syntax-helpers.ts b/src/util/syntax-helpers.ts
+index b7e6cae76fb4fccd042eb43b9cfdadd92497dac0..eaddf33e867b6a8b3c6f345d571efc540825cbf1 100644
+--- a/src/util/syntax-helpers.ts
++++ b/src/util/syntax-helpers.ts
+@@ -160,6 +160,7 @@ export function mutationCoverageSequenceExpression(
+ export function isTypeNode(path: babel.NodePath): boolean {
+   return (
+     path.isTypeAnnotation() ||
++    path.isTSType() ||
+     flowTypeAnnotationNodeTypes.includes(path.node.type) ||
+     tsTypeAnnotationNodeTypes.includes(path.node.type) ||
+     isDeclareVariableStatement(path) ||
+@@ -187,7 +188,6 @@ function isDeclareModule(path: babel.NodePath): boolean {
+ 
+ const tsTypeAnnotationNodeTypes: ReadonlyArray<babel.types.Node['type']> =
+   Object.freeze([
+-    'TSAsExpression',
+     'TSInterfaceDeclaration',
+     'TSTypeAnnotation',
+     'TSTypeAliasDeclaration',

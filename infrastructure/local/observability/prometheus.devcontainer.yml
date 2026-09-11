@@ -14,25 +14,11 @@ scrape_configs:
           service: 'account-service'
           runtime: 'devcontainer'
 
-  - job_name: 'cloud-service'
-    static_configs:
-      - targets: ['workspace:4002']
-        labels:
-          service: 'cloud-service'
-          runtime: 'devcontainer'
-
   - job_name: 'billing-service'
     static_configs:
       - targets: ['workspace:4020']
         labels:
           service: 'billing-service'
-          runtime: 'devcontainer'
-
-  - job_name: 'cloud-worker'
-    static_configs:
-      - targets: ['workspace:4101']
-        labels:
-          service: 'cloud-worker'
           runtime: 'devcontainer'
 
   - job_name: 'account-worker'

@@ -151,18 +151,7 @@ mod tests {
     use uuid::Uuid;
 
     async fn test_redis_pool() -> Option<RedisPool> {
-        let mut config = crate::config::RedisConfig::from_env();
-        if config.url == "redis://localhost:6379" {
-            config.url = "redis://127.0.0.1:6379".to_string();
-        }
-        config.max_connections = 2;
-        tokio::time::timeout(
-            std::time::Duration::from_millis(500),
-            crate::connection::create_pool(&config),
-        )
-        .await
-        .ok()
-        .and_then(|r| r.ok())
+        nvbes_test_utils::redis::test_redis_pool().await
     }
 
     #[tokio::test]

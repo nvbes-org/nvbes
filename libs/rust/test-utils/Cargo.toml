@@ -1,0 +1,28 @@
+[package]
+name = "nvbes-test-utils"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+description = "Shared test utilities and YAML keyword-driven test runner for nvbes crates"
+
+[[bin]]
+name = "nvbes-runner"
+path = "src/test.runner.cli.rs"
+
+[dependencies]
+async-trait.workspace = true
+hmac.workspace = true
+hex = "0.4"
+nvbes-redis = { path = "../redis" }
+nvbes-trust-risk = { path = "../trust-risk" }
+prost-types = "0.14"
+redis = { version = "0.29", features = ["tokio-comp", "json"] }
+chrono.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml_ng.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+uuid.workspace = true

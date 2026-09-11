@@ -78,7 +78,7 @@ export async function generateDpopKeyPair(): Promise<DpopKeyPair> {
       namedCurve: 'P-256',
     },
     true,
-    ['sign'],
+    ['sign', 'verify'],
   );
 
   const publicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
@@ -196,30 +196,20 @@ export async function dpopFetch(
     });
   }
 
-  try {
-    const keyPair = await ensureDpopKeyPair();
-    const proof = await createDpopProof(keyPair, method, url, accessToken);
-    headers.set(D_POP_HEADER, proof);
+  const keyPair = await ensureDpopKeyPair();
+  const proof = await createDpopProof(keyPair, method, url, accessToken);
+  headers.set(D_POP_HEADER, proof);
 
-    if (accessToken) {
-      headers.set('Authorization', `DPoP ${accessToken}`);
-    }
-
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers,
-    });
-
-    extractNonceFromResponse(response.headers);
-
-    return response;
-  } catch (error) {
-    console.error('DPoP fetch failed:', error);
-    return fetch(url, {
-      ...fetchOptions,
-      headers,
-    });
+  if (accessToken) {
+    headers.set('Authorization', `DPoP ${accessToken}`);
   }
+
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers,
+  });
+  extractNonceFromResponse(response.headers);
+  return response;
 }
 
 export function isDpopSupported(): boolean {

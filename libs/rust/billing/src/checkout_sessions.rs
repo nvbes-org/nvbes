@@ -14,8 +14,9 @@ use crate::checkout_sessions_audit::{
     audit_checkout_started,
 };
 use crate::checkout_sessions_fraud::{
-    CheckoutFraudAssessmentRecord, assess_checkout_session_fraud, checkout_fraud_enforcement,
-    enforce_checkout_fraud, fraud_provider_metadata, record_checkout_fraud_assessment_tx,
+    AssessCheckoutFraudSessionParams, CheckoutFraudAssessmentRecord, assess_checkout_session_fraud,
+    checkout_fraud_enforcement, enforce_checkout_fraud, fraud_provider_metadata,
+    record_checkout_fraud_assessment_tx,
 };
 use crate::db::{ProviderRoutingRuleLookupError, fetch_provider_routing_rule_tx};
 use crate::models::BillingStateRecord;
@@ -171,16 +172,16 @@ pub async fn create_billing_checkout_session(
         Some(provider_decision.provider.as_str()),
     )
     .await?;
-    let fraud_assessment = assess_checkout_session_fraud(
+    let fraud_assessment = assess_checkout_session_fraud(AssessCheckoutFraudSessionParams {
         config,
-        &record,
-        &target_plan,
-        provider_decision.provider,
+        record: &record,
+        target_plan: &target_plan,
+        provider: provider_decision.provider,
         checkout_country,
         checkout_amount_minor,
-        &geo_resolution,
-        fraud_velocity,
-    )?;
+        geo_resolution: &geo_resolution,
+        velocity: fraud_velocity,
+    })?;
     let fraud_enforcement = checkout_fraud_enforcement(config, &fraud_assessment);
     if let Err(error) = enforce_checkout_fraud(fraud_enforcement) {
         record_checkout_fraud_assessment_tx(
@@ -211,15 +212,17 @@ pub async fn create_billing_checkout_session(
     let checkout = create_provider_checkout(
         &mut tx,
         config,
-        input.workspace_id,
-        &record,
-        &target_plan,
-        checkout_country,
-        checkout_amount_minor,
-        &success_url,
-        &cancel_url,
-        provider_decision.provider,
-        &fraud_metadata,
+        crate::checkout_provider::CreateProviderCheckoutInput {
+            workspace_id: input.workspace_id,
+            record: &record,
+            target_plan: &target_plan,
+            checkout_country,
+            checkout_amount_minor,
+            success_url: &success_url,
+            cancel_url: &cancel_url,
+            provider: provider_decision.provider,
+            fraud_metadata: &fraud_metadata,
+        },
     )
     .await?;
     record_checkout_fraud_assessment_tx(

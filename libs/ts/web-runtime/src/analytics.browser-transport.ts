@@ -1,9 +1,4 @@
-import {
-  getErrorReportingReplaysOnErrorSampleRate,
-  getErrorReportingTracesSampleRate,
-  scrubErrorReportingBreadcrumb,
-  scrubErrorReportingEvent,
-} from './error-reporting-privacy';
+import { createSentryReporting } from './analytics.sentry-transport';
 import { stripPostHogUrlSecrets } from './analytics.posthog-privacy';
 import type { AnalyticsTransport, FeatureFlagResult, JsonType } from './analytics.types';
 
@@ -21,32 +16,17 @@ export function createBrowserAnalyticsTransport(
 ): AnalyticsTransport {
   type PostHog = typeof import('posthog-js/dist/module.full.no-external').default;
 
-  let sentry: typeof import('@sentry/browser') | null = null;
+  const sentry = createSentryReporting(options);
   let posthog: PostHog | null = null;
   let posthogInitializationPromise: Promise<PostHog | null> | null = null;
   let posthogInitialized = false;
   let posthogOptedOut = false;
   let productAnalyticsEnabled = false;
 
-  async function setErrorReportingEnabled(enabled: boolean): Promise<void> {
-    if (!enabled) {
-      if (sentry) {
-        await sentry.close(2_000);
-        sentry = null;
-      }
-      return;
-    }
-
-    if (sentry || !normalizedOptional(options.sentryDsn) || typeof window === 'undefined') {
-      return;
-    }
-
-    const loadedSentry = await import('@sentry/browser');
-    initSentry(loadedSentry, options);
-    sentry = loadedSentry;
-  }
-
   async function ensurePostHog(): Promise<PostHog | null> {
+    if (!productAnalyticsEnabled || typeof window === 'undefined') {
+      return null;
+    }
     if (posthogInitialized) {
       if (posthogOptedOut && posthog) {
         posthog.opt_in_capturing();
@@ -55,9 +35,6 @@ export function createBrowserAnalyticsTransport(
       return posthog;
     }
 
-    if (!productAnalyticsEnabled || typeof window === 'undefined') {
-      return null;
-    }
     if (!normalizedOptional(options.posthogKey)) {
       reportMissingDevelopmentConfig(options);
       return null;
@@ -146,7 +123,7 @@ export function createBrowserAnalyticsTransport(
       return distinctId && sessionId ? { distinctId, sessionId } : undefined;
     },
     async captureException(error, properties) {
-      sentry?.captureException(error, { extra: properties });
+      sentry.captureException(error, properties);
       const loadedPostHog = await ensurePostHog();
       loadedPostHog?.captureException(error, properties);
     },
@@ -162,10 +139,9 @@ export function createBrowserAnalyticsTransport(
       }
     },
     setProductAnalyticsEnabled,
-    setErrorReportingEnabled,
+    setErrorReportingEnabled: sentry.setEnabled,
     async disableCapture() {
-      await setErrorReportingEnabled(false);
-      await setProductAnalyticsEnabled(false);
+      await Promise.all([sentry.setEnabled(false), setProductAnalyticsEnabled(false)]);
     },
   };
 }
@@ -193,33 +169,6 @@ function reportMissingDevelopmentConfig(options: BrowserAnalyticsTransportOption
   console.error(
     `PostHog is enabled for ${options.appName}, but VITE_POSTHOG_KEY is missing or unconfigured. Product analytics events will be silently missed.`,
   );
-}
-
-function initSentry(
-  sentry: typeof import('@sentry/browser'),
-  options: BrowserAnalyticsTransportOptions,
-): void {
-  const dsn = normalizedOptional(options.sentryDsn);
-  if (!dsn) {
-    return;
-  }
-
-  const isProduction = options.environment === 'production';
-  sentry.init({
-    dsn,
-    environment: options.environment,
-    tracesSampleRate:
-      options.sentryTracesSampleRate ?? getErrorReportingTracesSampleRate(isProduction),
-    replaysOnErrorSampleRate: getErrorReportingReplaysOnErrorSampleRate(isProduction),
-    sendDefaultPii: false,
-    beforeBreadcrumb: scrubErrorReportingBreadcrumb,
-    beforeSend: scrubErrorReportingEvent,
-    initialScope: {
-      tags: {
-        app_name: options.appName,
-      },
-    },
-  });
 }
 
 function initPostHog(

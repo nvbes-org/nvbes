@@ -1,4 +1,4 @@
-import { createRequestHeaders } from '@nvbes/http-client';
+import { createRequestHeaders, HttpError } from '@nvbes/http-client';
 import type {
   MfaFactorView,
   RecoveryCodesResult,
@@ -102,11 +102,14 @@ export class NvbesIdentityWeb {
     const csrfToken = readScopedCsrfToken(authuser);
     if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
 
-    await fetch(`${this.config.baseUrl}/auth/logout`, {
+    const response = await fetch(`${this.config.baseUrl}/auth/logout`, {
       method: 'POST',
       credentials: 'include',
       headers: createRequestHeaders('POST', headers),
     });
+    if (!response.ok) {
+      throw new HttpError('Identity logout failed', response, undefined);
+    }
   }
 
   async listMfaFactors(

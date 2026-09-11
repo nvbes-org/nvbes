@@ -12,6 +12,25 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 ## Tests executables
 
 - `test-unit.sh`: typecheck web et tests unitaires Rust.
+- `test-workspace-coverage.sh`: couverture `cargo llvm-cov` du workspace Cargo
+  racine puis validation des seuils par crate (`docs/testing/rust-coverage-thresholds.json`).
+- `test-workspace-mutation.sh`: mutation testing `cargo-mutants` des crates
+  gated puis validation des seuils par crate
+  (`docs/testing/rust-mutation-thresholds.json`). Exige `cargo-mutants`
+  (`cargo install cargo-mutants --locked --version 27.1.0`);
+  `NVBES_MUTATION_TIMEOUT` regle le
+  timeout mutant par defaut 600s et `NVBES_MUTATION_JOBS` permet de borner le
+  parallelisme (par defaut, cargo-mutants choisit sa strategie d'execution).
+- `test-workspace-condition.sh`: couverture de condition (`cargo llvm-cov
+--branch`) du workspace Cargo puis validation des seuils par crate
+  (`docs/testing/rust-condition-thresholds.json`). Exige un toolchain nightly
+  (`rustup toolchain install nightly --profile minimal`); gate hors CI,
+  `NVBES_CONDITION_TOOLCHAIN` regle le toolchain par defaut `nightly`.
+- `generate-test-summary-report.mjs` (`pnpm report:test-summary`): génère le Test
+  Summary Report release conforme au template ISO 29119-3 §6 visé par
+  `docs/testing/iso-29119/03-documentation.md`, à partir du manifeste de test
+  Account, du rapport `cargo llvm-cov` et des seuils par crate. Écrit dans
+  `.temp/test-summary/test-summary-report.md`; `TSR_RELEASE` fixe la version notée.
 - `test-integration.sh`: tests d'integration Rust et validation IaC development/staging.
 - `test-account-portfolio.sh`: portefeuille bloquant Account complet (applications,
   bibliotheques TS associees, contrats, migrations, securite, worker, image et

@@ -13,43 +13,47 @@ use crate::{
     checkout_fraud_enforcement_action, resolve_checkout_fraud_policy,
 };
 
+pub(crate) struct AssessCheckoutFraudSessionParams<'a> {
+    pub config: &'a AppConfig,
+    pub record: &'a BillingStateRecord,
+    pub target_plan: &'a PlanRecord,
+    pub provider: ProviderCode,
+    pub checkout_country: Option<&'a str>,
+    pub checkout_amount_minor: i64,
+    pub geo_resolution: &'a nvbes_region::geo::GeoResolution,
+    pub velocity: BillingFraudVelocity,
+}
+
 pub(crate) fn assess_checkout_session_fraud(
-    config: &AppConfig,
-    record: &BillingStateRecord,
-    target_plan: &PlanRecord,
-    provider: ProviderCode,
-    checkout_country: Option<&str>,
-    checkout_amount_minor: i64,
-    geo_resolution: &nvbes_region::geo::GeoResolution,
-    velocity: BillingFraudVelocity,
+    params: AssessCheckoutFraudSessionParams<'_>,
 ) -> Result<CheckoutFraudAssessment, BillingCheckoutSessionError> {
     Ok(assess_checkout_fraud(CheckoutFraudInput {
         policy: checkout_fraud_policy(
-            config,
+            params.config,
             CheckoutFraudPolicyContext {
-                provider: Some(provider.as_str()),
-                plan_code: &target_plan.code,
-                country: checkout_country,
-                amount_minor: checkout_amount_minor,
+                provider: Some(params.provider.as_str()),
+                plan_code: &params.target_plan.code,
+                country: params.checkout_country,
+                amount_minor: params.checkout_amount_minor,
             },
         )?,
-        network_kind: geo_resolution.network_kind.as_str(),
-        network_risk_score: geo_resolution.risk_score,
-        network_labels: &geo_resolution.risk_labels,
-        geo_country: checkout_country,
-        billing_country: record.country.as_deref(),
-        vat_number: record.vat_number.as_deref(),
-        amount_minor: checkout_amount_minor,
-        existing_provider_customer: record.provider_customer_id.is_some()
-            || record.stripe_customer_id.is_some()
-            || record.billing_customer_id.is_some(),
-        active_paid_customer: record.subscription_status == "active",
-        recent_ip_checkouts: velocity.recent_ip_checkouts,
-        recent_ip_workspaces: velocity.recent_ip_workspaces,
-        recent_workspace_countries: velocity.recent_workspace_countries,
-        recent_payment_methods: velocity.recent_payment_methods,
-        recent_payment_failures: velocity.recent_payment_failures,
-        trusted_checkout_assessments: velocity.trusted_checkout_assessments,
+        network_kind: params.geo_resolution.network_kind.as_str(),
+        network_risk_score: params.geo_resolution.risk_score,
+        network_labels: &params.geo_resolution.risk_labels,
+        geo_country: params.checkout_country,
+        billing_country: params.record.country.as_deref(),
+        vat_number: params.record.vat_number.as_deref(),
+        amount_minor: params.checkout_amount_minor,
+        existing_provider_customer: params.record.provider_customer_id.is_some()
+            || params.record.stripe_customer_id.is_some()
+            || params.record.billing_customer_id.is_some(),
+        active_paid_customer: params.record.subscription_status == "active",
+        recent_ip_checkouts: params.velocity.recent_ip_checkouts,
+        recent_ip_workspaces: params.velocity.recent_ip_workspaces,
+        recent_workspace_countries: params.velocity.recent_workspace_countries,
+        recent_payment_methods: params.velocity.recent_payment_methods,
+        recent_payment_failures: params.velocity.recent_payment_failures,
+        trusted_checkout_assessments: params.velocity.trusted_checkout_assessments,
     }))
 }
 

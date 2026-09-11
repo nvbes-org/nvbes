@@ -1,0 +1,51 @@
+import { readFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
+import { mutationRunPaths } from './mutation-campaign-artifacts.mjs';
+
+const name = process.env.NVBES_MUTATION_PACKAGE;
+if (!/^[a-z][a-z0-9-]*$/u.test(name ?? '')) throw new Error('NVBES_MUTATION_PACKAGE is required');
+const root = `libs/ts/${name}`;
+const paths = mutationRunPaths(name, process.env.NVBES_MUTATION_RUN_DIRECTORY);
+const pkg = JSON.parse(readFileSync(`${root}/package.json`, 'utf8'));
+const scope = JSON.parse(readFileSync('docs/testing/v1/manifest.json', 'utf8'));
+if (Object.hasOwn(scope.typescriptExclusions, pkg.name))
+  throw new Error('Package has no applicable runtime mutation metric');
+
+export default {
+  mutate: [`${root}/src/**/*.{ts,tsx}`, `!${root}/src/**/*.{test,spec,gen,d}.{ts,tsx}`],
+  testRunner: 'command',
+  commandRunner: {
+    command: `node node_modules/vite-plus/bin/vp test run --root ${root} --retry=0 --pool=threads --maxWorkers=2 --bail=1`,
+  },
+  coverageAnalysis: 'off',
+  concurrency: Math.max(1, Math.min(4, Math.floor(availableParallelism() / 2))),
+  timeoutMS: 10000,
+  timeoutFactor: 1,
+  dryRunTimeoutMinutes: 2,
+  reporters: ['clear-text', 'json'],
+  jsonReporter: { fileName: paths.report },
+  tempDirName: paths.sandbox,
+  ignorePatterns: [
+    '/target',
+    '/archive',
+    '/.temp',
+    '/.trunk',
+    '/.nx',
+    '/.codex',
+    '/.agents',
+    '/.git',
+    '/.github',
+    '/.pnpm-store',
+    '/apps',
+    '/infrastructure',
+    '/vendor',
+    '/deploy',
+    '/fuzz',
+    '/reports',
+    '/libs/rust',
+  ],
+  incremental: false,
+  // Stryker counts timeouts as detected. nvbes evaluates the report separately
+  // and counts them as missed, using check-typescript-mutation.mjs.
+  thresholds: { high: 90, low: 90, break: 0 },
+};

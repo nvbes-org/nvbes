@@ -11,19 +11,31 @@ pub fn provider_subscription_applies_workspace_effects(primary_for_subscription:
     primary_for_subscription
 }
 
+#[derive(Debug, Clone)]
+pub struct SubscriptionUpsertWorkspaceEffectsInput<'a> {
+    pub workspace_id: Uuid,
+    pub provider_subscription_id: &'a str,
+    pub status: &'a str,
+    pub current_period_start: Option<DateTime<Utc>>,
+    pub current_period_end: Option<DateTime<Utc>>,
+    pub object: &'a Value,
+    pub primary_for_subscription: bool,
+}
+
 pub async fn apply_subscription_upsert_workspace_effects(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    workspace_id: Uuid,
-    provider_subscription_id: &str,
-    status: &str,
-    current_period_start: Option<DateTime<Utc>>,
-    current_period_end: Option<DateTime<Utc>>,
-    object: &Value,
-    primary_for_subscription: bool,
+    input: SubscriptionUpsertWorkspaceEffectsInput<'_>,
 ) -> BillingWebhookProcessingResult<()> {
-    if !provider_subscription_applies_workspace_effects(primary_for_subscription) {
+    if !provider_subscription_applies_workspace_effects(input.primary_for_subscription) {
         return Ok(());
     }
+
+    let workspace_id = input.workspace_id;
+    let provider_subscription_id = input.provider_subscription_id;
+    let status = input.status;
+    let current_period_start = input.current_period_start;
+    let current_period_end = input.current_period_end;
+    let object = input.object;
 
     let provider_price_id = object
         .pointer("/items/data/0/price/id")

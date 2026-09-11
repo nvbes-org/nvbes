@@ -18,7 +18,8 @@ mod sessions;
 pub use customer::{build_customer_fields, create_stripe_customer};
 pub use http::stripe_post_form;
 pub use sessions::{
-    build_checkout_session_fields, create_stripe_checkout_session, create_stripe_portal_session,
+    StripeCheckoutSessionParams, build_checkout_session_fields, create_stripe_checkout_session,
+    create_stripe_portal_session,
 };
 
 pub struct StripeSession {

@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "domain": "platform",
+  "project": "platform-operations-service",
+  "cargoPackage": "nvbes-platform",
+  "suites": [
+    {
+      "id": "platform.unit",
+      "requirement": "platform: unit behavior",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "platform-operations-service:test",
+      "cases": ["platform.unit.complete-run"]
+    },
+    {
+      "id": "platform.check",
+      "requirement": "platform: compilation",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "platform-operations-service:check",
+      "cases": ["platform.check.complete-run"]
+    },
+    {
+      "id": "platform.workspace-lint",
+      "requirement": "platform: workspace Clippy",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "rust-workspace:lint",
+      "cases": ["platform.workspace-lint.complete-run"]
+    },
+    {
+      "id": "platform.workspace-check",
+      "requirement": "platform: workspace compilation",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "rust-workspace:check",
+      "cases": ["platform.workspace-check.complete-run"]
+    },
+    {
+      "id": "platform.workspace-tests",
+      "requirement": "platform: shared production dependencies",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "rust-workspace:test",
+      "cases": ["platform.workspace-tests.complete-run"]
+    },
+    {
+      "id": "platform.workspace-format",
+      "requirement": "platform: Rust formatting",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "rust-workspace:format",
+      "cases": ["platform.workspace-format.complete-run"]
+    },
+    {
+      "id": "platform.database",
+      "requirement": "platform: persistent business invariants",
+      "risk": "Unauthorized access, corrupted state or lost events",
+      "execution": "automated",
+      "target": "platform-operations-service:test:database",
+      "cases": [
+        "platform.command-authorization",
+        "platform.append-only-audit",
+        "platform.operator-recovery",
+        "platform.finops-limits"
+      ]
+    },
+    {
+      "id": "platform.contract",
+      "requirement": "platform: deployable runtime contract",
+      "risk": "Invalid runtime or exposed unsupported interface",
+      "execution": "automated",
+      "target": "platform-operations-service:test:contract",
+      "cases": ["platform.runtime-contract"]
+    },
+    {
+      "id": "platform.acceptance",
+      "requirement": "platform: operator acceptance in isolated environment",
+      "risk": "An automated assertion does not prove the operational procedure",
+      "execution": "human",
+      "target": "docs/operations/platform-operations-manual-runbook.md",
+      "cases": ["platform.operator-acceptance"]
+    },
+    {
+      "id": "platform.restoration",
+      "requirement": "Restore the integrated V1 within RPO 24h/RTO 8h and budget 20/30 EUR TTC",
+      "risk": "Unrecoverable state or unbounded recurring costs",
+      "execution": "human",
+      "target": "docs/operations/platform-operations-manual-runbook.md",
+      "cases": [
+        "platform.restore-integrity",
+        "platform.integrated-journey",
+        "platform.budget-review"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "platform.complete-candidate-evidence",
+      "owner": "nvbes solo operator",
+      "risk": "Current commands and historical reports do not prove every case on the final candidate",
+      "reviewDate": "2026-09-17",
+      "closure": "Execute every declared case, link actual test identifiers and verified artifacts, reach all 90% gates and complete operator acceptance.",
+      "status": "open"
+    }
+  ]
+}
