@@ -78,14 +78,14 @@ Exemple `dossier.json` (générer deux UUID pour chaque nouvelle commande) :
 
 ```json
 {
-  "idempotency_key": "49db2f36-1488-473c-883c-c2707e2c657a",
-  "correlation_id": "b147613d-89a1-4d46-88d8-3ec5957b694a",
+  "idempotency_key": "00000000-0000-4000-8000-000000000001",
+  "correlation_id": "00000000-0000-4000-8000-000000000002",
   "reason": "Demande de vérification de livraison reçue",
   "action": {
     "type": "open_case",
     "category": "support",
     "owner": "email",
-    "subject_id": "58fa4945-962e-4fda-9400-f09422a47651",
+    "subject_id": "00000000-0000-4000-8000-000000000003",
     "source": "ticket-support-42",
     "summary": "Vérifier la livraison transactionnelle",
     "related_case_id": null

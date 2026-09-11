@@ -52,14 +52,14 @@ une base de production implicite.
 
 ## Stack
 
-| Domaine | Technologies |
-| --- | --- |
-| Backend | Rust, Axum, SQLx, Tokio, PostgreSQL |
-| Frontend et SDK | TypeScript, React, Vite, TanStack, Effect |
-| Monorepo | pnpm workspaces, Cargo workspace, Nx |
-| Identity | OAuth2/OIDC, DPoP, WebAuthn, PKCE |
-| Infrastructure | Scaleway serverless, Cloudflare, OpenTofu/Terraform |
-| Observabilité | OpenTelemetry, Grafana Cloud, Sentry |
+| Domaine         | Technologies                                        |
+| --------------- | --------------------------------------------------- |
+| Backend         | Rust, Axum, SQLx, Tokio, PostgreSQL                 |
+| Frontend et SDK | TypeScript, React, Vite, TanStack, Effect           |
+| Monorepo        | pnpm workspaces, Cargo workspace, Nx                |
+| Identity        | OAuth2/OIDC, DPoP, WebAuthn, PKCE                   |
+| Infrastructure  | Scaleway serverless, Cloudflare, OpenTofu/Terraform |
+| Observabilité   | OpenTelemetry, Grafana Cloud, Sentry                |
 
 ## Démarrage
 
@@ -116,3 +116,20 @@ pnpm agent:doctor     # Cohérence des instructions agents
 Les documents Drive, Cloud, Developer et Enterprise doivent afficher un statut
 « futur », « historique » ou « remplacé » avant d'être utilisés comme contexte
 d'implémentation.
+
+## Contribuer et signaler un problème
+
+Les contributions sont bienvenues lorsqu'elles respectent la direction V1, les
+frontières de domaine et le budget FinOps. Consulter
+[`CONTRIBUTING.md`](CONTRIBUTING.md), [`GOVERNANCE.md`](GOVERNANCE.md) et le
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) avant d'ouvrir une pull request.
+
+Une vulnérabilité ne doit jamais être publiée dans une issue. Utiliser le canal
+privé décrit dans [`SECURITY.md`](SECURITY.md).
+
+## Licence
+
+Le dépôt est distribué par défaut sous `AGPL-3.0-only`. Le SDK Rust backend
+Identity déclare une exception `MIT`. La portée exacte, les textes applicables
+et les règles relatives aux contenus tiers sont documentés dans la
+[politique de licence](docs/legal/open-source-licensing.md).

@@ -1,0 +1,35 @@
+name: Bug
+description: Signaler un comportement reproductible dans nvbes.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Ne publiez aucun secret, jeton, donnée personnelle ou vulnérabilité exploitable.
+  - type: textarea
+    id: observed
+    attributes:
+      label: Comportement observé
+      description: Décrivez le résultat obtenu et son impact.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction minimale
+      description: Incluez versions, commandes et logs expurgés.
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Révision
+      description: SHA Git ou version du package concerné.
+    validations:
+      required: true
