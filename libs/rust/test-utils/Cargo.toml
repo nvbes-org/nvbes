@@ -16,7 +16,7 @@ hex = "0.4"
 nvbes-redis = { path = "../redis" }
 nvbes-trust-risk = { path = "../trust-risk" }
 prost-types = "0.14"
-redis = { version = "0.29", features = ["tokio-comp", "json"] }
+redis = { version = "1.6", features = ["tokio-comp", "json"] }
 chrono.workspace = true
 reqwest.workspace = true
 serde.workspace = true
