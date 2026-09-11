@@ -100,13 +100,11 @@ Nx et un unique cas `<suite>.complete-run`. Une suite métier multi-cas ne peut
 pas devenir `passed` à partir du seul code retour de sa cible : elle devra
 fournir un résultat vérifiable pour chaque cas avant son intégration.
 
-Le workflow CI produit actuellement un premier reçu
-`platform.workspace-check` lors d'un `workflow_dispatch`, en rejouant la cible
-complète `rust-workspace:check`, puis le publie sept jours. Cette tranche
-valide le chemin de production ; elle ne constitue ni la campagne V1 complète
-ni une preuve réutilisable depuis une exécution PR. L'assemblage ultérieur du
-paquet doit télécharger ce reçu, lui ajouter la référence d'artefact GitHub et
-vérifier le run complet avec le gate commun.
+Le workflow manuel V1 produit les reçus des seize suites automatisées mono-cas
+(unit, check et contrôles workspace) en rejouant chaque cible Nx complète. Les
+reçus sont publiés séparément pendant sept jours et l'assembleur les lie à leur
+artefact GitHub exact. Les suites métier multi-cas restent volontairement
+exclues de ce producteur générique : elles exigent un rapport par ID de cas.
 
 Le workflow manuel dédié `v1-testing.yml` mesure les neuf packages TypeScript
 applicables dans des lanes isolées, exécutées une à une, avec une concurrence
@@ -120,7 +118,15 @@ La mutation s'exécute même après un échec de couverture, sans convertir cet
 échec en succès. Les rapports disponibles sont aussi conservés sept jours sous
 `v1-diagnostic-typescript-<package>-<sha>` ; ces diagnostics ne sont pas des
 reçus acceptés par l'assembleur. La matrice exhaustive ne prouve pas que ses
-seuils sont atteints. Toutes les crates Rust restent également obligatoires.
+seuils sont atteints.
+
+Une lane Rust protégée inventorie les crates depuis le catalogue V1, produit un
+export LLVM fusionné avec les branches et exécute cargo-mutants 27.1.0 sur les
+23 unités. Le producteur recalcule lignes, branches et mutations pour chaque
+crate, refuse immédiatement toute valeur sous son seuil applicable, puis
+publie un manifeste et les deux rapports bruts dans un unique artefact borné.
+L'assembleur revalide le SHA, les versions, les dates, le producteur et tous les
+scores avant d'ajouter ces 23 mesures au brouillon.
 
 Après un run manuel terminé, l'opérateur peut construire un brouillon local :
 
@@ -197,14 +203,14 @@ avec tous les modules Rust (certains n'ont aucun compteur applicable).
    classement de toutes les exigences historiques et migrer les
    consommateurs Account ensemble. Les IDs actuels sont des obligations,
    pas des assertions d'exécution.
-2. Étendre la production et l'assemblage des reçus CI à toutes les suites.
-   Le premier reçu mono-cas, l'assemblage incomplet, les recalculs TypeScript
-   et Rust et la comparaison avec les artefacts GitHub sont intégrés et
-   testés sur fixtures ; aucun paquet candidat réel complet n'a encore été
-   vérifié. L'exhaustivité de l'instrumentation et des sites de mutation, ainsi
-   que la vérification du contenu métier des preuves de suites et d'opérations,
-   restent à terminer. Publier un fichier dans un run réussi ne prouve pas à
-   lui seul que les cas annoncés ont réellement été exécutés.
+2. Étendre les reçus CI aux suites métier multi-cas. Les seize suites mono-cas,
+   les mesures TypeScript et Rust, leurs recalculs et la comparaison avec les
+   artefacts GitHub sont intégrés et testés sur fixtures ; aucun paquet candidat
+   réel complet n'a encore été vérifié. L'exhaustivité de l'instrumentation et
+   des sites de mutation, ainsi que la vérification du contenu métier des
+   preuves de suites et d'opérations, restent à terminer. Publier un fichier
+   dans un run réussi ne prouve pas à lui seul que les cas annoncés ont été
+   exécutés.
 3. Étalonner nightly (épinglé à `nightly-2026-09-09`) ; étendre les mesures Rust/TypeScript et
    atteindre effectivement 90 % partout. `llvm-cov --branch` mesure les
    branches ; ce n'est pas une preuve MC/DC ni une couverture indépendante

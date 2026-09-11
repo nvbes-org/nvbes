@@ -10,6 +10,10 @@ import {
   assembleTypescriptMeasurement,
   typescriptMeasurementArtifact,
 } from './v1-measurement-assembly.mjs';
+import {
+  assembleRustMeasurements,
+  rustMeasurementArtifact,
+} from './v1-rust-measurement-assembly.mjs';
 import { loadV1 } from './v1-release.mjs';
 import { eligibleSuite, suiteCommandDigest } from './v1-suite-receipt.mjs';
 
@@ -126,10 +130,25 @@ export function assembleReceiptDraft({
   for (const metadata of listing.artifacts) {
     const suiteId = receiptSuite(metadata.name, run.head_sha);
     const measurementSlug = typescriptMeasurementArtifact(metadata.name, run.head_sha);
-    if (!suiteId && !measurementSlug) continue;
+    const rustMeasurement = rustMeasurementArtifact(metadata.name, run.head_sha);
+    if (!suiteId && !measurementSlug && !rustMeasurement) continue;
     const id = artifactId(metadata.id);
     assert(!ids.has(id), 'Duplicate artifact ID');
     ids.add(id);
+    if (rustMeasurement) {
+      const assembled = assembleRustMeasurements({ metadata, run, units, readArtifact });
+      for (const measurement of assembled.measurements) {
+        assert(!measuredUnits.has(measurement.unit), 'Duplicate unit measurement');
+        measuredUnits.add(measurement.unit);
+        measurements.push(measurement);
+      }
+      artifacts.push(...assembled.artifacts);
+      for (const [file, bytes] of assembled.files) {
+        assert(!files.has(file), 'Duplicate measurement file');
+        files.set(file, bytes);
+      }
+      continue;
+    }
     if (measurementSlug) {
       const assembled = assembleTypescriptMeasurement({
         metadata,

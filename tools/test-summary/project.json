@@ -54,6 +54,12 @@
       "cache": false,
       "parallelism": false
     },
+    "measurement:rust": {
+      "executor": "nx:run-commands",
+      "options": { "command": "node tools/test-summary/v1-rust-measurement-receipt.mjs" },
+      "cache": false,
+      "parallelism": false
+    },
     "catalogue": {
       "executor": "nx:run-commands",
       "options": { "command": "node tools/test-summary/v1-release.mjs --catalogue" },
