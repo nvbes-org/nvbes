@@ -42,6 +42,17 @@ export function executeMutationSteps({
     status: 'not-run',
     steps: steps.map(({ name, timeout }) => ({ name, timeoutMs: timeout, status: 'not-run' })),
   };
+  function finish() {
+    try {
+      state.artifact = finalize(state.status);
+    } catch {
+      state.status = 'blocked';
+      state.reason = 'artifact-finalization-error';
+    }
+    state.finishedAt = now();
+    persist(state);
+    return state.status === 'passed' ? 0 : 1;
+  }
   persist(state);
   for (const [index, step] of steps.entries()) {
     const row = state.steps[index];
@@ -74,20 +85,10 @@ export function executeMutationSteps({
     persist(state);
     if (row.status !== 'passed') {
       state.status = row.status;
-      state.finishedAt = now();
-      persist(state);
-      return 1;
+      return finish();
     }
   }
-  try {
-    state.artifact = finalize();
-    state.status = 'passed';
-  } catch {
-    state.status = 'blocked';
-    state.reason = 'artifact-finalization-error';
-  }
-  state.finishedAt = now();
-  persist(state);
-  return state.status === 'passed' ? 0 : 1;
+  state.status = 'passed';
+  return finish();
 }
 import assert from 'node:assert/strict';

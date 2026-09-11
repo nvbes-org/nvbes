@@ -182,6 +182,29 @@ test('successful finalization persists the exact artifact reference', () => {
   assert.equal(final.releaseDecision, 'NO-GO');
 });
 
+test('retains a failed campaign artifact without promoting its status', () => {
+  let final;
+  let status;
+  const artifact = { report: 'failed.json' };
+  const exit = executeMutationSteps({
+    context: {},
+    steps: [{ name: 'threshold-gate', timeout: 100 }],
+    run: () => ({ status: 1 }),
+    persist: (state) => {
+      final = structuredClone(state);
+    },
+    finalize: (outcome) => {
+      status = outcome;
+      return artifact;
+    },
+  });
+  assert.equal(exit, 1);
+  assert.equal(status, 'failed');
+  assert.equal(final.status, 'failed');
+  assert.deepEqual(final.artifact, artifact);
+  assert.equal(final.releaseDecision, 'NO-GO');
+});
+
 test('checkout fingerprint detects tracked edits, untracked tests and commits', (t) => {
   const root = fixture(t);
   const git = (args) => execFileSync('git', args, { cwd: root, stdio: 'pipe' });

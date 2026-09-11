@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process';
-import { rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { checkTypescriptReport, typescriptScope } from './typescript-quality-gate.mjs';
 import { createMutationCheckpoint, executeMutationSteps } from './mutation-campaign-state.mjs';
+import { typescriptMutation } from './v1-typescript-measurements.mjs';
 import {
   mutationCheckout,
   mutationRunPaths,
@@ -54,13 +55,18 @@ process.exitCode = executeMutationSteps({
       env: { ...process.env, NVBES_MUTATION_RUN_DIRECTORY: directory },
     }),
   persist: (state) => checkpoint.persist(state),
-  finalize: () =>
-    publishMutationReport({
+  finalize: (status) => {
+    if (status !== 'passed' && !existsSync(report)) return undefined;
+    return publishMutationReport({
       root,
       name,
       report,
       before,
       after: mutationCheckout(root),
-      validate: (value) => checkTypescriptReport(name, 'mutation', value, root),
-    }),
+      validate: (value) =>
+        status === 'passed'
+          ? checkTypescriptReport(name, 'mutation', value, root)
+          : typescriptMutation(typescriptScope(name, root).unit, value),
+    });
+  },
 });
