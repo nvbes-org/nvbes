@@ -1,21 +1,19 @@
 use crate::{IdentityError, IdentityResult};
 
 pub fn hash_client_secret(secret: &str) -> IdentityResult<String> {
-    use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version, password_hash::SaltString};
-    use password_hash::rand_core::OsRng;
+    use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
 
-    let salt = SaltString::generate(&mut OsRng);
     let params = Params::new(65_536, 3, 4, None)
         .map_err(|error| IdentityError::internal("client_secret_hash_failed", error.to_string()))?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     argon2
-        .hash_password(secret.as_bytes(), &salt)
+        .hash_password(secret.as_bytes())
         .map(|hash| hash.to_string())
         .map_err(|error| IdentityError::internal("client_secret_hash_failed", error.to_string()))
 }
 
 pub fn verify_client_secret(secret: &str, hash_value: &str) -> IdentityResult<()> {
-    use argon2::{Argon2, PasswordVerifier, password_hash::PasswordHash};
+    use argon2::{Argon2, PasswordVerifier, password_hash::phc::PasswordHash};
 
     let parsed_hash = PasswordHash::new(hash_value).map_err(|error| {
         IdentityError::internal("client_secret_hash_invalid", error.to_string())
