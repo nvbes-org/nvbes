@@ -359,7 +359,7 @@
     "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25",
     "docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8",
     "docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9",
-    "docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+    "docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e",
     "dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4",
     "hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e",
     "github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
