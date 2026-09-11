@@ -27,7 +27,7 @@ nvbes-core = { path = "../../libs/rust/core" }
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-email-scaleway = { path = "../../libs/rust/adapters/email-scaleway" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
-openssl = "0.10"
+openssl.workspace = true
 prost = "0.14.4"
 prost-types = "0.14"
 reqwest.workspace = true

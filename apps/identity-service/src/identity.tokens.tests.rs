@@ -1,9 +1,5 @@
 use jsonwebtoken::{Algorithm, decode_header};
-use rsa::{
-    RsaPrivateKey,
-    pkcs8::{EncodePrivateKey, EncodePublicKey},
-    rand_core::OsRng,
-};
+use openssl::{pkey::PKey, rsa::Rsa};
 use uuid::Uuid;
 
 use crate::tokens_config::TokenConfig;
@@ -11,18 +7,14 @@ use crate::tokens_config::TokenConfig;
 use super::{ACCESS_TOKEN_TTL_SECONDS, TokenService};
 
 fn service() -> TokenService {
-    let private = RsaPrivateKey::new(&mut OsRng, 2048).unwrap();
-    let public = private.to_public_key();
+    let private = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
     TokenService::new(
         TokenConfig::from_values(
             "test",
             "http://identity.test".into(),
             "identity-key-1".into(),
-            private
-                .to_pkcs8_pem(Default::default())
-                .unwrap()
-                .to_string(),
-            public.to_public_key_pem(Default::default()).unwrap(),
+            String::from_utf8(private.private_key_to_pem_pkcs8().unwrap()).unwrap(),
+            String::from_utf8(private.public_key_to_pem().unwrap()).unwrap(),
             "nvbes-account-service".into(),
         )
         .unwrap(),

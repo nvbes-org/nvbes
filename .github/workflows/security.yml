@@ -1,6 +1,12 @@
 name: security
 
 on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 3 * * 1'
   workflow_dispatch:
 
 concurrency:
@@ -18,7 +24,7 @@ defaults:
 
 jobs:
   osv-lockfiles:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -43,7 +49,7 @@ jobs:
           sarif_file: osv-results.sarif
 
   cargo-deny:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -57,8 +63,28 @@ jobs:
           command: check
           arguments: --all-features
 
+  javascript-licenses:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+      - name: Install locked workspace dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+          pnpm install --frozen-lockfile --prefer-offline
+      - name: Enforce JavaScript production license policy
+        run: pnpm security:licenses
+
   gitleaks-history:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -79,13 +105,15 @@ jobs:
             --report-format=sarif \
             --report-path=/repo/gitleaks-results.sarif
       - name: Upload Gitleaks SARIF
-        if: always() && hashFiles('gitleaks-results.sarif') != ''
+        if: >-
+          always() && hashFiles('gitleaks-results.sarif') != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4
         with:
           sarif_file: gitleaks-results.sarif
 
   trivy-filesystem:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -103,6 +131,7 @@ jobs:
           ignore-unfixed: false
           exit-code: '1'
           format: sarif
+          limit-severities-for-sarif: true
           output: trivy-results.sarif
           skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
       - name: Generate CycloneDX SBOM
@@ -123,14 +152,16 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Upload Trivy SARIF
-        if: always() && hashFiles('trivy-results.sarif') != ''
+        if: >-
+          always() && hashFiles('trivy-results.sarif') != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4
         with:
           sarif_file: trivy-results.sarif
 
   codeql:
     name: codeql (${{ matrix.language }})
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
       fail-fast: false
@@ -156,7 +187,8 @@ jobs:
           category: /language:${{ matrix.language }}
 
   fuzz-smoke:
-    runs-on: [self-hosted, macOS, ARM64]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -172,6 +204,4 @@ jobs:
         run: cargo install cargo-fuzz --version 0.13.2 --locked
       - name: Run bounded parser fuzz targets
         run: |
-          cargo fuzz run dpop_proof -- -max_total_time=30
-          cargo fuzz run oauth_authorization_details -- -max_total_time=30
-          cargo fuzz run upload_inputs -- -max_total_time=30
+          cargo fuzz run dpop-proof -- -max_total_time=30

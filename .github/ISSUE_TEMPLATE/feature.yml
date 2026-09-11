@@ -1,0 +1,25 @@
+name: Évolution
+description: Proposer une capacité conforme à la direction V1.
+title: "proposal: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème utilisateur
+      description: Décrivez le besoin sans imposer d'emblée une solution.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Résultat attendu
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Contraintes et coûts
+      description: Sécurité, confidentialité, compatibilité, exploitation et coût mensuel.
+    validations:
+      required: true

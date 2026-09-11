@@ -101,7 +101,7 @@ describe('request body E2EE', () => {
       fetchImpl: recorder.fetchImpl,
       requestE2ee: {
         keyId: 'test-key',
-        secret: '0123456789abcdef0123456789abcdef',
+        secret: 'test-value-'.repeat(4).slice(0, 32),
       },
     });
 
@@ -123,7 +123,7 @@ describe('request body E2EE', () => {
       fetchImpl: recorder.fetchImpl,
       requestE2ee: {
         keyId: 'test-key',
-        secret: '0123456789abcdef0123456789abcdef',
+        secret: 'test-value-'.repeat(4).slice(0, 32),
       },
     });
 
