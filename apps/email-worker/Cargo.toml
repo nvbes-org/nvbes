@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 aes-gcm.workspace = true
+rand.workspace = true
 anyhow.workspace = true
 aws-sdk-sqs = { version = "=1.90.0", default-features = false, features = ["default-https-client", "rt-tokio"] }
 axum.workspace = true

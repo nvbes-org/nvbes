@@ -51,7 +51,7 @@ pub async fn cleanup_queue(pool: &RedisPool, queue: &str) {
             .expect("scan isolated test keys");
         let mut keys = Vec::new();
         while let Some(key) = iterator.next_item().await {
-            keys.push(key);
+            keys.push(key.expect("scan key should decode as UTF-8"));
         }
         keys
     };

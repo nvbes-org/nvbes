@@ -45,9 +45,9 @@ fn redis_error_is_transient(error: &redis::RedisError) -> bool {
         || error.is_connection_dropped()
         || matches!(
             error.kind(),
-            redis::ErrorKind::BusyLoadingError
-                | redis::ErrorKind::TryAgain
-                | redis::ErrorKind::ClusterDown
+            redis::ErrorKind::Server(redis::ServerErrorKind::BusyLoading)
+                | redis::ErrorKind::Server(redis::ServerErrorKind::TryAgain)
+                | redis::ErrorKind::Server(redis::ServerErrorKind::ClusterDown)
         )
 }
 

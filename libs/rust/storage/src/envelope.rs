@@ -133,10 +133,13 @@ pub fn decrypt_envelope(
     let kek_cipher =
         Aes256Gcm::new_from_slice(&tenant_kek).map_err(|_| EnvelopeError::DecryptionFailed)?;
 
-    let dek_nonce = Nonce::from_slice(&dek_nonce_bytes);
+    let dek_nonce = Nonce::from(
+        <[u8; NONCE_LEN]>::try_from(dek_nonce_bytes.as_slice())
+            .map_err(|_| EnvelopeError::InvalidEncoding)?,
+    );
     let dek_bytes = kek_cipher
         .decrypt(
-            dek_nonce,
+            &dek_nonce,
             Payload {
                 msg: &encrypted_dek_bytes,
                 aad: tenant_id.as_bytes(),
@@ -150,11 +153,14 @@ pub fn decrypt_envelope(
 
     let dek_cipher =
         Aes256Gcm::new_from_slice(&dek_bytes).map_err(|_| EnvelopeError::DecryptionFailed)?;
-    let data_nonce = Nonce::from_slice(&data_nonce_bytes);
+    let data_nonce = Nonce::from(
+        <[u8; NONCE_LEN]>::try_from(data_nonce_bytes.as_slice())
+            .map_err(|_| EnvelopeError::InvalidEncoding)?,
+    );
 
     let plaintext = dek_cipher
         .decrypt(
-            data_nonce,
+            &data_nonce,
             Payload {
                 msg: &ciphertext_bytes,
                 aad: tenant_id.as_bytes(),
@@ -196,7 +202,10 @@ pub fn rotate_envelope(
 
     let dek_bytes = current_kek_cipher
         .decrypt(
-            Nonce::from_slice(&dek_nonce_bytes),
+            &Nonce::from(
+                <[u8; NONCE_LEN]>::try_from(dek_nonce_bytes.as_slice())
+                    .map_err(|_| EnvelopeError::InvalidEncoding)?,
+            ),
             Payload {
                 msg: &encrypted_dek_bytes,
                 aad: tenant_id.as_bytes(),
