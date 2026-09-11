@@ -1,5 +1,6 @@
 import { createHash, generateKeyPairSync, sign, verify } from 'node:crypto';
-import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { lstat, mkdir, open, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -7,6 +8,7 @@ import {
   REQUIRED_HUMAN_CATEGORIES,
   canonicalTimestamp,
 } from './verify-acceptance-evidence.mjs';
+import { assertDescriptorConfined } from '../test-summary/descriptor-path.mjs';
 
 const MANIFEST_NAME = 'acceptance-evidence.json';
 const MANIFEST_SIGNATURE_NAME = 'acceptance-evidence.sig';
@@ -245,21 +247,27 @@ async function readBoundedFile(filePath, maxBytes, label, options = {}) {
       `${label} path escapes the evidence root`,
     );
   }
-  let metadata;
+  let handle;
   try {
-    metadata = await lstat(resolved);
+    handle = await open(resolved, constants.O_RDONLY | constants.O_NOFOLLOW);
   } catch (error) {
-    if (error?.code === 'ENOENT') {
+    if (error?.code === 'ENOENT' || error?.code === 'ELOOP') {
       throw new Error(`${label} must be a regular file`);
     }
     throw error;
   }
-  assert(metadata.isFile() && !metadata.isSymbolicLink(), `${label} must be a regular file`);
-  if (options.requireMode0600) {
-    assert((metadata.mode & 0o777) === 0o600, `${label} must have permissions 0600`);
+  try {
+    const metadata = await handle.stat();
+    assert(metadata.isFile(), `${label} must be a regular file`);
+    if (options.root) assertDescriptorConfined(handle.fd, options.root, label);
+    if (options.requireMode0600) {
+      assert((metadata.mode & 0o777) === 0o600, `${label} must have permissions 0600`);
+    }
+    assert(metadata.size > 0 && metadata.size <= maxBytes, `${label} has an invalid size`);
+    return handle.readFile();
+  } finally {
+    await handle.close();
   }
-  assert(metadata.size > 0 && metadata.size <= maxBytes, `${label} has an invalid size`);
-  return readFile(resolved);
 }
 
 function safeRelativePath(candidate) {

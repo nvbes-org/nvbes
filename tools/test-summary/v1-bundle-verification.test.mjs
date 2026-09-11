@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, sign } from 'node:crypto';
-import { mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -169,6 +169,22 @@ test('rejects traversal and escaping symlinks', (t) => {
   assert.throws(() => confinedRead(directory, '../result.json'), /traversal/u);
   symlinkSync(os.tmpdir(), path.join(directory, 'outside'));
   assert.throws(() => confinedRead(directory, 'outside'), /escapes/u);
+});
+
+test('rejects a regular artifact reached through a symlinked parent directory', (t) => {
+  const { directory } = fixture(t);
+  const nested = path.join(directory, 'nested');
+  const outside = mkdtempSync(path.join(os.tmpdir(), 'nvbes-v1-evidence-outside-'));
+  t.after(() => rmSync(outside, { recursive: true, force: true }));
+  mkdirSync(nested);
+  writeFileSync(path.join(nested, 'result.json'), '{}');
+  writeFileSync(path.join(outside, 'result.json'), '{"outside":true}');
+  renameSync(nested, `${nested}-preserved`);
+  symlinkSync(outside, nested);
+  assert.throws(
+    () => confinedRead(directory, 'nested/result.json'),
+    /Artifact escapes evidence directory/u,
+  );
 });
 
 test('a fresh signature cannot replace missing CI provenance', (t) => {

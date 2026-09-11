@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -125,6 +134,48 @@ test('validates the exact published bytes and refuses a changed invalid report',
   assert.throws(() => readFileSync(path.join(root, '.temp/typescript/test/mutation.json')), {
     code: 'ENOENT',
   });
+});
+
+test('refuses a symlinked mutation report before publication', (t) => {
+  const root = fixture(t);
+  const report = reportAt(root, { score: 100 });
+  const replacement = path.join(root, 'replacement.json');
+  writeFileSync(replacement, JSON.stringify({ score: 100 }));
+  unlinkSync(path.join(root, report));
+  symlinkSync(replacement, path.join(root, report));
+  assert.throws(
+    () =>
+      publishMutationReport({
+        root,
+        name: 'test',
+        report,
+        before: {},
+        after: {},
+      }),
+    /Mutation report must be a regular file/u,
+  );
+});
+
+test('refuses an external report reached through a symlinked run directory', (t) => {
+  const root = fixture(t);
+  const report = reportAt(root, { score: 100 });
+  const runDirectory = path.dirname(path.join(root, report));
+  const outside = mkdtempSync(path.join(os.tmpdir(), 'nvbes-mutation-outside-'));
+  t.after(() => rmSync(outside, { recursive: true, force: true }));
+  writeFileSync(path.join(outside, 'mutation.json'), JSON.stringify({ score: 100 }));
+  renameSync(runDirectory, `${runDirectory}-preserved`);
+  symlinkSync(outside, runDirectory);
+  assert.throws(
+    () =>
+      publishMutationReport({
+        root,
+        name: 'test',
+        report,
+        before: {},
+        after: {},
+      }),
+    /Mutation report escapes its trusted directory/u,
+  );
 });
 
 test('rejects artifact traversal and reports from another package', (t) => {

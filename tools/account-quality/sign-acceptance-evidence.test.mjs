@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash, sign } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -198,6 +198,48 @@ test('rejects a world-readable private key', async (t) => {
       signerKeyId: 'account-release-board-2026',
     }),
     /must have permissions 0600/u,
+  );
+});
+
+test('refuses a symlinked private key before signing', async (t) => {
+  const evidence = await evidenceFixture(t);
+  const keypair = await keypairFixture(t);
+  const privateKeyPath = path.join(path.dirname(keypair.privatePath), 'private-key-alias.pem');
+  await symlink(keypair.privatePath, privateKeyPath);
+  await assert.rejects(
+    signAcceptanceEvidence({
+      deploymentKeyId: 'production-control-plane-2026',
+      evidenceRoot: evidence.root,
+      now: NOW,
+      privateKeyPath,
+      release: RELEASE,
+      reports: evidence.reports,
+      signerKeyId: 'account-release-board-2026',
+    }),
+    /acceptance private key must be a regular file/u,
+  );
+});
+
+test('refuses evidence from a symlinked report directory', async (t) => {
+  const evidence = await evidenceFixture(t);
+  const keypair = await keypairFixture(t);
+  const reportsPath = path.join(evidence.root, 'reports');
+  const outside = await mkdtemp(path.join(tmpdir(), 'account-evidence-outside-'));
+  t.after(() => rm(outside, { force: true, recursive: true }));
+  await rename(reportsPath, path.join(evidence.root, 'reports-preserved'));
+  await writeFile(path.join(outside, 'acceptance-alpha.txt'), 'outside evidence');
+  await symlink(outside, reportsPath);
+  await assert.rejects(
+    signAcceptanceEvidence({
+      deploymentKeyId: 'production-control-plane-2026',
+      evidenceRoot: evidence.root,
+      now: NOW,
+      privateKeyPath: keypair.privatePath,
+      release: RELEASE,
+      reports: evidence.reports,
+      signerKeyId: 'account-release-board-2026',
+    }),
+    /acceptance-alpha report escapes its trusted directory/u,
   );
 });
 

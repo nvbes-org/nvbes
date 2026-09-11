@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash, createPublicKey, verify } from 'node:crypto';
-import { readFileSync, realpathSync, statSync } from 'node:fs';
+import { closeSync, constants, fstatSync, openSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
+import { assertDescriptorConfined } from './descriptor-path.mjs';
 import { verifyTypescriptMeasurements } from './v1-typescript-measurements.mjs';
 import { verifyRustMeasurements } from './v1-rust-measurements.mjs';
 
@@ -13,9 +14,23 @@ export function confinedRead(directory, relative) {
   const root = realpathSync(directory);
   const location = realpathSync(path.resolve(root, relative));
   assert(location.startsWith(`${root}${path.sep}`), 'Artifact escapes evidence directory');
-  const stat = statSync(location);
-  assert(stat.isFile() && stat.size <= 16 * 1024 * 1024, 'Invalid or oversized evidence file');
-  return readFileSync(location);
+  let descriptor;
+  try {
+    descriptor = openSync(location, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if (error?.code === 'ENOENT' || error?.code === 'ELOOP') {
+      throw new Error('Invalid or oversized evidence file');
+    }
+    throw error;
+  }
+  try {
+    const stat = fstatSync(descriptor);
+    assert(stat.isFile() && stat.size <= 16 * 1024 * 1024, 'Invalid or oversized evidence file');
+    assertDescriptorConfined(descriptor, root, 'Evidence artifact');
+    return readFileSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
 }
 
 export function verifyBundle({

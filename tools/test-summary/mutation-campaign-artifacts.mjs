@@ -1,8 +1,19 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
+import { assertDescriptorConfined } from './descriptor-path.mjs';
 
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -56,8 +67,7 @@ export function publishMutationReport({ root, name, report, before, after, valid
   assert.equal(report, mutationRunPaths(name, path.posix.dirname(report)).report);
   assert.deepEqual(after, before, 'Mutation checkout changed during execution');
   const source = path.join(root, report);
-  assert(lstatSync(source).isFile(), 'Mutation report must be a regular file');
-  const bytes = readFileSync(source);
+  const bytes = readRegularFile(source, root, 'Mutation report');
   // Validate precisely the bytes being archived and published, not an earlier read.
   validate(JSON.parse(bytes.toString()));
   const destination = path.join(root, '.temp/typescript', name, 'mutation.json');
@@ -76,12 +86,27 @@ export function verifyMutationArtifact(root, artifact) {
     ),
     'Invalid mutation artifact path',
   );
-  assert(
-    lstatSync(path.join(root, artifact.report)).isFile(),
-    'Mutation artifact must be a regular file',
-  );
-  const bytes = readFileSync(path.join(root, artifact.report));
+  const bytes = readRegularFile(path.join(root, artifact.report), root, 'Mutation artifact');
   assert.equal(bytes.length, artifact.bytes, 'Mutation artifact size changed');
   assert.equal(digest(bytes), artifact.sha256, 'Mutation artifact digest changed');
   return JSON.parse(bytes.toString());
+}
+
+function readRegularFile(location, root, label) {
+  let descriptor;
+  try {
+    descriptor = openSync(location, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if (error?.code === 'ENOENT' || error?.code === 'ELOOP') {
+      throw new Error(`${label} must be a regular file`);
+    }
+    throw error;
+  }
+  try {
+    assert(fstatSync(descriptor).isFile(), `${label} must be a regular file`);
+    assertDescriptorConfined(descriptor, realpathSync(root), label);
+    return readFileSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
 }
