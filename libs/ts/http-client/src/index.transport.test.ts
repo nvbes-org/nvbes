@@ -56,7 +56,7 @@ it('uses CSRF only for credential-bearing mutations and preserves explicit token
   await client.post('/item', schema, {}, { headers: { 'X-CSRF-Token': 'explicit' } });
   expect(new Headers(calls[0]?.headers).has('X-CSRF-Token')).toBe(false);
   expect(new Headers(calls[1]?.headers).get('X-CSRF-Token')).toBe('explicit');
-  const anonymous = transport();
+  const anonymous = transport('omit');
   await anonymous.client.post('/item', schema, {});
   expect(new Headers(anonymous.calls[0]?.headers).has('X-CSRF-Token')).toBe(false);
   vi.stubGlobal('document', { cookie: '' });

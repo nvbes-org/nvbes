@@ -94,6 +94,7 @@ it.each([
   [undefined, 'junk; =bad; csrf_token=abc==; csrf_token_1=wrong', 'abc=='],
   [undefined, 'csrf_token=; __Host-csrf_token=backup', 'backup'],
   [undefined, 'csrf_token=old; csrf_token=new', 'new'],
+  [undefined, 'csrf_token=valid; csrf_token', 'valid'],
 ])('reads only the selected CSRF cookie for %s', (authuser, cookie, expected) => {
   vi.stubGlobal('document', { cookie });
   expect(readCsrfToken(authuser)).toBe(expected);
@@ -111,6 +112,12 @@ it.each([
   ['///users', 'https://a.test/api/', 'https://a.test/api/users'],
   ['HTTPS://b.test/a', 'https://a.test/api/', 'https://b.test/a'],
   ['web+demo://b.test/a', 'https://a.test/api/', 'web+demo://b.test/a'],
+  ['//b.test/users', 'https://a.test/', 'https://b.test/users'],
+  [
+    'nested/https://b.test/item',
+    'https://a.test/api/',
+    'https://a.test/api/nested/https://b.test/item',
+  ],
 ])('resolves %s against %s', (path, base, expected) => {
   expect(resolveRequestUrl(path, base).href).toBe(expected);
 });

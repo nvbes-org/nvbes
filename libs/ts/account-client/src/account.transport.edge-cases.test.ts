@@ -1,9 +1,29 @@
 import { z } from 'zod';
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { AccountAuthenticationError, AccountHttpError } from './account.errors';
 import { AccountTransport } from './account.transport';
 
 describe('AccountTransport edge cases', () => {
+  it('does not consume a 204 response body', async () => {
+    const response = new Response(null, { status: 204 });
+    const read = vi.spyOn(response, 'text');
+    await expect(
+      transportReturning(response).request('/empty', z.undefined(), { method: 'DELETE' }),
+    ).resolves.toBeUndefined();
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('preserves internal separators in a relative route without a leading slash', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ ok: true }));
+    const transport = new AccountTransport({
+      baseUrl: 'https://account.test/api/',
+      fetchImpl,
+      getAccessToken: () => 'synthetic',
+    });
+    await transport.request('nested//resource', z.object({ ok: z.boolean() }), { method: 'GET' });
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe('https://account.test/api/nested//resource');
+  });
+
   it('rejects a whitespace-only token before invoking fetch', async () => {
     let called = false;
     const transport = new AccountTransport({
