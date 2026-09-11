@@ -83,7 +83,12 @@ test('refuses a raw score below the applicable threshold', () => {
 
 test('manual trusted CI publishes bounded TypeScript measurement artifacts', () => {
   const workflow = parse(readFileSync('.github/workflows/v1-testing.yml', 'utf8'));
-  assert.deepEqual(workflow.on, { workflow_dispatch: null });
+  assert.deepEqual(Object.keys(workflow.on), ['workflow_dispatch']);
+  assert.deepEqual(
+    Object.keys(workflow.on.workflow_dispatch.inputs).sort((a, b) => a.localeCompare(b)),
+    ['expected_sha', 'fallback_of', 'runner'],
+  );
+  assert.equal(workflow.on.workflow_dispatch.inputs.runner.default, 'github-hosted');
   assert.equal(workflow.concurrency['cancel-in-progress'], true);
   assert.deepEqual(workflow.permissions, { actions: 'read', contents: 'read' });
   const job = workflow.jobs['typescript-measurement'];
@@ -112,10 +117,10 @@ test('manual trusted CI publishes bounded TypeScript measurement artifacts', () 
   });
   const manifest = JSON.parse(readFileSync('docs/testing/v1/manifest.json', 'utf8'));
   assert.deepEqual(
-    job.strategy.matrix.include.map((entry) => entry.unit).sort(),
+    job.strategy.matrix.include.map((entry) => entry.unit).sort((a, b) => a.localeCompare(b)),
     typescriptUnits(manifest, process.cwd())
       .map((entry) => entry.name)
-      .sort(),
+      .sort((a, b) => a.localeCompare(b)),
     'The CI campaign must include every applicable production package',
   );
   const mutations = job.steps.find((step) => step.id === 'mutation');

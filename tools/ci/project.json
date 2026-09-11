@@ -22,7 +22,7 @@
         "{workspaceRoot}/tools/security/ci-secret-policy.mjs"
       ],
       "options": {
-        "command": "node --test tools/ci/authorize-pr-cache.test.mjs tools/ci/cargo-affected.test.mjs tools/ci/continuous-integration-contract.test.mjs tools/ci/deployment-provenance-contract.test.mjs tools/ci/identity-restore-contract.test.mjs tools/ci/nx-cache-manager.test.mjs tools/ci/scaleway-cache-manager.test.mjs tools/ci/verify-ci-provenance.test.mjs tools/ci/scope.test.mjs tools/ci/rollout-report.test.mjs tools/ci/rust-runner.test.mjs",
+        "command": "node --test tools/ci/runner-fallback.test.mjs tools/ci/authorize-pr-cache.test.mjs tools/ci/cargo-affected.test.mjs tools/ci/continuous-integration-contract.test.mjs tools/ci/deployment-provenance-contract.test.mjs tools/ci/identity-restore-contract.test.mjs tools/ci/nx-cache-manager.test.mjs tools/ci/scaleway-cache-manager.test.mjs tools/ci/verify-ci-provenance.test.mjs tools/ci/scope.test.mjs tools/ci/rollout-report.test.mjs tools/ci/rust-runner.test.mjs",
         "cwd": "."
       }
     },
