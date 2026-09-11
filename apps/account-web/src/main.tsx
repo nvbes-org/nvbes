@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { App } from './app';
 import { AccountController } from './account.controller';
 import { accountGateway } from './account.gateway';
+import { watchAccountSession } from './account.revalidation';
 import './styles.css';
 import { BrowserLogoutTransaction, submitLogout } from '@nvbes/identity-sdk-web/oauth';
 
@@ -27,12 +28,14 @@ if (location.pathname === '/oauth/logout/callback') {
     logoutResult = 'invalid';
   }
 }
-window.addEventListener('pagehide', () => flushSync(() => controller.dispose()), { once: true });
+const stopWatching = watchAccountSession(controller);
+window.addEventListener(
+  'pagehide',
+  () => {
+    stopWatching();
+    flushSync(() => controller.dispose());
+  },
+  { once: true },
+);
 void controller.start(callback, logoutResult);
-window.addEventListener('focus', () => {
-  if (document.visibilityState === 'visible') void controller.revalidate();
-});
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') void controller.revalidate();
-});
 createRoot(root).render(<App controller={controller} />);

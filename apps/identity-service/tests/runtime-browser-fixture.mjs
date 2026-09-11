@@ -8,6 +8,7 @@ import { verifyHostedReauthentication } from './runtime-browser-hosted-reauth.mj
 import { accountWebBuild, verifyAccountWeb } from './runtime-browser-account-web.mjs';
 import { verifyPasswordRecovery } from './runtime-browser-password-recovery.mjs';
 import { verifySecurityKey } from './runtime-browser-hosted-security-key.mjs';
+import { verifyAccountPolling } from './runtime-browser-account-polling.mjs';
 
 const fixture = new RuntimeFixture();
 let closed = false;
@@ -35,6 +36,9 @@ process.once('SIGINT', () => {
 try {
   const web = process.env.NVBES_IDENTITY_TEST_WEB_UI === '1' ? await identityWebBuild() : undefined;
   const accountWeb = process.env.NVBES_IDENTITY_TEST_ACCOUNT_WEB === '1';
+  const accountPolling = process.env.NVBES_IDENTITY_TEST_ACCOUNT_REVALIDATION === '1';
+  if (accountPolling && !accountWeb)
+    throw new Error('Account revalidation requires the built Account fixture');
   const passwordRecovery = process.env.NVBES_IDENTITY_TEST_PASSWORD_RECOVERY === '1';
   const securityKey = process.env.NVBES_IDENTITY_TEST_SECURITY_KEY === '1';
   if (
@@ -211,7 +215,11 @@ try {
     await close();
   }
   if (accountWeb) {
-    console.log(JSON.stringify(await verifyAccountWeb(config)));
+    console.log(
+      JSON.stringify(
+        await (accountPolling ? verifyAccountPolling(config) : verifyAccountWeb(config)),
+      ),
+    );
     await close();
   }
   if (process.env.NVBES_IDENTITY_TEST_WEB_REAUTH === '1') {

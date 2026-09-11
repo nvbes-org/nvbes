@@ -84,8 +84,10 @@ La fixture vérifie annulation, confirmation, retour Account, state consommé,
 ancien accès Billing refusé, refresh refusé et reconnexion requise. Sa variante
 avec focus réel retire aussi le profil d'une seconde fenêtre Account à son retour.
 
-Les notifications back-channel proactives restent ouvertes : une fenêtre
-continuellement au premier plan n'est pas notifiée en temps réel. Aucun transport
-de notification RP n'est enregistré dans le profil courant. Ce lot ne démontre
+La [revalidation périodique Account](account-web-session-revalidation.md) retire
+désormais le profil d'une page continuellement visible après un refus du serveur,
+nominalement à sa prochaine lecture de 60 secondes. Les notifications back-channel
+proactives restent ouvertes : aucun transport de notification RP n'est enregistré
+dans le profil courant. Ce lot ne démontre
 ni certification OIDC/FAPI, ni préparation complète à l'ouverture publique, ni
 achèvement des autres exigences A–D.

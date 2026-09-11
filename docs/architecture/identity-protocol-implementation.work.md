@@ -13,6 +13,21 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Account visible : revalidation périodique — 2026-09-11
+
+Account relit son profil toutes les 60 secondes lorsque le document est visible
+et en ligne, sans chevaucher les requêtes. Le retour au premier plan ou en ligne
+conserve la vérification immédiate. Refus serveur, expiration et fermeture
+effacent le profil et les accès selon le contrôleur existant.
+
+Validation : 39 tests Account, typecheck/lint/build réussis ; Chromium
+153.0.8010.12 avec services réels et horloge réelle. Après logout dans une autre
+page, Account reçoit 401 et retire le profil après 59 951 ms, sans événement de
+focus ni de visibilité. Aucun Rust modifié. La fixture a terminé avec succès.
+Le [contrat de revalidation](account-web-session-revalidation.md) détaille le
+coût et les limites. OIDC Back-Channel Logout reste ouvert ; cette tranche ne
+clôture pas les lots A à D et ne déploie aucune infrastructure.
+
 ## Clé non résidente : interface et preuve navigateur — 2026-09-11
 
 Le parcours mot de passe puis clé déjà disponible dans le serveur et le SDK
