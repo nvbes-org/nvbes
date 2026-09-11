@@ -28,6 +28,18 @@ if (!['.github/workflows/ci.yml', '.github/workflows/v1-testing.yml'].includes(r
 const workflow = run.path.split('/').at(-1);
 const response = await api(`actions/runs/${runId}/jobs?per_page=100`);
 if (response.total_count > 100) throw new Error('Job inventory exceeds fallback bound');
+const failed = response.jobs.filter(
+  (job) => job.conclusion === 'failure' && !['ci-gate', 'local-fallback'].includes(job.name),
+);
+if (
+  failed.length === 0 ||
+  failed.some(
+    (job) => job.steps?.length !== 0 || job.runner_name || !job.labels?.includes('ubuntu-latest'),
+  )
+) {
+  console.log('No unstarted hosted failure: no fallback');
+  process.exit(0);
+}
 const annotations = {};
 for (const job of response.jobs.filter((entry) => entry.conclusion === 'failure')) {
   annotations[job.id] = await api(`check-runs/${job.id}/annotations?per_page=100`);

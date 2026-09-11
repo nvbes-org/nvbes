@@ -11,7 +11,7 @@ export function fallbackJob(path) {
   const dependency = path.endsWith('/ci.yml') ? 'ci-gate' : 'typescript-measurement';
   return `  local-fallback:
     needs: [${dependency}]
-    if: \${{ !cancelled() && needs.${dependency}.result == 'failure' && inputs.runner != 'local' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(fromJSON('["OWNER","MEMBER"]'), github.event.pull_request.author_association))) }}
+    if: \${{ always() && !cancelled() && inputs.runner != 'local' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(fromJSON('["OWNER","MEMBER"]'), github.event.pull_request.author_association))) }}
     runs-on: [self-hosted, Linux, ARM64, docker]
     timeout-minutes: 5
     permissions:
