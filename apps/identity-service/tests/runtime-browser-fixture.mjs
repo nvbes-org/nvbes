@@ -7,6 +7,7 @@ import { identityWebBuild } from './runtime-browser-web-ui.mjs';
 import { verifyHostedReauthentication } from './runtime-browser-hosted-reauth.mjs';
 import { accountWebBuild, verifyAccountWeb } from './runtime-browser-account-web.mjs';
 import { verifyPasswordRecovery } from './runtime-browser-password-recovery.mjs';
+import { verifySecurityKey } from './runtime-browser-hosted-security-key.mjs';
 
 const fixture = new RuntimeFixture();
 let closed = false;
@@ -35,6 +36,12 @@ try {
   const web = process.env.NVBES_IDENTITY_TEST_WEB_UI === '1' ? await identityWebBuild() : undefined;
   const accountWeb = process.env.NVBES_IDENTITY_TEST_ACCOUNT_WEB === '1';
   const passwordRecovery = process.env.NVBES_IDENTITY_TEST_PASSWORD_RECOVERY === '1';
+  const securityKey = process.env.NVBES_IDENTITY_TEST_SECURITY_KEY === '1';
+  if (
+    securityKey &&
+    (!web || accountWeb || passwordRecovery || process.env.NVBES_IDENTITY_TEST_WEB_REAUTH === '1')
+  )
+    throw new Error('Security-key verification needs its own built Identity fixture');
   if (passwordRecovery && (!web || accountWeb))
     throw new Error('Password recovery needs its own built Identity fixture');
   const recoveryKey = randomBytes(32);
@@ -195,6 +202,10 @@ try {
     );
   // Only public test URLs are printed. Keys and synthetic credentials stay inside the fixture.
   console.log(JSON.stringify({ client: origins.client, pid: process.pid, expiresInSeconds: 600 }));
+  if (securityKey) {
+    console.log(JSON.stringify(await verifySecurityKey(origins.client)));
+    await close();
+  }
   if (passwordRecovery) {
     console.log(JSON.stringify(await verifyPasswordRecovery(fixture, config, recoveryKey)));
     await close();

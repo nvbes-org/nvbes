@@ -30,12 +30,21 @@ export function AuthenticationForms({
       <Button
         size="lg"
         variant="outline"
+        className="h-auto min-h-11 max-w-full whitespace-normal py-2"
         disabled={state.busy}
         onClick={() => void controller.passkey()}
       >
         <Fingerprint data-icon="inline-start" />
-        {login ? 'Se connecter avec une passkey' : 'Vérifier avec une passkey'}
+        {login
+          ? 'Se connecter avec une passkey'
+          : 'Vérifier avec une passkey ou une clé de sécurité'}
       </Button>
+      {login && (
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Si votre clé de sécurité ne propose pas votre compte, commencez avec votre adresse email
+          et votre mot de passe.
+        </p>
+      )}
       {login ? (
         <PasswordLogin controller={controller} busy={state.busy} onStep={onStep} />
       ) : state.stage === 'security-step-up' ||

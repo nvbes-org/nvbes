@@ -77,6 +77,8 @@ describe('Identity login screen', () => {
     );
     expect(screen.queryByLabelText('Code à 6 chiffres')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Autoriser et continuer' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Vérifier avec une passkey' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Vérifier avec une passkey ou une clé de sécurité' }),
+    ).toBeTruthy();
   });
 });

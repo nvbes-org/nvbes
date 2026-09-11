@@ -13,6 +13,28 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Clé non résidente : interface et preuve navigateur — 2026-09-11
+
+Le parcours mot de passe puis clé déjà disponible dans le serveur et le SDK
+est maintenant vérifié dans Identity Web construit, avec une clé CTAP2 USB
+virtuelle sans stockage résident. Le premier enrollment puis une nouvelle
+connexion recent_webauthn aboutissent à Account via OAuth/DPoP. Les options
+conservent l'ID de la clé et UV required ; l'assertion n'a pas de userHandle.
+Le rejeu est refusé. Aucune option ni réponse de cérémonie n'est réécrite.
+
+L'interface explique le parcours et inclut la clé de sécurité dans le libellé
+de step-up. La capture mobile a révélé un contrôle tronqué sans débordement du
+document : le bouton revient maintenant à la ligne et le test vérifie aussi
+les limites des contrôles/textes dans le viewport. Le scénario SDK antérieur
+et sa vérification d'annulation restent conservés.
+
+Validation : 62 tests Identity Web, typecheck/lint/build, suite SDK existante
+via cache Nx et Chromium 153.0.8010.12 sur fixture neuve. Aucun Rust modifié ;
+les binaires réels sont construits par la fixture sans relancer cargo check.
+Le [contrat de preuve](identity-security-key-browser.md) donne la commande et
+les limites : clé physique, login sans mot de passe par email, autres clients
+et exigences A–D restent distincts et ouverts. Aucun déploiement.
+
 ## TOTP et récupération MFA : échéances sous contention — 2026-09-11
 
 Huit régressions ont été reproduites contre l'implémentation précédente avec
