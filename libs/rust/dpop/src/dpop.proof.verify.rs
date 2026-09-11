@@ -15,6 +15,28 @@ pub fn verify_dpop_proof(
     expected_ath: Option<&str>,
     max_iat_skew_secs: i64,
 ) -> Result<DpopProof, DpopError> {
+    if proof_str.len() > 16_384 || !(0..=300).contains(&max_iat_skew_secs) {
+        return Err(DpopError::InvalidProof(
+            "proof or time window exceeds limits".into(),
+        ));
+    }
+    let encoded = proof_str.split('.').next().unwrap_or_default();
+    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(encoded)
+        .map_err(|_| DpopError::InvalidProof("invalid header".into()))?;
+    let raw: serde_json::Value = serde_json::from_slice(&bytes)
+        .map_err(|_| DpopError::InvalidProof("invalid header".into()))?;
+    if raw.get("crit").is_some()
+        || raw.get("jwk").is_some_and(|jwk| {
+            ["d", "p", "q", "dp", "dq", "qi", "oth", "k"]
+                .iter()
+                .any(|key| jwk.get(key).is_some())
+        })
+    {
+        return Err(DpopError::InvalidProof(
+            "private key or unsupported critical header".into(),
+        ));
+    }
     let header = decode_header(proof_str)?;
 
     if header.typ.as_deref() != Some("dpop+jwt") {
@@ -26,6 +48,21 @@ pub fn verify_dpop_proof(
 
     let jwt_jwk = header.jwk.as_ref().ok_or(DpopError::MissingJwk)?;
     let jwk = jwt_jwk_to_jwk(jwt_jwk)?;
+    if jwk.kty != "EC" || jwk.crv != "P-256" {
+        return Err(DpopError::InvalidProof(
+            "only P-256 keys are supported".into(),
+        ));
+    }
+    for coordinate in [&jwk.x, &jwk.y] {
+        let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(coordinate)
+            .map_err(|_| DpopError::InvalidProof("invalid coordinate".into()))?;
+        if bytes.len() != 32
+            || base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes) != *coordinate
+        {
+            return Err(DpopError::InvalidProof("noncanonical coordinate".into()));
+        }
+    }
     let decoding_key = decoding_key_for_jwk(&jwk)?;
 
     let mut validation = Validation::new(DPOP_ALGORITHM);

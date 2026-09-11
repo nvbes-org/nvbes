@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, mkdirSync } from 'node:fs';
+import { stripVTControlCharacters } from 'node:util';
 import {
   checkOomExit,
   recommendedParallelism,
@@ -24,7 +25,7 @@ function run(binary, args, capture = false) {
   if (capture) {
     process.stdout.write(result.stdout ?? '');
     process.stderr.write(result.stderr ?? '');
-    const output = (result.stdout ?? '').replace(/\u001b\[[0-9;]*m/gu, '');
+    const output = stripVTControlCharacters(result.stdout ?? '');
     const match = output.match(/Cache:\s+(\d+)\/(\d+) hit/u);
     if (match) {
       cache.hits += Number(match[1]);

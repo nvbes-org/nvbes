@@ -4,6 +4,10 @@
 > applications `account-web` et `cloud-web` citées ci-dessous sont archivées ;
 > leur présence ne crée aucun lot frontend V1 actif.
 
+La préparation des nouveaux sites Identity et Account est décrite dans la
+[matrice des parcours et contrats](frontend-platform-preparation.md), qui
+distingue le runtime actuel des capacités proposées.
+
 `account-web` et `cloud-web` utilisent le meme modele runtime:
 
 - TanStack Router porte les routes client.

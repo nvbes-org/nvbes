@@ -1,4 +1,7 @@
 import type { WebStorage } from './storage';
+import { verifyIdToken, type VerifiedIdentity } from './oidc.id-token';
+import { createDpopProof, type DpopMainKeyPair } from './dpop';
+import { IndexedDbDpopTransactionStore, type DpopTransactionStore } from './dpop.transaction-store';
 
 const AUTHORIZATION_TRANSACTION_MAX_AGE_MS = 15 * 60 * 1_000;
 
@@ -10,6 +13,8 @@ export interface AuthorizationCodeTokenResponse {
   idToken: string | null;
   scope: string;
   returnTo: string;
+  dpopKey?: DpopMainKeyPair;
+  identity?: VerifiedIdentity;
 }
 
 export interface ExchangeAuthorizationCodeInput {
@@ -24,6 +29,7 @@ export interface ExchangeAuthorizationCodeConfig {
   storage: WebStorage;
   fetchImpl?: typeof fetch;
   now?: () => number;
+  dpopStore?: DpopTransactionStore;
 }
 
 export async function exchangeAuthorizationCode(
@@ -41,6 +47,22 @@ export async function exchangeAuthorizationCode(
     throw new Error('OAuth authorization transaction expired.');
   }
 
+  const endpoint = `${config.baseUrl.replace(/\/+$/u, '')}/oauth/token`;
+  const keyStore = config.dpopStore ?? new IndexedDbDpopTransactionStore();
+  let key: DpopMainKeyPair | undefined;
+  if (transaction.dpop) {
+    const binding = transaction.dpop;
+    if (
+      binding.issuer !== new URL(config.baseUrl).origin ||
+      binding.clientId !== config.clientId ||
+      binding.redirectUri !== config.redirectUri
+    )
+      throw new Error('OAuth DPoP transaction context mismatch.');
+    key = (await keyStore.load(binding.keyId)) ?? undefined;
+    if (!key || key.jkt !== binding.jkt)
+      throw new Error('OAuth DPoP transaction key missing or mismatched.');
+  }
+  const proof = key ? await createDpopProof(key, 'POST', endpoint) : undefined;
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     client_id: config.clientId,
@@ -49,12 +71,15 @@ export async function exchangeAuthorizationCode(
     code_verifier: transaction.codeVerifier,
   });
   const fetchImpl = config.fetchImpl ?? fetch.bind(globalThis);
-  const response = await fetchImpl(`${config.baseUrl.replace(/\/+$/u, '')}/oauth/token`, {
+  const response = await fetchImpl(endpoint, {
     method: 'POST',
     credentials: 'omit',
+    redirect: 'error',
+    cache: 'no-store',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
+      ...(proof ? { DPoP: proof } : {}),
     },
     body,
   });
@@ -64,11 +89,25 @@ export async function exchangeAuthorizationCode(
   }
 
   const tokens = parseTokenResponse(payload);
+  if (tokens.tokenType !== (key ? 'DPoP' : 'Bearer'))
+    throw new Error('Unexpected OAuth token binding.');
+  const identity = await verifyIdToken({
+    token: tokens.idToken,
+    accessToken: tokens.accessToken,
+    issuer: config.baseUrl,
+    clientId: config.clientId,
+    nonce: transaction.nonce,
+    fetchImpl: config.fetchImpl,
+    now: config.now,
+  });
+  if (transaction.dpop) await keyStore.remove(transaction.dpop.keyId);
   config.storage.clearTransaction();
-  return { ...tokens, returnTo: transaction.returnTo };
+  return { ...tokens, identity, returnTo: transaction.returnTo, ...(key ? { dpopKey: key } : {}) };
 }
 
-function parseTokenResponse(payload: unknown): Omit<AuthorizationCodeTokenResponse, 'returnTo'> {
+export function parseTokenResponse(
+  payload: unknown,
+): Omit<AuthorizationCodeTokenResponse, 'returnTo'> {
   if (!isRecord(payload)) {
     throw new Error('Identity returned an invalid OAuth token response.');
   }
@@ -77,7 +116,7 @@ function parseTokenResponse(payload: unknown): Omit<AuthorizationCodeTokenRespon
   const tokenType = requiredString(payload, 'token_type');
   const scope = requiredString(payload, 'scope');
   const expiresIn = payload.expires_in;
-  if (typeof expiresIn !== 'number' || !Number.isFinite(expiresIn) || expiresIn <= 0) {
+  if (typeof expiresIn !== 'number' || !Number.isSafeInteger(expiresIn) || expiresIn <= 0) {
     throw new Error('Identity returned an invalid OAuth token lifetime.');
   }
 

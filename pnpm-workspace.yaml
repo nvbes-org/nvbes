@@ -11,7 +11,7 @@ catalog:
   '@tanstack/react-router-devtools': ^1.167.1
   typescript: ^7.0.2
   vite: ^8.2.1
-  vite-plus: ^0.2.9
+  vite-plus: 0.2.9
   '@vitejs/plugin-react': ^6.0.5
   react-router-dom: ^7.15.1
   tsx: ^4.23.12
@@ -32,6 +32,9 @@ allowBuilds:
   workerd: true
 
 overrides:
+  vite: npm:@voidzero-dev/vite-plus-core@0.2.9
+  vitest: 4.1.10
+  '@vitest/coverage-v8': 4.1.10
   '@babel/core': 7.29.7
   '@hono/node-server': 2.0.12
   axios: 1.18.1

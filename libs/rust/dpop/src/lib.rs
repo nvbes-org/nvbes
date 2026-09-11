@@ -6,6 +6,9 @@ pub mod keys;
 pub mod nonce;
 #[path = "dpop.proof.rs"]
 pub mod proof;
+#[cfg(feature = "resource-server")]
+#[path = "dpop.resource.rs"]
+pub mod resource;
 
 pub use binding::TokenConfirmation;
 pub use keys::{DpopKeyPair, generate_key_pair, jwk_thumbprint};

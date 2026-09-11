@@ -33,7 +33,8 @@
   },
   "dependencies": {
     "@nvbes/http-client": "workspace:*",
-    "@nvbes/identity-sdk-core": "workspace:*"
+    "@nvbes/identity-sdk-core": "workspace:*",
+    "jose": "6.2.9"
   },
   "devDependencies": {
     "@types/node": "^25.9.5",

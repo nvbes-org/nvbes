@@ -20,6 +20,15 @@ pub struct IdentityConfig {
     pub mfa_previous_key_version: Option<i16>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct MfaRuntimeConfig {
+    pub database_url: String,
+    pub encryption_key: [u8; 32],
+    pub key_version: i16,
+    pub previous_encryption_key: Option<[u8; 32]>,
+    pub previous_key_version: Option<i16>,
+}
+
 impl IdentityConfig {
     pub fn from_env() -> Result<Self, ConfigError> {
         let environment = optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into());
@@ -40,32 +49,11 @@ impl IdentityConfig {
             .unwrap_or(default_bind_addr)
             .parse()
             .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_BIND_ADDR"))?;
-        let mfa_encryption_key = optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
-            .or_else(|| {
-                matches!(environment.as_str(), "development" | "test")
-                    .then(|| DEVELOPMENT_MFA_KEY.into())
-            })
-            .ok_or(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
-            .and_then(|value| decode_key(&value))?;
-        let mfa_key_version = version(
-            "NVBES_IDENTITY_MFA_KEY_VERSION",
-            matches!(environment.as_str(), "development" | "test").then_some(1),
-        )?;
-        let previous_key = optional("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
-        let previous_version = optional("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");
-        let (mfa_previous_encryption_key, mfa_previous_key_version) =
-            match (previous_key, previous_version) {
-                (None, None) => (None, None),
-                (Some(key), Some(version_value)) => {
-                    let version =
-                        parse_version("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION", &version_value)?;
-                    if version == mfa_key_version {
-                        return Err(ConfigError::Invalid("MFA key versions must be distinct"));
-                    }
-                    (Some(decode_key(&key)?), Some(version))
-                }
-                _ => return Err(ConfigError::Invalid("MFA previous key pair")),
-            };
+        let mfa = mfa_runtime_config(&environment)?;
+        let mfa_encryption_key = mfa.encryption_key;
+        let mfa_key_version = mfa.key_version;
+        let mfa_previous_encryption_key = mfa.previous_encryption_key;
+        let mfa_previous_key_version = mfa.previous_key_version;
         let sentry_dsn = optional("SENTRY_DSN");
         let sentry_traces_sample_rate = optional("SENTRY_TRACES_SAMPLE_RATE")
             .unwrap_or_else(|| "0.1".into())
@@ -102,6 +90,48 @@ impl IdentityConfig {
             mfa_previous_key_version,
         })
     }
+}
+
+pub fn environment_from_env() -> String {
+    optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into())
+}
+
+pub fn mfa_runtime_config_from_env() -> Result<MfaRuntimeConfig, ConfigError> {
+    let environment = environment_from_env();
+    mfa_runtime_config(&environment)
+}
+
+fn mfa_runtime_config(environment: &str) -> Result<MfaRuntimeConfig, ConfigError> {
+    let mfa_encryption_key = optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
+        .or_else(|| {
+            matches!(environment, "development" | "test").then(|| DEVELOPMENT_MFA_KEY.into())
+        })
+        .ok_or(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
+        .and_then(|value| decode_key(&value))?;
+    let mfa_key_version = version(
+        "NVBES_IDENTITY_MFA_KEY_VERSION",
+        matches!(environment, "development" | "test").then_some(1),
+    )?;
+    let previous_key = optional("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
+    let previous_version = optional("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");
+    let (previous_encryption_key, previous_key_version) = match (previous_key, previous_version) {
+        (None, None) => (None, None),
+        (Some(key), Some(version_value)) => {
+            let version = parse_version("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION", &version_value)?;
+            if version == mfa_key_version {
+                return Err(ConfigError::Invalid("MFA key versions must be distinct"));
+            }
+            (Some(decode_key(&key)?), Some(version))
+        }
+        _ => return Err(ConfigError::Invalid("MFA previous key pair")),
+    };
+    Ok(MfaRuntimeConfig {
+        database_url: database_url(environment)?,
+        encryption_key: mfa_encryption_key,
+        key_version: mfa_key_version,
+        previous_encryption_key,
+        previous_key_version,
+    })
 }
 
 fn validate_observability(

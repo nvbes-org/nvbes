@@ -4,6 +4,8 @@ mod cors;
 pub mod headers;
 #[path = "security.profile.rs"]
 pub mod profile;
+#[path = "security.resource_cors.rs"]
+pub mod resource_cors;
 #[path = "security.tls_pinning.rs"]
 pub mod tls_pinning;
 

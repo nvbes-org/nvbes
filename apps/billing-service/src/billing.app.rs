@@ -30,11 +30,24 @@ pub struct BillingState {
 }
 
 pub fn create_router(state: BillingState) -> Router {
-    Router::new()
-        .merge(health::router())
-        .merge(metrics::router())
-        .route("/webhooks/stripe", post(stripe_webhook_handler))
+    let cors = state
+        .config
+        .browser_origins
+        .layer(vec![axum::http::Method::GET, axum::http::Method::POST]);
+    let browser = Router::new()
         .route("/billing/plans", get(list_plans_handler))
+        .route(
+            "/accounts/{account_type}/{id}/billing/checkout",
+            post(create_checkout_handler),
+        )
+        .route(
+            "/accounts/{account_type}/{id}/billing/portal",
+            post(create_portal_handler),
+        )
+        .route(
+            "/accounts/{account_type}/{id}/billing/overview",
+            get(get_overview_handler),
+        )
         .route(
             "/workspaces/{id}/billing/checkout",
             post(create_checkout_handler),
@@ -47,6 +60,12 @@ pub fn create_router(state: BillingState) -> Router {
             "/workspaces/{id}/billing/overview",
             get(get_overview_handler),
         )
+        .layer(cors);
+    Router::new()
+        .merge(browser)
+        .merge(health::router())
+        .merge(metrics::router())
+        .route("/webhooks/stripe", post(stripe_webhook_handler))
         .route("/operator/billing/overview", get(operator_overview_handler))
         .route(
             "/operator/billing/reconciliations",

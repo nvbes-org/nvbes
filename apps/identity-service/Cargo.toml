@@ -6,6 +6,7 @@ version.workspace = true
 
 [features]
 database-tests = []
+email-integration-tests = ["database-tests"]
 
 [[bin]]
 name = "nvbes-identity-service"
@@ -17,9 +18,11 @@ aes-gcm.workspace = true
 axum.workspace = true
 base64.workspace = true
 chrono.workspace = true
+hmac.workspace = true
 jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 metrics-exporter-prometheus.workspace = true
 nvbes-core = { path = "../../libs/rust/core" }
+nvbes-dpop = { path = "../../libs/rust/dpop" }
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
 rand.workspace = true
@@ -28,13 +31,19 @@ rsa = { version = "0.9.10", features = ["pem"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+subtle = "2.6.1"
 sqlx.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+tower-http.workspace = true
 uuid.workspace = true
+# Read the current typed counter under a database lock; never alter ceremony policy.
+webauthn-rs = { workspace = true, features = ["danger-credential-internals"] }
+webauthn-rs-proto = "0.5.5"
 
 [dev-dependencies]
+webauthn-authenticator-rs = { version = "0.5.5", default-features = false, features = ["softpasskey"] }
 prost-types = "0.14"
 tokio-stream = { version = "0.1.18", features = ["net"] }
 tonic.workspace = true

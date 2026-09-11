@@ -15,7 +15,7 @@ use crate::{
     audit::{self, AuditInput},
     auth::Principal,
     error::{AccountError, AccountResult},
-    profile::ensure_profile,
+    profile::ensure_profile_in_transaction,
 };
 
 #[derive(Debug, Serialize, FromRow)]
@@ -90,10 +90,11 @@ async fn request_export(
 ) -> AccountResult<(StatusCode, Json<ExportRequest>)> {
     principal.require("account:export")?;
     principal.require_step_up()?;
-    ensure_profile(&state.db, principal.id).await?;
     let mut tx = state.db.begin().await?;
+    ensure_profile_in_transaction(&mut tx, principal.id).await?;
     let existing = sqlx::query_as::<_, ExportRequest>("SELECT id,status,requested_at FROM account_exports WHERE principal_id=$1 AND status IN ('pending','processing') ORDER BY requested_at DESC LIMIT 1").bind(principal.id).fetch_optional(&mut *tx).await?;
     if let Some(value) = existing {
+        principal.require_step_up_at_database(&mut tx).await?;
         tx.commit().await?;
         return Ok((StatusCode::ACCEPTED, Json(value)));
     }
@@ -119,6 +120,7 @@ async fn request_export(
         json!({"export_id": id, "principal_id": principal.id}),
     )
     .await?;
+    principal.require_step_up_at_database(&mut tx).await?;
     tx.commit().await?;
     Ok((StatusCode::ACCEPTED, Json(value)))
 }
@@ -139,8 +141,13 @@ async fn download_export(
 ) -> AccountResult<Json<Value>> {
     principal.require("account:export")?;
     principal.require_step_up()?;
-    sqlx::query_scalar("SELECT document FROM account_exports WHERE id=$1 AND principal_id=$2 AND status='completed' AND expires_at>clock_timestamp()")
-        .bind(export_id).bind(principal.id).fetch_optional(&state.db).await?.map(Json).ok_or(AccountError::NotFound)
+    let mut connection = state.db.acquire().await?;
+    let document = sqlx::query_scalar("SELECT document FROM account_exports WHERE id=$1 AND principal_id=$2 AND status='completed' AND expires_at>clock_timestamp()")
+        .bind(export_id).bind(principal.id).fetch_optional(&mut *connection).await?.ok_or(AccountError::NotFound)?;
+    principal
+        .require_step_up_at_database(&mut connection)
+        .await?;
+    Ok(Json(document))
 }
 
 async fn request_closure(
@@ -150,9 +157,13 @@ async fn request_closure(
 ) -> AccountResult<(StatusCode, Json<ClosureRequest>)> {
     principal.require("account:close")?;
     principal.require_step_up()?;
-    ensure_profile(&state.db, principal.id).await?;
     let mut tx = state.db.begin().await?;
-    if let Some(value) = sqlx::query_as::<_, ClosureRequest>("SELECT id,status,requested_at FROM account_closures WHERE principal_id=$1 AND status IN ('pending','processing') LIMIT 1").bind(principal.id).fetch_optional(&mut *tx).await? { tx.commit().await?; return Ok((StatusCode::ACCEPTED, Json(value))); }
+    ensure_profile_in_transaction(&mut tx, principal.id).await?;
+    if let Some(value) = sqlx::query_as::<_, ClosureRequest>("SELECT id,status,requested_at FROM account_closures WHERE principal_id=$1 AND status IN ('pending','processing') LIMIT 1").bind(principal.id).fetch_optional(&mut *tx).await? {
+        principal.require_step_up_at_database(&mut tx).await?;
+        tx.commit().await?;
+        return Ok((StatusCode::ACCEPTED, Json(value)));
+    }
     let id = Uuid::new_v4();
     let value = sqlx::query_as("INSERT INTO account_closures(id,principal_id,status,execute_after) VALUES($1,$2,'pending',clock_timestamp()+interval '7 days') RETURNING id,status,requested_at").bind(id).bind(principal.id).fetch_one(&mut *tx).await?;
     sqlx::query("UPDATE account_profiles SET lifecycle_status='closure_pending',updated_at=clock_timestamp() WHERE principal_id=$1 AND lifecycle_status='active'").bind(principal.id).execute(&mut *tx).await?;
@@ -176,6 +187,7 @@ async fn request_closure(
         json!({"saga_id": id, "principal_id": principal.id}),
     )
     .await?;
+    principal.require_step_up_at_database(&mut tx).await?;
     tx.commit().await?;
     Ok((StatusCode::ACCEPTED, Json(value)))
 }
@@ -212,6 +224,7 @@ async fn cancel_closure(
         },
     )
     .await?;
+    principal.require_step_up_at_database(&mut tx).await?;
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }

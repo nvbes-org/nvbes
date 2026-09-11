@@ -13,10 +13,14 @@ const errorReportingSource = readFileSync(
   'utf8',
 );
 const healthSource = readFileSync(join(serviceRoot, 'src/identity.health.rs'), 'utf8');
-const deploymentWorkflow = readFileSync(
+const deploymentWorkflowSource = readFileSync(
   join(workspaceRoot, '.github/workflows/deploy.yml'),
   'utf8',
 );
+const deploymentWorkflow = deploymentWorkflowSource
+  .split('\n  deploy-identity:\n')[1]
+  ?.split(/\n  [a-zA-Z0-9_-]+:\n/)[0];
+assert.ok(deploymentWorkflow, 'unified workflow must retain the Identity deployment job');
 const runtimeTerraform = readFileSync(
   join(workspaceRoot, 'infrastructure/environments/identity-production/runtime.tf'),
   'utf8',
@@ -27,6 +31,22 @@ const productionVariables = readFileSync(
 );
 const syntheticProof = readFileSync(
   join(workspaceRoot, 'tools/deployment/prove-identity-synthetic-auth.sh'),
+  'utf8',
+);
+const syntheticTerraform = readFileSync(
+  join(workspaceRoot, 'infrastructure/environments/identity-production/synthetic.tf'),
+  'utf8',
+);
+const syntheticTokenProof = readFileSync(
+  join(workspaceRoot, 'tools/deployment/prove-identity-synthetic-token.sh'),
+  'utf8',
+);
+const syntheticMfaProof = readFileSync(
+  join(workspaceRoot, 'tools/deployment/prove-identity-synthetic-mfa.sh'),
+  'utf8',
+);
+const syntheticInvitationProof = readFileSync(
+  join(workspaceRoot, 'tools/deployment/prove-identity-synthetic-invitation.sh'),
   'utf8',
 );
 const publicRuntimeProof = readFileSync(
@@ -65,7 +85,7 @@ test('runtime stays closed to public authentication', () => {
 });
 
 test('deployment is main-only, approved, immutable and scale-to-zero', () => {
-  assert.ok(deploymentWorkflow.includes("github.ref == 'refs/heads/main'"));
+  assert.ok(deploymentWorkflow.includes("if: ${{ success() && github.ref == 'refs/heads/main' &&"));
   assert.ok(deploymentWorkflow.includes('[[ "$IDENTITY_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]'));
   assert.ok(deploymentWorkflow.includes('cosign verify'));
   assert.ok(deploymentWorkflow.includes('IDENTITY_IMAGE_DIGEST'));
@@ -87,12 +107,11 @@ test('production accepts canonical 32-byte MFA keys without UTF-8 assumptions', 
 });
 
 test('deployment migrates before apply and proves public auth stays absent', () => {
-  const identitySection = deploymentWorkflow.slice(deploymentWorkflow.indexOf('deploy-identity:'));
-  const migration = identitySection.indexOf('- name: Run database migrations');
-  const apply = identitySection.indexOf('- name: Apply reviewed Identity runtime plan');
+  const migration = deploymentWorkflow.indexOf('- name: Run database migrations');
+  const apply = deploymentWorkflow.indexOf('- name: Apply reviewed Identity runtime plan');
   assert.ok(migration >= 0);
   assert.ok(apply > migration);
-  assert.ok(identitySection.includes('tools/deployment/prove-identity-public-runtime.sh'));
+  assert.ok(deploymentWorkflow.includes('tools/deployment/prove-identity-public-runtime.sh'));
   assert.ok(publicRuntimeProof.includes('/auth/register"'));
   assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "404" ]]'));
 });
@@ -132,4 +151,34 @@ test('deployment proves Sentry delivery from a private production job', () => {
   assert.ok(deploymentWorkflow.includes('Prove Identity Sentry delivery'));
   assert.ok(deploymentWorkflow.includes('identity_error_reporting_smoke_job_id'));
   assert.ok(mainSource.includes('result.configured && result.flushed'));
+});
+
+test('deployment proves scoped tokens and revocation without persisting JWTs', () => {
+  assert.ok(mainSource.includes('action == "synthetic-token-smoke"'));
+  assert.ok(syntheticTerraform.includes('identity_synthetic_token'));
+  assert.ok(syntheticTerraform.includes('args                   = ["synthetic-token-smoke"]'));
+  assert.ok(syntheticTokenProof.includes('identity_token_issuer'));
+  assert.ok(syntheticTerraform.includes('NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM'));
+  assert.ok(syntheticTokenProof.includes('"nvbes-account-service"'));
+  assert.ok(
+    syntheticTokenProof.includes(
+      '["account:close","account:export","account:read","account:write"]',
+    ),
+  );
+  assert.ok(syntheticTokenProof.includes('inactive_after_revocation == true'));
+  assert.equal(syntheticTokenProof.includes('access_token'), false);
+});
+
+test('deployment proves encrypted MFA and invitation-only account creation', () => {
+  assert.ok(mainSource.includes('action == "synthetic-mfa-smoke"'));
+  assert.ok(mainSource.includes('action == "synthetic-invitation-smoke"'));
+  assert.ok(syntheticTerraform.includes('identity_synthetic_mfa'));
+  assert.ok(syntheticTerraform.includes('identity_synthetic_invitation'));
+  assert.ok(syntheticMfaProof.includes('identity_mfa_key_version'));
+  assert.ok(syntheticMfaProof.includes('step_up_method == "totp"'));
+  assert.ok(syntheticInvitationProof.includes('code_hash_bytes'));
+  assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "404" ]]'));
+  assert.ok(deploymentWorkflow.includes('tools/deployment/prove-identity-synthetic-token.sh'));
+  assert.ok(deploymentWorkflow.includes('tools/deployment/prove-identity-synthetic-mfa.sh'));
+  assert.ok(deploymentWorkflow.includes('tools/deployment/prove-identity-synthetic-invitation.sh'));
 });

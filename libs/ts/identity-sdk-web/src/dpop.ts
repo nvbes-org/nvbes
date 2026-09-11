@@ -15,18 +15,18 @@ type DpopWorkerKeyPair = {
   usingWorker: true;
 };
 
-type DpopMainKeyPair = {
+export type DpopMainKeyPair = {
   keyPair: CryptoKeyPair;
   publicJwk: JsonWebKey;
   jkt: string;
   usingWorker: false;
 };
 
-type DpopKeyPair = DpopWorkerKeyPair | DpopMainKeyPair;
+export type DpopKeyPair = DpopWorkerKeyPair | DpopMainKeyPair;
 
 let cryptoWorker: DpopWorkerCrypto | null = null;
 let cachedKeyPair: DpopKeyPair | null = null;
-let currentNonce: string | null = null;
+const nonces = new Map<string, string>();
 
 export function configureDpopCryptoWorker(worker: DpopWorkerCrypto): void {
   cryptoWorker = worker;
@@ -52,7 +52,7 @@ async function sha256Base64url(input: string): Promise<string> {
   return base64urlEncode(hash);
 }
 
-async function computeJwkThumbprint(jwk: JsonWebKey): Promise<string> {
+export async function computeJwkThumbprint(jwk: JsonWebKey): Promise<string> {
   const canonical = {
     crv: jwk.crv,
     kty: jwk.kty,
@@ -72,20 +72,25 @@ export async function generateDpopKeyPair(): Promise<DpopKeyPair> {
     return cachedKeyPair;
   }
 
+  cachedKeyPair = await generateBrowserDpopKeyPair();
+  return cachedKeyPair;
+}
+
+/** Independent key for one OAuth transaction; never changes the legacy global cache. */
+export async function generateBrowserDpopKeyPair(): Promise<DpopMainKeyPair> {
   const keyPair = await crypto.subtle.generateKey(
     {
       name: 'ECDSA',
       namedCurve: 'P-256',
     },
-    true,
+    false,
     ['sign'],
   );
 
   const publicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
   const jkt = await computeJwkThumbprint(publicJwk);
 
-  cachedKeyPair = { keyPair, publicJwk, jkt, usingWorker: false };
-  return cachedKeyPair;
+  return { keyPair, publicJwk, jkt, usingWorker: false };
 }
 
 export function getCachedKeyPair(): DpopKeyPair | null {
@@ -105,18 +110,29 @@ export async function ensureDpopKeyPair(): Promise<DpopKeyPair> {
   return generateDpopKeyPair();
 }
 
-export function setDpopNonce(nonce: string): void {
-  currentNonce = nonce;
+export function setDpopNonce(nonce: string, serverUrl: string): void {
+  const origin = new URL(serverUrl).origin;
+  if (!nonce) {
+    nonces.delete(origin);
+    return;
+  }
+  if (nonce.length > 1024) throw new Error('DPoP nonce is too large');
+  nonces.delete(origin);
+  if (nonces.size >= 32) {
+    const oldest = nonces.keys().next().value;
+    if (oldest !== undefined) nonces.delete(oldest);
+  }
+  nonces.set(origin, nonce);
 }
 
-export function getDpopNonce(): string | null {
-  return currentNonce;
+export function getDpopNonce(serverUrl: string): string | null {
+  return nonces.get(new URL(serverUrl).origin) ?? null;
 }
 
-export function extractNonceFromResponse(headers: Headers): string | null {
+export function extractNonceFromResponse(headers: Headers, serverUrl: string): string | null {
   const nonce = headers.get(D_POP_NONCE_HEADER.toLowerCase());
   if (nonce) {
-    currentNonce = nonce;
+    setDpopNonce(nonce, serverUrl);
   }
   return nonce;
 }
@@ -129,11 +145,14 @@ export async function createDpopProof(
 ): Promise<string> {
   const jti = crypto.randomUUID();
   const iat = Math.floor(Date.now() / 1000);
+  const target = new URL(url);
+  target.search = '';
+  target.hash = '';
 
   const payload: Record<string, unknown> = {
     jti,
     htm: method.toUpperCase(),
-    htu: url,
+    htu: target.href,
     iat,
   };
 
@@ -142,8 +161,9 @@ export async function createDpopProof(
     payload.ath = ath;
   }
 
-  if (currentNonce) {
-    payload.nonce = currentNonce;
+  const nonce = getDpopNonce(url);
+  if (nonce) {
+    payload.nonce = nonce;
   }
 
   const publicJwk: Record<string, unknown> = {
@@ -183,9 +203,9 @@ export async function createDpopProof(
 
 export async function dpopFetch(
   url: string,
-  options: RequestInit & { dpop?: boolean; accessToken?: string } = {},
+  options: RequestInit & { dpop?: boolean; accessToken?: string; key?: DpopKeyPair } = {},
 ): Promise<Response> {
-  const { dpop = true, accessToken, ...fetchOptions } = options;
+  const { dpop = true, accessToken, key, ...fetchOptions } = options;
   const method = (fetchOptions.method ?? 'GET').toUpperCase();
   const headers = createRequestHeaders(method, fetchOptions.headers);
 
@@ -196,30 +216,23 @@ export async function dpopFetch(
     });
   }
 
-  try {
-    const keyPair = await ensureDpopKeyPair();
-    const proof = await createDpopProof(keyPair, method, url, accessToken);
-    headers.set(D_POP_HEADER, proof);
+  const keyPair = key ?? (await ensureDpopKeyPair());
+  const proof = await createDpopProof(keyPair, method, url, accessToken);
+  headers.set(D_POP_HEADER, proof);
 
-    if (accessToken) {
-      headers.set('Authorization', `DPoP ${accessToken}`);
-    }
-
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers,
-    });
-
-    extractNonceFromResponse(response.headers);
-
-    return response;
-  } catch (error) {
-    console.error('DPoP fetch failed:', error);
-    return fetch(url, {
-      ...fetchOptions,
-      headers,
-    });
+  if (accessToken) {
+    headers.set('Authorization', `DPoP ${accessToken}`);
   }
+
+  const response = await fetch(url, {
+    ...fetchOptions,
+    redirect: 'error',
+    credentials: 'omit',
+    headers,
+  });
+
+  extractNonceFromResponse(response.headers, url);
+  return response;
 }
 
 export function isDpopSupported(): boolean {

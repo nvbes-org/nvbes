@@ -1,7 +1,10 @@
 use std::net::SocketAddr;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct AccountConfig {
+    pub browser_origins: nvbes_core::security::resource_cors::ResourceCorsOrigins,
+    pub public_origin: Option<String>,
+    pub billing_authorization_secret: Option<String>,
     pub environment: String,
     pub database_url: String,
     pub database_max_connections: u32,
@@ -10,6 +13,9 @@ pub struct AccountConfig {
     pub token_audience: String,
     pub token_key_id: String,
     pub token_public_key_pem: String,
+    pub token_verification_keys: String,
+    pub identity_resource_client_id: String,
+    pub identity_resource_secret: String,
     pub metrics_token: String,
     pub sentry_dsn: Option<String>,
     pub sentry_traces_sample_rate: f32,
@@ -19,8 +25,22 @@ pub struct AccountConfig {
 
 impl AccountConfig {
     pub fn from_env() -> Result<Self, ConfigError> {
+        let billing_authorization_secret = optional("NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET");
+        if billing_authorization_secret
+            .as_deref()
+            .is_some_and(|s| !crate::billing_authorization::valid_secret(s))
+        {
+            return Err(ConfigError::Invalid(
+                "NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET",
+            ));
+        }
         let environment = optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into());
         let development = matches!(environment.as_str(), "development" | "test");
+        let browser_origins = nvbes_core::security::resource_cors::ResourceCorsOrigins::from_json(
+            &std::env::var("NVBES_ACCOUNT_BROWSER_ORIGINS_JSON").unwrap_or_else(|_| "[]".into()),
+            development,
+        )
+        .map_err(|_| ConfigError::Invalid("NVBES_ACCOUNT_BROWSER_ORIGINS_JSON"))?;
         let database_url = optional("NVBES_ACCOUNT_DATABASE_URL")
             .or_else(|| development.then(|| "postgres://localhost/nvbes_account".into()))
             .ok_or(ConfigError::Missing("NVBES_ACCOUNT_DATABASE_URL"))?;
@@ -40,10 +60,12 @@ impl AccountConfig {
             .or_else(|| development.then(|| "http://identity.local".into()))
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_TOKEN_ISSUER"))?;
         let token_audience = optional("NVBES_ACCOUNT_TOKEN_AUDIENCE")
-            .or_else(|| development.then(|| "nvbes-account".into()))
+            .or_else(|| development.then(|| "nvbes-account-service".into()))
             .ok_or(ConfigError::Missing("NVBES_ACCOUNT_TOKEN_AUDIENCE"))?;
         let token_key_id = required("NVBES_IDENTITY_TOKEN_KEY_ID")?;
         let token_public_key_pem = required("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM")?;
+        let identity_resource_client_id = required("NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID")?;
+        let identity_resource_secret = required("NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET")?;
         validate_token_contract(development, &token_issuer, &token_audience, &token_key_id)?;
         let metrics_token = optional("NVBES_ACCOUNT_METRICS_TOKEN")
             .or_else(|| development.then(|| "development-account-metrics-token-value".into()))
@@ -65,14 +87,28 @@ impl AccountConfig {
             &metrics_token,
         )?;
         Ok(Self {
+            browser_origins,
+            public_origin: optional("NVBES_ACCOUNT_PUBLIC_ORIGIN"),
+            billing_authorization_secret,
             environment,
             database_url,
             database_max_connections,
             bind_addr,
-            token_issuer: token_issuer.trim_end_matches('/').into(),
+            token_issuer,
             token_audience,
             token_key_id,
             token_public_key_pem,
+            token_verification_keys: match std::env::var("NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS") {
+                Ok(value) => value,
+                Err(std::env::VarError::NotPresent) => "[]".into(),
+                Err(_) => {
+                    return Err(ConfigError::Invalid(
+                        "NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS",
+                    ));
+                }
+            },
+            identity_resource_client_id,
+            identity_resource_secret,
             metrics_token,
             sentry_dsn,
             sentry_traces_sample_rate,
@@ -88,6 +124,9 @@ fn validate_token_contract(
     audience: &str,
     key_id: &str,
 ) -> Result<(), ConfigError> {
+    if audience != "nvbes-account-service" {
+        return Err(ConfigError::Invalid("NVBES_ACCOUNT_TOKEN_AUDIENCE"));
+    }
     let parsed = issuer
         .parse::<axum::http::Uri>()
         .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_TOKEN_ISSUER"))?;

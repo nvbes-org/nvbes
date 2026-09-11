@@ -58,7 +58,7 @@
             },
             {
               "path": ".github/workflows/ci.yml",
-              "includes": ["pull_request:", "push:", "branches: ['main']"]
+              "includes": ["pull_request:", "push:", "branches: [main]"]
             }
           ]
         }
@@ -97,21 +97,23 @@
           "description": "Prevent persisted checkout credentials, require secrets to be allowlisted, and keep secret-bearing steps scoped to trusted push builds or explicitly validated protected-Environment workflows.",
           "evidence": [
             {
-              "path": ".github/workflows/deploy-web.yml",
+              "path": ".github/workflows/deploy.yml",
               "includes": [
                 "persist-credentials: false",
-                "SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}",
-                "POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}",
-                "GRAFANA_FARO_SOURCEMAP_API_KEY: ${{ secrets.GRAFANA_FARO_SOURCEMAP_API_KEY }}",
-                "if: github.event_name == 'push' && github.ref == 'refs/heads/main'"
+                "TF_VAR_identity_token_private_key_pem: ${{ secrets.IDENTITY_TOKEN_PRIVATE_KEY_PEM }}",
+                "name: production-identity",
+                "[[ \"$IDENTITY_DEPLOY_APPROVED_SHA\" == \"$GITHUB_SHA\" ]]"
               ]
             },
             {
               "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": ["allowedSecrets", "persist-credentials: false"]
+            },
+            {
+              "path": "tools/security/ci-secret-policy.mjs",
               "includes": [
-                "allowedSecrets",
-                "persist-credentials: false",
-                "secret-bearing step must be restricted"
+                "secret-bearing step must be restricted",
+                "Identity signing key must remain in the protected Identity deployment job"
               ]
             },
             {
@@ -270,6 +272,12 @@
               "path": ".github/workflows/ci.yml",
               "includes": [
                 "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+                "uses: ./.github/actions/ci-setup"
+              ]
+            },
+            {
+              "path": ".github/actions/ci-setup/action.yml",
+              "includes": [
                 "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
                 "pnpm install --frozen-lockfile --prefer-offline"
               ]
@@ -305,8 +313,12 @@
               ]
             },
             {
-              "path": ".github/workflows/ci.yml",
-              "includes": ["pnpm format:check", "pnpm check:structure", "pnpm check:nx-boundaries"]
+              "path": "tools/ci/run-lane.mjs",
+              "includes": ["'fmt'", "'--check'", "'check:structure'", "'check:nx-boundaries'"]
+            },
+            {
+              "path": "tools/ci/scope-paths.mjs",
+              "includes": ["'format:check'", "'lint'", "'typecheck'"]
             }
           ]
         }
@@ -405,6 +417,7 @@
     "IDENTITY_SYNTHETIC_RECOVERED_PASSWORD",
     "IDENTITY_TERRAFORM_STATE_ACCESS_KEY",
     "IDENTITY_TERRAFORM_STATE_SECRET_KEY",
+    "IDENTITY_TOKEN_PRIVATE_KEY_PEM",
     "IDENTITY_TOKEN_PUBLIC_KEY_PEM",
     "NVBES_STAGING_ACCOUNT_PASSWORD",
     "POSTHOG_CLI_API_KEY",

@@ -59,12 +59,20 @@ async fn billing_lifecycle_is_isolated_deduplicated_and_audited() {
     });
 
     let config = BillingConfig {
+        public_origin: None,
+        browser_origins: Default::default(),
+        account_authority: None,
         bind_addr: "127.0.0.1:8080".parse().unwrap(),
         database_url: database_url.clone(),
         stripe_secret_key: "sk_test_mock_for_db_tests".into(),
         stripe_webhook_secret: "whsec_mock_secret".into(),
         stripe_api_base_url,
         identity_public_key_pem: None,
+        identity_token_issuer: None,
+        identity_token_key_id: None,
+        identity_verification_keys: "[]".into(),
+        identity_resource_client_id: None,
+        identity_resource_secret: None,
         metrics_token: None,
         operator_token: Some("test_operator_token".into()),
         app_url: "https://nvbes.test".into(),

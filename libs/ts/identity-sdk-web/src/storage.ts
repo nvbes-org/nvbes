@@ -6,6 +6,7 @@ export interface OAuthTransaction {
   nonce: string | null;
   createdAt: number;
   returnTo: string;
+  dpop?: { keyId: string; jkt: string; issuer: string; clientId: string; redirectUri: string };
 }
 
 export interface WebStorage {
@@ -87,6 +88,14 @@ function isOAuthTransaction(value: unknown): value is OAuthTransaction {
   }
 
   return (
+    (value.dpop === undefined ||
+      (isRecord(value.dpop) &&
+        ['keyId', 'jkt', 'issuer', 'clientId', 'redirectUri'].every(
+          (field) =>
+            typeof value.dpop === 'object' &&
+            value.dpop !== null &&
+            typeof Reflect.get(value.dpop, field) === 'string',
+        ))) &&
     typeof value.state === 'string' &&
     value.state.length > 0 &&
     typeof value.codeVerifier === 'string' &&
