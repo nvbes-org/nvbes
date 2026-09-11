@@ -32,7 +32,7 @@ RUN --mount=type=cache,id=nvbes-cargo-registry-rust-1.91.1-${TARGETPLATFORM},tar
     cargo build --locked --release --bin nvbes-email-worker \
     && install -D target/release/nvbes-email-worker /out/email-worker
 
-FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS runtime
+FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS runtime
 
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
