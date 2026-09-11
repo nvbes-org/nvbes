@@ -4,7 +4,7 @@ import { encryptRequestBody } from './http.request-e2ee';
 afterEach(() => vi.unstubAllGlobals());
 const input = {
   body: '{"secret":"synthetic"}',
-  secret: '0123456789abcdef0123456789abcdef',
+  secret: '0123456789abcdef'.repeat(2),
   keyId: 'test-key',
   method: 'post',
   url: 'https://a.test/private?public=1',
