@@ -43,5 +43,5 @@ process.exitCode = executeMutationSteps({
     },
   ],
   run: ({ args, timeout }) => spawnSync('node', args, { stdio: 'inherit', timeout }),
-  persist: checkpoint.persist,
+  persist: (state) => checkpoint.persist(state),
 });

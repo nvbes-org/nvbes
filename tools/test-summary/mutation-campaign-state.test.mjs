@@ -44,17 +44,22 @@ test('records each step before execution and retains NO-GO even on diagnostic su
   assert.equal(result.snapshots[0].finishedAt, null);
 });
 
-for (const [label, failure, status, reason] of [
-  [
-    'timeout',
-    { error: { code: 'ETIMEDOUT', message: 'secret' }, signal: 'SIGTERM' },
-    'blocked',
-    'timeout',
-  ],
-  ['spawn error', { error: { code: 'ENOENT', message: 'secret' } }, 'blocked', 'execution-error'],
-  ['signal', { signal: 'SIGTERM' }, 'blocked', 'signal'],
-  ['nonzero', { status: 1 }, 'failed', 'nonzero-exit'],
-  ['absent exit', { status: null }, 'failed', 'nonzero-exit'],
+for (const { label, failure, status, reason } of [
+  {
+    label: 'timeout',
+    failure: { error: { code: 'ETIMEDOUT', message: 'secret' }, signal: 'SIGTERM' },
+    status: 'blocked',
+    reason: 'timeout',
+  },
+  {
+    label: 'spawn error',
+    failure: { error: { code: 'ENOENT', message: 'secret' } },
+    status: 'blocked',
+    reason: 'execution-error',
+  },
+  { label: 'signal', failure: { signal: 'SIGTERM' }, status: 'blocked', reason: 'signal' },
+  { label: 'nonzero', failure: { status: 1 }, status: 'failed', reason: 'nonzero-exit' },
+  { label: 'absent exit', failure: { status: null }, status: 'failed', reason: 'nonzero-exit' },
 ]) {
   test(`persists ${label}, keeps dependent steps not-run, and excludes sensitive details`, () => {
     let calls = 0;
@@ -96,7 +101,7 @@ test('real child timeout is recorded and checkpoint files are distinct and priva
       steps,
       run: () =>
         spawnSync(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { timeout: 100 }),
-      persist: checkpoint.persist,
+      persist: (state) => checkpoint.persist(state),
     });
     assert.equal(exit, 1);
     const state = JSON.parse(readFileSync(checkpoint.file, 'utf8'));
