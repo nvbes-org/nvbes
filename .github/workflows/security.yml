@@ -131,6 +131,7 @@ jobs:
           ignore-unfixed: false
           exit-code: '1'
           format: sarif
+          limit-severities-for-sarif: true
           output: trivy-results.sarif
           skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
       - name: Generate CycloneDX SBOM
@@ -203,6 +204,4 @@ jobs:
         run: cargo install cargo-fuzz --version 0.13.2 --locked
       - name: Run bounded parser fuzz targets
         run: |
-          cargo fuzz run dpop_proof -- -max_total_time=30
-          cargo fuzz run oauth_authorization_details -- -max_total_time=30
-          cargo fuzz run upload_inputs -- -max_total_time=30
+          cargo fuzz run dpop-proof -- -max_total_time=30

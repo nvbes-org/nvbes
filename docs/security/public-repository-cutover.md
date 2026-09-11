@@ -31,10 +31,27 @@ Une réécriture d'historique doit être décidée et coordonnée avant la bascu
 - [x] environnements de production limités à `main`, sans bypass administrateur ;
 - [x] Dependabot alerts et mises à jour de sécurité activés ;
 - [x] PR de préparation fusionnée sur `main` après validation locale complète ;
-- [ ] jobs GitHub-hosted exécutés après levée de la restriction de facturation du
-      dépôt privé (aucune étape de la PR de préparation n'a pu démarrer) ;
-- [ ] sauvegarde miroir du dépôt et export des paramètres GitHub effectués ;
-- [ ] confirmation explicite des divulgations ci-dessus par le propriétaire.
+- [x] jobs GitHub-hosted exécutés après la bascule publique ;
+- [x] sauvegarde miroir du dépôt et export des paramètres GitHub effectués ;
+- [x] confirmation explicite des divulgations ci-dessus par le propriétaire.
+
+## Preuve de bascule du 11 septembre 2026
+
+- visibilité GitHub vérifiée `PUBLIC` sur `nvbes-org/nvbes` ;
+- `main` publié au SHA exact
+  `9da5b79509baf8f939c2e2866461e608f1072737` ;
+- miroir pré-bascule `nvbes-public-cutover-backup-20260911T124809Z` vérifié par
+  `git fsck --full`, avec 266 références et un instantané des paramètres sans
+  valeur de secret ;
+- ruleset actif `main branch security policy` (`22916612`), sans acteur de
+  contournement ;
+- Secret scanning, Push protection, Dependabot alerts, mises à jour de sécurité
+  et signalement privé des vulnérabilités vérifiés actifs ;
+- approbation Actions exigée pour tous les contributeurs externes ;
+- restrictions `main` des sept environnements `production-*` et de `stripe-ci`
+  vérifiées après la bascule ;
+- exécutions publiques initiales : `security` `34601012409` et
+  `continuous integration` `34601015144`.
 
 ## Séquence de bascule
 

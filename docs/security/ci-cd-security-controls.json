@@ -207,7 +207,9 @@
               "includes": [
                 "name: production-identity",
                 "github.ref == 'refs/heads/main'",
-                "ref: ${{ inputs.approved_sha }}",
+                "ref: main",
+                "git merge-base --is-ancestor \"$APPROVED_SHA\" origin/main",
+                "git checkout --detach \"$APPROVED_SHA\"",
                 "validate-identity-production-restore",
                 "expected_principal_id",
                 "DELETE_RESTORE_DATABASE=true"
@@ -229,7 +231,9 @@
               "includes": [
                 "name: production-account",
                 "github.ref == 'refs/heads/main'",
-                "ref: ${{ inputs.approved_sha }}",
+                "ref: main",
+                "git merge-base --is-ancestor \"$APPROVED_SHA\" origin/main",
+                "git checkout --detach \"$APPROVED_SHA\"",
                 "validate-account-production-restore",
                 "expected_principal_id",
                 "DELETE_RESTORE_DATABASE=true"
@@ -239,7 +243,9 @@
               "path": ".github/workflows/validate-restore.yml",
               "includes": [
                 "validate-platform-operations-restore",
-                "ref: ${{ inputs.approved_sha }}",
+                "ref: main",
+                "git merge-base --is-ancestor \"$APPROVED_SHA\" origin/main",
+                "git checkout --detach \"$APPROVED_SHA\"",
                 "check-ci-cd-security.mjs",
                 "node tools/security/check-ci-cd-security.mjs"
               ]
