@@ -8,10 +8,8 @@ export const candidateGuard =
 
 export function fallbackJob(path) {
   assert(['.github/workflows/ci.yml', '.github/workflows/v1-testing.yml'].includes(path));
-  const dependency = path.endsWith('/ci.yml') ? 'ci-gate' : 'typescript-measurement';
   return `  local-fallback:
-    needs: [${dependency}]
-    if: \${{ always() && !cancelled() && inputs.runner != 'local' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(fromJSON('["OWNER","MEMBER"]'), github.event.pull_request.author_association))) }}
+    if: \${{ inputs.runner != 'local' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
     runs-on: [self-hosted, Linux, ARM64, docker]
     timeout-minutes: 5
     permissions:
@@ -57,6 +55,7 @@ export function fallbackPlan({
   assert.equal(run.head_repository?.full_name, repository, 'Foreign repository');
   assert(['push', 'pull_request', 'workflow_dispatch'].includes(run.event), 'Unexpected event');
   assert.equal(run.run_attempt, 1, 'Only one automatic fallback attempt');
+  assert.notEqual(run.conclusion, 'cancelled', 'Cancelled run must not be retried');
   assert(['admin', 'maintain', 'write'].includes(permission), 'Actor is not a repository writer');
   assert(/^[a-f0-9]{40}$/u.test(run.head_sha), 'Invalid SHA');
   assert.equal(branchSha, run.head_sha, 'Candidate branch has moved');

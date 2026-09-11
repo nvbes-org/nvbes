@@ -26,7 +26,22 @@ const run = await api(`actions/runs/${runId}`);
 if (!['.github/workflows/ci.yml', '.github/workflows/v1-testing.yml'].includes(run.path))
   throw new Error('Unexpected workflow');
 const workflow = run.path.split('/').at(-1);
-const response = await api(`actions/runs/${runId}/jobs?per_page=100`);
+let response;
+// Independent bootstrap observer: billing failures can skip all dependent jobs,
+// even those using always(). Do not wait for the hosted dependency chain.
+for (let attempt = 0; attempt < 60; attempt++) {
+  response = await api(`actions/runs/${runId}/jobs?per_page=100`);
+  const bootstrap = response.jobs.filter(
+    (job) => job.name === 'authorize-cache' || job.name.startsWith('TypeScript measurement'),
+  );
+  if (bootstrap.some((job) => job.conclusion || job.steps?.length > 0)) break;
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+}
+const latest = await api(`actions/runs/${runId}`);
+if (latest.conclusion === 'cancelled') {
+  console.log('Cancelled run: no fallback');
+  process.exit(0);
+}
 if (response.total_count > 100) throw new Error('Job inventory exceeds fallback bound');
 const failed = response.jobs.filter(
   (job) => job.conclusion === 'failure' && !['ci-gate', 'local-fallback'].includes(job.name),
