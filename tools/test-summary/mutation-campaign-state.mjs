@@ -22,6 +22,7 @@ export function executeMutationSteps({
   steps,
   run,
   persist,
+  finalize = () => undefined,
   now = () => new Date().toISOString(),
 }) {
   assert(steps.length > 0, 'Mutation steps must not be empty');
@@ -78,9 +79,15 @@ export function executeMutationSteps({
       return 1;
     }
   }
-  state.status = 'passed';
+  try {
+    state.artifact = finalize();
+    state.status = 'passed';
+  } catch {
+    state.status = 'blocked';
+    state.reason = 'artifact-finalization-error';
+  }
   state.finishedAt = now();
   persist(state);
-  return 0;
+  return state.status === 'passed' ? 0 : 1;
 }
 import assert from 'node:assert/strict';
