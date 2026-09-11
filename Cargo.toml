@@ -57,7 +57,7 @@ prost = "0.13.5"
 rand = "0.9.2"
 reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls"] }
 sentry = { version = "0.48.3", default-features = false, features = ["backtrace", "contexts", "debug-images", "panic", "release-health", "reqwest", "rustls"] }
-sha1 = "0.10.6"
+sha1 = "0.11.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 sha2 = "0.10.9"
