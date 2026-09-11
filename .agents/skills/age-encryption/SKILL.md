@@ -17,6 +17,7 @@ description: |
   DO NOT USE FOR: Real-time stream encryption - use `security/libsodium` (secretstream)
 allowed-tools: Read, Grep, Glob, Write, Edit
 ---
+
 # age (and rage) — Modern File Encryption
 
 > **Deep Knowledge**: Use `mcp__documentation__fetch_docs` with technology: `age`.
@@ -24,11 +25,13 @@ allowed-tools: Read, Grep, Glob, Write, Edit
 ## What age Is
 
 `age` (pronounced "ah-gay" 🦗) is a simple, modern, secure file encryption tool. Spec at https://age-encryption.org. Implementations:
+
 - **Go reference** — `filippo.io/age` (CLI: `age`)
 - **Rust port** — `str4d/rage` (CLI: `rage`, `rage-keygen`)
 - **JS** — `age-encryption` npm package
 
 **Properties**:
+
 - One-line API for encrypt/decrypt
 - X25519-based public-key recipients (32-byte short string `age1...`)
 - Scrypt-based passphrase recipients
@@ -49,10 +52,11 @@ age-keygen -o key.txt
 ```
 
 `key.txt` contains:
+
 ```
 # created: 2026-05-04T10:00:00Z
-# public key: age1qz5jksw7g7e9q...
-AGE-SECRET-KEY-1XYZ...
+# public recipient: age1qz5jksw7g7e9q...
+<generated private key; never commit this file>
 ```
 
 ### Encrypt (one or more recipients)
@@ -311,18 +315,18 @@ User can decrypt with **any one** of: their passphrase, their YubiKey, or their 
 
 ## age vs GPG
 
-| Aspect | age | GPG |
-|---|---|---|
-| Spec age | Modern (2019+) | Old (1991+) |
-| Algorithms | Modern (X25519, ChaCha20-Poly1305, Scrypt) | Configurable, default OK |
-| Identity format | 32-byte short string | Long fingerprint, web of trust |
-| Key file format | Single line | Complex keyring |
-| CLI ergonomics | Simple | Notoriously complex |
-| Streaming | Yes, native | Yes |
-| Recipient encryption | Yes | Yes |
-| Signing | No (use minisign or ssh-keygen) | Yes |
-| Web of trust | No | Yes |
-| Interop with old systems | No | Yes |
+| Aspect                   | age                                        | GPG                            |
+| ------------------------ | ------------------------------------------ | ------------------------------ |
+| Spec age                 | Modern (2019+)                             | Old (1991+)                    |
+| Algorithms               | Modern (X25519, ChaCha20-Poly1305, Scrypt) | Configurable, default OK       |
+| Identity format          | 32-byte short string                       | Long fingerprint, web of trust |
+| Key file format          | Single line                                | Complex keyring                |
+| CLI ergonomics           | Simple                                     | Notoriously complex            |
+| Streaming                | Yes, native                                | Yes                            |
+| Recipient encryption     | Yes                                        | Yes                            |
+| Signing                  | No (use minisign or ssh-keygen)            | Yes                            |
+| Web of trust             | No                                         | Yes                            |
+| Interop with old systems | No                                         | Yes                            |
 
 For new projects: **age**. For legacy/compliance: GPG. For signing: minisign or ssh signatures.
 
@@ -354,37 +358,37 @@ For backups: include your own version field inside the encrypted payload (don't 
 
 ## Anti-Patterns
 
-| Anti-pattern | Why it's bad | Correct approach |
-|---|---|---|
-| Single passphrase recipient with no backup | Lost passphrase = lost data | Multi-recipient: passphrase + YubiKey + paper key derived from seed |
-| Hardcoded age recipient in app | Updates break encrypted-at-rest data | Allow user-configured recipients |
-| Encrypting with age over an unencrypted SQLite file | Plain DB exists in temp | Use SQLCipher for DB; age for export |
-| Using age for streaming protocols | Not designed for it (chunked finalization) | Use libsodium `secretstream` |
-| Encrypting key file with age | Recursive key management | Use Keystore/Keychain/SEP for key wrapping |
-| Treating `.age` files as opaque blobs | Header readable | Don't store sensitive metadata in plaintext (filename, date) — encrypt at OS level too |
-| Using age for inter-process IPC | Overhead | Use libsodium `crypto_box` directly |
-| `age -p` with weak passphrases | Brute-force | Use diceware (≥6 words) or passphrase manager |
+| Anti-pattern                                        | Why it's bad                               | Correct approach                                                                       |
+| --------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| Single passphrase recipient with no backup          | Lost passphrase = lost data                | Multi-recipient: passphrase + YubiKey + paper key derived from seed                    |
+| Hardcoded age recipient in app                      | Updates break encrypted-at-rest data       | Allow user-configured recipients                                                       |
+| Encrypting with age over an unencrypted SQLite file | Plain DB exists in temp                    | Use SQLCipher for DB; age for export                                                   |
+| Using age for streaming protocols                   | Not designed for it (chunked finalization) | Use libsodium `secretstream`                                                           |
+| Encrypting key file with age                        | Recursive key management                   | Use Keystore/Keychain/SEP for key wrapping                                             |
+| Treating `.age` files as opaque blobs               | Header readable                            | Don't store sensitive metadata in plaintext (filename, date) — encrypt at OS level too |
+| Using age for inter-process IPC                     | Overhead                                   | Use libsodium `crypto_box` directly                                                    |
+| `age -p` with weak passphrases                      | Brute-force                                | Use diceware (≥6 words) or passphrase manager                                          |
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| "no identity matched any of the recipients" | Wrong key for ciphertext | Try other identities; check recipient list during encrypt |
-| Plugin not found | Plugin binary not in PATH | Install plugin via `cargo install` or `brew install`, ensure `age-plugin-*` is in PATH |
-| Slow decrypt | Large file or weak Scrypt work factor | Streaming should be fast; check disk I/O |
-| Checksum verification failure | Truncated/corrupted file | Re-download or restore from backup |
-| Cannot decrypt on different machine | Identity tied to hardware (YubiKey, SEP) | Need same hardware OR additional fallback recipient |
-| `parsing recipient` error | Wrong format | Recipients start `age1...` (X25519) or `ssh-ed25519/...` (SSH) |
-| Empty output | `--armor` was set during encrypt but not detected on decrypt | Use `-a` flag (armor) consistently |
+| Symptom                                     | Cause                                                        | Fix                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| "no identity matched any of the recipients" | Wrong key for ciphertext                                     | Try other identities; check recipient list during encrypt                              |
+| Plugin not found                            | Plugin binary not in PATH                                    | Install plugin via `cargo install` or `brew install`, ensure `age-plugin-*` is in PATH |
+| Slow decrypt                                | Large file or weak Scrypt work factor                        | Streaming should be fast; check disk I/O                                               |
+| Checksum verification failure               | Truncated/corrupted file                                     | Re-download or restore from backup                                                     |
+| Cannot decrypt on different machine         | Identity tied to hardware (YubiKey, SEP)                     | Need same hardware OR additional fallback recipient                                    |
+| `parsing recipient` error                   | Wrong format                                                 | Recipients start `age1...` (X25519) or `ssh-ed25519/...` (SSH)                         |
+| Empty output                                | `--armor` was set during encrypt but not detected on decrypt | Use `-a` flag (armor) consistently                                                     |
 
 ## When NOT to Use This Skill
 
-| Scenario | Use Instead |
-|----------|-------------|
-| SQLite encryption | `databases/sqlcipher` |
-| Real-time symmetric encryption (libsodium-style API) | `security/libsodium` |
-| Bitcoin signing/keys | `bitcoin/cryptography/*` |
-| TLS | platform TLS / `rustls` |
-| Code signing | minisign or sigstore |
-| GPG-specific workflows (web of trust, signing email) | GPG-specific tooling |
-| Hardware key wrapping for app-internal use | Keystore (Android), Keychain/SEP (iOS) |
+| Scenario                                             | Use Instead                            |
+| ---------------------------------------------------- | -------------------------------------- |
+| SQLite encryption                                    | `databases/sqlcipher`                  |
+| Real-time symmetric encryption (libsodium-style API) | `security/libsodium`                   |
+| Bitcoin signing/keys                                 | `bitcoin/cryptography/*`               |
+| TLS                                                  | platform TLS / `rustls`                |
+| Code signing                                         | minisign or sigstore                   |
+| GPG-specific workflows (web of trust, signing email) | GPG-specific tooling                   |
+| Hardware key wrapping for app-internal use           | Keystore (Android), Keychain/SEP (iOS) |

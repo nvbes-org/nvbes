@@ -22,7 +22,7 @@ async fn token_inspection_result_is_recorded_for_actor_and_tenant() {
         developer::RecordTokenDebugSessionRequest {
             context: None,
             tenant_id: fixture.tenant_id.to_string(),
-            token_hash_prefix: "0123456789abcdef".to_string(),
+            token_hash_prefix: "fixture-prefix".to_string(),
             active: true,
             access_decision: "allowed".to_string(),
         },
@@ -32,7 +32,7 @@ async fn token_inspection_result_is_recorded_for_actor_and_tenant() {
 
     assert_eq!(session.tenant_id, fixture.tenant_id.to_string());
     assert_eq!(session.actor_principal_id, fixture.principal_id.to_string());
-    assert_eq!(session.token_hash_prefix, "0123456789abcdef");
+    assert_eq!(session.token_hash_prefix, "fixture-prefix");
     assert!(session.active);
     assert_eq!(session.access_decision, "allowed");
     assert!(Uuid::parse_str(&session.session_id).is_ok());

@@ -3,7 +3,7 @@ use chrono::Utc;
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, decode_header, encode,
 };
-use rsa::{RsaPublicKey, pkcs8::DecodePublicKey, traits::PublicKeyParts};
+use openssl::pkey::PKey;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -67,15 +67,15 @@ impl TokenService {
     pub fn new(config: TokenConfig) -> anyhow::Result<Self> {
         let encoding_key = EncodingKey::from_rsa_pem(config.private_key_pem.as_bytes())?;
         let decoding_key = DecodingKey::from_rsa_pem(config.public_key_pem.as_bytes())?;
-        let public_key = RsaPublicKey::from_public_key_pem(&config.public_key_pem)?;
+        let public_key = PKey::public_key_from_pem(config.public_key_pem.as_bytes())?.rsa()?;
         let jwks = JsonWebKeySet {
             keys: vec![JsonWebKey {
                 kid: config.key_id.clone(),
                 kty: "RSA",
                 usage: "sig",
                 alg: "RS256",
-                n: URL_SAFE_NO_PAD.encode(public_key.n().to_bytes_be()),
-                e: URL_SAFE_NO_PAD.encode(public_key.e().to_bytes_be()),
+                n: URL_SAFE_NO_PAD.encode(public_key.n().to_vec()),
+                e: URL_SAFE_NO_PAD.encode(public_key.e().to_vec()),
             }],
         };
         Ok(Self {
