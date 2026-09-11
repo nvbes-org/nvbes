@@ -1,12 +1,15 @@
 import { isIP } from 'node:net';
 import { pathToFileURL } from 'node:url';
+import { isCurrentCiTestDatabaseHost } from './lib/ci-test-database-host.mjs';
 
 function reject(message) {
   throw new Error(message);
 }
 
 export function validateAccountTestDatabaseTarget(environment) {
-  const targetEnvironment = (environment.NVBES_ENVIRONMENT ?? environment.NVBES_ENV)?.trim().toLowerCase();
+  const targetEnvironment = (environment.NVBES_ENVIRONMENT ?? environment.NVBES_ENV)
+    ?.trim()
+    .toLowerCase();
 
   let target;
   try {
@@ -27,7 +30,12 @@ export function validateAccountTestDatabaseTarget(environment) {
     environment.GITHUB_ACTIONS === 'true' &&
     targetEnvironment === 'ci' &&
     hostname === 'host.docker.internal';
-  if (!loopback && !devcontainerPostgres && !githubActionsPostgres) {
+  if (
+    !loopback &&
+    !devcontainerPostgres &&
+    !githubActionsPostgres &&
+    !isCurrentCiTestDatabaseHost(hostname, environment)
+  ) {
     reject(`account database tests refuse PostgreSQL host ${hostname}`);
   }
   const databaseName = decodeURIComponent(target.pathname.replace(/^\/+/, ''));

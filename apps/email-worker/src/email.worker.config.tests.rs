@@ -188,7 +188,10 @@ fn producer_parser_rejects_malformed_credentials() {
         )
         .is_err()
     );
-    assert_eq!(producers::from_environment(None, "test").unwrap().len(), 5);
+    let producers = producers::from_environment(None, "test").unwrap();
+    let mut names: Vec<_> = producers.keys().map(String::as_str).collect();
+    names.sort_unstable();
+    assert_eq!(names, ["billing-service", "identity-service"]);
     assert!(producers::from_environment(None, "production").is_err());
 }
 

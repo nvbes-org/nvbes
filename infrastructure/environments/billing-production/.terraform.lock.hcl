@@ -8,6 +8,7 @@ provider "registry.terraform.io/scaleway/scaleway" {
     "h1:+jxYkcFLfzXER+yiqWPOLIlimdsw9rbCDZKti+vtjFE=",
     "h1:C1TKVi2WmIML8w4Q5bqHIexGN3jSHdFi0XzdbSs9nLE=",
     "h1:TQEPjbMRVvFOcwOiO1D0YAfrS5p7i/XTAq6aBBpWrJE=",
+    "h1:a9TAY+JlFlgTKPNAeplaGX8IRPsqZZurg5ohxpOOAiw=",
     "zh:02e29ce80768a53d2fe356918ed19b3cff61db00d4be435c5f7cf46f3144f099",
     "zh:052251b8c7e92553bed2795c8b0f989fe91c9ee47eae7b6b15117f5f8e42a56e",
     "zh:471f61f449966e2563855a3a21efa537959f73fcd78c0b43faf57d322aa55294",

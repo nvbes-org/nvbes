@@ -1,5 +1,6 @@
 import { isIP } from 'node:net';
 import { pathToFileURL } from 'node:url';
+import { isCurrentCiTestDatabaseHost } from './lib/ci-test-database-host.mjs';
 
 const ALLOWED_ENVIRONMENTS = new Set([
   'ci',
@@ -44,7 +45,12 @@ export function validateEmailTestDatabaseTarget(environment) {
     environment.GITHUB_ACTIONS === 'true' &&
     targetEnvironment === 'ci' &&
     hostname === 'host.docker.internal';
-  if (!loopback && !devcontainerPostgres && !githubActionsPostgres) {
+  if (
+    !loopback &&
+    !devcontainerPostgres &&
+    !githubActionsPostgres &&
+    !isCurrentCiTestDatabaseHost(hostname, environment)
+  ) {
     reject(`email database tests refuse PostgreSQL host ${hostname}`);
   }
 

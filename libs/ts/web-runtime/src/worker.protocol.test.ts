@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { afterEach, expect, it, vi } from 'vite-plus/test';
 import { createWorker, defineWorker } from './worker';
 
