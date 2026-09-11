@@ -9,9 +9,7 @@ export default defineConfig({
   pack: {
     entry: ['src/index.ts'],
     format: ['esm', 'cjs'],
-    dts: {
-      cjsReexport: true,
-    },
+    dts: true,
     deps: {
       alwaysBundle: ['@nvbes/http-client'],
       onlyBundle: ['zod'],
