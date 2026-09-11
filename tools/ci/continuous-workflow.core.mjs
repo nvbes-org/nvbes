@@ -33,18 +33,17 @@ export function validateContinuousWorkflow(text, setupText) {
         assert.deepEqual(step.with, { 'fetch-depth': 0, 'persist-credentials': false });
     }
   }
-  const finops = jobs.contracts.steps.filter((step) => step.run === 'pnpm check:finops');
-  assert.equal(finops.length, 1, 'exact FinOps gate required');
-  assert.deepEqual(finops[0], { name: 'Enforce FinOps contract', run: 'pnpm check:finops' });
+  const finops = jobs.scope.steps.filter((step) => step.run === 'pnpm check:finops');
+  assert.equal(finops.length, 1, 'exact FinOps gate required in scope');
+  assert.deepEqual(finops[0], {
+    name: 'Enforce FinOps contract',
+    if: "steps.preflight.outputs.graph-required == 'true'",
+    run: 'pnpm check:finops',
+  });
   for (const lane of lanes) {
     const job = jobs[lane];
-    const infrastructure = ['rust', 'database', 'terraform'].includes(lane);
-    assert.deepEqual(job.needs, [
-      'authorize-cache',
-      'scope',
-      ...(infrastructure ? ['contracts'] : []),
-    ]);
-    const expression = `!cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success'${infrastructure ? " && needs.contracts.result == 'success'" : ''} && needs.scope.outputs.${lane}-required == 'true'`;
+    assert.deepEqual(job.needs, ['authorize-cache', 'scope']);
+    const expression = `!cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.${lane}-required == 'true'`;
     assert.equal(job.if, `\${{ ${expression} }}`);
     const setup = job.steps.find((step) => step.uses === './.github/actions/ci-setup');
     assert.ok(setup, 'lane setup required');
@@ -64,7 +63,9 @@ export function validateContinuousWorkflow(text, setupText) {
   }
   const preflight = jobs.scope.steps.findIndex((step) => step.id === 'preflight');
   const setup = jobs.scope.steps.findIndex((step) => step.uses === './.github/actions/ci-setup');
+  const finopsIndex = jobs.scope.steps.findIndex((step) => step.run === 'pnpm check:finops');
   assert.ok(preflight >= 0 && preflight < setup);
+  assert.ok(setup < finopsIndex);
   assert.equal(jobs.scope.steps[setup].if, "steps.preflight.outputs.graph-required == 'true'");
   const composite = parse(setupText);
   for (const step of composite.runs.steps) {

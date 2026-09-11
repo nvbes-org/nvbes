@@ -10,6 +10,14 @@ on:
         description: Optional full base SHA (otherwise last successful branch CI)
         type: string
         required: false
+      mode:
+        description: Rollout mode (affected or shadow)
+        type: choice
+        options:
+          - affected
+          - shadow
+        default: affected
+        required: false
 concurrency:
   group: continuous-integration-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -98,8 +106,13 @@ jobs:
           caches: pnpm
           cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Enforce FinOps contract
+        if: steps.preflight.outputs.graph-required == 'true'
+        run: pnpm check:finops
       - name: Configure affected scope
         id: plan
+        env:
+          NVBES_CI_ROLLOUT_MODE: ${{ inputs.mode || 'affected' }}
         run: node tools/ci/nx-cache-manager.mjs
 
   contracts:
@@ -130,8 +143,6 @@ jobs:
           caches: pnpm nx
           cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
-      - name: Enforce FinOps contract
-        run: pnpm check:finops
       - name: Validate contracts
         run: node tools/ci/run-lane.mjs contracts
       - name: Publish successful protected lane caches
@@ -179,8 +190,8 @@ jobs:
         run: node tools/ci/scaleway-cache-manager.mjs save pnpm nx
 
   rust:
-    needs: [authorize-cache, scope, contracts]
-    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.contracts.result == 'success' && needs.scope.outputs.rust-required == 'true' }}
+    needs: [authorize-cache, scope]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.rust-required == 'true' }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
@@ -216,8 +227,8 @@ jobs:
         run: node tools/ci/scaleway-cache-manager.mjs save cargo
 
   database:
-    needs: [authorize-cache, scope, contracts]
-    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.contracts.result == 'success' && needs.scope.outputs.database-required == 'true' }}
+    needs: [authorize-cache, scope]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.database-required == 'true' }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
@@ -258,8 +269,8 @@ jobs:
         run: node tools/ci/scaleway-cache-manager.mjs save pnpm cargo
 
   terraform:
-    needs: [authorize-cache, scope, contracts]
-    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.contracts.result == 'success' && needs.scope.outputs.terraform-required == 'true' }}
+    needs: [authorize-cache, scope]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.terraform-required == 'true' }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false

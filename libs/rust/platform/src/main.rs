@@ -3,12 +3,12 @@ use std::sync::Arc;
 
 use nvbes_platform::{
     cockpit_auth::OperatorAuthPolicy,
-    cockpit_finops::FinOpsMonitor,
-    cockpit_health::HealthAggregator,
     cockpit_server::{PlatformCockpitState, create_platform_cockpit_router},
+    operations_context::{ContextClient, ServiceEndpoint},
+    operations_db::MIGRATOR,
 };
 use tokio::net::TcpListener;
-use tracing::{info, warn};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,19 +22,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let environment =
         std::env::var("NVBES_ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
 
-    let operator_token = std::env::var("NVBES_PLATFORM_OPERATIONS_TOKEN").unwrap_or_else(|_| {
-        if environment == "production" {
-            panic!("NVBES_PLATFORM_OPERATIONS_TOKEN is mandatory in production");
-        }
-        warn!("NVBES_PLATFORM_OPERATIONS_TOKEN not set; defaulting to local-dev-token");
-        "local-dev-token".to_string()
-    });
+    let db = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .acquire_timeout(std::time::Duration::from_secs(5))
+        .connect(&std::env::var("NVBES_PLATFORM_OPERATIONS_DATABASE_URL")?)
+        .await?;
+    if std::env::args().nth(1).as_deref() == Some("migrate") {
+        MIGRATOR.run(&db).await?;
+        return Ok(());
+    }
+    let auth_policy = OperatorAuthPolicy::from_rsa_pem(
+        std::env::var("NVBES_PLATFORM_OPERATIONS_PUBLIC_KEY_PEM")?.as_bytes(),
+        &std::env::var("NVBES_PLATFORM_OPERATIONS_ISSUER")?,
+        "platform-operations",
+    )?;
+    let endpoints: Vec<ServiceEndpoint> = serde_json::from_str(
+        &std::env::var("NVBES_PLATFORM_OPERATIONS_SERVICES").unwrap_or_else(|_| "[]".into()),
+    )?;
+    let context = ContextClient::new(endpoints, environment == "production")
+        .map_err(std::io::Error::other)?;
 
     let state = PlatformCockpitState {
         environment: environment.clone(),
-        auth_policy: Arc::new(OperatorAuthPolicy::new(operator_token)),
-        health_aggregator: Arc::new(HealthAggregator::default()),
-        finops_monitor: Arc::new(FinOpsMonitor::default()),
+        auth_policy: Arc::new(auth_policy),
+        db,
+        context: Arc::new(context),
     };
 
     let router = create_platform_cockpit_router(state);

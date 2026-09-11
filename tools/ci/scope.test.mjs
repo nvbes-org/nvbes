@@ -100,6 +100,17 @@ test('shared persistence and SQL dependency changes select DB consumers', () => 
   ]);
   assert.equal(plan(['Cargo.lock']).candidate.rust, true);
 });
+test('Operations persistence participates in the isolated database lane', () => {
+  const p = plan(['libs/rust/platform/migrations/202609070001_operations.sql'], {
+    context: {
+      nodes: {
+        ...nodes,
+        'platform-operations-service': node('apps/platform-operations-service', ['test:database']),
+      },
+    },
+  });
+  assert.ok(p.databaseExecution.includes('platform-operations-service'));
+});
 test('unknown root and unavailable base select the complete scope', () => {
   for (const p of [plan(['unknown.config']), plan([], { fallback: true })]) {
     assert.equal(p.fallbackFull, true);
@@ -194,7 +205,7 @@ test('missing base, inaccessible history, and missing ancestor use full fallback
       await resolveScopeBase(environment, {
         ...io,
         runs: async function* () {
-          throw new Error('403');
+          yield await Promise.reject(new Error('403'));
         },
       })
     ).fallback,

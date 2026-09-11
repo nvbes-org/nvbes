@@ -11,6 +11,10 @@ database-tests = []
 name = "nvbes-account-service"
 path = "src/main.rs"
 
+[[test]]
+name = "maintenance-cli"
+path = "src/account.maintenance.tests.rs"
+
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true

@@ -13,6 +13,34 @@ utilisé en parallèle). La branche de PR Identity 175, commit `890e0b7e`, a ét
 intégrée localement comme dépendance par merge signé `ce7adc9b`. Aucune PR n'a
 été fusionnée dans main et aucune infrastructure n'a été déployée.
 
+## Intégration de main et maintien des gates Identity — 2026-09-11
+
+Intégration de main `6af12ea1` dans la branche de travail, sans fusionner la PR.
+Les trois conflits concernent l'ancien workflow de déploiement Identity et
+ses contrats Nx/Node. Les preuves de jetons/révocation, MFA et invitations et
+les variables de signature sont reportées dans le job Identity du workflow
+unifié. Les cibles de test navigateur, Email et DPoP restent conservées.
+
+Les assertions de déploiement sont limitées au job Identity, pour qu'un autre
+service ne satisfasse pas ses gates. La clé privée est allowlistée uniquement
+pour le workflow de déploiement et son job Identity protégé ; un test refuse
+son exposition globale, dans le build, dans un job renommé/non protégé ou dans
+un autre workflow. Les références déplacées du registre de sécurité CI et le
+contrat statique Account sont réalignés sur les fichiers actifs.
+
+Validation : 71 tests de contrats CI, 11 Identity, 4 Account et 9 Trust/Risk ;
+21 tests Account et 41 Platform Operations avec migrations PostgreSQL isolées ;
+cargo check --workspace, format Rust et garde de sécurité CI/CD réussis.
+Le contrôle global check:ci-cd-security reste en échec dans son étape conformité
+(11 références obsolètes), et le contrôle d'exploitation exécuté séparément
+référence encore identity-worker/audit_anchor absent. Aucun de ces gates n'est
+neutralisé ni présenté comme réussi. Les preuves navigateur antérieures ne
+sont pas réexécutées pour cette intégration des workflows et de Platform.
+
+Platform Operations dispose maintenant du stockage/audit issu de main ; son
+raccordement à l'émetteur Identity actif et à l'autorisation Account reste à
+livrer. Les lots A à D restent ouverts. Aucun déploiement ni nouvel envoi externe.
+
 ## Account sensible : fraîcheur après les attentes SQL — 2026-09-11
 
 Les demandes d'export/fermeture, l'annulation de fermeture et le téléchargement

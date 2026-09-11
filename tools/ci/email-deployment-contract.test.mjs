@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const workflowPath = '.github/workflows/deploy-email.yml';
+const workflowPath = '.github/workflows/deploy.yml';
 const stackRoot = 'infrastructure/environments/email-production';
 
 function read(path) {
@@ -30,7 +30,7 @@ test('email production deploy is isolated and uses an immutable signed image', (
 
   const workflow = read(workflowPath);
   assert.match(workflow, /^\s*workflow_dispatch:\s*$/mu);
-  assert.doesNotMatch(workflow, /^\s+inputs:\s*$/mu);
+  assert.match(workflow, /service:/u);
   assert.match(workflow, /name:\s*production-email/u);
   assert.match(workflow, /refs\/heads\/main/u);
   assert.match(workflow, /EMAIL_DEPLOY_CONFIRMATION: \$\{\{ vars\.EMAIL_DEPLOY_CONFIRMATION \}\}/u);

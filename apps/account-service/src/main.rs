@@ -33,24 +33,24 @@ mod teams;
 async fn main() -> anyhow::Result<()> {
     let command: Vec<String> = std::env::args().skip(1).collect();
     if matches!(command.as_slice(), [action] if action == "migrate") {
-        let config = config::AccountConfig::from_env()?;
-        let pool = database::connect(&config.database_url, 2).await?;
+        let database_url = config::required_database_url()?;
+        let pool = database::connect(&database_url, 2).await?;
         database::migrate(&pool).await?;
         println!("account database migrations applied");
         return Ok(());
     }
     if matches!(command.as_slice(), [action] if action == "synthetic-account-smoke") {
-        let config = config::AccountConfig::from_env()?;
+        let database_url = config::required_database_url()?;
         let owner = required_uuid("NVBES_ACCOUNT_SYNTHETIC_OWNER_ID")?;
         let member = required_uuid("NVBES_ACCOUNT_SYNTHETIC_MEMBER_ID")?;
-        let pool = database::connect(&config.database_url, 2).await?;
+        let pool = database::connect(&database_url, 2).await?;
         let result = synthetic::run(&pool, owner, member).await?;
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
     if matches!(command.as_slice(), [action] if action == "process-privacy-jobs") {
-        let config = config::AccountConfig::from_env()?;
-        let pool = database::connect(&config.database_url, 2).await?;
+        let database_url = config::required_database_url()?;
+        let pool = database::connect(&database_url, 2).await?;
         let result = privacy_jobs::process_pending(&pool).await?;
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());

@@ -82,13 +82,14 @@ if (preflight.graphRequired) {
 const policy = validateRolloutPolicy(
   JSON.parse(readFileSync('tools/ci/rollout-policy.json', 'utf8')),
 );
-if (policy.mode === 'affected') {
+const rolloutMode = process.env.NVBES_CI_ROLLOUT_MODE || 'affected';
+if (rolloutMode === 'affected' && policy.mode === 'affected' && policy.activationEvidence) {
   const report = JSON.parse(
     git('show', `${policy.activationEvidence.reportCommit}:docs/ci/affected-rollout-evidence.json`),
   );
   validateCommittedReport(policy, report);
 }
-const plan = createPlan(preflight, { ...context, rolloutMode: policy.mode });
+const plan = createPlan(preflight, { ...context, rolloutMode });
 console.log(`CI_SCOPE ${JSON.stringify(scopeMetric(plan, preflight.startedAt))}`);
 writeFileSync('.nx/ci/plan.json', JSON.stringify(plan));
 const output = [

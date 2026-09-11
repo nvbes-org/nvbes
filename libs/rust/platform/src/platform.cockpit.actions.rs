@@ -89,78 +89,9 @@ impl OperatorActionDispatcher {
     pub fn execute(cmd: OperatorCommand) -> Result<OperatorActionReceipt, ActionExecutionError> {
         Self::validate_command(&cmd)?;
 
-        let (action_type, details, is_reversible, reversal_instruction) = match &cmd.payload {
-            OperatorActionPayload::ReplayEmailMessage { message_id } => (
-                "replay_email_message".to_string(),
-                format!("Dispatched manual replay for message {}", message_id),
-                false,
-                None,
-            ),
-            OperatorActionPayload::ApplyEmailSuppression { email, reason } => (
-                "apply_email_suppression".to_string(),
-                format!("Suppression applied to {}: {}", email, reason),
-                true,
-                Some(format!("Execute release_email_suppression for {}", email)),
-            ),
-            OperatorActionPayload::ReleaseEmailSuppression { email } => (
-                "release_email_suppression".to_string(),
-                format!("Suppression released for {}", email),
-                true,
-                Some(format!("Execute apply_email_suppression for {}", email)),
-            ),
-            OperatorActionPayload::ResolveTrustRiskCase {
-                case_id,
-                resolution,
-            } => (
-                "resolve_trust_risk_case".to_string(),
-                format!("Case {} marked resolved: {}", case_id, resolution),
-                true,
-                Some(format!(
-                    "Reopen review case {} via trust-risk operations",
-                    case_id
-                )),
-            ),
-            OperatorActionPayload::ReconcileBillingEvent {
-                event_id,
-                resolution,
-            } => (
-                "reconcile_billing_event".to_string(),
-                format!("Event {} manually reconciled: {}", event_id, resolution),
-                false,
-                None,
-            ),
-            OperatorActionPayload::ActivateDegradedProcedure { scenario } => (
-                "activate_degraded_procedure".to_string(),
-                format!("Activated degraded mode procedure for {:?}", scenario),
-                true,
-                Some(format!(
-                    "Execute deactivate_degraded_procedure for {:?}",
-                    scenario
-                )),
-            ),
-            OperatorActionPayload::DeactivateDegradedProcedure { scenario } => (
-                "deactivate_degraded_procedure".to_string(),
-                format!("Deactivated degraded mode procedure for {:?}", scenario),
-                true,
-                Some(format!(
-                    "Execute activate_degraded_procedure for {:?}",
-                    scenario
-                )),
-            ),
-        };
-
-        Ok(OperatorActionReceipt {
-            receipt_id: Uuid::new_v4(),
-            operator_id: cmd.operator_id,
-            action_type,
-            idempotency_key: cmd.idempotency_key,
-            correlation_id: cmd.correlation_id,
-            executed_at: Utc::now(),
-            status: "executed".to_string(),
-            details,
-            is_reversible,
-            reversal_instruction,
-        })
+        Err(ActionExecutionError::ExecutionFailed(
+            "No secured domain command adapter is configured; no action was executed".into(),
+        ))
     }
 }
 

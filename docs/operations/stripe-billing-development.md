@@ -78,7 +78,7 @@ Un serveur déployé reçoit une clé propre à son environnement et un secret
 de destination webhook HTTPS permanente (`/webhooks/stripe`). Il ne lance pas
 `stripe listen`. Le secret de la CLI locale n'est pas celui de cette destination.
 
-Le workflow `deploy-billing.yml` utilise déjà l'environnement `production-billing`
+Le workflow `deploy.yml` (job `deploy-billing`) utilise déjà l'environnement `production-billing`
 et les secrets `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`. Déploiement du
 serveur et encaissement live restent deux décisions différentes : la V1 refuse
 toujours les clés live et les événements `livemode=true`.

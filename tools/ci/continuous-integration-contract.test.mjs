@@ -22,13 +22,13 @@ for (const [name, mutate] of [
   [
     'conditional FinOps',
     (w) => {
-      w.jobs.contracts.steps.find((s) => s.run === 'pnpm check:finops').if = 'false';
+      w.jobs.scope.steps.find((s) => s.run === 'pnpm check:finops').if = 'false';
     },
   ],
   [
     'disguised FinOps',
     (w) => {
-      w.jobs.contracts.steps.find((s) => s.run === 'pnpm check:finops').run =
+      w.jobs.scope.steps.find((s) => s.run === 'pnpm check:finops').run =
         'exit 0\npnpm check:finops';
     },
   ],

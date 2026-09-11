@@ -13,10 +13,14 @@ const errorReportingSource = readFileSync(
   'utf8',
 );
 const healthSource = readFileSync(join(serviceRoot, 'src/identity.health.rs'), 'utf8');
-const deploymentWorkflow = readFileSync(
-  join(workspaceRoot, '.github/workflows/deploy-identity.yml'),
+const deploymentWorkflowSource = readFileSync(
+  join(workspaceRoot, '.github/workflows/deploy.yml'),
   'utf8',
 );
+const deploymentWorkflow = deploymentWorkflowSource
+  .split('\n  deploy-identity:\n')[1]
+  ?.split(/\n  [a-zA-Z0-9_-]+:\n/)[0];
+assert.ok(deploymentWorkflow, 'unified workflow must retain the Identity deployment job');
 const runtimeTerraform = readFileSync(
   join(workspaceRoot, 'infrastructure/environments/identity-production/runtime.tf'),
   'utf8',
@@ -81,7 +85,7 @@ test('runtime stays closed to public authentication', () => {
 });
 
 test('deployment is main-only, approved, immutable and scale-to-zero', () => {
-  assert.ok(deploymentWorkflow.includes("if: ${{ success() && github.ref == 'refs/heads/main' }}"));
+  assert.ok(deploymentWorkflow.includes("if: ${{ success() && github.ref == 'refs/heads/main' &&"));
   assert.ok(deploymentWorkflow.includes('[[ "$IDENTITY_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]'));
   assert.ok(deploymentWorkflow.includes('cosign verify'));
   assert.ok(deploymentWorkflow.includes('IDENTITY_IMAGE_DIGEST'));

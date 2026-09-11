@@ -8,11 +8,14 @@ resource "scaleway_container_namespace" "platform_operations" {
 
 locals {
   platform_operations_runtime_environment = {
-    NVBES_ENVIRONMENT              = local.environment
-    NVBES_PLATFORM_OPERATIONS_PORT = "8084"
+    NVBES_ENVIRONMENT                        = local.environment
+    NVBES_PLATFORM_OPERATIONS_PORT           = "8084"
+    NVBES_PLATFORM_OPERATIONS_PUBLIC_KEY_PEM = var.platform_operations_public_key_pem
+    NVBES_PLATFORM_OPERATIONS_ISSUER         = var.platform_operations_issuer
+    NVBES_PLATFORM_OPERATIONS_SERVICES       = var.platform_operations_services
   }
   platform_operations_runtime_secrets = {
-    NVBES_PLATFORM_OPERATIONS_TOKEN = var.platform_operations_token
+    NVBES_PLATFORM_OPERATIONS_DATABASE_URL = var.platform_operations_database_url
   }
 }
 

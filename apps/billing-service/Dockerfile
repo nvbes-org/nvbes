@@ -29,11 +29,9 @@ COPY contracts ./contracts
 COPY libs ./libs
 COPY vendor ./vendor
 
-WORKDIR /usr/src/nvbes/apps/billing-service
-
 RUN --mount=type=cache,id=nvbes-cargo-registry-rust-1.91.1-${TARGETPLATFORM},target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,id=nvbes-cargo-git-rust-1.91.1-${TARGETPLATFORM},target=/usr/local/cargo/git,sharing=locked \
-    --mount=type=cache,id=nvbes-billing-service-target-rust-1.91.1-${TARGETPLATFORM},target=/usr/src/nvbes/apps/billing-service/target,sharing=locked \
+    --mount=type=cache,id=nvbes-billing-service-target-rust-1.91.1-${TARGETPLATFORM},target=/usr/src/nvbes/target,sharing=locked \
     cargo build --locked --release --bin nvbes-billing-service \
     && install -D target/release/nvbes-billing-service /out/billing-service
 

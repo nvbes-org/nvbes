@@ -29,8 +29,24 @@ pub mod cockpit_model;
 pub mod cockpit_server;
 #[path = "platform.cockpit.trust_risk.rs"]
 pub mod cockpit_trust_risk;
-#[path = "platform.cockpit.ui.rs"]
-pub mod cockpit_ui;
+
+#[path = "platform.operations.context.rs"]
+pub mod operations_context;
+#[path = "platform.operations.db.rs"]
+pub mod operations_db;
+#[path = "platform.operations.error.rs"]
+pub mod operations_error;
+#[path = "platform.operations.model.rs"]
+pub mod operations_model;
+#[path = "platform.operations.routes.rs"]
+pub mod operations_routes;
+#[path = "platform.operations.service.rs"]
+pub mod operations_service;
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "platform.operations.tests.rs"]
+mod operations_tests;
+#[path = "platform.operations.validation.rs"]
+pub mod operations_validation;
 
 pub use cockpit_model::{AggregateHealth, CockpitOverview, HealthStatus, RuntimeHealth, ServiceId};
 pub use cockpit_server::{PlatformCockpitState, create_platform_cockpit_router};
