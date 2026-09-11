@@ -131,6 +131,7 @@ jobs:
           ignore-unfixed: false
           exit-code: '1'
           format: sarif
+          limit-severities-for-sarif: true
           output: trivy-results.sarif
           skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
       - name: Generate CycloneDX SBOM
