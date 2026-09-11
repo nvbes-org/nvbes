@@ -2,7 +2,7 @@
 
 ## Conclusion
 
-Le 11 septembre 2026, Gitleaks 8.30.1 a analysé les 774 commits accessibles
+Le 11 septembre 2026, Gitleaks 8.30.1 a analysé les 781 commits accessibles
 avec `--all` et l'arbre courant. Les 28 détections historiques et 17 détections
 de l'arbre ont été revues. Elles correspondaient à des exemples de
 documentation, des UUID de démonstration, des valeurs de test déterministes ou

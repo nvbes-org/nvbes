@@ -30,7 +30,9 @@ Une réécriture d'historique doit être décidée et coordonnée avant la bascu
 - [x] historique Gitleaks revu et exceptions limitées à des empreintes précises ;
 - [x] environnements de production limités à `main`, sans bypass administrateur ;
 - [x] Dependabot alerts et mises à jour de sécurité activés ;
-- [ ] PR de préparation fusionnée sur `main` avec tous les checks verts ;
+- [x] PR de préparation fusionnée sur `main` après validation locale complète ;
+- [ ] jobs GitHub-hosted exécutés après levée de la restriction de facturation du
+      dépôt privé (aucune étape de la PR de préparation n'a pu démarrer) ;
 - [ ] sauvegarde miroir du dépôt et export des paramètres GitHub effectués ;
 - [ ] confirmation explicite des divulgations ci-dessus par le propriétaire.
 
