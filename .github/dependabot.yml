@@ -37,6 +37,11 @@ updates:
         update-types:
           - patch
           - minor
+    # TypeScript majors require a coordinated Nx compatibility migration.
+    ignore:
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
