@@ -19,17 +19,6 @@
         "unviable": 0
       }
     },
-    "nvbes-dpop": {
-      "threshold": 73,
-      "baseline": {
-        "score": 78.6,
-        "tested": 42,
-        "caught": 33,
-        "missed": 9,
-        "timeout": 0,
-        "unviable": 9
-      }
-    },
     "nvbes-email": {
       "threshold": 79,
       "baseline": {
@@ -44,18 +33,6 @@
   },
   "excluded": [
     {
-      "crate": "nvbes-tenancy",
-      "reason": "Score de mutation mesure 29.7% (11/37), sous le plancher de 50% : la majorite des mutants manques portent sur la normalisation/validation de politique et de nom de workspace (workspace.rs) et sur les constructeurs de policy sans test unitaire. Re-inclusion conditionnee a des tests ciblant les mutants manques reportes dans outcomes.json, sans abaisser le seuil sous le plancher.",
-      "baseline": {
-        "score": 29.7,
-        "tested": 37,
-        "caught": 11,
-        "missed": 26,
-        "timeout": 0,
-        "unviable": 2
-      }
-    },
-    {
       "crate": "nvbes-observability",
       "reason": "Score de mutation mesure 18.6% (18/97), sous le plancher de 50% : crate d'instrumentation (tracing, middleware, metriques, worker error reporting) dont les fonctions restantes (capture, heartbeat, reusabilite des ChekIn) ne sont pas exercees par les tests unitaires. Re-inclusion conditionnee a des tests ciblant les mutants manques, sans abaisser le seuil sous le plancher.",
       "baseline": {
@@ -65,18 +42,6 @@
         "missed": 79,
         "timeout": 0,
         "unviable": 15
-      }
-    },
-    {
-      "crate": "nvbes-ports",
-      "reason": "Score de mutation mesure 0.0% (0/2), sous le plancher de 50% : la validation ObjectWrite::validate (ports.storage.rs) n'est exercee par aucun test. Re-inclusion conditionnee a un test couvrant la validation des contrats de port.",
-      "baseline": {
-        "score": 0.0,
-        "tested": 2,
-        "caught": 0,
-        "missed": 2,
-        "timeout": 0,
-        "unviable": 0
       }
     }
   ]

@@ -52,27 +52,18 @@ nvbes/
 ├── libs/
 │   ├── rust/
 │   │   ├── core/           # Primitives partagées (config, auth, mfa)
-│   │   ├── adapters/       # Adaptateurs externes (Scaleway email, PostHog...)
+│   │   ├── adapters/       # Adaptateurs externes actifs (Scaleway email)
 │   │   ├── audit/          # Audit append-only
 │   │   ├── billing/        # Logique billing partagée
 │   │   ├── email/          # Service email
-│   │   ├── identity-sdk-backend/ # SDK Rust standalone
 │   │   ├── observability/  # Métriques, tracing, sentry
 │   │   ├── platform/       # Primitives de plateforme
-│   │   ├── ports/          # Contrats et interfaces de ports
-│   │   ├── products/       # Modules produits partagés (account, cloud...)
 │   │   ├── region/         # Régions et résidence des données
-│   │   ├── scan/           # Scan engine
-│   │   ├── storage/        # Object storage
-│   │   └── tenancy/        # Multi-tenant primitives
+│   │   ├── redis/          # Primitives Redis actives
+│   │   └── trust-risk/     # Domaine Trust/Risk
 │   └── ts/
-│       ├── identity-sdk/       # SDK TypeScript
 │       ├── identity-sdk-core/  # Types OpenAPI générés
-│       ├── identity-sdk-web/   # SDK web (PKCE, WebAuthn, MFA)
-│       ├── http-client/        # Client HTTP TS valide runtime
-│       ├── identity-client/    # Client Identity TS typé
-│       ├── web-runtime/        # Runtime React Query/Effect partagé
-│       └── web-ui/             # Composants UI transverses
+│       └── email-ui/           # Templates React Email actifs
 ├── infrastructure/         # Terraform/OpenTofu et contrat FinOps
 └── archive/                # Produits et prototypes hors runtime actif
 ```
@@ -188,7 +179,7 @@ pnpm nx:affected
 
 **Pour TOUS les sites web/projets frontend, suivre cet ordre STRICTEMENT, sans exception :**
 
-1. **Registry du projet** — Utiliser d'abord les composants du registry interne du projet (`libs/ts/web-ui`, `apps/*/components/ui`, registry local `components.json`)
+1. **Registry du projet** — Utiliser d'abord les composants du registry interne du projet (`apps/*/components/ui`, registry local `components.json`)
 2. **Registry officiel shadcn/ui** — Si aucun composant utile dans le registry projet, utiliser le registry officiel shadcn/ui
    - Docs: https://ui.shadcn.com/docs/registry/getting-started
    - Directory: https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/directory.json

@@ -95,12 +95,8 @@ if command -v cargo-watch >/dev/null 2>&1 && command -v systemfd >/dev/null 2>&1
   systemfd --no-pid -s "http::$NVBES_IDENTITY_BIND_ADDR" -- cargo watch \
     --watch apps/identity-service \
     --watch libs/rust/core \
-    --watch libs/rust/identity-sdk-backend \
-    --watch libs/rust/products/identity \
     --watch libs/rust/platform \
-    --watch libs/rust/ports \
     --watch libs/rust/audit \
-    --watch libs/rust/tenancy \
     --watch libs/rust/region \
     --watch Cargo.toml \
     --watch Cargo.lock \
@@ -117,11 +113,8 @@ if command -v cargo-watch >/dev/null 2>&1 && command -v systemfd >/dev/null 2>&1
   systemfd --no-pid -s "http::$NVBES_ACCOUNT_BIND_ADDR" -- cargo watch \
     --watch apps/account-service \
     --watch libs/rust/core \
-    --watch libs/rust/products/account \
     --watch libs/rust/platform \
-    --watch libs/rust/ports \
     --watch libs/rust/audit \
-    --watch libs/rust/tenancy \
     --watch libs/rust/region \
     --watch Cargo.toml \
     --watch Cargo.lock \
@@ -140,9 +133,7 @@ if command -v cargo-watch >/dev/null 2>&1 && command -v systemfd >/dev/null 2>&1
     --watch libs/rust/core \
     --watch libs/rust/trust-risk \
     --watch libs/rust/platform \
-    --watch libs/rust/ports \
     --watch libs/rust/audit \
-    --watch libs/rust/tenancy \
     --watch libs/rust/region \
     --watch Cargo.toml \
     --watch Cargo.lock \
@@ -165,17 +156,6 @@ else
   echo "warning: watchexec not found, billing service running without hotreload" >&2
   node "$SCRIPT_DIR/stripe-dev.mjs" &
 fi
-
-# TypeScript libraries watch mode
-echo "Starting TypeScript libraries in watch mode..."
-pnpm --filter @nvbes/identity-sdk dev &
-pnpm --filter @nvbes/identity-sdk-web dev &
-pnpm --filter @nvbes/http-client dev &
-pnpm --filter @nvbes/web-runtime dev &
-pnpm --filter @nvbes/web-ui dev &
-pnpm --filter @nvbes/identity-client dev &
-pnpm --filter @nvbes/account-client dev &
-pnpm --filter @nvbes/billing-client dev &
 
 # Email UI generate watch (for email templates)
 if command -v watchexec >/dev/null 2>&1; then

@@ -114,13 +114,7 @@ switch (lane) {
         'tsconfig.base.json',
         'nx.json',
       ]);
-      for (const check of [
-        'check:structure',
-        'check:nx-boundaries',
-        'check:secrets',
-        'check:web-runtime-guardrails',
-        'check:ajax-security',
-      ])
+      for (const check of ['check:structure', 'check:nx-boundaries', 'check:secrets'])
         run('pnpm', [check]);
     }
     break;

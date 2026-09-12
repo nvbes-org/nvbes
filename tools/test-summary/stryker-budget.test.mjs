@@ -4,7 +4,7 @@ import test from 'node:test';
 
 test('bounds mutation and test parallelism without changing scope, retries or score accounting', async () => {
   const previous = process.env.NVBES_MUTATION_PACKAGE;
-  process.env.NVBES_MUTATION_PACKAGE = 'identity-sdk-web';
+  process.env.NVBES_MUTATION_PACKAGE = 'email-ui';
   try {
     const { default: config } = await import('./stryker.config.mjs');
     assert.equal(
@@ -20,8 +20,8 @@ test('bounds mutation and test parallelism without changing scope, retries or sc
     assert.equal(config.timeoutMS, 10000);
     assert.deepEqual(config.thresholds, { high: 90, low: 90, break: 0 });
     assert.deepEqual(config.mutate, [
-      'libs/ts/identity-sdk-web/src/**/*.{ts,tsx}',
-      '!libs/ts/identity-sdk-web/src/**/*.{test,spec,gen,d}.{ts,tsx}',
+      'libs/ts/email-ui/src/**/*.{ts,tsx}',
+      '!libs/ts/email-ui/src/**/*.{test,spec,gen,d}.{ts,tsx}',
     ]);
   } finally {
     if (previous === undefined) delete process.env.NVBES_MUTATION_PACKAGE;

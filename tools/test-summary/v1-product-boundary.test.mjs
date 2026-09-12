@@ -23,23 +23,10 @@ await test('Cloud and Enterprise remain archived, outside the active Cargo works
   }
 });
 
-await test('the active identity client cannot export or import Enterprise and federation runtime', () => {
-  for (const file of readdirSync('libs/ts/identity-client/src')) {
-    assert.doesNotMatch(file, /^(enterprise\.|federation\.|identity\.enterprise|combined\.)/u);
-    if (!file.endsWith('.ts') || file.endsWith('.test.ts')) continue;
-    assert.doesNotMatch(
-      readFileSync(`libs/ts/identity-client/src/${file}`, 'utf8'),
-      /from ['"].*(?:enterprise|federation|archive)\b/u,
-      file,
-    );
-  }
-  for (const file of [
-    'enterprise.client.ts',
-    'identity.enterprise-client.ts',
-    'federation.schemas.ts',
-  ]) {
-    assert(existsSync(`archive/libs/ts/identity-client/src/${file}`));
-  }
+await test('the unused identity client remains entirely outside the active workspace', () => {
+  assert(!existsSync('libs/ts/identity-client'));
+  assert(existsSync('archive/libs/ts/identity-client/package.json'));
+  assert(existsSync('archive/libs/ts/identity-client/src/index.ts'));
   assert(readFileSync('.nxignore', 'utf8').split('\n').includes('archive/**'));
 });
 
@@ -51,10 +38,8 @@ await test('root commands and fuzzing do not reconnect archived product runtimes
       /scripts\/(?:db-migrate|migrate-staging|generate-openapi|test-identity-e2e-local)\.sh|upload_inputs/u,
     );
   }
-  assert.doesNotMatch(
-    readFileSync('fuzz/Cargo.toml', 'utf8'),
-    /nvbes-cloud-service|upload_inputs/u,
-  );
+  assert(!existsSync('fuzz/Cargo.toml'));
+  assert(existsSync('archive/tools/dpop-fuzz/Cargo.toml'));
   assert.doesNotMatch(
     readFileSync('scripts/dev-hot.sh', 'utf8'),
     /products\/(?:enterprise|cloud)/u,

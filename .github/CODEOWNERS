@@ -8,15 +8,15 @@
 /libs/ts/email-ui/ @shaynlink
 
 # Identity SDKs retained as shared libraries.
-/libs/ts/identity-client/ @shaynlink
+/archive/libs/ts/identity-client/ @shaynlink
 /libs/ts/identity-sdk*/ @shaynlink
-/libs/rust/identity-sdk-backend/ @shaynlink
+/archive/libs/rust/identity-sdk-backend/ @shaynlink
 
 # Cryptography, secrets, tokens and shared security primitives.
 /libs/rust/core/ @shaynlink
-/libs/rust/dpop/ @shaynlink
+/archive/libs/rust/dpop/ @shaynlink
 /libs/rust/redis/ @shaynlink
-/libs/rust/storage/ @shaynlink
+/archive/libs/rust/storage/ @shaynlink
 /deny.toml @shaynlink
 /.osv-scanner.toml @shaynlink
 /.gitleaks.toml @shaynlink
