@@ -25,14 +25,17 @@
       "{workspaceRoot}/libs/rust/**/Cargo.toml",
       "{workspaceRoot}/libs/rust/**/src/**/*",
       "{workspaceRoot}/libs/rust/platform/migrations/**/*",
-      "{workspaceRoot}/vendor/xmlsec/**/*"
+      "{workspaceRoot}/vendor/xmlsec/**/*",
+      "{workspaceRoot}/libs/rust/core/src/*.sql"
     ],
     "production": ["default"]
   },
   "targets": {
     "format": {
       "executor": "nx:run-commands",
-      "options": { "command": "cargo fmt --all -- --check" },
+      "options": {
+        "command": "cargo fmt --all -- --check"
+      },
       "cache": true,
       "inputs": ["default"]
     },
@@ -126,6 +129,14 @@
       "configurations": {},
       "parallelism": false,
       "cache": false
+    },
+    "test:security-storage": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": ["default"],
+      "options": {
+        "command": "cargo test --locked -p nvbes-core --lib"
+      }
     }
   }
 }

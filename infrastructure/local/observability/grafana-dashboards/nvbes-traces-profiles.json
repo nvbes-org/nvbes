@@ -1,1 +1,220 @@
-{"annotations":{"list":[{"builtIn":1,"datasource":{"type":"grafana","uid":"-- Grafana --"},"enable":true,"hide":true,"iconColor":"rgba(0, 211, 255, 1)","name":"Annotations & Alerts","type":"dashboard"}]},"editable":true,"fiscalYearStartMonth":0,"graphTooltip":0,"id":null,"links":[],"liveNow":false,"panels":[{"datasource":{"type":"tempo","uid":"Tempo"},"description":"","fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"mappings":[],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null}]},"unit":"short"},"overrides":[]},"gridPos":{"h":7,"w":12,"x":0,"y":0},"id":1,"options":{"showHeader":true},"targets":[{"datasource":{"type":"tempo","uid":"Tempo"},"filters":[],"limit":20,"query":"{ .service.name =~ \"nvbes-.*\" }","queryType":"traceqlSearch","refId":"A","tableType":"traces"}],"title":"Recent API traces","type":"table"},{"datasource":{"type":"prometheus","uid":"Prometheus"},"description":"","fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"mappings":[],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null}]},"unit":"s"},"overrides":[]},"gridPos":{"h":7,"w":12,"x":12,"y":0},"id":2,"options":{"legend":{"displayMode":"table","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"none"}},"targets":[{"datasource":{"type":"prometheus","uid":"Prometheus"},"editorMode":"code","expr":"histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket[5m])))","instant":false,"legendFormat":"__auto","range":true,"refId":"A"}],"title":"HTTP latency p95","type":"timeseries"},{"datasource":{"type":"prometheus","uid":"Prometheus"},"description":"","fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"mappings":[],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null}]},"unit":"short"},"overrides":[]},"gridPos":{"h":7,"w":12,"x":0,"y":7},"id":3,"options":{"legend":{"displayMode":"table","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"none"}},"targets":[{"datasource":{"type":"prometheus","uid":"Prometheus"},"editorMode":"code","expr":"sum by (service) (rate(traces_spanmetrics_calls_total{status_code=\"STATUS_CODE_ERROR\"}[5m]))","instant":false,"legendFormat":"__auto","range":true,"refId":"A"}],"title":"Trace errors by service","type":"timeseries"},{"datasource":{"type":"prometheus","uid":"Prometheus"},"description":"","fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"mappings":[],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null}]},"unit":"s"},"overrides":[]},"gridPos":{"h":7,"w":12,"x":12,"y":7},"id":4,"options":{"legend":{"displayMode":"table","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"none"}},"targets":[{"datasource":{"type":"prometheus","uid":"Prometheus"},"editorMode":"code","expr":"histogram_quantile(0.95, sum by (le, db_system) (rate(traces_spanmetrics_latency_bucket{db_system=~\"postgresql|redis\"}[5m])))","instant":false,"legendFormat":"__auto","range":true,"refId":"A"}],"title":"DB and Redis dependency latency","type":"timeseries"},{"datasource":{"type":"prometheus","uid":"Prometheus"},"description":"","fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"mappings":[],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null}]},"unit":"short"},"overrides":[]},"gridPos":{"h":7,"w":12,"x":0,"y":14},"id":5,"options":{"legend":{"displayMode":"table","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"none"}},"targets":[{"datasource":{"type":"prometheus","uid":"Prometheus"},"editorMode":"code","expr":"sum by (status_code) (rate(pyroscope_write_sent_bytes_total[5m]))","instant":false,"legendFormat":"__auto","range":true,"refId":"A"}],"title":"Profile export bytes","type":"timeseries"},{"datasource":{"type":"grafana-pyroscope-datasource","uid":"Pyroscope"},"description":"","fieldConfig":{"defaults":{"color":{"mode":"palette-classic"},"mappings":[],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null}]},"unit":"short"},"overrides":[]},"gridPos":{"h":7,"w":12,"x":12,"y":14},"id":6,"options":{"showHeader":true},"targets":[{"datasource":{"type":"grafana-pyroscope-datasource","uid":"Pyroscope"},"groupBy":[],"labelSelector":"process_cpu:cpu:nanoseconds:cpu:nanoseconds{}","profileTypeId":"process_cpu:cpu:nanoseconds:cpu:nanoseconds","queryType":"profile","refId":"A"}],"title":"CPU profiles","type":"table"}],"refresh":"30s","schemaVersion":39,"style":"dark","tags":["nvbes","p1","traces","profiles"],"templating":{"list":[]},"time":{"from":"now-6h","to":"now"},"timepicker":{},"timezone":"browser","title":"nvbes Traces and Profiles","uid":"nvbes-traces-profiles","version":1,"weekStart":""}
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": { "type": "tempo", "uid": "Tempo" },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "Tempo" },
+          "filters": [],
+          "limit": 20,
+          "query": "{ .service.name =~ \"nvbes-.*\" }",
+          "queryType": "traceqlSearch",
+          "refId": "A",
+          "tableType": "traces"
+        }
+      ],
+      "title": "Recent API traces",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket[5m])))",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP latency p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 7 },
+      "id": 3,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "editorMode": "code",
+          "expr": "sum by (service) (rate(traces_spanmetrics_calls_total{status_code=\"STATUS_CODE_ERROR\"}[5m]))",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Trace errors by service",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 7 },
+      "id": 4,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, db_system) (rate(traces_spanmetrics_latency_bucket{db_system=~\"postgresql\"}[5m])))",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "PostgreSQL dependency latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 14 },
+      "id": 5,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "editorMode": "code",
+          "expr": "sum by (status_code) (rate(pyroscope_write_sent_bytes_total[5m]))",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Profile export bytes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "grafana-pyroscope-datasource", "uid": "Pyroscope" },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 14 },
+      "id": 6,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-pyroscope-datasource", "uid": "Pyroscope" },
+          "groupBy": [],
+          "labelSelector": "process_cpu:cpu:nanoseconds:cpu:nanoseconds{}",
+          "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
+          "queryType": "profile",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU profiles",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nvbes", "p1", "traces", "profiles"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "nvbes Traces and Profiles",
+  "uid": "nvbes-traces-profiles",
+  "version": 1,
+  "weekStart": ""
+}

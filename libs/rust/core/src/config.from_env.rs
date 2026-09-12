@@ -351,17 +351,6 @@ impl AppConfig {
             request_e2ee_key_id: optional_env("NVBES_REQUEST_E2EE_KEY_ID")
                 .unwrap_or_else(|| "default".to_string()),
             request_e2ee_secret: optional_env("NVBES_REQUEST_E2EE_SECRET"),
-            redis_url: env_or_default(
-                "NVBES_REDIS_URL",
-                std::env::var("NVBES_REDIS_URL").ok(),
-                "redis://localhost:6379",
-                secret_bootstrap_mode,
-            )?,
-            redis_password: optional_env("NVBES_REDIS_PASSWORD"),
-            redis_max_connections: std::env::var("NVBES_REDIS_MAX_CONNECTIONS")
-                .ok()
-                .and_then(|value| value.parse::<u32>().ok())
-                .unwrap_or(10),
             security_contact_email: optional_env("NVBES_SECURITY_CONTACT_EMAIL"),
         };
 

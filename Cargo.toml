@@ -7,7 +7,6 @@ members = [
   "libs/rust/audit",
   "libs/rust/billing",
   "libs/rust/core",
-  "libs/rust/redis",
   "libs/rust/region",
   "libs/rust/email",
   "libs/rust/adapters/email-scaleway",

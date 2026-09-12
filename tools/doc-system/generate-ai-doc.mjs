@@ -42,14 +42,14 @@ const SERVICE_DOMAIN_KNOWLEDGE = {
     participant GW as "gateway-cloud"
     participant ID as "identity-service"
     participant DB as "PostgreSQL (Identity DB)"
-    participant Redis as "Redis Session Cache"
+    participant Postgres as "PostgreSQL Session Store"
 
     User->>GW: POST /api/v1/auth/login (email, password)
     GW->>ID: Route la requete d authentification
     ID->>DB: Recherche de l utilisateur par hash d email
     DB-->>ID: Enregistrement utilisateur & sel Argon2id
     ID->>ID: Verification du mot de passe
-    ID->>Redis: Creation de session & DPoP proof
+    ID->>Postgres: Creation de session
     ID-->>GW: Set-Cookie (Session HTTP-only) + DPoP Token
     GW-->>User: 200 OK (Authentifie)`,
     errors: [

@@ -126,29 +126,6 @@ const dashboards = [
     ],
   },
   {
-    file: 'nvbes-redis-hot-path.json',
-    title: 'nvbes Redis and Hot Path',
-    tags: ['nvbes', 'p0', 'redis'],
-    panels: [
-      graph('Redis command rate', 'sum by (command, outcome) (rate(redis_commands_total[5m]))'),
-      graph(
-        'Redis command p95 latency',
-        'histogram_quantile(0.95, sum by (le, command) (rate(redis_command_duration_seconds_bucket[5m])))',
-        's',
-      ),
-      graph(
-        'Cache hit and miss',
-        'sum by (cache_type) (rate(redis_cache_hit_total[5m])) or sum by (cache_type) (rate(redis_cache_miss_total[5m]))',
-      ),
-      graph(
-        'Rate limit decisions',
-        'sum by (bucket, action) (rate(redis_ratelimit_allowed_total[5m])) or sum by (bucket, action) (rate(redis_ratelimit_blocked_total[5m]))',
-      ),
-      stat('Redis pool active', 'max(redis_pool_active)'),
-      stat('Redis pool available', 'max(redis_pool_available)'),
-    ],
-  },
-  {
     file: 'nvbes-workers-queues.json',
     title: 'nvbes Workers and Queues',
     tags: ['nvbes', 'p0', 'workers'],
@@ -284,8 +261,8 @@ const dashboards = [
         'sum by (service) (rate(traces_spanmetrics_calls_total{status_code="STATUS_CODE_ERROR"}[5m]))',
       ),
       graph(
-        'DB and Redis dependency latency',
-        'histogram_quantile(0.95, sum by (le, db_system) (rate(traces_spanmetrics_latency_bucket{db_system=~"postgresql|redis"}[5m])))',
+        'PostgreSQL dependency latency',
+        'histogram_quantile(0.95, sum by (le, db_system) (rate(traces_spanmetrics_latency_bucket{db_system=~"postgresql"}[5m])))',
         's',
       ),
       graph(
