@@ -1,0 +1,31 @@
+{
+  "nvbes-core": {
+    "idempotency::tests::idempotency_round_trip_uses_redis": "Redis persistence",
+    "limiter::tests::rate_limiter_blocks_after_limit": "Redis persistence"
+  },
+  "nvbes-redis": {
+    "auth_challenge::tests::": "Redis persistence",
+    "email_verification::tests::": "Redis persistence",
+    "password_reset::tests::": "Redis persistence",
+    "worker_queue::lease_tests::": "Redis leases",
+    "worker_queue::reliability_tests::": "Redis concurrency",
+    "worker_queue::retention_migration_tests::": "Redis migration",
+    "worker_queue::retention_tests::": "Redis retention",
+    "worker_queue::status_tests::": "Redis pool",
+    "worker_queue::test_support::cleanup_integration_tests::": "Redis cleanup",
+    "worker_queue::tests::": "Redis queue",
+    "worker_queue::volume_tests::": "Redis volume"
+  },
+  "nvbes-email": {
+    "client::integration_tests::": "gRPC loopback transport",
+    "operations::integration_tests::": "gRPC loopback transport",
+    "smtp::protocol_tests::": "SMTP loopback transport",
+    "error::transport_tests::": "HTTP loopback transport and real timeouts"
+  },
+  "nvbes-email-scaleway": {
+    "tests::adapter_": "HTTP adapter against a loopback server"
+  },
+  "nvbes-email-worker": {
+    "grpc_service::limits_tests::grpc_transport_rejects_messages_above_the_worker_budget": "gRPC loopback transport"
+  }
+}

@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { rustSources } from '../test-summary/v1-catalogue.mjs';
+import { rustMutation } from '../test-summary/v1-rust-measurements.mjs';
 
 export function aggregateMutationOutcomes(outcomes) {
   const perCrate = new Map();
@@ -72,6 +74,11 @@ export function evaluateMutation(outcomes, config, packages) {
     if (Number.isFinite(entry.baseline?.score) === false)
       throw new Error(`Excluded crate ${entry.crate} requires a recorded baseline score`);
   }
+  if (configuredNames.size === 0) throw new Error('Empty mutation gate');
+  for (const [name, spec] of Object.entries(config.crates)) {
+    if (!Number.isFinite(spec.threshold) || spec.threshold <= 0 || spec.threshold > 100)
+      throw new Error(`Invalid mutation threshold for ${name}`);
+  }
 
   const stats = aggregateMutationOutcomes(outcomes);
   const rows = [];
@@ -141,6 +148,11 @@ if (isCli) {
       `${outcomesPath} is not a cargo-mutants outcomes.json (expected an "outcomes" array)`,
     );
   const packages = loadCargoMetadata();
+  for (const name of Object.keys(config.crates)) {
+    const pkg = packages.find((entry) => entry.name === name);
+    if (!pkg) throw new Error(`Configured crate ${name} is not a workspace member`);
+    rustMutation({ name, ...rustSources(pkg.manifest_path, process.cwd()) }, outcomes);
+  }
   const result = evaluateMutation(outcomes.outcomes, config, packages);
   console.log(formatMutationTable(result.rows));
   if (result.failures.length) {

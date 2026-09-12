@@ -39,6 +39,12 @@ for (const [name, mutate] of [
     },
   ],
   [
+    'missing micro-test Node runtime',
+    (w) => {
+      w.jobs.rust.steps.find((s) => s.with?.caches).with.node = 'false';
+    },
+  ],
+  [
     'ignored Rust failure',
     (w) => {
       w.jobs.rust['continue-on-error'] = true;

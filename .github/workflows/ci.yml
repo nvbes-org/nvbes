@@ -226,11 +226,11 @@ jobs:
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
       - uses: ./.github/actions/ci-setup
         with:
-          node: 'false'
+          node: 'true'
           rust: 'true'
           coverage: 'true'
           terraform: 'false'
-          caches: cargo
+          caches: pnpm cargo
           cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
       - name: Start isolated Redis

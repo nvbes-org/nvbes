@@ -55,7 +55,8 @@ export function validateContinuousWorkflow(text, setupText) {
     assert.ok(setup, 'lane setup required');
     assert.equal(setup.with.rust, String(['rust', 'database'].includes(lane)));
     assert.equal(setup.with.terraform, String(lane === 'terraform'));
-    assert.equal(setup.with.node, String(lane !== 'rust'));
+    // Rust also executes the network-isolated TypeScript micro-tests through Nx.
+    assert.equal(setup.with.node, 'true');
     assert.equal(setup.if, undefined);
     const security = job.steps.findIndex(
       (step) =>

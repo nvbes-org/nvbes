@@ -43,7 +43,10 @@ fn region_utc_offset(country_code: &str) -> Option<i32> {
 }
 
 pub fn today_in_region(region: Option<&str>) -> NaiveDate {
-    let now_utc = Utc::now();
+    date_in_region_at(region, Utc::now())
+}
+
+pub(super) fn date_in_region_at(region: Option<&str>, now_utc: chrono::DateTime<Utc>) -> NaiveDate {
     let offset_hours = region.and_then(region_utc_offset).unwrap_or(0);
 
     if offset_hours >= 0 {
@@ -89,8 +92,13 @@ pub fn parse_birthdate(raw: Option<&str>) -> Result<Option<NaiveDate>, AppError>
 }
 
 pub fn validate_birthdate(birthdate: NaiveDate, region: Option<&str>) -> Result<(), AppError> {
-    let today = today_in_region(region);
+    validate_birthdate_on(birthdate, today_in_region(region))
+}
 
+pub(super) fn validate_birthdate_on(
+    birthdate: NaiveDate,
+    today: NaiveDate,
+) -> Result<(), AppError> {
     if birthdate > today {
         return Err(AppError::bad_request(
             "validation_failed",
