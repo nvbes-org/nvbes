@@ -1468,7 +1468,6 @@ jobs:
               apps/identity-service/Dockerfile \
               apps/identity-service/migrations \
               apps/identity-service/src \
-              contracts/protobuf/nvbes/identity \
               libs/rust
           fi
       - name: Authenticate to GHCR

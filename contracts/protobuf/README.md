@@ -1,6 +1,6 @@
-# Protobuf Contracts
+# Active Protobuf Contracts
 
-Internal APIs use protobuf contracts for service-to-service boundaries.
+Email and Trust/Risk use these protobuf contracts for active service boundaries.
 
 Rules:
 

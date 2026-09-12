@@ -1,7 +1,8 @@
-# Event Contracts
+# Active Event Contracts
 
 Critical events use the common envelope in `envelope.schema.json` and a
-versioned event schema listed in `manifest.json`.
+versioned event schema listed in `manifest.json`. Schemas without an active
+producer are retained under `archive/contracts/events`.
 
 Rules:
 

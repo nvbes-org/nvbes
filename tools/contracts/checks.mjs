@@ -2,8 +2,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { requiredSplitEventTypes } from './checks.split-contracts.mjs';
-
 const errors = [];
 
 function readJson(path) {
@@ -67,12 +65,6 @@ function checkEventDocuments() {
   if (!Array.isArray(manifest.events) || manifest.events.length === 0) {
     errors.push('contracts/events/manifest.json: events must be a non-empty array');
     return;
-  }
-
-  const eventTypes = new Set(manifest.events.map((event) => event.event_type));
-  for (const eventType of requiredSplitEventTypes) {
-    if (!eventTypes.has(eventType))
-      errors.push(`contracts/events/manifest.json: missing ${eventType}`);
   }
 
   const seen = new Set();

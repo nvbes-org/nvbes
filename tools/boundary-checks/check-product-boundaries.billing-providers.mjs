@@ -3,8 +3,6 @@ import { existsSync, readFileSync } from 'node:fs';
 function checkBillingProviderNeutralSurface(errors) {
   const requiredProviderFiles = [
     ['libs/rust/billing/src/provider.rs', 'PROVIDER_CODES: &[&str] = &["stripe", "mollie", "cb"]'],
-    ['apps/gateway-cloud/src/gateway.schema.enums.rs', 'Cb'],
-    ['contracts/graphql/schema.graphql', 'CB'],
     [
       'apps/billing-service/migrations/0009_billing_provider_cb.sql',
       "ADD VALUE IF NOT EXISTS 'cb'",
@@ -19,20 +17,6 @@ function checkBillingProviderNeutralSurface(errors) {
       errors.push(
         `${file}: Billing provider-neutral surface must include CB provider evidence ${expected}`,
       );
-    }
-  }
-
-  for (const file of [
-    'contracts/events/billing.payment.changed.v1.schema.json',
-    'contracts/events/billing.reconciliation.difference.v1.schema.json',
-  ]) {
-    if (!existsSync(file)) {
-      errors.push(`${file}: required for Billing event provider contracts`);
-      continue;
-    }
-    const content = readFileSync(file, 'utf8');
-    if (!content.includes('"enum": ["stripe", "mollie", "cb"]')) {
-      errors.push(`${file}: Billing event provider contract must include stripe, mollie and cb`);
     }
   }
 }
