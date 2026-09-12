@@ -12,8 +12,6 @@ pub mod pagination;
 pub mod pii_logging;
 #[path = "postgres.runtime.rs"]
 pub mod postgres_runtime;
-#[path = "redis.runtime.rs"]
-pub mod redis_runtime;
 #[path = "security.mod.rs"]
 pub mod security;
 #[path = "tls.mod.rs"]

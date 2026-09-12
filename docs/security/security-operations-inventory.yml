@@ -30,7 +30,6 @@ critical_assets:
       - libs/ts/identity-sdk-web
     dependencies:
       - postgresql-account
-      - redis-session-store
       - scaleway-key-manager
       - scaleway-secret-manager
     recovery_priority: 1
@@ -110,10 +109,6 @@ platform_dependencies:
     kind: data-store
     network: private-only
     owner: payment_security
-  - id: redis-session-store
-    kind: ephemeral-security-state
-    network: private-only
-    owner: identity_security
   - id: scaleway-key-manager
     kind: cryptographic-root
     owner: security_operations

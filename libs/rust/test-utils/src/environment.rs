@@ -90,39 +90,45 @@ mod tests {
 
     #[test]
     fn validate_loopback_url_accepts_localhost() {
-        assert!(validate_loopback_url("redis://localhost:6379", "Redis").is_ok());
+        assert!(validate_loopback_url("postgres://localhost:5432", "PostgreSQL").is_ok());
     }
 
     #[test]
     fn validate_loopback_url_accepts_loopback_ip() {
-        assert!(validate_loopback_url("redis://127.0.0.1:6379", "Redis").is_ok());
-        assert!(validate_loopback_url("redis://127.42.0.1:16379/15", "Redis").is_ok());
+        assert!(validate_loopback_url("postgres://127.0.0.1:5432", "PostgreSQL").is_ok());
+        assert!(validate_loopback_url("postgres://127.42.0.1:15432/15", "PostgreSQL").is_ok());
     }
 
     #[test]
     fn validate_loopback_url_accepts_docker_host() {
-        assert!(validate_loopback_url("redis://host.docker.internal:6379/15", "Redis").is_ok());
+        assert!(
+            validate_loopback_url("postgres://host.docker.internal:5432/15", "PostgreSQL").is_ok()
+        );
     }
 
     #[test]
     fn validate_loopback_url_rejects_remote_hosts() {
-        for url in ["redis://redis.internal:6379", "redis://10.0.0.1:6379"] {
-            assert!(validate_loopback_url(url, "Redis").is_err(), "{url}");
+        for url in [
+            "postgres://database.internal:5432",
+            "postgres://10.0.0.1:5432",
+        ] {
+            assert!(validate_loopback_url(url, "PostgreSQL").is_err(), "{url}");
         }
     }
 
     #[test]
     fn parses_ipv6_and_rejects_deceptive_authorities_without_leaking_credentials() {
-        assert!(validate_loopback_url("redis://[::1]:6379", "Redis").is_ok());
+        assert!(validate_loopback_url("postgres://[::1]:5432", "PostgreSQL").is_ok());
         for url in [
-            "redis://localhost@remote.example:6379",
-            "redis://localhost.evil:6379",
+            "postgres://localhost@remote.example:5432",
+            "postgres://localhost.evil:5432",
             "not-a-url",
         ] {
-            assert!(validate_loopback_url(url, "Redis").is_err());
+            assert!(validate_loopback_url(url, "PostgreSQL").is_err());
         }
         let error =
-            validate_loopback_url("redis://user:secret@remote.example:6379", "Redis").unwrap_err();
+            validate_loopback_url("postgres://user:secret@remote.example:5432", "PostgreSQL")
+                .unwrap_err();
         assert!(!error.contains("secret"));
     }
 }

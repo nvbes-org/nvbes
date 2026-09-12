@@ -104,19 +104,19 @@ steps:
         let yaml = r#"
 id: TC-FULL-001
 description: "Full test case"
-tags: [integration, redis]
+tags: [integration, data]
 timeout: 30s
 env:
   NVBES_ENV: test
 steps:
   - keyword: env.validate_test
-  - keyword: redis.set_value
+  - keyword: data.set_var
     params:
       key: "test:123"
       value: "hello"
     expect:
       status: ok
-  - keyword: redis.get_value
+  - keyword: data.get_var
     params:
       key: "${LAST.key}"
     label: "get after set"
@@ -127,7 +127,7 @@ steps:
 "#;
         let tc = parse_test_case(yaml).unwrap();
         assert_eq!(tc.id, "TC-FULL-001");
-        assert_eq!(tc.tags, vec!["integration", "redis"]);
+        assert_eq!(tc.tags, vec!["integration", "data"]);
         assert_eq!(tc.env.get("NVBES_ENV").unwrap(), "test");
         assert_eq!(tc.steps.len(), 3);
         assert!(tc.steps[1].expect.is_some());

@@ -10,9 +10,7 @@
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
-  "forwardPorts": [
-    3001, 4000, 4002, 5173, 11025, 15432, 16379, 18025, 18333
-  ],
+  "forwardPorts": [3001, 4000, 4002, 5173, 11025, 15432, 18025, 18333],
   "portsAttributes": {
     "3001": {
       "label": "Identity web"
@@ -28,9 +26,6 @@
     },
     "15432": {
       "label": "PostgreSQL"
-    },
-    "16379": {
-      "label": "Redis"
     },
     "18333": {
       "label": "SeaweedFS S3"
@@ -57,11 +52,7 @@
         "rust-analyzer.cargo.allTargets": false,
         "rust-analyzer.cargo.features": [],
         "rust-analyzer.check.allTargets": false,
-        "rust-analyzer.files.excludeDirs": [
-          ".git",
-          "node_modules",
-          "target"
-        ],
+        "rust-analyzer.files.excludeDirs": [".git", "node_modules", "target"],
         "rust-analyzer.lru.capacity": 128,
         "typescript.disableAutomaticTypeAcquisition": true,
         "typescript.tsdk": "node_modules/typescript/lib",

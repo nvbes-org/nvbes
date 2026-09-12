@@ -59,7 +59,6 @@ impl KeywordRegistry {
 }
 
 pub fn register_all(registry: &mut KeywordRegistry) {
-    super::keywords::redis_kw::register(registry);
     super::keywords::env_kw::register(registry);
     super::keywords::data_kw::register(registry);
     super::keywords::http_kw::register(registry);
@@ -104,11 +103,6 @@ mod tests {
             "http.get",
             "http.post",
             "http.assert_status",
-            "redis.health_check",
-            "redis.set_value",
-            "redis.get_value",
-            "redis.del_key",
-            "redis.publish",
             "env.validate_test",
             "env.validate_loopback",
             "data.set_var",

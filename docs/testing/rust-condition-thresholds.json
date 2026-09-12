@@ -73,11 +73,6 @@
       "baseline": { "score": 0.0, "count": 0, "covered": 0 }
     },
     {
-      "crate": "nvbes-redis",
-      "reason": "Tests d'intégration dépendants d'un service Redis non provisionné dans ce gate ; crate active utilisée par les runtimes conservés, compilée et testée séparément.",
-      "baseline": { "score": 47.3, "count": 258, "covered": 122 }
-    },
-    {
       "crate": "nvbes-region",
       "reason": "Couverture de condition mesurée 46.2% (85/184), sous le plancher de 50% : résidence des données et matrices régionales partiellement exercées. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
       "baseline": { "score": 46.2, "count": 184, "covered": 85 }

@@ -14,7 +14,5 @@ pub mod identity_kw;
 pub mod infra_kw;
 #[path = "test.runner.keywords.platform_kw.rs"]
 pub mod platform_kw;
-#[path = "test.runner.keywords.redis_kw.rs"]
-pub mod redis_kw;
 #[path = "test.runner.keywords.trust_risk_kw.rs"]
 pub mod trust_risk_kw;

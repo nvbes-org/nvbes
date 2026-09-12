@@ -16,9 +16,6 @@ source "$ROOT_DIR/scripts/lib/workspace-env.sh"
 load_workspace_env "$nvbes_node_process_title"
 unset nvbes_env_caller_script nvbes_node_process_title
 
-if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
-  export NVBES_REDIS_PASSWORD=""
-fi
 
 if [ -z "${LIBCLANG_PATH:-}" ]; then
   if command -v apt-get >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
@@ -59,10 +56,6 @@ require_destructive_account_test_database() {
   node "$ROOT_DIR/scripts/lib/validate-destructive-test-database.mjs"
 }
 
-require_account_test_redis() {
-  require_env NVBES_REDIS_URL
-  node "$ROOT_DIR/scripts/lib/validate-test-redis-target.mjs"
-}
 
 validate_staging_account_targets() {
   require_cmd node

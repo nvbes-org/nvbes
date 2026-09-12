@@ -39,7 +39,7 @@ beyla.ebpf "identity" {
   }
 
   traces {
-    instrumentations = ["http", "grpc", "sql", "redis"]
+    instrumentations = ["http", "grpc", "sql"]
 
     sampler {
       name = "traceidratio"

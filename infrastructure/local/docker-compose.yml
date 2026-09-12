@@ -21,22 +21,6 @@ services:
     <<: *postgres
     profiles: [infra, full]
 
-  redis:
-    image: redis/redis-stack:7.4.0-v2
-    container_name: nvbes-redis
-    ports:
-      - "6379:6379"
-      - "8001:8001"
-    volumes:
-      - nvbes_redis_data:/data
-    environment:
-      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-redis_dev} --maxmemory 256mb --maxmemory-policy volatile-ttl --appendonly yes --appendfsync everysec --save 60 1"
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    profiles: [infra, full]
 
   mailpit:
     image: axllent/mailpit:v1.30.6@sha256:7f33095f80e901f6ad08028f06ca284aa58fe84942be5496008d041d3b9f4d4d
@@ -243,4 +227,3 @@ volumes:
   nvbes_mimir_data:
   nvbes_pgdata:
   nvbes_prometheus_data:
-  nvbes_redis_data:
