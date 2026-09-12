@@ -20,6 +20,7 @@ catalog:
   '@sentry/browser': ^10.73.0
 
 allowBuilds:
+  '@bufbuild/buf': false
   '@posthog/cli': true
   '@sentry/cli': false
   core-js: true

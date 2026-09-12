@@ -103,6 +103,15 @@ switch (lane) {
   case 'contracts':
     nx(['test:ci-contract', 'test:lockfile-integration'], ['ci-contracts'], 2);
     if (!plan.ciOnly) {
+      run('pnpm', ['check:contracts']);
+      run('pnpm', [
+        'exec',
+        'buf',
+        'breaking',
+        'contracts/protobuf',
+        '--against',
+        `.git#commit=${plan.base},subdir=contracts/protobuf`,
+      ]);
       run('pnpm', [
         'exec',
         'vp',
