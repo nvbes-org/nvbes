@@ -46,10 +46,6 @@
       "threshold": { "lines": 40, "functions": 42, "regions": 44 },
       "baseline": { "lines": 41.6, "functions": 43.8, "regions": 45.9 }
     },
-    "nvbes-dpop": {
-      "threshold": { "lines": 70, "functions": 62, "regions": 66 },
-      "baseline": { "lines": 71.9, "functions": 64.1, "regions": 67.9 }
-    },
     "nvbes-platform": {
       "threshold": { "lines": 53, "functions": 54, "regions": 49 },
       "baseline": { "lines": 54.7, "functions": 55.5, "regions": 50.7 }
@@ -58,38 +54,6 @@
       "threshold": { "lines": 13, "functions": 18, "regions": 12 },
       "baseline": { "lines": 14.5, "functions": 20.2, "regions": 14.0 }
     },
-    "nvbes-ports": {
-      "threshold": { "lines": 70, "functions": 65, "regions": 79 },
-      "baseline": { "lines": 72.4, "functions": 66.7, "regions": 80.9 }
-    },
-    "nvbes-identity-sdk": {
-      "threshold": { "lines": 18, "functions": 11, "regions": 19 },
-      "baseline": { "lines": 20.4, "functions": 13.0, "regions": 20.7 }
-    },
-    "nvbes-product-account": {
-      "threshold": { "lines": 24, "functions": 26, "regions": 37 },
-      "baseline": { "lines": 26.1, "functions": 27.5, "regions": 39.1 }
-    },
-    "nvbes-product-analytics": {
-      "threshold": { "lines": 76, "functions": 75, "regions": 75 },
-      "baseline": { "lines": 77.9, "functions": 76.9, "regions": 77.0 }
-    },
-    "nvbes-product-identity": {
-      "threshold": { "lines": 22, "functions": 25, "regions": 29 },
-      "baseline": { "lines": 23.6, "functions": 26.9, "regions": 30.6 }
-    },
-    "nvbes-analytics-posthog": {
-      "threshold": { "lines": 24, "functions": 20, "regions": 20 },
-      "baseline": { "lines": 26.4, "functions": 22.2, "regions": 21.9 }
-    },
-    "nvbes-storage": {
-      "threshold": { "lines": 43, "functions": 20, "regions": 46 },
-      "baseline": { "lines": 45.4, "functions": 21.7, "regions": 48.0 }
-    },
-    "nvbes-tenancy": {
-      "threshold": { "lines": 61, "functions": 66, "regions": 60 },
-      "baseline": { "lines": 63.2, "functions": 67.9, "regions": 62.0 }
-    },
     "nvbes-trust-risk": {
       "threshold": { "lines": 62, "functions": 55, "regions": 57 },
       "baseline": { "lines": 64.0, "functions": 57.1, "regions": 59.0 }
@@ -97,20 +61,12 @@
   },
   "excluded": [
     {
-      "crate": "nvbes-scan",
-      "reason": "Crate squelette (trait/mock ClamAV) sans logique testable en production V1 ; aucun test cible."
-    },
-    {
-      "crate": "nvbes-product-developer",
-      "reason": "Produit Developer archivé ; squelette de ports, aucun test cible."
-    },
-    {
       "crate": "nvbes-test-utils",
       "reason": "Bibliothèque utilitaire de tests uniquement (support keyword runner, pools de test) ; hors périmètre de production, non mesurée."
     },
     {
       "crate": "nvbes-redis",
-      "reason": "Redis hors périmètre V1 ; tests d'intégration dépendants d'un service Redis non provisionné en CI, couverture non représentative sans service. Crate actif utilisé en runtime par core/dpop/billing/products : reste compilé et testé, exclu du gate de couverture."
+      "reason": "Tests d'intégration dépendants d'un service Redis non provisionné dans ce gate de couverture ; crate active utilisée par les runtimes conservés, compilée et testée séparément."
     }
   ]
 }

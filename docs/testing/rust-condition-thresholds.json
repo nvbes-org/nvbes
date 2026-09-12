@@ -16,25 +16,9 @@
       "threshold": 95,
       "baseline": { "score": 100.0, "count": 2, "covered": 2 }
     },
-    "nvbes-identity-sdk": {
-      "threshold": 63,
-      "baseline": { "score": 68.8, "count": 16, "covered": 11 }
-    },
-    "nvbes-product-account": {
-      "threshold": 61,
-      "baseline": { "score": 66.7, "count": 18, "covered": 12 }
-    },
-    "nvbes-dpop": {
-      "threshold": 60,
-      "baseline": { "score": 65.4, "count": 26, "covered": 17 }
-    },
     "nvbes-trust-risk": {
       "threshold": 53,
       "baseline": { "score": 58.3, "count": 168, "covered": 98 }
-    },
-    "nvbes-product-analytics": {
-      "threshold": 46,
-      "baseline": { "score": 51.5, "count": 68, "covered": 35 }
     }
   },
   "excluded": [
@@ -42,11 +26,6 @@
       "crate": "nvbes-account-service",
       "reason": "Couverture de condition mesurée 0.0% (0/92), sous le plancher de 50% : le service s'appuie sur les tests d'intégration Redis non provisionnés en CI. Ré-inclusion conditionnée à des tests d'intégration avec service, sans abaisser le seuil sous le plancher.",
       "baseline": { "score": 0.0, "count": 92, "covered": 0 }
-    },
-    {
-      "crate": "nvbes-analytics-posthog",
-      "reason": "Aucune branche instrumentée (0/0) : adaptateur d'envoi PostHog sans sous-condition exerçable par les tests unitaires au commit de baseline. Ré-inclusion conditionnée à des tests couvrant la logique du transport.",
-      "baseline": { "score": 0.0, "count": 0, "covered": 0 }
     },
     {
       "crate": "nvbes-audit",
@@ -84,19 +63,9 @@
       "baseline": { "score": 45.7, "count": 186, "covered": 85 }
     },
     {
-      "crate": "nvbes-ports",
-      "reason": "Aucune branche instrumentée (0/0) : contrat de ports Storage/Email, structures de contrats purs sans sous-condition logique. Ré-inclusion conditionnée à une instrumentation effective de la métrique branches.",
-      "baseline": { "score": 0.0, "count": 0, "covered": 0 }
-    },
-    {
       "crate": "nvbes-product-cloud",
       "reason": "Produit Cloud exclu par la direction V1, archivé dans archive/libs/rust/products/cloud et retiré du workspace Cargo. Baseline historique conservée, sans rôle dans la décision d'exclusion.",
       "baseline": { "score": 0.0, "count": 4, "covered": 0 }
-    },
-    {
-      "crate": "nvbes-product-developer",
-      "reason": "Produit Developer archivé : squelette de ports, aucune branche instrumentée (0/0). Ré-inclusion conditionnée aux tests du produit.",
-      "baseline": { "score": 0.0, "count": 0, "covered": 0 }
     },
     {
       "crate": "nvbes-product-enterprise",
@@ -104,34 +73,14 @@
       "baseline": { "score": 0.0, "count": 0, "covered": 0 }
     },
     {
-      "crate": "nvbes-product-identity",
-      "reason": "Produit Identity : squelette, branches non exercées (0/2), sous le plancher de 50%. Ré-inclusion conditionnée aux tests du produit.",
-      "baseline": { "score": 0.0, "count": 2, "covered": 0 }
-    },
-    {
       "crate": "nvbes-redis",
-      "reason": "Redis hors périmètre V1 : tests d'intégration dépendants d'un service Redis non provisionné en CI, couverture non représentative sans service. Crate actif utilisé en runtime par core/dpop/billing/products : reste compilé et testé, exclu du gate de couverture de condition.",
+      "reason": "Tests d'intégration dépendants d'un service Redis non provisionné dans ce gate ; crate active utilisée par les runtimes conservés, compilée et testée séparément.",
       "baseline": { "score": 47.3, "count": 258, "covered": 122 }
     },
     {
       "crate": "nvbes-region",
       "reason": "Couverture de condition mesurée 46.2% (85/184), sous le plancher de 50% : résidence des données et matrices régionales partiellement exercées. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
       "baseline": { "score": 46.2, "count": 184, "covered": 85 }
-    },
-    {
-      "crate": "nvbes-scan",
-      "reason": "Crate squelette (trait/mock ClamAV) sans logique testable en production V1 ; aucune branche instrumentée (0/0).",
-      "baseline": { "score": 0.0, "count": 0, "covered": 0 }
-    },
-    {
-      "crate": "nvbes-storage",
-      "reason": "Couverture de condition mesurée 23.1% (6/26), sous le plancher de 50% : validation des ports Object storage peu exercée par les tests unitaires. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 23.1, "count": 26, "covered": 6 }
-    },
-    {
-      "crate": "nvbes-tenancy",
-      "reason": "Couverture de condition mesurée 41.7% (10/24), sous le plancher de 50% : normalisation de workspaceName/policies partiellement couverte. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 41.7, "count": 24, "covered": 10 }
     },
     {
       "crate": "nvbes-test-utils",
