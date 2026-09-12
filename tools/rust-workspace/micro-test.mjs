@@ -104,7 +104,7 @@ try {
     const result = isolatedRun(
       sandbox,
       binary.executable,
-      ['--test-threads=1', '--format=terse', ...excluded.flatMap((name) => ['--skip', name])],
+      ['--test-threads=1', '--format=pretty', ...excluded.flatMap((name) => ['--skip', name])],
       { env: { ...env, CARGO_MANIFEST_DIR: binary.manifest_path.replace(/\/Cargo.toml$/u, '') } },
     );
     console.log(`${pkg}:\n${result.stdout}`);
