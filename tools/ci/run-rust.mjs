@@ -24,6 +24,14 @@ if (!packages.length || packages.some((name) => !members.includes(name)))
 if (spawnSync('cargo', ['fmt', '--all', '--check'], { stdio: 'inherit' }).status !== 0)
   throw new Error('Rust formatting failed');
 if (
+  spawnSync(
+    'cargo',
+    ['clippy', '--workspace', '--all-targets', '--locked', '--', '-D', 'warnings'],
+    { stdio: 'inherit' },
+  ).status !== 0
+)
+  throw new Error('Rust linting failed');
+if (
   spawnSync('pnpm', ['exec', 'nx', 'run', 'rust-workspace:micro-test'], { stdio: 'inherit' })
     .status !== 0
 )
