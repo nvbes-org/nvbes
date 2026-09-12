@@ -1,8 +1,9 @@
 use aes_gcm::{
     Aes256Gcm, Nonce,
-    aead::{Aead, AeadCore, KeyInit, OsRng, Payload},
+    aead::{Aead, KeyInit, Payload},
 };
 use hmac::{Hmac, Mac};
+use rand::RngCore;
 use sha2::Sha256;
 use uuid::Uuid;
 
@@ -32,7 +33,9 @@ impl EmailCrypto {
         field: &'static str,
         plaintext: &[u8],
     ) -> anyhow::Result<SealedValue> {
-        let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+        let mut nonce_bytes = [0_u8; 12];
+        rand::rng().fill_bytes(&mut nonce_bytes);
+        let nonce = Nonce::from(nonce_bytes);
         let ciphertext = self
             .cipher
             .encrypt(
@@ -57,7 +60,7 @@ impl EmailCrypto {
     ) -> anyhow::Result<Vec<u8>> {
         self.cipher
             .decrypt(
-                Nonce::from_slice(&sealed.nonce),
+                &Nonce::from(sealed.nonce),
                 Payload {
                     msg: &sealed.ciphertext,
                     aad: &associated_data(message_id, field),
@@ -67,7 +70,7 @@ impl EmailCrypto {
     }
 
     pub fn recipient_hash(&self, email: &str) -> [u8; 32] {
-        let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&self.recipient_hmac_key)
+        let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(&self.recipient_hmac_key)
             .expect("HMAC accepts 32-byte keys");
         mac.update(email.trim().to_ascii_lowercase().as_bytes());
         mac.finalize().into_bytes().into()

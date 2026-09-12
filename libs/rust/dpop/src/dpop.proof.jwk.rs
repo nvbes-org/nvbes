@@ -28,6 +28,11 @@ pub(super) fn jwt_jwk_to_jwk(jwt_jwk: &JwtJwk) -> Result<Jwk, DpopError> {
                 EllipticCurve::P384 => "P-384",
                 EllipticCurve::P521 => "P-521",
                 EllipticCurve::Ed25519 => "Ed25519",
+                _ => {
+                    return Err(DpopError::InvalidProof(
+                        "unsupported elliptic curve in JWK".into(),
+                    ));
+                }
             };
             Ok(Jwk {
                 kty: "EC".to_string(),

@@ -20,7 +20,7 @@
   "dependencies": {
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-email": "^6.9.3"
+    "react-email": "^6.9.5"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",

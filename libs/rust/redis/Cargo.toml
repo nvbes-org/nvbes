@@ -5,8 +5,8 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-redis = { version = "0.29", features = ["tokio-comp", "json", "streams", "script"] }
-bb8-redis = "0.21"
+redis = { version = "1.6", features = ["tokio-comp", "json", "streams", "script"] }
+bb8-redis = "0.26"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
