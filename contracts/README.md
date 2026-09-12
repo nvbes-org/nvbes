@@ -1,14 +1,11 @@
 # nvbes Contracts
 
-This directory is the source boundary for public REST contracts, internal
-protobuf contracts and durable event schemas.
+This directory is the source boundary for contracts consumed by active V1 runtimes.
 
 ## Layout
 
-- `openapi/`: manifest for REST OpenAPI documents.
-- `protobuf/`: internal gRPC protobuf contracts.
-- `graphql/`: gateway/BFF schema and governance rules.
+- `protobuf/`: internal gRPC contracts consumed by Email and Trust/Risk.
 - `events/`: versioned durable event schemas.
 
-Generated SDKs and service code must derive from these contracts or from the
-OpenAPI files referenced by the manifest.
+Identity OpenAPI and generated types are owned by `libs/ts/identity-sdk-core`.
+Contracts without an active consumer live under `archive/contracts`.

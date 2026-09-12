@@ -11,8 +11,8 @@ Perimetre relu:
 - docs/product/marketing-growth.md
 - docs/product/pricing.md
 - docs/product/finops-billing.md
-- docs/api/public-api-v1.md
-- docs/api/v1-contracts.md
+- archive/docs/api/public-api-v1.md
+- archive/docs/api/v1-contracts.md
 - docs/architecture/infrastructure-devops.md
 
 ## Synthese
