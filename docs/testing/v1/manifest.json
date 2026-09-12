@@ -20,20 +20,8 @@
     "productionLoadTestingAllowed": false
   },
   "cargoManifests": ["Cargo.toml", "apps/billing-service/Cargo.toml"],
-  "sharedCargoPackages": [
-    "nvbes-audit",
-    "nvbes-billing",
-    "nvbes-dpop",
-    "nvbes-identity-sdk",
-    "nvbes-ports",
-    "nvbes-product-account",
-    "nvbes-product-identity",
-    "nvbes-region",
-    "nvbes-tenancy",
-    "nvbes-analytics-posthog"
-  ],
+  "sharedCargoPackages": ["nvbes-audit", "nvbes-billing", "nvbes-region"],
   "typescriptExclusions": {
-    "@nvbes/identity-sdk-core": "OpenAPI and generated declarations only; contract tests remain mandatory.",
-    "@nvbes/backoffice-service-sdk-core": "Archived Backoffice OpenAPI and generated declarations; no V1 runtime."
+    "@nvbes/identity-sdk-core": "OpenAPI and generated declarations only; contract tests remain mandatory."
   }
 }

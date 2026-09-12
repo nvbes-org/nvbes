@@ -48,7 +48,7 @@
               ]
             },
             {
-              "path": "tools/security/check-content-security-policy.mjs",
+              "path": "archive/tools/security/check-content-security-policy.mjs",
               "includes": ["assertNoProductionUnsafeScriptSources", "unsafe-inline", "unsafe-eval"]
             }
           ]
@@ -184,7 +184,7 @@
           "description": "The root check path validates registry evidence, shared CSP usage, required directives, no legacy CSP headers, and no unsafe production script sources.",
           "evidence": [
             {
-              "path": "tools/security/check-content-security-policy.mjs",
+              "path": "archive/tools/security/check-content-security-policy.mjs",
               "includes": [
                 "Content Security Policy controls",
                 "assertRequiredWebDirectives",
@@ -195,7 +195,7 @@
               "path": "package.json",
               "includes": [
                 "check:content-security-policy",
-                "tools/security/check-content-security-policy.mjs"
+                "archive/tools/security/check-content-security-policy.mjs"
               ]
             }
           ]

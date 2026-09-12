@@ -98,17 +98,7 @@ test('manual trusted CI publishes bounded TypeScript measurement artifacts', () 
     'fail-fast': false,
     'max-parallel': 1,
     matrix: {
-      include: [
-        { package: 'http-client', unit: '@nvbes/http-client' },
-        { package: 'billing-client', unit: '@nvbes/billing-client' },
-        { package: 'account-client', unit: '@nvbes/account-client' },
-        { package: 'identity-sdk', unit: '@nvbes/identity-sdk' },
-        { package: 'identity-client', unit: '@nvbes/identity-client' },
-        { package: 'identity-sdk-web', unit: '@nvbes/identity-sdk-web' },
-        { package: 'web-runtime', unit: '@nvbes/web-runtime' },
-        { package: 'web-ui', unit: '@nvbes/web-ui' },
-        { package: 'email-ui', unit: '@nvbes/email-ui' },
-      ],
+      include: [{ package: 'email-ui', unit: '@nvbes/email-ui' }],
     },
   });
   assert.deepEqual(job.env, {

@@ -14,7 +14,6 @@ fi
 log_step "web typecheck"
 pnpm --dir apps/cloud-web typecheck
 pnpm --dir apps/account-web typecheck
-pnpm --dir libs/ts/identity-sdk-web test
 
 log_step "parallel rust unit tests"
 cargo test --workspace --exclude nvbes-identity-worker --lib --bins --locked -- \

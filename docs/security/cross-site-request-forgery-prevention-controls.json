@@ -82,10 +82,7 @@
             },
             {
               "path": "libs/ts/http-client/src/http.request-context.ts",
-              "includes": [
-                "MUTATING_METHODS",
-                "X-Requested-With"
-              ]
+              "includes": ["MUTATING_METHODS", "X-Requested-With"]
             },
             {
               "path": "libs/ts/identity-sdk-web/src/csrf.ts",
@@ -280,7 +277,7 @@
               "includes": ["csrf_token_is_bound_to_session_token"]
             },
             {
-              "path": "tools/security/check-cross-site-request-forgery-prevention.mjs",
+              "path": "archive/tools/security/check-cross-site-request-forgery-prevention.mjs",
               "includes": ["Cross-Site Request Forgery Prevention controls", "assertImplementation"]
             },
             {

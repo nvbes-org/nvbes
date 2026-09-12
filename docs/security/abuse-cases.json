@@ -188,7 +188,10 @@
         },
         {
           "path": "apps/enterprise-service/src/enterprise.grpc.user_access.db.rs",
-          "includes": ["ensure_workspaces_belong", "all workspace IDs must belong to the requested scope"]
+          "includes": [
+            "ensure_workspaces_belong",
+            "all workspace IDs must belong to the requested scope"
+          ]
         }
       ]
     },
@@ -211,7 +214,7 @@
           "includes": ["origin_guard"]
         },
         {
-          "path": "scripts/check-ajax-security.mjs",
+          "path": "archive/scripts/check-ajax-security.mjs",
           "includes": ["AJAX security guardrails passed."]
         },
         {
@@ -259,7 +262,7 @@
           "includes": ["export type SafeHtml", "VerifiedHtml", "dangerouslySetInnerHTML"]
         },
         {
-          "path": "scripts/check-ajax-security.mjs",
+          "path": "archive/scripts/check-ajax-security.mjs",
           "includes": [
             "dangerouslySetInnerHTML",
             "jsonp",
@@ -267,7 +270,7 @@
           ]
         },
         {
-          "path": "scripts/check-web-runtime-guardrails.mjs",
+          "path": "archive/scripts/check-web-runtime-guardrails.mjs",
           "includes": ["VerifiedHtml", "dangerouslySetInnerHTML"]
         }
       ]

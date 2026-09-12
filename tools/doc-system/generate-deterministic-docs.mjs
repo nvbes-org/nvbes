@@ -230,7 +230,7 @@ flowchart TD
 
 - **Isolation stricte** : Aucun service d'un domaine (ex: \`identity\`) ne peut importer directement la base de données d'un autre domaine (ex: \`cloud\`).
 - **Communication inter-services** : Réalisée exclusivement via des contrats HTTP / OpenAPI typés ou des queues asynchrones.
-- **Libs Core** : \`libs/rust/core\` et \`libs/ts/web-runtime\` doivent rester neutres et sans logique métier spécifique.
+- **Lib Core** : \`libs/rust/core\` doit rester neutre et sans logique métier spécifique.
 `;
 
   writeMarkdown(join(OUT_DOCS_DIR, 'architecture-matrix.md'), content);

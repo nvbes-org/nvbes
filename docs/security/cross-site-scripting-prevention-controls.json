@@ -18,7 +18,7 @@
               "includes": ["export type SafeHtml", "VerifiedHtml", "dangerouslySetInnerHTML"]
             },
             {
-              "path": "tools/security/check-cross-site-scripting-prevention.mjs",
+              "path": "archive/tools/security/check-cross-site-scripting-prevention.mjs",
               "includes": ["assertNoUnsafeDomSinks", "libs/ts/web-runtime/src/safe-html.tsx"]
             }
           ]
@@ -137,7 +137,10 @@
             },
             {
               "path": "libs/rust/email/src/renderer.tests.rs",
-              "includes": ["substitutions_are_escaped_in_html_but_preserved_in_text", "&lt;script&gt;"]
+              "includes": [
+                "substitutions_are_escaped_in_html_but_preserved_in_text",
+                "&lt;script&gt;"
+              ]
             }
           ]
         }
@@ -176,7 +179,7 @@
           "description": "The root check validates registry evidence, safe primitives, consent screen usage, dangerous sink bans, tests, and package wiring.",
           "evidence": [
             {
-              "path": "tools/security/check-cross-site-scripting-prevention.mjs",
+              "path": "archive/tools/security/check-cross-site-scripting-prevention.mjs",
               "includes": ["Cross Site Scripting Prevention controls", "assertImplementation"]
             },
             {
