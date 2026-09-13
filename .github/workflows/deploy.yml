@@ -35,6 +35,7 @@ defaults:
 
 jobs:
   ci-provenance:
+    if: ${{ !inputs.email_observability_only }}
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 5
     steps:
@@ -667,7 +668,6 @@ jobs:
           cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
 
   reconcile-email-idle-alert:
-    needs: [ci-provenance]
     if: ${{ success() && github.ref == 'refs/heads/main' && inputs.service == 'email' && inputs.email_observability_only }}
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 5
@@ -679,6 +679,12 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/deploy.yml
+      - name: Validate the checked-out revision and Email alert contract
+        run: |
+          [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+          node --test tools/ci/email-deployment-contract.test.mjs
       - name: Reconcile only the closed-window queue alert
         env:
           EMAIL_SYNTHETIC_SMOKE_ENABLED: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED }}

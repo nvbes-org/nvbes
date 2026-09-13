@@ -55,6 +55,11 @@ test('idle queue reconciliation changes only no-data handling and fails closed o
   assert.match(workflow, /REQUESTED_SERVICE.*inputs\.service/u);
   assert.match(workflow, /\[\[ "\$REQUESTED_SERVICE" == "email" \]\]/u);
   assert.match(workflow, /run: node tools\/ci\/reconcile-email-idle-alert\.mjs/u);
+  assert.match(workflow, /ci-provenance:\n\s+if: \$\{\{ !inputs\.email_observability_only \}\}/u);
+  assert.match(workflow, /node --test tools\/ci\/email-deployment-contract\.test\.mjs/u);
+  const alertJob = workflow.split('  reconcile-email-idle-alert:')[1].split('  deploy-email:')[0];
+  assert.doesNotMatch(alertJob, /needs: \[ci-provenance\]/u);
+  assert.match(alertJob, /\[\[ "\$\(git rev-parse HEAD\)" == "\$GITHUB_SHA" \]\]/u);
 });
 
 test('the production ledger accepts bounded operational validation messages', () => {
