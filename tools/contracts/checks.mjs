@@ -88,6 +88,18 @@ function checkEventDocuments() {
       errors.push(`${event.schema}: payload property is required`);
     }
   }
+
+  const allSchemas = walk('contracts/events', (path) => path.endsWith('.schema.json'));
+  for (const file of allSchemas) {
+    const schema = readJson(file);
+    if (!schema) continue;
+    if (!schema.$schema) {
+      errors.push(`${file}: missing $schema identifier`);
+    }
+    if (schema.type !== 'object') {
+      errors.push(`${file}: top-level schema type must be 'object'`);
+    }
+  }
 }
 
 checkProtoDocuments();
