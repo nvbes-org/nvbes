@@ -5,8 +5,13 @@ import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import test from 'node:test';
 
-for (const failBaseline of [false, true]) {
-  test(`Rust runner preserves full baseline (baseline failure=${failBaseline})`, () => {
+for (const [failBaseline, failMicro, failClippy] of [
+  [false, false, false],
+  [true, false, false],
+  [false, true, false],
+  [false, false, true],
+]) {
+  test(`Rust runner preserves gates (baseline=${failBaseline}, micro=${failMicro}, clippy=${failClippy})`, () => {
     const directory = mkdtempSync(join(tmpdir(), 'nvbes-rust-runner-'));
     try {
       const metadata = {
@@ -18,8 +23,15 @@ for (const failBaseline of [false, true]) {
           dependencies: [],
         })),
       };
-      const cargo = `#!${process.execPath}\nconst fs=require('node:fs');const args=process.argv.slice(2);fs.appendFileSync(process.env.TEST_CALLS,JSON.stringify(args)+'\\n');if(args[0]==='metadata') console.log(process.env.TEST_METADATA);if(args.includes('--workspace')&&process.env.TEST_FAIL==='true')process.exit(1);`;
+      const cargo = `#!${process.execPath}\nconst fs=require('node:fs');const args=process.argv.slice(2);fs.appendFileSync(process.env.TEST_CALLS,JSON.stringify(args)+'\\n');if(args[0]==='metadata') console.log(process.env.TEST_METADATA);if(args[0]==='test'&&args.includes('--workspace')&&process.env.TEST_FAIL==='true')process.exit(1);if(args[0]==='clippy'&&process.env.TEST_CLIPPY_FAIL==='true')process.exit(1);`;
       writeFileSync(join(directory, 'cargo'), cargo, { mode: 0o755 });
+      writeFileSync(
+        join(directory, 'pnpm'),
+        `#!${process.execPath}\nprocess.exit(${failMicro ? 1 : 0});`,
+        {
+          mode: 0o755,
+        },
+      );
       writeFileSync(join(directory, 'event.json'), '{}');
       const result = spawnSync(process.execPath, ['tools/ci/run-rust.mjs'], {
         encoding: 'utf8',
@@ -29,6 +41,7 @@ for (const failBaseline of [false, true]) {
           TEST_CALLS: join(directory, 'calls'),
           TEST_METADATA: JSON.stringify(metadata),
           TEST_FAIL: String(failBaseline),
+          TEST_CLIPPY_FAIL: String(failClippy),
           GITHUB_STEP_SUMMARY: join(directory, 'summary'),
           GITHUB_EVENT_PATH: join(directory, 'event.json'),
           NVBES_CI_PLAN: JSON.stringify({
@@ -41,11 +54,28 @@ for (const failBaseline of [false, true]) {
           }),
         },
       });
-      assert.equal(result.status, failBaseline ? 1 : 0, result.stderr);
+      assert.equal(result.status, failBaseline || failMicro || failClippy ? 1 : 0, result.stderr);
       const calls = readFileSync(join(directory, 'calls'), 'utf8')
         .trim()
         .split('\n')
         .map(JSON.parse);
+      assert.ok(
+        calls.some((args) =>
+          args.join(' ').includes('clippy --workspace --all-targets --locked -- -D warnings'),
+        ),
+      );
+      if (failMicro || failClippy) {
+        assert.match(
+          result.stderr,
+          failClippy ? /Rust linting failed/u : /Isolated micro-tests failed/u,
+        );
+        assert.equal(
+          calls.some((args) => args[0] === 'test'),
+          false,
+        );
+        assert.doesNotMatch(result.stdout, /CI_RUST_EVIDENCE/u);
+        return;
+      }
       assert.deepEqual(
         calls.filter((args) => args[0] === 'test'),
         [

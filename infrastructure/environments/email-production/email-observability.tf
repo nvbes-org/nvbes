@@ -36,11 +36,15 @@ resource "grafana_rule_group" "email" {
     for_each = each.value.rules
 
     content {
-      uid            = rule.value.uid
-      name           = rule.value.title
-      condition      = rule.value.condition
-      for            = rule.value.for
-      no_data_state  = rule.value.noDataState
+      uid       = rule.value.uid
+      name      = rule.value.title
+      condition = rule.value.condition
+      for       = rule.value.for
+      # The closed validation window has no dispatch triggers or public metrics.
+      # Missing samples must not impersonate an observed queue deadline breach.
+      no_data_state = rule.value.uid == "nvbes-email-queue-stale" ? (
+        var.email_internal_validation_enabled ? rule.value.noDataState : "OK"
+      ) : rule.value.noDataState
       exec_err_state = rule.value.execErrState
       annotations    = rule.value.annotations
       labels         = rule.value.labels

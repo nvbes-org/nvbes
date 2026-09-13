@@ -29,3 +29,16 @@ test('Rust includes compile-time templates but excludes Docker and migrations', 
   assert.equal(isRustWorkspaceAffected(['apps/email-worker/Dockerfile']), false);
   assert.equal(isRustWorkspaceAffected(['apps/email-worker/migrations/002.sql']), false);
 });
+
+test('micro-test harness, inventories, and isolated TypeScript select the Rust lane', () => {
+  for (const path of [
+    'scripts/test-unit.sh',
+    'tools/rust-workspace/network-deny.c',
+    'tools/rust-workspace/micro-test.components.json',
+    'docs/testing/v1/manifest.json',
+    'libs/ts/email-ui/src/email-ui.test.tsx',
+    'libs/ts/identity-sdk-core/openapi.contract.test.mjs',
+    'apps/billing-service/Cargo.lock',
+  ])
+    assert.equal(isRustWorkspaceAffected([path]), true, path);
+});

@@ -31,6 +31,18 @@
     "production": ["default"]
   },
   "targets": {
+    "test:harness": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": { "command": "node --test tools/rust-workspace/*.test.mjs" }
+    },
+    "micro-test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["test:harness"],
+      "cache": false,
+      "parallelism": false,
+      "options": { "command": "node tools/rust-workspace/micro-test.mjs" }
+    },
     "format": {
       "executor": "nx:run-commands",
       "options": {
@@ -116,6 +128,12 @@
       "cache": false
     },
     "mutation": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": { "command": "node tools/rust-workspace/mutation-v1.mjs" }
+    },
+    "mutation:baseline": {
       "executor": "nx:run-commands",
       "inputs": [
         "default",

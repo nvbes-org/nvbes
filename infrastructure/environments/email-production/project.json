@@ -1,18 +1,28 @@
 {
-	"name": "terraform-email-production",
-	"projectType": "application",
-	"root": "infrastructure/environments/email-production",
-	"implicitDependencies": ["terraform-modules"],
-	"targets": {
-		"terraform:validate": {
-			"executor": "nx:run-commands",
-			"cache": true,
-			"inputs": ["default", "^default"],
-			"options": {
-				"command": "terraform fmt -check -recursive infrastructure/environments/email-production && terraform -chdir=infrastructure/environments/email-production init -reconfigure -backend=false -input=false -lockfile=readonly && terraform -chdir=infrastructure/environments/email-production validate",
-				"cwd": "."
-			}
-		}
-	},
-	"tags": ["scope:infrastructure", "type:terraform", "domain:email"]
+  "name": "terraform-email-production",
+  "projectType": "application",
+  "root": "infrastructure/environments/email-production",
+  "implicitDependencies": ["terraform-modules"],
+  "targets": {
+    "terraform:test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "dependsOn": ["terraform:validate"],
+      "inputs": ["default", "^default"],
+      "options": {
+        "command": "terraform -chdir=infrastructure/environments/email-production test",
+        "cwd": "."
+      }
+    },
+    "terraform:validate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "options": {
+        "command": "terraform fmt -check -recursive infrastructure/environments/email-production && terraform -chdir=infrastructure/environments/email-production init -reconfigure -backend=false -input=false -lockfile=readonly && terraform -chdir=infrastructure/environments/email-production validate",
+        "cwd": "."
+      }
+    }
+  },
+  "tags": ["scope:infrastructure", "type:terraform", "domain:email"]
 }
