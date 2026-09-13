@@ -28,6 +28,10 @@ separement de la compilation ; le chargement initial des binaires sur macOS
 peut dominer ce temps. Les tests TypeScript email et le contrat SDK generes
 tournent sous la meme protection reseau, sans retries.
 
+Le runner appelle directement le Vitest installe avec Vite+, sans le lanceur
+`vp` susceptible de provisionner un runtime via npm. Le harnais teste ce
+demarrage sans reseau avant toute compilation Rust, y compris en CI Linux.
+
 Les tests d'age utilisent une date explicite, notamment la veille et le jour
 du treizieme anniversaire et un changement de date regional. La fonction
 publique conserve l'horloge de production ; seul le calcul pur recoit la date.

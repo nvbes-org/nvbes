@@ -3,6 +3,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { networkSandbox, isolatedRun, verifySandbox } from './micro-test.sandbox.mjs';
+import { emailTestArguments } from './micro-test.typescript.mjs';
 
 // All ordinary lib/bin tests are included unless explicitly classified as components.
 // Default cargo test and the existing CI component/database lanes retain those tests.
@@ -120,21 +121,11 @@ try {
     for (const prefix of Object.keys(entries))
       assert(seen.has(`${pkg}/${prefix}`), `Stale component classification: ${pkg}/${prefix}`);
   }
-  const ts = isolatedRun(
-    sandbox,
-    process.execPath,
-    [
-      'node_modules/vite-plus/bin/vp',
-      'test',
-      'run',
-      '--root',
-      'libs/ts/email-ui',
-      '--retry=0',
-      '--maxWorkers=1',
-    ],
-    { env, stdio: 'inherit' },
-  );
-  assert.equal(ts.status, 0, 'Isolated email-ui tests failed');
+  const ts = isolatedRun(sandbox, process.execPath, emailTestArguments(), {
+    env,
+    stdio: 'inherit',
+  });
+  assert.equal(ts.status, 0, `Isolated email-ui tests failed (${ts.signal ?? ts.error ?? ''})`);
   const contracts = isolatedRun(
     sandbox,
     process.execPath,
