@@ -49,6 +49,7 @@ test('container has shallow liveness and graceful shutdown', () => {
     dockerfile,
     /HEALTHCHECK[^\n]*\\\n\s+CMD \["curl", "--fail", "--silent", "--show-error", "http:\/\/127\.0\.0\.1:8080\/health\/live"\]/,
   );
+  assert.equal(dockerfile.includes('/health/ready'), false);
   assert.ok(dockerfile.includes('STOPSIGNAL SIGTERM'));
   assert.ok(mainSource.includes('action == "migrate"'));
   assert.ok(mainSource.includes('SignalKind::terminate()'));

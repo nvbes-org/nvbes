@@ -15,6 +15,4 @@ node "$ROOT_DIR/scripts/validate-email-test-database.mjs"
 cargo test \
   --locked \
   --package nvbes-email-worker \
-  --features database-tests \
-  -- \
-  --test-threads=1
+  --features database-tests

@@ -130,6 +130,10 @@ fn map_accept_error(error: database::AcceptCommandError, state: &EmailWorkerStat
 #[path = "email.worker.grpc.service.tests.rs"]
 mod tests;
 
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.grpc.cdc.tests.rs"]
+mod cdc_tests;
+
 #[cfg(test)]
 #[path = "email.worker.grpc.service.limits.tests.rs"]
 mod limits_tests;
