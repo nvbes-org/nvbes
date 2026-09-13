@@ -15,6 +15,11 @@ on:
           - email
           - identity
           - trust-risk
+      email_observability_only:
+        description: "Reconcile only the idle Email queue alert; do not deploy runtimes"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: deploy-production-${{ inputs.service || 'all' }}
@@ -39,6 +44,14 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/deploy.yml
+      - name: Validate observability-only scope
+        env:
+          EMAIL_OBSERVABILITY_ONLY: ${{ inputs.email_observability_only }}
+          REQUESTED_SERVICE: ${{ inputs.service }}
+        run: |
+          if [[ "$EMAIL_OBSERVABILITY_ONLY" == "true" ]]; then
+            [[ "$REQUESTED_SERVICE" == "email" ]]
+          fi
       - name: Verify exact continuous integration provenance
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -557,7 +570,7 @@ jobs:
   build-scan-sign-email:
     needs: [ci-provenance]
     runs-on: [self-hosted, macOS, ARM64]
-    if: ${{ success() && (inputs.service == 'all' || inputs.service == 'email' || !inputs.service) }}
+    if: ${{ success() && !inputs.email_observability_only && (inputs.service == 'all' || inputs.service == 'email' || !inputs.service) }}
     timeout-minutes: 75
     environment:
       name: production-ci-cache
@@ -652,6 +665,27 @@ jobs:
       - name: Sign container image
         run: |
           cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
+
+  reconcile-email-idle-alert:
+    needs: [ci-provenance]
+    if: ${{ success() && github.ref == 'refs/heads/main' && inputs.service == 'email' && inputs.email_observability_only }}
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 5
+    environment:
+      name: production-email
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/deploy.yml
+      - name: Reconcile only the closed-window queue alert
+        env:
+          EMAIL_SYNTHETIC_SMOKE_ENABLED: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED }}
+          GRAFANA_URL: ${{ vars.GRAFANA_URL }}
+          GRAFANA_PROMETHEUS_DATASOURCE_UID: ${{ vars.GRAFANA_PROMETHEUS_DATASOURCE_UID }}
+          GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
+        run: node tools/ci/reconcile-email-idle-alert.mjs
 
   deploy-email:
     needs: [ci-provenance, build-scan-sign-email]

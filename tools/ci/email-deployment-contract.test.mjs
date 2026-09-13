@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
+import { idleQueueRule } from './reconcile-email-idle-alert.mjs';
 
 const workflowPath = '.github/workflows/deploy.yml';
 const stackRoot = 'infrastructure/environments/email-production';
@@ -8,6 +9,53 @@ const stackRoot = 'infrastructure/environments/email-production';
 function read(path) {
   return readFileSync(path, 'utf8');
 }
+
+test('idle queue reconciliation changes only no-data handling and fails closed on drift', () => {
+  const rule = {
+    uid: 'nvbes-email-queue-stale',
+    title: 'Email queue is stale',
+    condition: 'C',
+    for: '5m',
+    isPaused: false,
+    execErrState: 'Error',
+    noDataState: 'Alerting',
+    labels: { severity: 'critical' },
+    notification_settings: { receiver: 'grafana-default-email' },
+    data: [
+      {
+        refId: 'A',
+        datasourceUid: 'grafanacloud-prom',
+        model: { expr: 'max(email_queue_oldest_age_seconds)' },
+      },
+      { refId: 'B', model: { expression: 'A', reducer: 'last' } },
+      {
+        refId: 'C',
+        model: {
+          expression: 'B',
+          conditions: [{ evaluator: { type: 'gt', params: [300] } }],
+        },
+      },
+    ],
+  };
+  assert.deepEqual(idleQueueRule(rule, 'false', 'grafanacloud-prom'), {
+    ...rule,
+    noDataState: 'OK',
+  });
+  assert.equal(rule.noDataState, 'Alerting');
+  assert.throws(() => idleQueueRule(rule, 'true', 'grafanacloud-prom'));
+  assert.throws(() => idleQueueRule(rule, undefined, 'grafanacloud-prom'));
+  assert.throws(() => idleQueueRule(rule, 'false', 'wrong-datasource'));
+  assert.throws(() => idleQueueRule({ ...rule, for: '0s' }, 'false', 'grafanacloud-prom'));
+  const drifted = structuredClone(rule);
+  drifted.data[2].model.conditions[0].evaluator.params = [600];
+  assert.throws(() => idleQueueRule(drifted, 'false', 'grafanacloud-prom'));
+
+  const workflow = read(workflowPath);
+  assert.match(workflow, /!inputs\.email_observability_only/u);
+  assert.match(workflow, /REQUESTED_SERVICE.*inputs\.service/u);
+  assert.match(workflow, /\[\[ "\$REQUESTED_SERVICE" == "email" \]\]/u);
+  assert.match(workflow, /run: node tools\/ci\/reconcile-email-idle-alert\.mjs/u);
+});
 
 test('the production ledger accepts bounded operational validation messages', () => {
   const migration = read('apps/email-worker/migrations/0004_email_operational_category.sql');
