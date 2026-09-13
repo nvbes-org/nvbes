@@ -1,5 +1,6 @@
 {
   "nvbes-core": {
+    "limiter::tests::rate_limiter_blocks_after_limit": "PostgreSQL persistence",
     "limiter::postgres_tests::": "PostgreSQL persistence and concurrency"
   },
   "nvbes-email": {

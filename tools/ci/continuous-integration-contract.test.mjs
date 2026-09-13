@@ -37,6 +37,7 @@ test('PostgreSQL limiter tests remain components, without stale Redis classifica
     readFileSync('tools/rust-workspace/micro-test.components.json', 'utf8'),
   );
   assert.deepEqual(components['nvbes-core'], {
+    'limiter::tests::rate_limiter_blocks_after_limit': 'PostgreSQL persistence',
     'limiter::postgres_tests::': 'PostgreSQL persistence and concurrency',
   });
   assert.equal(components['nvbes-redis'], undefined);
