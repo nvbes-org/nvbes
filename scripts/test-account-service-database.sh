@@ -13,4 +13,4 @@ require_env DATABASE_URL
 node --test "$ROOT_DIR/scripts/validate-account-test-database.test.mjs"
 node "$ROOT_DIR/scripts/validate-account-test-database.mjs"
 
-cargo test --locked --package nvbes-account-service --features database-tests -- --test-threads=1
+cargo test --locked --package nvbes-account-service --features database-tests

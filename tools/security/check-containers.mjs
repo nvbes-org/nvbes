@@ -42,16 +42,42 @@ requirePath(catalogPath);
 const catalog = existsSync(catalogPath)
   ? JSON.parse(readFileSync(catalogPath, 'utf8'))
   : { rust: [] };
-const dockerfiles = [...new Set(catalog.rust.map(({ dockerfile }) => dockerfile))];
+const dockerfiles = [
+  ...new Set([
+    ...catalog.rust.map(({ dockerfile }) => dockerfile),
+    'apps/platform-operations-service/Dockerfile',
+  ]),
+];
 
 for (const dockerfile of dockerfiles) {
   requireText(dockerfile, 'FROM rust:1.91.1-slim-bookworm@sha256:');
   requireText(dockerfile, 'FROM debian:bookworm-slim@sha256:');
   requireText(dockerfile, 'cargo build --locked --release');
   requireText(dockerfile, 'USER 10001:10001');
+  requireText(dockerfile, 'STOPSIGNAL SIGTERM');
+  requireText(dockerfile, '/health/live');
+  if (existsSync(dockerfile)) {
+    const content = readFileSync(dockerfile, 'utf8');
+    if (content.includes('/health/ready')) {
+      errors.push(
+        `${dockerfile}: HEALTHCHECK must not probe /health/ready (use shallow /health/live)`,
+      );
+    }
+    for (const secretPattern of ['sk_live_', 'whsec_', 'rk_live_']) {
+      if (content.includes(secretPattern)) {
+        errors.push(`${dockerfile}: contains hardcoded secret pattern ${secretPattern}`);
+      }
+    }
+  }
 }
 
-const releaseImages = ['nvbes-email-worker'];
+const releaseImages = [
+  'nvbes-account-service',
+  'nvbes-billing-service',
+  'nvbes-email-worker',
+  'nvbes-identity-service',
+  'nvbes-trust-risk-service',
+];
 
 const catalogImages = new Set(catalog.rust.map(({ image }) => image));
 for (const image of releaseImages) {

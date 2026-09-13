@@ -142,3 +142,17 @@ test('OpenAPI planner binds authenticated IDs and bearer credentials', () => {
   const request = buildRequestInit('get', {}, {}, authContext, true);
   assert.equal(request.headers.Authorization, 'Bearer synthetic-token');
 });
+
+test('OpenAPI probe loads and parses the canonical active specification', async () => {
+  const { existsSync, readFileSync } = await import('node:fs');
+  const path = await import('node:path');
+  const specPath = path.resolve('libs/ts/identity-sdk-core/openapi.json');
+  assert.ok(existsSync(specPath), 'canonical openapi.json exists');
+  const spec = JSON.parse(readFileSync(specPath, 'utf8'));
+  assert.ok(spec.paths, 'OpenAPI paths are present');
+  assert.ok(
+    spec.paths['/.well-known/openid-configuration'],
+    'well-known openid configuration is present',
+  );
+  assert.ok(spec.paths['/oauth/token'], 'oauth token route is present');
+});

@@ -1,7 +1,7 @@
 use crate::{
     cockpit_auth::{DEFAULT_OPERATOR_ROLE, OperatorSession},
     cockpit_model::ServiceId,
-    operations_db::{MIGRATOR, load_case},
+    operations_db::load_case,
     operations_error::OperationsError,
     operations_model::*,
     operations_service::execute,
@@ -35,9 +35,8 @@ fn open() -> Command {
     })
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "./migrations")]
 async fn full_case_lifecycle_retries_concurrency_and_appeal(pool: PgPool) {
-    MIGRATOR.run(&pool).await.unwrap();
     let actor = actor();
     let create = open();
     let (first, replay) = tokio::join!(
@@ -113,9 +112,8 @@ async fn full_case_lifecycle_retries_concurrency_and_appeal(pool: PgPool) {
     );
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "./migrations")]
 async fn validation_and_audit_failure_roll_back_mutations(pool: PgPool) {
-    MIGRATOR.run(&pool).await.unwrap();
     let mut invalid = open();
     invalid.reason = " ".into();
     assert!(execute(&pool, &actor(), invalid).await.is_err());
@@ -129,9 +127,8 @@ async fn validation_and_audit_failure_roll_back_mutations(pool: PgPool) {
     assert_eq!(count, 0);
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "./migrations")]
 async fn costs_are_corrected_without_erasing_history(pool: PgPool) {
-    MIGRATOR.run(&pool).await.unwrap();
     let record = |replaces| {
         command(Action::RecordCost {
             month: chrono::NaiveDate::from_ymd_opt(2026, 9, 1).unwrap(),
@@ -158,9 +155,8 @@ async fn costs_are_corrected_without_erasing_history(pool: PgPool) {
     assert_eq!(count, 2);
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "./migrations")]
 async fn observations_and_appeals_preserve_domain_and_subject_boundaries(pool: PgPool) {
-    MIGRATOR.run(&pool).await.unwrap();
     let id = execute(&pool, &actor(), open())
         .await
         .unwrap()
