@@ -25,4 +25,4 @@ Leurs anciennes commandes racine ne sont plus exposées. Les runtimes V1 ont leu
 commandes `migrate` propres ; `pnpm dev` les orchestre en local, et
 `pnpm db:migrate:billing` conserve la migration Billing explicite.
 La génération OpenAPI historique n'est pas une capacité des nouveaux services.
-Le fuzzing des uploads Cloud est conservé dans `archive/fuzz/`, hors campagne V1.
+Le harness de fuzzing historique est conservé dans `archive/tools/dpop-fuzz/`, hors campagne V1.

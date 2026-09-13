@@ -186,22 +186,3 @@ jobs:
         with:
           category: /language:${{ matrix.language }}
 
-  fuzz-smoke:
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - name: CI/CD security gate
-        run: node tools/security/check-ci-cd-security.mjs
-      - name: Install pinned nightly toolchain
-        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
-        with:
-          toolchain: nightly-2026-07-20
-      - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --version 0.13.2 --locked
-      - name: Run bounded parser fuzz targets
-        run: |
-          cargo fuzz run dpop-proof -- -max_total_time=30

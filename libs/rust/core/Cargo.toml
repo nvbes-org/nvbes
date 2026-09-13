@@ -39,3 +39,4 @@ utoipa = { workspace = true }
 
 [dev-dependencies]
 nvbes-test-utils = { path = "../test-utils" }
+proptest.workspace = true

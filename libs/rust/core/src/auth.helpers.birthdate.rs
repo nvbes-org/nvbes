@@ -128,3 +128,7 @@ pub fn validate_birthdate(birthdate: NaiveDate, region: Option<&str>) -> Result<
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "auth.helpers.birthdate.property.tests.rs"]
+mod property_tests;

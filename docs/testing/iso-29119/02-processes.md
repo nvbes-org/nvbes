@@ -96,7 +96,7 @@ prioriser.
 | Decision coverage        | Branches Rust (`cargo llvm-cov`)        |
 | Risk-based               | Priorisation via `regression-matrix.md` |
 | Use case                 | E2E parcours critiques                  |
-| Error guessing           | Fuzz targets                            |
+| Error guessing           | Property tests (`proptest`) / Fuzz gaps |
 
 ### 2.5 Test Implementation
 
@@ -108,7 +108,7 @@ prioriser.
 | ----------------- | ------------------------ | ------------------------------------- |
 | Unit tests inline | `#[cfg(test)] mod tests` | `src/*.tests.rs`                      |
 | Integration tests | `tests/` directory       | `tests/container-contract.test.mjs`   |
-| Fuzz targets      | `cargo-fuzz`             | `fuzz/fuzz_targets/*.rs`              |
+| Property tests    | `proptest!`              | `src/*.property.tests.rs`             |
 | k6 scenarios      | JS load test scripts     | `tools/load-tests/account/*.js`       |
 | E2E scripts       | Playwright specs         | `apps/identity-web/e2e/*.spec.ts`     |
 | Test fixtures     | DB seeds, mocks          | `scripts/lib/test-env.sh`             |
@@ -168,7 +168,7 @@ défaillances.
 | Load (weekly) | Cron `31 1 * * 0`       | k6 `volume/spike/stress`                | k6 summary JSON   |
 | DAST          | Cron `41 2 * * 3`       | ZAP scan                                | ZAP report        |
 | Security      | Scheduled               | `pnpm check:security`                   | Security report   |
-| Fuzz          | Manual                  | `pnpm security:fuzz`                    | Fuzz artifacts    |
+| Fuzz          | Gap V1                  | Documenté dans manifest (`fuzz`)        | Gap V1            |
 
 **Gestion des défaillances** :
 
