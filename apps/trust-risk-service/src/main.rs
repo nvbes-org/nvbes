@@ -10,6 +10,9 @@ mod assessment_grpc;
 mod audit;
 #[path = "trust_risk.auth.rs"]
 mod auth;
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "trust_risk.cdc.tests.rs"]
+mod cdc_tests;
 #[path = "trust_risk.config.rs"]
 mod config;
 #[path = "trust_risk.database.rs"]

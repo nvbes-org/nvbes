@@ -35,7 +35,6 @@ RUN apt-get update \
     pkg-config \
     postgresql-client \
     python3 \
-    redis-tools \
     ripgrep \
     shellcheck \
     unzip \

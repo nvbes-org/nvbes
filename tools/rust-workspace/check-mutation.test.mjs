@@ -164,3 +164,21 @@ test('rejects an excluded crate without a justification or baseline', () => {
   };
   assert.throws(() => evaluateMutation([], config, examplePackages()), /explicit reason/u);
 });
+
+test('refuses an empty gate and thresholds that could turn missing evidence green', () => {
+  assert.throws(
+    () => evaluateMutation([], { schemaVersion: 1, crates: {}, excluded: [] }),
+    /Empty mutation gate/u,
+  );
+  for (const threshold of [0, -1, 101, NaN, Infinity, undefined]) {
+    assert.throws(
+      () =>
+        evaluateMutation([], {
+          schemaVersion: 1,
+          crates: { 'nvbes-audit': { threshold } },
+          excluded: [],
+        }),
+      /Invalid mutation threshold/u,
+    );
+  }
+});

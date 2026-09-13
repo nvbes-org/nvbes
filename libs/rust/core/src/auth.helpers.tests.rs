@@ -1,9 +1,14 @@
+use super::birthdate::{date_in_region_at, validate_birthdate_on};
 use super::{
-    dummy_verify_password, hash_password, hash_password_with_pepper, validate_birthdate,
-    validate_password, verify_and_check_rehash, verify_password, verify_password_with_pepper,
+    dummy_verify_password, hash_password, hash_password_with_pepper, validate_password,
+    verify_and_check_rehash, verify_password, verify_password_with_pepper,
 };
 use axum::http::StatusCode;
-use chrono::{Datelike, NaiveDate, TimeDelta, Utc};
+use chrono::{NaiveDate, TimeZone, Utc};
+
+fn today() -> NaiveDate {
+    NaiveDate::from_ymd_opt(2026, 9, 12).unwrap()
+}
 
 #[test]
 fn test_argon2id_hashing_owasp_params() {
@@ -127,56 +132,50 @@ fn benchmark_argon2id_latency() {
 
 #[test]
 fn birthdate_rejects_future_date() {
-    let tomorrow = Utc::now().date_naive() + TimeDelta::days(1);
-    let err = validate_birthdate(tomorrow, None).expect_err("future date should fail");
+    let tomorrow = NaiveDate::from_ymd_opt(2026, 9, 13).unwrap();
+    let err = validate_birthdate_on(tomorrow, today()).expect_err("future date should fail");
     assert_eq!(err.code, "validation_failed");
 }
 
 #[test]
 fn birthdate_rejects_too_young() {
-    let thirteen_years_ago = Utc::now().date_naive() - TimeDelta::days(13 * 365 + 1);
-    let err = validate_birthdate(thirteen_years_ago, None).expect_err("too young should fail");
+    let birthday_tomorrow = NaiveDate::from_ymd_opt(2013, 9, 13).unwrap();
+    let err = validate_birthdate_on(birthday_tomorrow, today()).expect_err("too young should fail");
     assert_eq!(err.code, "minimum_age");
 }
 
 #[test]
 fn birthdate_accepts_valid_age() {
-    let twenty_years_ago =
-        NaiveDate::from_ymd_opt(Utc::now().date_naive().year() - 20, 6, 15).unwrap();
-    assert!(validate_birthdate(twenty_years_ago, None).is_ok());
+    let thirteenth_birthday = NaiveDate::from_ymd_opt(2013, 9, 12).unwrap();
+    assert!(validate_birthdate_on(thirteenth_birthday, today()).is_ok());
 }
 
 #[test]
 fn birthdate_rejects_before_1900() {
     let ancient = NaiveDate::from_ymd_opt(1899, 1, 1).unwrap();
-    let err = validate_birthdate(ancient, None).expect_err("pre-1900 should fail");
+    let err = validate_birthdate_on(ancient, today()).expect_err("pre-1900 should fail");
     assert_eq!(err.code, "validation_failed");
 }
 
 #[test]
 fn birthdate_accepts_leap_day() {
     let leap_day = NaiveDate::from_ymd_opt(2000, 2, 29).unwrap();
-    assert!(validate_birthdate(leap_day, None).is_ok());
+    assert!(validate_birthdate_on(leap_day, today()).is_ok());
 }
 
 #[test]
 fn region_affects_age_calculation() {
-    let today_utc = Utc::now().date_naive();
-    let yesterday_in_nz = today_utc - TimeDelta::days(1);
-
-    let result_utc = validate_birthdate(yesterday_in_nz, None);
-    let result_nz = validate_birthdate(yesterday_in_nz, Some("NZ"));
-
-    match (result_utc.is_ok(), result_nz.is_ok()) {
-        (false, false) | (true, true) | (true, false) => {}
-        (false, true) => {}
-    }
+    let instant = Utc.with_ymd_and_hms(2026, 9, 12, 18, 0, 0).unwrap();
+    let birthdate = NaiveDate::from_ymd_opt(2013, 9, 13).unwrap();
+    assert!(validate_birthdate_on(birthdate, date_in_region_at(None, instant)).is_err());
+    assert!(validate_birthdate_on(birthdate, date_in_region_at(Some("NZ"), instant)).is_ok());
 }
 
 #[test]
 fn region_utc_unknown_falls_back_to_utc() {
-    let date = NaiveDate::from_ymd_opt(2000, 1, 1).unwrap();
-    let result_unknown = validate_birthdate(date, Some("XX"));
-    let result_none = validate_birthdate(date, None);
-    assert_eq!(result_unknown.is_ok(), result_none.is_ok());
+    let instant = Utc.with_ymd_and_hms(2026, 9, 12, 23, 30, 0).unwrap();
+    assert_eq!(
+        date_in_region_at(Some("XX"), instant),
+        date_in_region_at(None, instant)
+    );
 }

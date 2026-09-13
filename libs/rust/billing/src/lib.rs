@@ -22,7 +22,6 @@ pub mod fraud_policy;
 pub mod fx;
 pub mod invoice_pdf;
 pub mod invoices;
-pub mod jobs;
 pub mod ledger;
 pub mod models;
 pub mod mollie;

@@ -36,7 +36,6 @@ if [ -n "${DATABASE_URL:-}" ] && [ "$DATABASE_URL" != "$NVBES_DATABASE_URL" ]; t
 fi
 export DATABASE_URL="$NVBES_DATABASE_URL"
 
-require_account_test_redis
 
 export CI=true
 

@@ -20,3 +20,7 @@ mod contract_tests;
 #[cfg(test)]
 #[path = "trust_risk.domain.tests.rs"]
 mod domain_tests;
+
+#[cfg(test)]
+#[path = "trust_risk.rules.properties.tests.rs"]
+mod properties;
