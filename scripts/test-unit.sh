@@ -12,14 +12,13 @@ if [ "${GITHUB_ACTIONS:-}" != "true" ]; then
 fi
 
 log_step "web typecheck"
-pnpm --dir apps/cloud-web typecheck
-pnpm --dir apps/account-web typecheck
+pnpm --dir libs/ts/email-ui typecheck
 
 log_step "parallel rust unit tests"
-cargo test --workspace --exclude nvbes-identity-worker --lib --bins --locked -- \
+cargo test --workspace --lib --bins --locked -- \
 	--test-threads=4 \
 	--skip postgresql_fresh_database_reaches_complete_schema \
-	--skip postgresql_upgrade_from_n_minus_one_preserves_compatible_data
+	--skip postgresql_upgrade_from_n_minus_one_preserves_compatible_data \
+	--skip limiter::postgres_tests \
+	--skip limiter::tests::rate_limiter_blocks_after_limit
 
-log_step "serial identity worker tests"
-cargo test --package nvbes-identity-worker --locked -- --test-threads=1

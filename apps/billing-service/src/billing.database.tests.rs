@@ -8,18 +8,13 @@ use std::{
 
 use axum::{Form, Json, Router, http::HeaderMap, routing::post};
 use serde_json::json;
+use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::{connect, migrate};
 use crate::{config::BillingConfig, synthetic};
 
-#[tokio::test]
-async fn billing_lifecycle_is_isolated_deduplicated_and_audited() {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = connect(&database_url, 2)
-        .await
-        .expect("test database connects");
-    migrate(&pool).await.expect("billing migrations apply");
+#[sqlx::test(migrations = "./migrations")]
+async fn billing_lifecycle_is_isolated_deduplicated_and_audited(pool: PgPool) {
 
     let workspace_id = Uuid::new_v4();
     let owner_id = Uuid::new_v4();
@@ -60,7 +55,7 @@ async fn billing_lifecycle_is_isolated_deduplicated_and_audited() {
 
     let config = BillingConfig {
         bind_addr: "127.0.0.1:8080".parse().unwrap(),
-        database_url: database_url.clone(),
+        database_url: "postgres://localhost/unused".into(),
         stripe_secret_key: "sk_test_mock_for_db_tests".into(),
         stripe_webhook_secret: "whsec_mock_secret".into(),
         stripe_api_base_url,
