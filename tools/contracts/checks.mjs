@@ -1,10 +1,9 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const errors = [];
-
-function readJson(path) {
+function readJson(path, errors) {
   if (!existsSync(path)) {
     errors.push(`${path}: missing`);
     return undefined;
@@ -28,7 +27,7 @@ function walk(dir, predicate, results = []) {
   return results;
 }
 
-function checkProtoDocuments() {
+export function checkProtoDocuments(errors = []) {
   const files = walk('contracts/protobuf', (path) => path.endsWith('.proto'));
   if (files.length === 0) errors.push('contracts/protobuf: at least one .proto file is required');
   for (const file of files) {
@@ -39,11 +38,12 @@ function checkProtoDocuments() {
     }
     if (/\bTODO\b|\bTBD\b|\bFIXME\b/i.test(content)) errors.push(`${file}: unresolved marker`);
   }
+  return errors;
 }
 
-function checkEventDocuments() {
-  const manifest = readJson('contracts/events/manifest.json');
-  const envelope = readJson('contracts/events/envelope.schema.json');
+export function checkEventDocuments(errors = []) {
+  const manifest = readJson('contracts/events/manifest.json', errors);
+  const envelope = readJson('contracts/events/envelope.schema.json', errors);
   if (!manifest || !envelope) return;
 
   for (const field of [
@@ -76,7 +76,7 @@ function checkEventDocuments() {
       errors.push(`${key}: critical=true is required while the event remains in the manifest`);
     }
 
-    const schema = readJson(event.schema);
+    const schema = readJson(event.schema, errors);
     if (!schema) continue;
     if (schema.properties?.event_type?.const !== event.event_type) {
       errors.push(`${event.schema}: event_type const must match manifest`);
@@ -91,7 +91,7 @@ function checkEventDocuments() {
 
   const allSchemas = walk('contracts/events', (path) => path.endsWith('.schema.json'));
   for (const file of allSchemas) {
-    const schema = readJson(file);
+    const schema = readJson(file, errors);
     if (!schema) continue;
     if (!schema.$schema) {
       errors.push(`${file}: missing $schema identifier`);
@@ -100,15 +100,50 @@ function checkEventDocuments() {
       errors.push(`${file}: top-level schema type must be 'object'`);
     }
   }
+  return errors;
 }
 
-checkProtoDocuments();
-checkEventDocuments();
+export function checkProtoBreaking(errors = [], env = process.env) {
+  const against = env.NVBES_BUF_BREAKING_AGAINST;
+  let target = against;
+  if (!target && env.CI !== 'true') {
+    for (const candidate of ['origin/main', 'main']) {
+      const check = spawnSync('git', ['rev-parse', '--verify', candidate], { encoding: 'utf8' });
+      if (check.status === 0) {
+        target = `.git#branch=${candidate},subdir=contracts/protobuf`;
+        break;
+      }
+    }
+  }
+  if (!target) return errors;
 
-if (errors.length > 0) {
-  console.error('Contract checks failed:');
-  for (const error of errors) console.error(`- ${error}`);
-  process.exit(1);
+  const buf = spawnSync('buf', ['breaking', 'contracts/protobuf', '--against', target], {
+    encoding: 'utf8',
+  });
+  if (buf.status !== 0 && buf.status !== null) {
+    errors.push(
+      `contracts/protobuf: breaking changes detected against ${target}:\n${buf.stderr || buf.stdout}`,
+    );
+  }
+  return errors;
 }
 
-console.log('Contracts: ok');
+export function runContractChecks(env = process.env) {
+  const errors = [];
+  checkProtoDocuments(errors);
+  checkProtoBreaking(errors, env);
+  checkEventDocuments(errors);
+  return errors;
+}
+
+import { pathToFileURL } from 'node:url';
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const errors = runContractChecks();
+  if (errors.length > 0) {
+    console.error('Contract checks failed:');
+    for (const error of errors) console.error(`- ${error}`);
+    process.exit(1);
+  }
+  console.log('Contracts: ok');
+}
