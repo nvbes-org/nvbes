@@ -70,6 +70,24 @@ Alerts cover stale queue age, elevated provider failures, and spam complaint
 rate. During staging rehearsals, exercise each alert and attach the evidence to
 the release packet.
 
+In the isolated production stack, `email_internal_validation_enabled=false`
+closes the bounded validation window: ingress is private and dispatch triggers
+are absent. The stale-queue rule therefore treats missing samples as `OK` during
+that window. A measured queue age above 300 seconds still fires after five
+minutes. Opening validation restores the canonical `Alerting` no-data behavior;
+missing telemetry then requires investigation. Query execution errors retain
+the `Error` state in both modes. An `OK` state without samples does not prove an
+empty queue or working telemetry. Do not enable public ingress, continuous
+scraping, or dispatch triggers just to clear this alert.
+
+To reconcile only this provisioned rule while validation is closed, dispatch
+`deploy.yml` on a CI-verified `main` revision with `service=email` and
+`email_observability_only=true`. The protected `production-email` job uses the
+existing Grafana provisioning token, refuses query or threshold drift, changes
+only `noDataState`, and reads the rule back. Confirm the next Grafana evaluation
+clears the no-data firing instance. Normal Email deployment restores the state
+appropriate to its validation window through Terraform.
+
 Validate Sentry after each environment is wired by running
 `nvbes-email-worker error-reporting-smoke`. The command returns a JSON event ID,
 monitor check-in ID, configuration state, and flush result without connecting

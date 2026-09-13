@@ -39,6 +39,9 @@
       "inputs": [
         "{workspaceRoot}/package.json",
         "{workspaceRoot}/tools/ci/email-deployment-contract.test.mjs",
+        "{workspaceRoot}/tools/ci/reconcile-email-idle-alert.mjs",
+        "{workspaceRoot}/.github/workflows/deploy.yml",
+        "{workspaceRoot}/infrastructure/local/observability/grafana-provisioning/alerting/nvbes-email.yml",
         "{workspaceRoot}/infrastructure/environments/email-production/**/*",
         "{workspaceRoot}/infrastructure/stacks/email/production/**/*"
       ],
