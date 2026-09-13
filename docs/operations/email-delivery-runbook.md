@@ -81,9 +81,10 @@ empty queue or working telemetry. Do not enable public ingress, continuous
 scraping, or dispatch triggers just to clear this alert.
 
 To reconcile only this provisioned rule while validation is closed, dispatch
-`deploy.yml` on a CI-verified `main` revision with `service=email` and
+`deploy.yml` on the reviewed `main` revision with `service=email` and
 `email_observability_only=true`. The protected `production-email` job uses the
-existing Grafana provisioning token, refuses query or threshold drift, changes
+existing Grafana provisioning token, validates the checked-out revision and
+Email alert contract, refuses query or threshold drift, changes
 only `noDataState`, and reads the rule back. Confirm the next Grafana evaluation
 clears the no-data firing instance. Normal Email deployment restores the state
 appropriate to its validation window through Terraform.
