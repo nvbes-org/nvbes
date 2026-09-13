@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,17 +38,34 @@ function normalizeUrl(value, name) {
 }
 
 function loadOpenApiSpec() {
-  const stdout = execFileSync(
-    'cargo',
-    ['run', '-p', 'nvbes-account-service', '--', '--export-openapi'],
-    {
-      cwd: ROOT_DIR,
-      encoding: 'utf8',
-      maxBuffer: 20 * 1024 * 1024,
-      env: process.env,
-    },
-  );
-  return JSON.parse(stdout);
+  if (process.env.NVBES_OPENAPI_SPEC_PATH) {
+    const customPath = path.resolve(ROOT_DIR, process.env.NVBES_OPENAPI_SPEC_PATH);
+    if (!existsSync(customPath)) {
+      fail(`specified NVBES_OPENAPI_SPEC_PATH not found: ${customPath}`);
+    }
+    return JSON.parse(readFileSync(customPath, 'utf8'));
+  }
+
+  if (process.env.NVBES_OPENAPI_EXPORT_FROM_CARGO) {
+    const stdout = execFileSync(
+      'cargo',
+      ['run', '-p', 'nvbes-account-service', '--', '--export-openapi'],
+      {
+        cwd: ROOT_DIR,
+        encoding: 'utf8',
+        maxBuffer: 20 * 1024 * 1024,
+        env: process.env,
+      },
+    );
+    return JSON.parse(stdout);
+  }
+
+  const defaultSpecPath = path.resolve(ROOT_DIR, 'libs/ts/identity-sdk-core/openapi.json');
+  if (existsSync(defaultSpecPath)) {
+    return JSON.parse(readFileSync(defaultSpecPath, 'utf8'));
+  }
+
+  fail(`OpenAPI specification not found at default path: ${defaultSpecPath}`);
 }
 
 async function probe(baseUrl, pathName, method, operation, spec, authContext, protectedOperation) {
