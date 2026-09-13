@@ -57,7 +57,6 @@ impl AppConfig {
             &mut self.billing_database_url,
         )?;
         assign_required(secrets, "jwt_secret", &mut self.jwt_secret)?;
-        assign_required(secrets, "redis_url", &mut self.redis_url)?;
 
         assign_optional(
             secrets,
@@ -113,7 +112,6 @@ impl AppConfig {
             "request_e2ee_secret",
             &mut self.request_e2ee_secret,
         )?;
-        assign_optional(secrets, "redis_password", &mut self.redis_password)?;
         Ok(())
     }
 }

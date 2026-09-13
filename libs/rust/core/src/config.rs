@@ -163,11 +163,6 @@ pub struct AppConfig {
     pub request_e2ee_key_id: String,
     #[serde(skip_serializing)]
     pub request_e2ee_secret: Option<String>,
-    #[serde(skip_serializing)]
-    pub redis_url: String,
-    #[serde(skip_serializing)]
-    pub redis_password: Option<String>,
-    pub redis_max_connections: u32,
     pub security_contact_email: Option<String>,
 }
 

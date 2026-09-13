@@ -1,20 +1,6 @@
 {
   "nvbes-core": {
-    "idempotency::tests::idempotency_round_trip_uses_redis": "Redis persistence",
-    "limiter::tests::rate_limiter_blocks_after_limit": "Redis persistence"
-  },
-  "nvbes-redis": {
-    "auth_challenge::tests::": "Redis persistence",
-    "email_verification::tests::": "Redis persistence",
-    "password_reset::tests::": "Redis persistence",
-    "worker_queue::lease_tests::": "Redis leases",
-    "worker_queue::reliability_tests::": "Redis concurrency",
-    "worker_queue::retention_migration_tests::": "Redis migration",
-    "worker_queue::retention_tests::": "Redis retention",
-    "worker_queue::status_tests::": "Redis pool",
-    "worker_queue::test_support::cleanup_integration_tests::": "Redis cleanup",
-    "worker_queue::tests::": "Redis queue",
-    "worker_queue::volume_tests::": "Redis volume"
+    "limiter::postgres_tests::": "PostgreSQL persistence and concurrency"
   },
   "nvbes-email": {
     "client::integration_tests::": "gRPC loopback transport",

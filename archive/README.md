@@ -26,3 +26,9 @@ commandes `migrate` propres ; `pnpm dev` les orchestre en local, et
 `pnpm db:migrate:billing` conserve la migration Billing explicite.
 La génération OpenAPI historique n'est pas une capacité des nouveaux services.
 Le fuzzing des uploads Cloud est conservé dans `archive/fuzz/`, hors campagne V1.
+
+L'ancien adaptateur Redis et ses primitives de cache, verrouillage, limitation et
+files de travail sont conservés dans `archive/libs/rust/redis/`. Ils ne font plus
+partie du workspace Cargo actif : les primitives de sécurité encore requises ont
+une source de vérité PostgreSQL, tandis que les anciennes files Redis restent une
+référence historique non déployable.

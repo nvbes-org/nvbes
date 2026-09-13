@@ -85,6 +85,11 @@ Sortie : recommandation shadow traçable, sans blocage automatique prématuré.
 
 ### Lot 7 — Platform Operations
 
+Implémentation et preuve locale : [API et parcours opérateur](operations/platform-operations-api.md).
+Les commandes de dossier et de registre sont persistées et auditées ; les
+interventions métier restent manuelles dans le domaine propriétaire, avec les
+gates de sécurité décrits dans le runbook.
+
 - dossiers support, sécurité, abus, facturation et recours ;
 - contexte consolidé sans accès direct aux bases des services ;
 - commandes opérateur idempotentes, motivées et auditées ;

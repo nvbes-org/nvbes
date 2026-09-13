@@ -6,6 +6,41 @@ import { validateContinuousWorkflow } from './continuous-workflow.core.mjs';
 
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const setup = readFileSync('.github/actions/ci-setup/action.yml', 'utf8');
+test('Rust reports use Node 24 uploads and explicitly include only their hidden report paths', () => {
+  const steps = parse(workflow).jobs.rust.steps;
+  const uploads = steps.filter((step) => step.uses?.startsWith('actions/upload-artifact@'));
+  assert.equal(uploads.length, 2);
+  for (const step of uploads) {
+    assert.equal(step.uses, 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a');
+    assert.equal(step.with['include-hidden-files'], true);
+    assert.equal(step.with['if-no-files-found'], 'error');
+    assert.match(
+      step.with.path,
+      /^\.temp\/(rust\/coverage-workspace|v1-receipts\/platform\.workspace-check)\.json$/u,
+    );
+  }
+  assert.equal(steps.find((step) => step.name === 'Validate rust coverage').id, 'rust-coverage');
+  assert.equal(
+    steps.find((step) => step.name === 'Upload rust coverage report').if,
+    "${{ !cancelled() && steps.rust-coverage.outcome != 'skipped' }}",
+  );
+  assert.equal(
+    parse(setup).runs.steps.find((step) => step.uses?.startsWith('actions/setup-node@')).with[
+      'node-version'
+    ],
+    24,
+  );
+});
+
+test('PostgreSQL limiter tests remain components, without stale Redis classifications', () => {
+  const components = JSON.parse(
+    readFileSync('tools/rust-workspace/micro-test.components.json', 'utf8'),
+  );
+  assert.deepEqual(components['nvbes-core'], {
+    'limiter::postgres_tests::': 'PostgreSQL persistence and concurrency',
+  });
+  assert.equal(components['nvbes-redis'], undefined);
+});
 test('CI preserves runtime isolation, FinOps, and the required gate', () => {
   validateContinuousWorkflow(workflow, setup);
   const parsed = parse(workflow);

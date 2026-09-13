@@ -8,7 +8,6 @@ version.workspace = true
 chrono.workspace = true
 nvbes-core = { path = "../core" }
 nvbes-audit = { path = "../audit" }
-nvbes-redis = { path = "../redis" }
 nvbes-region = { path = "../region" }
 reqwest.workspace = true
 serde.workspace = true

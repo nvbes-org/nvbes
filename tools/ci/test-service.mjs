@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { hostname } from 'node:os';
 
 export function serviceName(kind, env = process.env) {
-  assert(['postgres', 'redis'].includes(kind), 'Unknown test service');
+  assert(kind === 'postgres', 'Unknown test service');
   assert(/^\d+$/u.test(env.GITHUB_RUN_ID ?? ''), 'Missing run ID');
   assert(/^\d+$/u.test(env.GITHUB_RUN_ATTEMPT ?? ''), 'Missing run attempt');
   assert(/^[a-zA-Z0-9_-]+$/u.test(env.GITHUB_JOB ?? ''), 'Missing job ID');
@@ -31,7 +31,7 @@ export function stopService(kind) {
 
 export async function startService(kind) {
   const name = serviceName(kind);
-  const port = kind === 'postgres' ? 5432 : 6379;
+  const port = 5432;
   let network;
   if (existsSync('/.dockerenv')) {
     const networks = JSON.parse(
@@ -41,30 +41,25 @@ export async function startService(kind) {
     assert(network, 'Containerized runner requires a named Docker network');
   }
   const connection = serviceNetwork(name, port, network);
-  const image =
-    kind === 'postgres'
-      ? 'postgres:17-alpine'
-      : 'redis@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf';
+  const image = 'postgres:17-alpine';
   docker(
     'run',
     '--detach',
     '--name',
     name,
     '--memory',
-    kind === 'postgres' ? '512m' : '128m',
+    '512m',
     '--cpus',
     '1',
     ...connection.args,
-    ...(kind === 'postgres' ? ['--env', 'POSTGRES_PASSWORD=postgres'] : []),
+    '--env',
+    'POSTGRES_PASSWORD=postgres',
     image,
   );
   try {
     let ready = false;
     for (let attempt = 0; attempt < 30; attempt++) {
-      const probe =
-        kind === 'postgres'
-          ? ['pg_isready', '--host', '127.0.0.1', '--username', 'postgres']
-          : ['redis-cli', 'ping'];
+      const probe = ['pg_isready', '--host', '127.0.0.1', '--username', 'postgres'];
       const result = spawnSync('docker', ['exec', name, ...probe], {
         stdio: 'ignore',
         timeout: 5000,

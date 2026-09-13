@@ -39,7 +39,6 @@
         "{workspaceRoot}/scripts/lib/openapi-probe-plan.mjs",
         "{workspaceRoot}/scripts/lib/openapi-seeded-auth.mjs",
         "{workspaceRoot}/scripts/lib/validate-destructive-test-database.mjs",
-        "{workspaceRoot}/scripts/lib/validate-test-redis-target.mjs",
         "{workspaceRoot}/scripts/test-account-service-migrations.sh",
         "{workspaceRoot}/scripts/test-openapi-contract.mjs",
         "{workspaceRoot}/tools/load-tests/account/**/*"

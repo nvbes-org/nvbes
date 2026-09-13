@@ -233,8 +233,8 @@ jobs:
           caches: pnpm cargo
           cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
-      - name: Start isolated Redis
-        run: node tools/ci/test-redis.mjs
+      - name: Start isolated security PostgreSQL
+        run: node tools/ci/test-security-database.mjs
       - name: Validate rust
         run: node tools/ci/run-rust.mjs
       - name: Produce V1 workspace check receipt
@@ -242,23 +242,26 @@ jobs:
         run: node tools/test-summary/v1-suite-receipt.mjs --suite=platform.workspace-check
       - name: Upload V1 workspace check receipt
         if: always() && github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1, Node 24 LTS
         with:
           name: v1-receipt-platform.workspace-check-${{ github.sha }}
           path: .temp/v1-receipts/platform.workspace-check.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
       - name: Validate rust coverage
+        id: rust-coverage
         run: bash scripts/test-workspace-coverage.sh
-      - name: Stop Redis
+      - name: Stop security PostgreSQL
         if: always()
-        run: node tools/ci/test-redis.mjs stop
+        run: node tools/ci/test-security-database.mjs stop
       - name: Upload rust coverage report
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: ${{ !cancelled() && steps.rust-coverage.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1, Node 24 LTS
         with:
           name: rust-coverage-workspace
           path: .temp/rust/coverage-workspace.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
       - name: Publish successful protected lane caches
