@@ -17,6 +17,10 @@
         "command": "pnpm --dir libs/ts/identity-sdk-core check"
       }
     },
+    "format:check": {
+      "executor": "nx:run-script",
+      "options": { "script": "format:check" }
+    },
     "generate:ts": {
       "executor": "nx:run-commands",
       "options": {
@@ -29,6 +33,10 @@
         "command": "pnpm --dir libs/ts/identity-sdk-core generate:rust"
       }
     },
+    "lint": {
+      "executor": "nx:run-script",
+      "options": { "script": "lint" }
+    },
     "test": {
       "executor": "nx:run-commands",
       "cache": false,
@@ -40,6 +48,10 @@
       "options": {
         "command": "pnpm --dir libs/ts/identity-sdk-core test"
       }
+    },
+    "typecheck": {
+      "executor": "nx:run-script",
+      "options": { "script": "typecheck" }
     }
   }
 }
