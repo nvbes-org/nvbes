@@ -1,0 +1,18 @@
+{
+  "nvbes-core": {
+    "limiter::tests::rate_limiter_blocks_after_limit": "PostgreSQL persistence",
+    "limiter::postgres_tests::": "PostgreSQL persistence and concurrency"
+  },
+  "nvbes-email": {
+    "client::integration_tests::": "gRPC loopback transport",
+    "operations::integration_tests::": "gRPC loopback transport",
+    "smtp::protocol_tests::": "SMTP loopback transport",
+    "error::transport_tests::": "HTTP loopback transport and real timeouts"
+  },
+  "nvbes-email-scaleway": {
+    "tests::adapter_": "HTTP adapter against a loopback server"
+  },
+  "nvbes-email-worker": {
+    "grpc_service::limits_tests::grpc_transport_rejects_messages_above_the_worker_budget": "gRPC loopback transport"
+  }
+}

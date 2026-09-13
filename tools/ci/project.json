@@ -13,6 +13,7 @@
       "cache": true,
       "inputs": [
         "{projectRoot}/**/*",
+        "{workspaceRoot}/tools/rust-workspace/micro-test.components.json",
         "{workspaceRoot}/scripts/validate-*-test-database.mjs",
         "{workspaceRoot}/scripts/lib/ci-test-database-host.mjs",
         "{workspaceRoot}/.github/workflows/**/*",

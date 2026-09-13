@@ -34,7 +34,14 @@ pub(crate) fn state() -> IdentityState {
 
 #[tokio::test]
 async fn liveness_is_shallow_but_readiness_requires_the_database() {
-    let app = router(state());
+    let state = state();
+    // Model an unavailable database without opening a real network connection.
+    state.db.close().await;
+    assert!(matches!(
+        state.db.acquire().await,
+        Err(sqlx::Error::PoolClosed)
+    ));
+    let app = router(state);
     let live = app
         .clone()
         .oneshot(

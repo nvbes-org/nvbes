@@ -23,10 +23,15 @@ export function isRustWorkspaceAffected(changedPaths) {
   return changedPaths.some(
     (path) =>
       rustWorkspacePaths.has(path) ||
+      path === 'scripts/test-unit.sh' ||
+      path === 'docs/testing/v1/manifest.json' ||
+      path.startsWith('tools/rust-workspace/') ||
+      path.startsWith('libs/ts/email-ui/') ||
+      path.startsWith('libs/ts/identity-sdk-core/') ||
       path.startsWith('.cargo/') ||
       path.startsWith('vendor/xmlsec/') ||
       ((path.startsWith('apps/') || path.startsWith('libs/rust/')) &&
-        (path.endsWith('.rs') || path.endsWith('Cargo.toml'))) ||
+        (path.endsWith('.rs') || path.endsWith('Cargo.toml') || path.endsWith('Cargo.lock'))) ||
       path.startsWith('contracts/protobuf/') ||
       path.startsWith('libs/rust/email/templates/'),
   );

@@ -11,10 +11,15 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 
 ## Tests executables
 
-- `test-unit.sh`: typecheck web et tests unitaires Rust.
+- `test-unit.sh`: micro-tests Rust des manifestes V1 et tests TypeScript actifs,
+  sans chargement de `.env` ni provisionnement. Le reseau est bloque pendant
+  l'execution (Seatbelt macOS, seccomp Linux), y compris le loopback.
+  Voir [Micro-tests et isolation](../docs/testing/micro-tests-isolation.md).
 - `test-workspace-coverage.sh`: couverture `cargo llvm-cov` du workspace Cargo
   racine puis validation des seuils par crate (`docs/testing/rust-coverage-thresholds.json`).
-- `test-workspace-mutation.sh`: mutation testing `cargo-mutants` des crates
+- `pnpm test:rust:mutation`: mutation testing exhaustif des crates de production
+  du catalogue V1, seuil minimum 90%, rapports complets obligatoires.
+- `test-workspace-mutation.sh` (`pnpm test:rust:mutation:baseline`): diagnostic historique des crates
   gated puis validation des seuils par crate
   (`docs/testing/rust-mutation-thresholds.json`). Exige `cargo-mutants`
   (`cargo install cargo-mutants --locked --version 27.1.0`);

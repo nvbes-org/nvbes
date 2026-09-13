@@ -23,6 +23,11 @@ if (!packages.length || packages.some((name) => !members.includes(name)))
   throw new Error('Invalid Rust candidate scope');
 if (spawnSync('cargo', ['fmt', '--all', '--check'], { stdio: 'inherit' }).status !== 0)
   throw new Error('Rust formatting failed');
+if (
+  spawnSync('pnpm', ['exec', 'nx', 'run', 'rust-workspace:micro-test'], { stdio: 'inherit' })
+    .status !== 0
+)
+  throw new Error('Isolated micro-tests failed');
 startMemoryWatchdog({ intervalMs: 2000, thresholdMb: 500 });
 const started = Date.now();
 const scoped = spawnSync(

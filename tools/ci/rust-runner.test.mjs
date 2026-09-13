@@ -5,8 +5,12 @@ import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import test from 'node:test';
 
-for (const failBaseline of [false, true]) {
-  test(`Rust runner preserves full baseline (baseline failure=${failBaseline})`, () => {
+for (const [failBaseline, failMicro] of [
+  [false, false],
+  [true, false],
+  [false, true],
+]) {
+  test(`Rust runner preserves gates (baseline failure=${failBaseline}, micro failure=${failMicro})`, () => {
     const directory = mkdtempSync(join(tmpdir(), 'nvbes-rust-runner-'));
     try {
       const metadata = {
@@ -20,6 +24,13 @@ for (const failBaseline of [false, true]) {
       };
       const cargo = `#!${process.execPath}\nconst fs=require('node:fs');const args=process.argv.slice(2);fs.appendFileSync(process.env.TEST_CALLS,JSON.stringify(args)+'\\n');if(args[0]==='metadata') console.log(process.env.TEST_METADATA);if(args.includes('--workspace')&&process.env.TEST_FAIL==='true')process.exit(1);`;
       writeFileSync(join(directory, 'cargo'), cargo, { mode: 0o755 });
+      writeFileSync(
+        join(directory, 'pnpm'),
+        `#!${process.execPath}\nprocess.exit(${failMicro ? 1 : 0});`,
+        {
+          mode: 0o755,
+        },
+      );
       writeFileSync(join(directory, 'event.json'), '{}');
       const result = spawnSync(process.execPath, ['tools/ci/run-rust.mjs'], {
         encoding: 'utf8',
@@ -41,11 +52,20 @@ for (const failBaseline of [false, true]) {
           }),
         },
       });
-      assert.equal(result.status, failBaseline ? 1 : 0, result.stderr);
+      assert.equal(result.status, failBaseline || failMicro ? 1 : 0, result.stderr);
       const calls = readFileSync(join(directory, 'calls'), 'utf8')
         .trim()
         .split('\n')
         .map(JSON.parse);
+      if (failMicro) {
+        assert.match(result.stderr, /Isolated micro-tests failed/u);
+        assert.equal(
+          calls.some((args) => args[0] === 'test'),
+          false,
+        );
+        assert.doesNotMatch(result.stdout, /CI_RUST_EVIDENCE/u);
+        return;
+      }
       assert.deepEqual(
         calls.filter((args) => args[0] === 'test'),
         [
