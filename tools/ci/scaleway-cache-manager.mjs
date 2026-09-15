@@ -79,7 +79,7 @@ function cacheDefinitions() {
     cargo: {
       path: cargoHome,
       members: ['registry', 'git'],
-      key: `v1/cargo/${platform}/rust-1.91.1`,
+      key: `v1/cargo/${platform}/rust-1.98.1`,
     },
     terraform: {
       path: terraformHome,

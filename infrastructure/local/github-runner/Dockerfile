@@ -39,7 +39,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     PATH=/usr/local/cargo/bin:$PATH
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile default && \
     /usr/local/cargo/bin/rustup component add rustfmt clippy && \
-    /usr/local/cargo/bin/rustup toolchain install 1.91.1 --component rustfmt,clippy && \
+    /usr/local/cargo/bin/rustup toolchain install 1.98.1 --component rustfmt,clippy && \
     chmod -R 777 /usr/local/rustup /usr/local/cargo
 
 # Install Terraform

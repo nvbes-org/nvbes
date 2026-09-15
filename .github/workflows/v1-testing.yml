@@ -110,14 +110,14 @@ jobs:
           toolchain: nightly-2026-09-09
           components: llvm-tools-preview
       - name: Install pinned cargo-mutants
-        run: cargo +1.91.1 install cargo-mutants --locked --version 27.1.0
+        run: cargo +1.98.1 install cargo-mutants --locked --version 27.1.0
       - name: Measure every V1 Rust crate
         env:
           NVBES_MUTATION_JOBS: '4'
         run: bash scripts/test-v1-rust-measurements.sh
       - name: Produce Rust measurement receipts
         env:
-          NVBES_RUST_VERSION: 1.91.1
+          NVBES_RUST_VERSION: 1.98.1
           NVBES_LLVM_COV_VERSION: 0.8.7
           NVBES_CARGO_MUTANTS_VERSION: 27.1.0
         run: >-
