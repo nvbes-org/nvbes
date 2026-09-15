@@ -98,7 +98,8 @@ uniquement après succès de la lane sur push `main`.
 Les PR internes signées peuvent lire le cache après autorisation depuis la base
 de la PR ; forks et Dependabot fonctionnent sans secrets. Le cache de compilation
 S3 sccache est en lecture seule sur PR, et en lecture/écriture sur push protégé.
-Les contextes sans credentials utilisent le disque éphémère.
+Les contextes sans credentials utilisent le backend natif GitHub Actions de sccache,
+avec un dossier de cache isolé par job et des statistiques affichées au démarrage.
 
 TypeScript/contrats/containers : pnpm + Nx ; Rust : Cargo + sccache ; DB :
 pnpm + Cargo + sccache ; Terraform : pnpm + plugins. Les namespaces Nx sont
