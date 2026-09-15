@@ -35,7 +35,12 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: pnpm exec commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --git-log-args="--no-merges" --strict --verbose
+        run: |
+          commits=$(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA")
+          while IFS= read -r commit; do
+            [[ -n "$commit" ]] || continue
+            git show -s --format=%B "$commit" | pnpm exec commitlint --strict --verbose
+          done <<< "$commits"
       - name: Validate PR title for squash merge
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
