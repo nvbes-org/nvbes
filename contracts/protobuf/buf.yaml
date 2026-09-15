@@ -14,3 +14,5 @@ lint:
 breaking:
   use:
     - FILE
+  except:
+    - FILE_NO_DELETE
