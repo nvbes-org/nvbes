@@ -34,7 +34,12 @@ runs:
       shell: bash --noprofile --norc -euo pipefail {0}
       run: |
         corepack enable
-        corepack prepare pnpm@11.18.0 --activate
+        for attempt in 1 2 3; do
+          corepack prepare pnpm@11.18.0 --activate && break || {
+            if [[ "$attempt" -eq 3 ]]; then exit 1; fi
+            sleep 2
+          }
+        done
     - name: Restore lane caches
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
