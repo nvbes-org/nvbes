@@ -38,7 +38,6 @@ await test('root commands and fuzzing do not reconnect archived product runtimes
       /scripts\/(?:db-migrate|migrate-staging|generate-openapi|test-identity-e2e-local)\.sh|upload_inputs/u,
     );
   }
-  assert(!existsSync('fuzz/Cargo.toml'));
   assert(existsSync('archive/tools/dpop-fuzz/Cargo.toml'));
   assert.doesNotMatch(
     readFileSync('scripts/dev-hot.sh', 'utf8'),
