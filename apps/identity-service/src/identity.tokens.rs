@@ -244,3 +244,7 @@ fn validate_scope(scope: &str) -> anyhow::Result<()> {
 #[cfg(test)]
 #[path = "identity.tokens.tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "identity.tokens.property.tests.rs"]
+mod property_tests;

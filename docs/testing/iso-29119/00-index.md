@@ -41,6 +41,7 @@ ISO 29119 Part 3 (Documentation)
 
 ISO 29119 Part 4 (Techniques)
   └─→ fuzz/fuzz_targets/ (boîte blanche: fuzz testing)
+  └─→ libs/rust/*/src/*.property.tests.rs (boîte blanche: property-based testing)
   └─→ libs/rust/*/src/*.tests.rs (boîte blanche: unit tests)
   └─→ docs/testing/rust-coverage-thresholds.json (boîte blanche: seuils coverage par crate)
   └─→ apps/*/tests/container-contract.test.mjs (boîte noire: contract tests)
@@ -61,7 +62,6 @@ pnpm test:rust:coverage             # Couverture llvm-cov workspace + seuils par
 pnpm test:e2e:critical              # E2E Playwright critiques
 pnpm test:smoke                     # Smoke HTTP
 pnpm check:security                 # Sécurité complète
-pnpm security:fuzz                  # Fuzz testing (3 cibles, 30s chacune)
 pnpm verify                         # Vérification pré-commit complète
 ```
 

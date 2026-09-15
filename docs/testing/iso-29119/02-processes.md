@@ -88,15 +88,15 @@ prioriser.
 
 **nvbes implémentation** : Détail dans [04-design-techniques.md](04-design-techniques.md).
 
-| Technique                | Cible nvbes                             |
-| ------------------------ | --------------------------------------- |
-| Equivalence partitioning | Validation inputs (config, API params)  |
-| Boundary value analysis  | Quotas, limits, TTL, expiry             |
-| State transition         | Auth flows (MFA, sessions, OAuth)       |
-| Decision coverage        | Branches Rust (`cargo llvm-cov`)        |
-| Risk-based               | Priorisation via `regression-matrix.md` |
-| Use case                 | E2E parcours critiques                  |
-| Error guessing           | Fuzz targets                            |
+| Technique                | Cible nvbes                               |
+| ------------------------ | ----------------------------------------- |
+| Equivalence partitioning | Validation inputs (config, API params)    |
+| Boundary value analysis  | Quotas, limits, TTL, expiry               |
+| State transition         | Auth flows (MFA, sessions, OAuth)         |
+| Decision coverage        | Branches Rust (`cargo llvm-cov`)          |
+| Risk-based               | Priorisation via `regression-matrix.md`   |
+| Use case                 | E2E parcours critiques                    |
+| Error guessing           | Property tests (`proptest`), fuzz targets |
 
 ### 2.5 Test Implementation
 
@@ -108,7 +108,7 @@ prioriser.
 | ----------------- | ------------------------ | ------------------------------------- |
 | Unit tests inline | `#[cfg(test)] mod tests` | `src/*.tests.rs`                      |
 | Integration tests | `tests/` directory       | `tests/container-contract.test.mjs`   |
-| Fuzz targets      | `cargo-fuzz`             | `fuzz/fuzz_targets/*.rs`              |
+| Property tests    | `proptest!`              | `src/*.property.tests.rs`             |
 | k6 scenarios      | JS load test scripts     | `tools/load-tests/account/*.js`       |
 | E2E scripts       | Playwright specs         | `apps/identity-web/e2e/*.spec.ts`     |
 | Test fixtures     | DB seeds, mocks          | `scripts/lib/test-env.sh`             |
@@ -156,19 +156,19 @@ défaillances.
 
 **nvbes implémentation** :
 
-| Lane          | Déclencheur             | Commande                                | Artefact          |
-| ------------- | ----------------------- | --------------------------------------- | ----------------- |
-| Unit          | PR                      | `cargo test --workspace --lib --bins`   | Cargo test output |
-| Integration   | PR (DB required)        | `cargo test --workspace --tests`        | Test output       |
-| Contract      | PR (contracts required) | `node tools/ci/run-lane.mjs contracts`  | Nx report         |
-| TypeScript    | PR (TS required)        | `node tools/ci/run-lane.mjs typescript` | Nx report         |
-| E2E           | Scheduled/Manual        | `pnpm test:e2e:critical`                | Playwright HTML   |
-| Smoke         | Post-deploy             | `pnpm test:smoke`                       | HTTP assertions   |
-| Load (daily)  | Cron `17 1 * * *`       | k6 `load` profile                       | k6 summary JSON   |
-| Load (weekly) | Cron `31 1 * * 0`       | k6 `volume/spike/stress`                | k6 summary JSON   |
-| DAST          | Cron `41 2 * * 3`       | ZAP scan                                | ZAP report        |
-| Security      | Scheduled               | `pnpm check:security`                   | Security report   |
-| Fuzz          | Manual                  | `pnpm security:fuzz`                    | Fuzz artifacts    |
+| Lane          | Déclencheur                 | Commande                                | Artefact          |
+| ------------- | --------------------------- | --------------------------------------- | ----------------- |
+| Unit          | PR                          | `cargo test --workspace --lib --bins`   | Cargo test output |
+| Integration   | PR (DB required)            | `cargo test --workspace --tests`        | Test output       |
+| Contract      | PR (contracts required)     | `node tools/ci/run-lane.mjs contracts`  | Nx report         |
+| TypeScript    | PR (TS required)            | `node tools/ci/run-lane.mjs typescript` | Nx report         |
+| E2E           | Scheduled/Manual            | `pnpm test:e2e:critical`                | Playwright HTML   |
+| Smoke         | Post-deploy                 | `pnpm test:smoke`                       | HTTP assertions   |
+| Load (daily)  | Cron `17 1 * * *`           | k6 `load` profile                       | k6 summary JSON   |
+| Load (weekly) | Cron `31 1 * * 0`           | k6 `volume/spike/stress`                | k6 summary JSON   |
+| DAST          | Cron `41 2 * * 3`           | ZAP scan                                | ZAP report        |
+| Security      | Scheduled                   | `pnpm check:security`                   | Security report   |
+| Fuzz          | Post-merge (`security.yml`) | `cargo fuzz run content-digest` (30s)   | Fuzz artifact     |
 
 **Gestion des défaillances** :
 
