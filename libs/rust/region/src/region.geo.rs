@@ -45,6 +45,10 @@ mod v2fly_dat;
 #[path = "region.geo.v2fly.import.rs"]
 pub mod v2fly_import;
 
+#[cfg(test)]
+#[path = "region.geo.property.tests.rs"]
+mod property_tests;
+
 pub use cache::{
     cached_ip_intelligence_tx, cached_remote_lookup_tx, merge_cached_intelligence,
     resolve_cached_geo_tx,
