@@ -2913,6 +2913,7 @@ dependencies = [
  "nvbes-email-scaleway",
  "nvbes-observability",
  "openssl",
+ "proptest",
  "prost",
  "prost-types",
  "rand 0.9.5",

@@ -44,4 +44,6 @@ thiserror.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+proptest.workspace = true
 tower = "0.5"
+
