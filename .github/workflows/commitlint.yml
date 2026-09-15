@@ -1,0 +1,47 @@
+name: commitlint
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+concurrency:
+  group: commitlint-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  actions: read
+  contents: read
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/commitlint.yml
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+          pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate PR commits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          commits=$(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA")
+          while IFS= read -r commit; do
+            [[ -n "$commit" ]] || continue
+            git show -s --format=%B "$commit" | pnpm exec commitlint --strict --verbose
+          done <<< "$commits"
+      - name: Validate PR title for squash merge
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint --strict --verbose

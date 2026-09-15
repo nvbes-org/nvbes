@@ -38,6 +38,36 @@ cargo check --workspace
 Run additional targeted tests for every changed behaviour. A skipped check must
 be explained in the pull request.
 
+## Commit messages
+
+Commits and pull request titles follow Conventional Commits:
+
+```text
+feat(identity): add a sign-in method
+fix(billing): correct the invoice total
+chore(deps): update dependencies
+```
+
+Use a lowercase type: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`,
+`refactor`, `revert`, `style`, or `test`. Scopes are optional and unrestricted.
+Headers must not exceed 100 characters. Mark breaking changes with `!` before
+the colon or a `BREAKING CHANGE:` footer.
+Default message exemptions are disabled, so merge, revert and version-only
+messages must also follow the convention.
+
+After installing dependencies, run `pnpm exec lefthook install` to enable the
+local `commit-msg` check. To check an existing commit, run
+`pnpm exec commitlint --last --verbose`. CI validates all PR commits and the PR
+title, including title edits, using the same configuration. CI excludes merge
+commits by their Git parent count, allowing GitHub's generated branch-update
+messages; ordinary commits receive no message exemptions. The title must also
+describe the final change because it becomes the squash commit subject.
+
+This check validates message structure; it does not determine release readiness
+or publish packages. The workflow uses no secrets or paid services and has a
+five-minute timeout. Removing the config, hook, workflow and dev dependencies
+reverts the integration.
+
 ## Pull requests
 
 - Explain the problem, the delivered outcome and the evidence collected.
