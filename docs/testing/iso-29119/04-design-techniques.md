@@ -213,7 +213,7 @@ Webhook Billing:
 | Zone à risque        | Raison                 | Tests                | Fichiers                       |
 | -------------------- | ---------------------- | -------------------- | ------------------------------ |
 | Concurrent access    | Race conditions DB     | Concurrency tests    | `account.database.tests.rs`    |
-| Serialization JSON   | Edge cases, Unicode    | Fuzz                 | `fuzz/fuzz_targets/`           |
+| Serialization JSON   | Edge cases, Unicode    | Property tests       | `src/*.property.tests.rs`      |
 | Token expiry         | Clock skew, rotation   | Boundary             | `identity.tokens.tests.rs`     |
 | Webhook replay       | Idempotence            | Duplicate processing | `billing.webhooks.tests.rs`    |
 | Upload integrity     | Checksum, partial      | corruption scenarios | `email.worker.config.tests.rs` |
@@ -436,8 +436,8 @@ cargo mutants --package nvbes-email --timeout 600
 | Cause-effet       | `#[test]`                     | `node:test` | —           | —       | —            |
 | Table décision    | `#[test]`                     | `node:test` | —           | —       | —            |
 | Cas d'utilisation | Integration                   | —           | Playwright  | —       | —            |
-| Error guessing    | `#[test]`                     | —           | —           | —       | `cargo-fuzz` |
-| Risk-based        | Prioritaire                   | Prioritaire | Prioritaire | Profils | 3 cibles     |
+| Error guessing    | `#[test]`, `proptest!`        | `node:test` | —           | —       | `cargo-fuzz` |
+| Risk-based        | Prioritaire                   | Prioritaire | Prioritaire | Profils | 2 cibles     |
 | Statement cov.    | `llvm-cov`                    | —           | —           | —       | —            |
 | Branch cov.       | `llvm-cov`                    | —           | —           | —       | —            |
 | Condition cov.    | `llvm-cov --branch` (nightly) | —           | —           | —       | —            |
@@ -448,12 +448,12 @@ cargo mutants --package nvbes-email --timeout 600
 
 ### Tests unitaires Rust
 
-| Technique prioritaire     | Justification                          |
-| ------------------------- | -------------------------------------- |
-| Équivalence par partition | Validation inputs (config, API params) |
-| Valeurs limites           | Quotas, TTL, size limits               |
-| Branch coverage           | `cargo llvm-cov` 90-95%                |
-| Error guessing            | Fuzz targets existants                 |
+| Technique prioritaire     | Justification                                    |
+| ------------------------- | ------------------------------------------------ |
+| Équivalence par partition | Validation inputs (config, API params)           |
+| Valeurs limites           | Quotas, TTL, size limits                         |
+| Branch coverage           | `cargo llvm-cov` 90-95%                          |
+| Error guessing            | Property tests (`proptest`), boundary assertions |
 
 ### Tests d'intégration
 
@@ -485,5 +485,5 @@ cargo mutants --package nvbes-email --timeout 600
 | Technique prioritaire | Justification                 |
 | --------------------- | ----------------------------- |
 | Error guessing        | OWASP Top 10 patterns         |
-| Fuzz                  | Input malformé, injection     |
+| Fuzz / Property tests | Input malformé, injection     |
 | Risk-based            | Priorisation assets critiques |

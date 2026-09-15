@@ -213,6 +213,10 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+#[path = "email.worker.webhook.property.tests.rs"]
+mod property_tests;
+
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "email.worker.webhook.tests.rs"]
 mod database_tests;
