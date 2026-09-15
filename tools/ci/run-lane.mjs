@@ -148,5 +148,10 @@ const metric = {
     ? memoryStats.minAvailableMbSeen
     : null,
 };
+const durationSec = (metric.durationMs / 1000).toFixed(1);
+const cacheInfo = cache.total
+  ? `${cache.hits}/${cache.total} (${Math.round((cache.hits / cache.total) * 100)}%)`
+  : 'N/A';
+const summaryMd = `### 🏁 CI Lane: \`${lane}\`\n\n| Metric | Value |\n| :--- | :--- |\n| **Status** | ✅ Passed |\n| **Duration** | ${durationSec}s |\n| **Nx Cache Hits** | ${cacheInfo} |\n| **Rollout Mode** | ${plan.shadow ? 'Shadow' : 'Affected'} |\n\nCI_METRIC ${JSON.stringify(metric)}\n`;
 console.log(`CI_METRIC ${JSON.stringify(metric)}`);
-appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\nCI_METRIC ${JSON.stringify(metric)}\n`);
+appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n${summaryMd}\n`);

@@ -56,6 +56,14 @@ on:
         required: false
         default: false
         type: boolean
+      runner:
+        description: "GitHub-hosted first; local for a confirmed hosted outage"
+        required: false
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - local
 
 concurrency:
   group: validate-restore-production-${{ inputs.service }}
@@ -73,7 +81,7 @@ jobs:
 
   validate-account-restore:
     if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'account' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     environment:
       name: production-account
@@ -227,7 +235,7 @@ jobs:
 
   validate-billing-restore:
     if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'billing' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     environment:
       name: production-billing
@@ -378,7 +386,7 @@ jobs:
 
   validate-email-restore:
     if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'email' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     environment:
       name: production-email
@@ -830,7 +838,7 @@ jobs:
 
   validate-identity-restore:
     if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'identity' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     environment:
       name: production-identity
@@ -985,7 +993,7 @@ jobs:
 
   validate-platform-operations-restore:
     if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'platform-operations' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

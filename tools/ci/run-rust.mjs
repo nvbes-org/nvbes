@@ -75,9 +75,26 @@ const evidence = {
     : null,
 };
 console.log(`CI_RUST_EVIDENCE ${JSON.stringify(evidence)}`);
-appendFileSync(
-  process.env.GITHUB_STEP_SUMMARY,
-  `## Rust shadow comparison\n\n\`\`\`json\n${JSON.stringify(evidence, null, 2)}\n\`\`\`\n`,
-);
-if (full.status !== 0 || scoped.status !== 0)
+
+const scopedStatusText = scoped.status === 0 ? '✅ Passed' : '❌ Failed';
+const fullStatusText =
+  plan.rustMode === 'workspace' ? (full.status === 0 ? '✅ Passed' : '❌ Failed') : '⏭️ Skipped';
+const durationSec = (evidence.durationMs / 1000).toFixed(1);
+
+let rustSummary = `### 🦀 Rust Test Results Summary\n\n`;
+rustSummary += `| Scope | Evaluated Packages | Status | Execution Mode |\n`;
+rustSummary += `| :--- | :--- | :---: | :---: |\n`;
+rustSummary += `| **Scoped Candidate** | \`${packages.join('`, `')}\` | ${scopedStatusText} | \`${plan.rustMode}\` |\n`;
+rustSummary += `| **Workspace Baseline** | ${members.length} workspace members | ${fullStatusText} | full check |\n\n`;
+rustSummary += `- **Duration:** ${durationSec}s\n`;
+if (evidence.divergence) {
+  rustSummary += `\n> [!CAUTION]\n> **Divergence Detected:** Scoped tests result differs from full workspace baseline!\n\n`;
+}
+rustSummary += `\n<details><summary>Detailed JSON Evidence</summary>\n\n\`\`\`json\n${JSON.stringify(evidence, null, 2)}\n\`\`\`\n</details>\n\n`;
+
+appendFileSync(process.env.GITHUB_STEP_SUMMARY, rustSummary);
+
+if (full.status !== 0 || scoped.status !== 0) {
+  console.log('::error title=Rust Tests Failed::One or more Rust tests failed.');
   throw new Error('Rust candidate or workspace baseline failed');
+}

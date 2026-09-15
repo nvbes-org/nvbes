@@ -62,10 +62,10 @@ test('deployment materializes the data-only database identity before runtime val
   assert.ok(foundation.includes('-target=scaleway_iam_policy.trust_risk_database_runtime'));
 });
 
-test('new image builds use the local Docker runner for linux/amd64', () => {
+test('new image builds use hosted runner by default with local Docker fallback', () => {
   assert.ok(
     deploymentWorkflow.includes(
-      'build-scan-sign-trust-risk:\n    needs: [ci-provenance]\n    runs-on: [self-hosted, macOS, ARM64]',
+      'build-scan-sign-trust-risk:\n    needs: [ci-provenance]\n    runs-on: ${{ inputs.runner == \'local\' && fromJSON(\'["self-hosted","Linux","ARM64","docker"]\') || \'ubuntu-latest\' }}',
     ),
   );
   assert.ok(deploymentWorkflow.includes('platforms: linux/amd64'));
