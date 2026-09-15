@@ -11,7 +11,7 @@ const configSource = readFileSync(join(serviceRoot, 'src/billing.config.rs'), 'u
 const webhookSource = readFileSync(join(serviceRoot, 'src/billing.webhooks.rs'), 'utf8');
 
 test('image is reproducible and runs Billing as non-root', () => {
-  assert.match(dockerfile, /^FROM rust:1\.91\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
+  assert.match(dockerfile, /^FROM rust:1\.98\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
   assert.ok(dockerfile.includes('cargo build --locked --release --bin nvbes-billing-service'));
   assert.ok(dockerfile.includes('USER 10001:10001'));
   assert.ok(dockerfile.includes('ENTRYPOINT ["/app/billing-service"]'));

@@ -9,7 +9,7 @@ const serviceRoot = join(workspaceRoot, 'apps/platform-operations-service');
 const dockerfile = readFileSync(join(serviceRoot, 'Dockerfile'), 'utf8');
 
 test('image builds and runs the Platform Operations service as non-root', () => {
-  assert.match(dockerfile, /^FROM rust:1\.91\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
+  assert.match(dockerfile, /^FROM rust:1\.98\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
   assert.match(dockerfile, /cargo build --locked --release --bin nvbes-platform-operations/);
   assert.equal(dockerfile.match(/^ARG DEBIAN_FRONTEND=noninteractive$/gm)?.length, 2);
   assert.ok(dockerfile.includes('CARGO_BUILD_JOBS=1'));
