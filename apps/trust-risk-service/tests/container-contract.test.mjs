@@ -25,7 +25,7 @@ const observabilityTerraform = readFileSync(
 
 test('image builds and runs the Trust/Risk service as non-root', () => {
   assert.match(manifest, /^name = "nvbes-trust-risk-service"$/m);
-  assert.match(dockerfile, /^FROM rust:1\.91\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
+  assert.match(dockerfile, /^FROM rust:1\.98\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
   assert.match(dockerfile, /cargo build --locked --release --bin nvbes-trust-risk-service/);
   assert.equal(dockerfile.match(/^ARG DEBIAN_FRONTEND=noninteractive$/gm)?.length, 2);
   assert.ok(dockerfile.includes('CARGO_BUILD_JOBS=1'));
@@ -41,6 +41,7 @@ test('container exposes shallow liveness and supports deployment commands', () =
     dockerfile,
     /HEALTHCHECK[^\n]*\\\n\s+CMD \["curl", "--fail", "--silent", "--show-error", "http:\/\/127\.0\.0\.1:8080\/health\/live"\]/,
   );
+  assert.equal(dockerfile.includes('/health/ready'), false);
   assert.ok(dockerfile.includes('STOPSIGNAL SIGTERM'));
   assert.ok(mainSource.includes('action == "migrate"'));
   assert.ok(mainSource.includes('action == "validate-runtime"'));

@@ -12,7 +12,7 @@ Every pull request is expected to pass:
 - CodeQL for JavaScript, TypeScript and GitHub Actions;
 - Gitleaks over the complete Git history;
 - Trivy filesystem, secret and infrastructure-as-code scanning;
-- property-based tests for critical HTTP headers, token validation and security parsers;
+- property-based tests for critical HTTP headers, token validation and security parsers; bounded fuzz smoke tests for content-digest and stripe-signature;
 - the existing repository security-control registries.
 
 An exception must be narrow, owned, documented with exploitability analysis and
@@ -91,11 +91,11 @@ remain reviewed by the maintainer before merge.
 
 ## NIST SSDF 1.1 mapping
 
-| SSDF practice    | Repository implementation                                                   |
-| ---------------- | --------------------------------------------------------------------------- |
-| PO.1, PO.3       | CODEOWNERS, remediation SLA, security control registries                    |
-| PS.1, PS.2       | Least-privilege workflows, full-SHA action pins, protected release identity |
-| PW.4, PW.7       | CodeQL, property tests (proptest), DAST and review gates                    |
-| PW.9             | OSV, cargo-deny, Gitleaks and Trivy                                         |
-| PS.3             | CycloneDX SBOM, provenance, digest-only release evidence and Cosign         |
-| RV.1, RV.2, RV.3 | Scheduled scanning, severity SLA and documented exception lifecycle         |
+| SSDF practice    | Repository implementation                                                          |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| PO.1, PO.3       | CODEOWNERS, remediation SLA, security control registries                           |
+| PS.1, PS.2       | Least-privilege workflows, full-SHA action pins, protected release identity        |
+| PW.4, PW.7       | CodeQL, property tests (proptest), bounded fuzz smoke tests, DAST and review gates |
+| PW.9             | OSV, cargo-deny, Gitleaks and Trivy                                                |
+| PS.3             | CycloneDX SBOM, provenance, digest-only release evidence and Cosign                |
+| RV.1, RV.2, RV.3 | Scheduled scanning, severity SLA and documented exception lifecycle                |

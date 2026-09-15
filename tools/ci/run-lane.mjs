@@ -24,7 +24,8 @@ function run(binary, args, capture = false) {
   if (capture) {
     process.stdout.write(result.stdout ?? '');
     process.stderr.write(result.stderr ?? '');
-    const output = (result.stdout ?? '').replace(/\u001b\[[0-9;]*m/gu, '');
+    const ansiPattern = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'gu');
+    const output = (result.stdout ?? '').replace(ansiPattern, '');
     const match = output.match(/Cache:\s+(\d+)\/(\d+) hit/u);
     if (match) {
       cache.hits += Number(match[1]);
@@ -103,6 +104,15 @@ switch (lane) {
   case 'contracts':
     nx(['test:ci-contract', 'test:lockfile-integration'], ['ci-contracts'], 2);
     if (!plan.ciOnly) {
+      run('pnpm', ['check:contracts']);
+      run('pnpm', [
+        'exec',
+        'buf',
+        'breaking',
+        'contracts/protobuf',
+        '--against',
+        `.git#commit=${plan.base},subdir=contracts/protobuf`,
+      ]);
       run('pnpm', [
         'exec',
         'vp',
@@ -114,7 +124,12 @@ switch (lane) {
         'tsconfig.base.json',
         'nx.json',
       ]);
-      for (const check of ['check:structure', 'check:nx-boundaries', 'check:secrets'])
+      for (const check of [
+        'check:structure',
+        'check:nx-boundaries',
+        'check:product-boundaries',
+        'check:secrets',
+      ])
         run('pnpm', [check]);
     }
     break;

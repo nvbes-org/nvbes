@@ -1,4 +1,4 @@
 pub mod environment;
-pub mod redis;
+pub mod postgres;
 #[path = "test.runner.mod.rs"]
 pub mod runner;

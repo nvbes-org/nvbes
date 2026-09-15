@@ -32,7 +32,6 @@ services:
       NVBES_DATABASE_URL: postgres://postgres:postgres@postgres:5432/nvbes
       NVBES_CLOUD_DATABASE_URL: postgres://postgres:postgres@postgres:5432/nvbes_cloud
       NVBES_EMAIL_DATABASE_URL: postgres://postgres:postgres@postgres:5432/nvbes_email
-      NVBES_REDIS_URL: redis://:redis_dev@redis:6379
       STORAGE_ENABLED: 'true'
       STORAGE_BUCKET: nvbes
       STORAGE_ENDPOINT: http://seaweedfs:8333
@@ -50,8 +49,6 @@ services:
       NVBES_BILLING_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4104
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       seaweedfs:
         condition: service_started
@@ -102,38 +99,6 @@ services:
     pids_limit: 128
     logging: *limited-logging
 
-  redis:
-    image: redis:7.4-alpine
-    container_name: nvbes-devcontainer-redis
-    command:
-      - redis-server
-      - --requirepass
-      - redis_dev
-      - --maxmemory
-      - 64mb
-      - --maxmemory-policy
-      - volatile-lru
-      - --save
-      - '60 1'
-      - --appendonly
-      - 'yes'
-      - --appendfsync
-      - 'everysec'
-    volumes:
-      - nvbes_redis_data:/data
-    ports:
-      - '127.0.0.1:${NVBES_DEVCONTAINER_REDIS_PORT:-16379}:6379'
-    healthcheck:
-      test: ['CMD', 'redis-cli', '-a', 'redis_dev', '--raw', 'ping']
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    networks:
-      - nvbes_dev
-    mem_limit: 128m
-    mem_reservation: 16m
-    pids_limit: 64
-    logging: *limited-logging
 
   seaweedfs:
     image: chrislusf/seaweedfs:3.80
@@ -175,7 +140,6 @@ services:
     logging: *limited-logging
 
 volumes:
-  nvbes_redis_data:
   nvbes_seaweedfs_data:
   nvbes_cargo_registry:
   nvbes_cargo_git:

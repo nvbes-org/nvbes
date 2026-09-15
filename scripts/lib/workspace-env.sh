@@ -28,7 +28,6 @@ load_workspace_env() {
     export NVBES_DEVELOPER_DATABASE_URL="${NVBES_DEVCONTAINER_DEVELOPER_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_developer}"
     export NVBES_ENTERPRISE_DATABASE_URL="${NVBES_DEVCONTAINER_ENTERPRISE_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_enterprise}"
     export NVBES_EMAIL_DATABASE_URL="${NVBES_DEVCONTAINER_EMAIL_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_email}"
-    export NVBES_REDIS_URL="${NVBES_DEVCONTAINER_REDIS_URL:-redis://:redis_dev@redis:6379}"
     export NVBES_SMTP_HOST="${NVBES_DEVCONTAINER_SMTP_HOST:-mailpit}"
     export NVBES_SMTP_PORT="${NVBES_DEVCONTAINER_SMTP_PORT:-1025}"
     export NVBES_SMTP_STARTTLS="${NVBES_DEVCONTAINER_SMTP_STARTTLS:-false}"

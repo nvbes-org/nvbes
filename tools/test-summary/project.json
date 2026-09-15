@@ -12,6 +12,7 @@
       "{workspaceRoot}/apps/**/Cargo.toml",
       "{workspaceRoot}/.nxignore",
       "{workspaceRoot}/package.json",
+      "{workspaceRoot}/fuzz/Cargo.toml",
       "{workspaceRoot}/scripts/dev-hot.sh",
       "{workspaceRoot}/archive/libs/**/Cargo.toml",
       "{workspaceRoot}/archive/libs/ts/identity-client/src/*.ts",

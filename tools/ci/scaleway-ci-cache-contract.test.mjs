@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { compilationCacheEnvironment } from './configure-sccache.core.mjs';
 
 const deployWorkflow = readFileSync('.github/workflows/deploy.yml', 'utf8');
 const rotationWorkflow = readFileSync('.github/workflows/rotate-ci-cache-credentials.yml', 'utf8');
@@ -27,7 +28,7 @@ test('deployment builds combine shared Rust and isolated Scaleway registry cache
     );
   }
   assert.ok(
-    (deployWorkflow.match(/rust-builder:rust-1\.91\.1-linux-amd64/gu)?.length ?? 0) >= 6,
+    (deployWorkflow.match(/rust-builder:rust-1\.98\.1-linux-amd64/gu)?.length ?? 0) >= 6,
     'each deploy build imports and exports the shared Linux Rust cache',
   );
 });
@@ -42,8 +43,8 @@ test('Rust Dockerfiles use stable, platform-scoped BuildKit cache mounts', () =>
     'trust-risk-service',
   ]) {
     const dockerfile = readFileSync(`apps/${service}/Dockerfile`, 'utf8');
-    assert.match(dockerfile, /id=nvbes-cargo-registry-rust-1\.91\.1-\$\{TARGETPLATFORM\}/u);
-    assert.match(dockerfile, /id=nvbes-cargo-git-rust-1\.91\.1-\$\{TARGETPLATFORM\}/u);
+    assert.match(dockerfile, /id=nvbes-cargo-registry-rust-1\.98\.1-\$\{TARGETPLATFORM\}/u);
+    assert.match(dockerfile, /id=nvbes-cargo-git-rust-1\.98\.1-\$\{TARGETPLATFORM\}/u);
     assert.match(dockerfile, /sharing=locked/u);
   }
 });
@@ -185,16 +186,35 @@ test('rotation is restricted to the protected bootstrap environment', () => {
   assert.match(rotationWorkflow, /ci-cache-policy-repair\.tfplan/u);
 });
 
-test('CI lanes use scoped caches with read-only PR compilation access', () => {
+test('CI lanes separate PR compilation writes from the protected S3 cache', () => {
   const setup = readFileSync('.github/actions/ci-setup/action.yml', 'utf8');
-  const compilation = readFileSync('tools/ci/configure-sccache.mjs', 'utf8');
   assert.match(ciWorkflow, /needs\.authorize-cache\.outputs\.trusted == 'true'/u);
   assert.match(setup, /inputs\.rust == 'true'/u);
   assert.match(setup, /scaleway-cache-manager\.mjs restore/u);
-  assert.match(
-    compilation,
-    /SCCACHE_S3_RW_MODE = trusted \? ['"]READ_WRITE['"] : ['"]READ_ONLY['"]/u,
-  );
-  assert.match(compilation, /trusted\/rust/u);
+  const credentials = {
+    AWS_ACCESS_KEY_ID: 'fixture',
+    AWS_SECRET_ACCESS_KEY: 'fixture',
+    SCW_CI_CACHE_BUCKET: 'fixture',
+    GITHUB_ACTIONS: 'true',
+  };
+  const main = compilationCacheEnvironment({
+    ...credentials,
+    GITHUB_EVENT_NAME: 'push',
+    GITHUB_REF: 'refs/heads/main',
+  });
+  assert.equal(main.SCCACHE_S3_RW_MODE, 'READ_WRITE');
+  assert.match(main.SCCACHE_S3_KEY_PREFIX, /^trusted\/rust\//u);
+  assert.equal(main.SCCACHE_GHA_ENABLED, undefined);
+  const pr = compilationCacheEnvironment({
+    ...credentials,
+    GITHUB_EVENT_NAME: 'pull_request',
+    GITHUB_REF: 'refs/pull/243/merge',
+    ACTIONS_RESULTS_URL: 'https://cache.invalid',
+    ACTIONS_RUNTIME_TOKEN: 'fixture',
+  });
+  assert.equal(pr.SCCACHE_BUCKET, undefined);
+  assert.equal(pr.AWS_SECRET_ACCESS_KEY, undefined);
+  assert.equal(pr.SCCACHE_GHA_ENABLED, 'on');
+  assert.equal(pr.SCCACHE_GHA_RW_MODE, 'READ_WRITE');
   assert.match(ciWorkflow, /success\(\) && github\.event_name == 'push'/u);
 });

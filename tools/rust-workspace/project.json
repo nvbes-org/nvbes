@@ -25,14 +25,29 @@
       "{workspaceRoot}/libs/rust/**/Cargo.toml",
       "{workspaceRoot}/libs/rust/**/src/**/*",
       "{workspaceRoot}/libs/rust/platform/migrations/**/*",
-      "{workspaceRoot}/vendor/xmlsec/**/*"
+      "{workspaceRoot}/vendor/xmlsec/**/*",
+      "{workspaceRoot}/libs/rust/core/src/*.sql"
     ],
     "production": ["default"]
   },
   "targets": {
+    "test:harness": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": { "command": "node --test tools/rust-workspace/*.test.mjs" }
+    },
+    "micro-test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["test:harness"],
+      "cache": false,
+      "parallelism": false,
+      "options": { "command": "node tools/rust-workspace/micro-test.mjs" }
+    },
     "format": {
       "executor": "nx:run-commands",
-      "options": { "command": "cargo fmt --all -- --check" },
+      "options": {
+        "command": "cargo fmt --all -- --check"
+      },
       "cache": true,
       "inputs": ["default"]
     },
@@ -114,6 +129,12 @@
     },
     "mutation": {
       "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": { "command": "node tools/rust-workspace/mutation-v1.mjs" }
+    },
+    "mutation:baseline": {
+      "executor": "nx:run-commands",
       "inputs": [
         "default",
         "{workspaceRoot}/docs/testing/rust-mutation-thresholds.json",
@@ -126,6 +147,14 @@
       "configurations": {},
       "parallelism": false,
       "cache": false
+    },
+    "test:security-storage": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": ["default"],
+      "options": {
+        "command": "cargo test --locked -p nvbes-core --lib"
+      }
     }
   }
 }

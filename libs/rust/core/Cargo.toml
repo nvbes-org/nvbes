@@ -34,7 +34,6 @@ tokio = { workspace = true, features = ["net"] }
 tokio-rustls.workspace = true
 tower = "0.5"
 tower-http = { workspace = true }
-nvbes-redis = { path = "../redis" }
 utoipa = { workspace = true }
 
 [dev-dependencies]

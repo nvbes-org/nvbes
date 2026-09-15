@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { profileOptions, thinkTimeSeconds } from '../load-tests/account/profiles.js';
@@ -244,7 +245,12 @@ test('preflight and native/container k6 paths enforce the protected denylist', a
     readFile('tools/load-tests/account/account-api.js', 'utf8'),
     readFile('tools/load-tests/account/account-session.js', 'utf8'),
     readFile('tools/account-quality/run-account-k6.sh', 'utf8'),
-    readFile('.github/workflows/account-quality.yml', 'utf8'),
+    readFile(
+      existsSync('.github/workflows/account-quality.yml')
+        ? '.github/workflows/account-quality.yml'
+        : '.github/workflows-archive/account-quality.yml',
+      'utf8',
+    ),
   ]);
   for (const source of sources) {
     assert.match(source, /ACCOUNT_PRODUCTION_DENIED_ORIGINS/u);

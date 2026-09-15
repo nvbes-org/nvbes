@@ -303,7 +303,7 @@ condition sur la décision). L'étalonnage booléen reste à exécuter ; le rapp
 > donc une vérification du toolchain épinglé `nightly-2026-09-09`
 > et bascule l'exécution dessus
 > via `rustup run`. Out-of-band : le gate n'est pas exécuté en CI (lane rust
-> pinnée sur stable 1.91.1), il est lancé explicitement en local.
+> pinnée sur stable 1.98.1), il est lancé explicitement en local.
 
 Le script historique lit `docs/testing/rust-condition-thresholds.json`.
 Les seuils ci-dessous sont des baselines de diagnostic, **pas les critères
@@ -428,21 +428,21 @@ cargo mutants --package nvbes-email --timeout 600
 
 ## 4. Matrice de couverture par technique
 
-| Technique         | Rust                          | TypeScript  | E2E         | k6      | Fuzz        |
-| ----------------- | ----------------------------- | ----------- | ----------- | ------- | ----------- |
-| Équivalence       | `#[test]`                     | `node:test` | Playwright  | —       | —           |
-| Valeurs limites   | `#[test]`                     | `node:test` | Playwright  | —       | —           |
-| Transition état   | `#[test]`                     | —           | Playwright  | —       | —           |
-| Cause-effet       | `#[test]`                     | `node:test` | —           | —       | —           |
-| Table décision    | `#[test]`                     | `node:test` | —           | —       | —           |
-| Cas d'utilisation | Integration                   | —           | Playwright  | —       | —           |
-| Error guessing    | `#[test]`, `proptest!`        | `node:test` | —           | —       | Gap V1      |
-| Risk-based        | Prioritaire                   | Prioritaire | Prioritaire | Profils | Prioritaire |
-| Statement cov.    | `llvm-cov`                    | —           | —           | —       | —           |
-| Branch cov.       | `llvm-cov`                    | —           | —           | —       | —           |
-| Condition cov.    | `llvm-cov --branch` (nightly) | —           | —           | —       | —           |
-| Path cov.         | `llvm-cov`                    | —           | —           | —       | —           |
-| Mutation          | cargo-mutants                 | —           | —           | —       | —           |
+| Technique         | Rust                          | TypeScript  | E2E         | k6      | Fuzz         |
+| ----------------- | ----------------------------- | ----------- | ----------- | ------- | ------------ |
+| Équivalence       | `#[test]`                     | `node:test` | Playwright  | —       | —            |
+| Valeurs limites   | `#[test]`                     | `node:test` | Playwright  | —       | —            |
+| Transition état   | `#[test]`                     | —           | Playwright  | —       | —            |
+| Cause-effet       | `#[test]`                     | `node:test` | —           | —       | —            |
+| Table décision    | `#[test]`                     | `node:test` | —           | —       | —            |
+| Cas d'utilisation | Integration                   | —           | Playwright  | —       | —            |
+| Error guessing    | `#[test]`, `proptest!`        | `node:test` | —           | —       | `cargo-fuzz` |
+| Risk-based        | Prioritaire                   | Prioritaire | Prioritaire | Profils | 2 cibles     |
+| Statement cov.    | `llvm-cov`                    | —           | —           | —       | —            |
+| Branch cov.       | `llvm-cov`                    | —           | —           | —       | —            |
+| Condition cov.    | `llvm-cov --branch` (nightly) | —           | —           | —       | —            |
+| Path cov.         | `llvm-cov` + fuzz             | —           | —           | —       | —            |
+| Mutation          | cargo-mutants                 | —           | —           | —       | —            |
 
 ## 5. Sélection de techniques par type de test
 
@@ -482,8 +482,8 @@ cargo mutants --package nvbes-email --timeout 600
 
 ### Tests de sécurité
 
-| Technique prioritaire | Justification                            |
-| --------------------- | ---------------------------------------- |
-| Error guessing        | OWASP Top 10 patterns                    |
-| Fuzz / Property tests | Input malformé, injection (fuzz: gap V1) |
-| Risk-based            | Priorisation assets critiques            |
+| Technique prioritaire | Justification                 |
+| --------------------- | ----------------------------- |
+| Error guessing        | OWASP Top 10 patterns         |
+| Fuzz / Property tests | Input malformé, injection     |
+| Risk-based            | Priorisation assets critiques |

@@ -49,7 +49,7 @@ function fixture() {
   };
 }
 
-test('database and Redis names isolate runs, attempts and jobs', () => {
+test('database names isolate runs, attempts and jobs', () => {
   const env = { GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1', GITHUB_JOB: 'database' };
   const name = serviceName('postgres', env);
   for (const change of [
@@ -59,7 +59,7 @@ test('database and Redis names isolate runs, attempts and jobs', () => {
   ]) {
     assert.notEqual(serviceName('postgres', { ...env, ...change }), name);
   }
-  assert.notEqual(serviceName('redis', env), name);
+  assert.throws(() => serviceName('unsupported', env));
   assert.throws(() => serviceName('postgres', {}));
   assert.throws(() => serviceName('postgres', { ...env, GITHUB_JOB: '../unsafe' }));
 });
@@ -69,10 +69,10 @@ test('hosted services use ephemeral loopback ports; Docker runners use network D
     args: ['--publish', '127.0.0.1::5432'],
     host: '127.0.0.1',
   });
-  assert.deepEqual(serviceNetwork('isolated', 6379, 'runner-network'), {
+  assert.deepEqual(serviceNetwork('isolated', 5432, 'runner-network'), {
     args: ['--network', 'runner-network'],
     host: 'isolated',
-    port: 6379,
+    port: 5432,
   });
 });
 

@@ -63,10 +63,6 @@
     {
       "crate": "nvbes-test-utils",
       "reason": "Bibliothèque utilitaire de tests uniquement (support keyword runner, pools de test) ; hors périmètre de production, non mesurée."
-    },
-    {
-      "crate": "nvbes-redis",
-      "reason": "Tests d'intégration dépendants d'un service Redis non provisionné dans ce gate de couverture ; crate active utilisée par les runtimes conservés, compilée et testée séparément."
     }
   ]
 }

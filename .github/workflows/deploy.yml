@@ -15,6 +15,11 @@ on:
           - email
           - identity
           - trust-risk
+      email_observability_only:
+        description: "Reconcile only the idle Email queue alert; do not deploy runtimes"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: deploy-production-${{ inputs.service || 'all' }}
@@ -30,6 +35,7 @@ defaults:
 
 jobs:
   ci-provenance:
+    if: ${{ !inputs.email_observability_only }}
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 5
     steps:
@@ -39,6 +45,14 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/deploy.yml
+      - name: Validate observability-only scope
+        env:
+          EMAIL_OBSERVABILITY_ONLY: ${{ inputs.email_observability_only }}
+          REQUESTED_SERVICE: ${{ inputs.service }}
+        run: |
+          if [[ "$EMAIL_OBSERVABILITY_ONLY" == "true" ]]; then
+            [[ "$REQUESTED_SERVICE" == "email" ]]
+          fi
       - name: Verify exact continuous integration provenance
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -110,10 +124,10 @@ jobs:
             org.opencontainers.image.version=${{ github.ref_name }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/account-service:buildcache
           cache-to: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/account-service:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
       - name: Block vulnerable release images
         if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
@@ -411,10 +425,10 @@ jobs:
             org.opencontainers.image.version=${{ github.ref_name }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/billing-service:buildcache
           cache-to: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/billing-service:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
       - name: Block vulnerable release images
         if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
@@ -557,7 +571,7 @@ jobs:
   build-scan-sign-email:
     needs: [ci-provenance]
     runs-on: [self-hosted, macOS, ARM64]
-    if: ${{ success() && (inputs.service == 'all' || inputs.service == 'email' || !inputs.service) }}
+    if: ${{ success() && !inputs.email_observability_only && (inputs.service == 'all' || inputs.service == 'email' || !inputs.service) }}
     timeout-minutes: 75
     environment:
       name: production-ci-cache
@@ -622,10 +636,10 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/email-worker:buildcache
           cache-to: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/email-worker:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
       - name: Block vulnerable release images
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -652,6 +666,32 @@ jobs:
       - name: Sign container image
         run: |
           cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
+
+  reconcile-email-idle-alert:
+    if: ${{ success() && github.ref == 'refs/heads/main' && inputs.service == 'email' && inputs.email_observability_only }}
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 5
+    environment:
+      name: production-email
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/deploy.yml
+      - name: Validate the checked-out revision and Email alert contract
+        run: |
+          [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+          node --test tools/ci/email-deployment-contract.test.mjs
+      - name: Reconcile only the closed-window queue alert
+        env:
+          EMAIL_SYNTHETIC_SMOKE_ENABLED: ${{ vars.EMAIL_SYNTHETIC_SMOKE_ENABLED }}
+          GRAFANA_URL: ${{ vars.GRAFANA_URL }}
+          GRAFANA_PROMETHEUS_DATASOURCE_UID: ${{ vars.GRAFANA_PROMETHEUS_DATASOURCE_UID }}
+          GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
+        run: node tools/ci/reconcile-email-idle-alert.mjs
 
   deploy-email:
     needs: [ci-provenance, build-scan-sign-email]
@@ -1369,10 +1409,10 @@ jobs:
             org.opencontainers.image.version=${{ github.ref_name }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/identity-service:buildcache
           cache-to: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/identity-service:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
       - name: Block vulnerable release images
         if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
@@ -1751,10 +1791,10 @@ jobs:
             org.opencontainers.image.version=${{ github.ref_name }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/trust-risk-service:buildcache
           cache-to: |
-            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.91.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
+            type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/rust-builder:rust-1.98.1-linux-amd64,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
             type=registry,ref=${{ env.CI_CACHE_REGISTRY }}/trust-risk-service:buildcache,mode=max,compression=zstd,oci-mediatypes=true,image-manifest=true
       - name: Block vulnerable release images
         if: env.REUSED_SOURCE_IMAGE_DIGEST == ''

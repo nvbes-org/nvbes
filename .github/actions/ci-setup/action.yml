@@ -34,7 +34,12 @@ runs:
       shell: bash --noprofile --norc -euo pipefail {0}
       run: |
         corepack enable
-        corepack prepare pnpm@11.18.0 --activate
+        for attempt in 1 2 3; do
+          corepack prepare pnpm@11.18.0 --activate && break || {
+            if [[ "$attempt" -eq 3 ]]; then exit 1; fi
+            sleep 2
+          }
+        done
     - name: Restore lane caches
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
@@ -51,17 +56,13 @@ runs:
     - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
       if: inputs.rust == 'true'
       with:
-        toolchain: 1.91.1
+        toolchain: 1.98.1
         components: rustfmt, clippy, llvm-tools-preview
-    - name: Install cargo-llvm-cov
-      if: inputs.rust == 'true' && inputs.coverage == 'true'
-      shell: bash --noprofile --norc -euo pipefail {0}
-      run: cargo install cargo-llvm-cov --locked --version 0.8.7
     - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
       if: inputs.rust == 'true'
       with:
         version: v0.17.0
-        disable_annotations: true
+        disable_annotations: false
     - name: Configure compilation cache
       if: inputs.rust == 'true'
       shell: bash --noprofile --norc -euo pipefail {0}
@@ -70,6 +71,10 @@ runs:
         AWS_SECRET_ACCESS_KEY: ${{ inputs.cache-secret }}
       run: |
         node tools/ci/configure-sccache.mjs
+    - name: Install cargo-llvm-cov
+      if: inputs.rust == 'true' && inputs.coverage == 'true'
+      shell: bash --noprofile --norc -euo pipefail {0}
+      run: cargo install cargo-llvm-cov --locked --version 0.8.7
     - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
       if: inputs.terraform == 'true'
       with:

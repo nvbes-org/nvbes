@@ -87,6 +87,7 @@ test('composite actions and compilation-cache setup are trust boundaries', () =>
   for (const filename of [
     '.github/actions/ci-setup/action.yml',
     'tools/ci/configure-sccache.mjs',
+    'tools/ci/configure-sccache.core.mjs',
     'tools/ci/scaleway-cache-manager.mjs',
   ]) {
     assert.equal(evaluatePullRequestCacheTrust(event, commits, [{ filename }]).trusted, false);

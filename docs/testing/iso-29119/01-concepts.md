@@ -34,19 +34,19 @@ de test. Les objets sont déclarés dans `Cargo.toml` workspace et
 | Regression testing  | Tests de régression | `pnpm test:pre-build`, matrice `regression-matrix.md`  |
 | Smoke testing       | Smoke tests         | `pnpm test:smoke`                                      |
 | Performance testing | Tests de charge     | k6 profiles (smoke, load, volume, spike, stress, soak) |
-| Security testing    | Tests de sécurité   | `pnpm check:security`                                  |
+| Security testing    | Tests de sécurité   | `pnpm check:security`, fuzz smoke (`security.yml`)     |
 
 ### 1.4 Types de test
 
-| ISO 29119              | nvbes                      | Outils                                                                |
-| ---------------------- | -------------------------- | --------------------------------------------------------------------- |
-| Functional testing     | Tests fonctionnels         | Unit, integration, E2E                                                |
-| Non-functional testing | Tests non-fonctionnels     | Performance, sécurité, accessibilité                                  |
-| Structural testing     | Tests structurels          | Property tests (`proptest`), coverage `cargo llvm-cov` (fuzz: gap V1) |
-| Change-related testing | Tests liés aux changements | Regression, affected `nx affected`                                    |
-| Black-box testing      | Boîte noire                | Contract tests, E2E, smoke                                            |
-| White-box testing      | Boîte blanche              | Unit tests internals, property tests, coverage                        |
-| Grey-box testing       | Boîte grise                | Integration tests avec DB réelle                                      |
+| ISO 29119              | nvbes                      | Outils                                                                              |
+| ---------------------- | -------------------------- | ----------------------------------------------------------------------------------- |
+| Functional testing     | Tests fonctionnels         | Unit, integration, E2E                                                              |
+| Non-functional testing | Tests non-fonctionnels     | Performance, sécurité, accessibilité                                                |
+| Structural testing     | Tests structurels          | Fuzz (`fuzz/fuzz_targets/`), property tests (`proptest`), coverage `cargo llvm-cov` |
+| Change-related testing | Tests liés aux changements | Regression, affected `nx affected`                                                  |
+| Black-box testing      | Boîte noire                | Contract tests, E2E, smoke                                                          |
+| White-box testing      | Boîte blanche              | Unit tests internals, fuzz, property tests, coverage                                |
+| Grey-box testing       | Boîte grise                | Integration tests avec DB réelle                                                    |
 
 ### 1.5 Processus de test
 
@@ -148,22 +148,22 @@ Test Report
 
 ### Par objectif
 
-| Objet de test              | Type ISO        | Niveau             | Automatisé   |
-| -------------------------- | --------------- | ------------------ | ------------ |
-| identity-service auth      | Fonctionnel     | Unit + Integration | Oui          |
-| email-worker dispatch      | Fonctionnel     | Unit + Integration | Oui          |
-| billing-service webhooks   | Fonctionnel     | Unit + Integration | Oui          |
-| trust-risk assessment      | Fonctionnel     | Unit + Integration | Oui          |
-| account-service DB/RLS     | Fonctionnel     | Unit + Integration | Oui          |
-| Container contracts        | Non-fonctionnel | System             | Oui          |
-| API contracts (OpenAPI)    | Fonctionnel     | System             | Oui          |
-| Load performance           | Non-fonctionnel | System             | Oui          |
-| Security (OWASP)           | Non-fonctionnel | System             | Oui          |
-| Browser E2E                | Fonctionnel     | System             | Oui          |
-| Fuzz (DPoP, OAuth, Upload) | Structurel      | Unit               | Non (Gap V1) |
-| Accessibility              | Non-fonctionnel | System             | Semi         |
-| Alpha/Beta/UAT             | Fonctionnel     | Acceptance         | Non          |
-| Pentest                    | Non-fonctionnel | Acceptance         | Non          |
+| Objet de test                           | Type ISO        | Niveau             | Automatisé      |
+| --------------------------------------- | --------------- | ------------------ | --------------- |
+| identity-service auth                   | Fonctionnel     | Unit + Integration | Oui             |
+| email-worker dispatch                   | Fonctionnel     | Unit + Integration | Oui             |
+| billing-service webhooks                | Fonctionnel     | Unit + Integration | Oui             |
+| trust-risk assessment                   | Fonctionnel     | Unit + Integration | Oui             |
+| account-service DB/RLS                  | Fonctionnel     | Unit + Integration | Oui             |
+| Container contracts                     | Non-fonctionnel | System             | Oui             |
+| API contracts (OpenAPI)                 | Fonctionnel     | System             | Oui             |
+| Load performance                        | Non-fonctionnel | System             | Oui             |
+| Security (OWASP)                        | Non-fonctionnel | System             | Oui             |
+| Browser E2E                             | Fonctionnel     | System             | Oui             |
+| Fuzz (content-digest, stripe-signature) | Structurel      | Unit               | Oui (30s borné) |
+| Accessibility                           | Non-fonctionnel | System             | Semi            |
+| Alpha/Beta/UAT                          | Fonctionnel     | Acceptance         | Non             |
+| Pentest                                 | Non-fonctionnel | Acceptance         | Non             |
 
 ### Par technique de conception
 
@@ -175,6 +175,6 @@ Test Report
 | Statement coverage       | Lignes Rust                | `cargo llvm-cov` workspace (seuils par crate : `rust-coverage-thresholds.json`) |
 | State transition         | Auth flow (MFA, sessions)  | `identity.auth.tests.rs`, `identity.mfa.crypto.tests.rs`                        |
 | Cause-effect graphing    | Webhook sign + idempotence | `billing.webhooks.tests.rs`                                                     |
-| Random/chaos testing     | Property / Fuzz            | `libs/rust/*/src/*.property.tests.rs` (fuzzing: gap V1)                         |
+| Random/chaos testing     | Property / Fuzz            | `libs/rust/*/src/*.property.tests.rs`, `fuzz/fuzz_targets/`                     |
 | Use case testing         | E2E critiques              | `apps/identity-web/e2e/*.spec.ts`                                               |
 | Risk-based testing       | Priorisation matrice       | `regression-matrix.md`                                                          |
