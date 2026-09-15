@@ -50,7 +50,10 @@ const dockerfiles = [
 ];
 
 for (const dockerfile of dockerfiles) {
-  requireText(dockerfile, 'FROM rust:1.91.1-slim-bookworm@sha256:');
+  requireText(
+    dockerfile,
+    'FROM rust:1.98.1-slim-bookworm@sha256:ebd900bae66fd508b466cef82d64a83a5fb34682e4c8b2797a42908bddc95a57',
+  );
   requireText(dockerfile, 'FROM debian:bookworm-slim@sha256:');
   requireText(dockerfile, 'cargo build --locked --release');
   requireText(dockerfile, 'USER 10001:10001');

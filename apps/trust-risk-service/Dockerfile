@@ -1,4 +1,4 @@
-FROM rust:1.91.1-slim-bookworm@sha256:8514999d4786ef12efe89239e86b3d0a021b94b9d35108c8efe6c79ca7dc1a65 AS builder
+FROM rust:1.98.1-slim-bookworm@sha256:ebd900bae66fd508b466cef82d64a83a5fb34682e4c8b2797a42908bddc95a57 AS builder
 
 ARG TARGETPLATFORM
 ARG SOURCE_DATE_EPOCH=0
@@ -29,9 +29,9 @@ COPY contracts ./contracts
 COPY libs ./libs
 COPY vendor ./vendor
 
-RUN --mount=type=cache,id=nvbes-cargo-registry-rust-1.91.1-${TARGETPLATFORM},target=/usr/local/cargo/registry,sharing=locked \
-    --mount=type=cache,id=nvbes-cargo-git-rust-1.91.1-${TARGETPLATFORM},target=/usr/local/cargo/git,sharing=locked \
-    --mount=type=cache,id=nvbes-trust-risk-service-target-rust-1.91.1-${TARGETPLATFORM},target=/usr/src/nvbes/target,sharing=locked \
+RUN --mount=type=cache,id=nvbes-cargo-registry-rust-1.98.1-${TARGETPLATFORM},target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=nvbes-cargo-git-rust-1.98.1-${TARGETPLATFORM},target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,id=nvbes-trust-risk-service-target-rust-1.98.1-${TARGETPLATFORM},target=/usr/src/nvbes/target,sharing=locked \
     cargo build --locked --release --bin nvbes-trust-risk-service \
     && install -D target/release/nvbes-trust-risk-service /out/trust-risk-service
 

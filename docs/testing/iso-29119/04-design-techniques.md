@@ -303,7 +303,7 @@ condition sur la décision). L'étalonnage booléen reste à exécuter ; le rapp
 > donc une vérification du toolchain épinglé `nightly-2026-09-09`
 > et bascule l'exécution dessus
 > via `rustup run`. Out-of-band : le gate n'est pas exécuté en CI (lane rust
-> pinnée sur stable 1.91.1), il est lancé explicitement en local.
+> pinnée sur stable 1.98.1), il est lancé explicitement en local.
 
 Le script historique lit `docs/testing/rust-condition-thresholds.json`.
 Les seuils ci-dessous sont des baselines de diagnostic, **pas les critères

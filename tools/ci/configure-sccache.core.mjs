@@ -30,7 +30,7 @@ export function compilationCacheEnvironment(source) {
     env.SCCACHE_REGION = env.SCW_CI_CACHE_REGION;
     env.SCCACHE_S3_USE_SSL = 'true';
     env.SCCACHE_S3_ENABLE_VIRTUAL_HOST_STYLE = 'true';
-    env.SCCACHE_S3_KEY_PREFIX = `trusted/rust/${env.RUNNER_OS}-${env.RUNNER_ARCH}/rust-1.91.1`;
+    env.SCCACHE_S3_KEY_PREFIX = `trusted/rust/${env.RUNNER_OS}-${env.RUNNER_ARCH}/rust-1.98.1`;
     env.SCCACHE_S3_RW_MODE = isTrustedPush(env.GITHUB_EVENT_NAME, env.GITHUB_REF)
       ? 'READ_WRITE'
       : 'READ_ONLY';

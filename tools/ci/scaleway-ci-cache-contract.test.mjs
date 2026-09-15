@@ -28,7 +28,7 @@ test('deployment builds combine shared Rust and isolated Scaleway registry cache
     );
   }
   assert.ok(
-    (deployWorkflow.match(/rust-builder:rust-1\.91\.1-linux-amd64/gu)?.length ?? 0) >= 6,
+    (deployWorkflow.match(/rust-builder:rust-1\.98\.1-linux-amd64/gu)?.length ?? 0) >= 6,
     'each deploy build imports and exports the shared Linux Rust cache',
   );
 });
@@ -43,8 +43,8 @@ test('Rust Dockerfiles use stable, platform-scoped BuildKit cache mounts', () =>
     'trust-risk-service',
   ]) {
     const dockerfile = readFileSync(`apps/${service}/Dockerfile`, 'utf8');
-    assert.match(dockerfile, /id=nvbes-cargo-registry-rust-1\.91\.1-\$\{TARGETPLATFORM\}/u);
-    assert.match(dockerfile, /id=nvbes-cargo-git-rust-1\.91\.1-\$\{TARGETPLATFORM\}/u);
+    assert.match(dockerfile, /id=nvbes-cargo-registry-rust-1\.98\.1-\$\{TARGETPLATFORM\}/u);
+    assert.match(dockerfile, /id=nvbes-cargo-git-rust-1\.98\.1-\$\{TARGETPLATFORM\}/u);
     assert.match(dockerfile, /sharing=locked/u);
   }
 });

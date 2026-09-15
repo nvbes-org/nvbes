@@ -21,7 +21,7 @@ const run = {
 };
 const context = {
   sha,
-  tools: { rust: '1.91.1', llvmCov: '0.8.7', cargoMutants: '27.1.0' },
+  tools: { rust: '1.98.1', llvmCov: '0.8.7', cargoMutants: '27.1.0' },
   producer: {
     kind: 'github-actions',
     repository: 'nvbes-org/nvbes',
