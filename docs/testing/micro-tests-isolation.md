@@ -54,6 +54,13 @@ tournent aussi avec `cargo test`, donc dans la campagne de mutation.
 
 ## Mutation
 
+Le lanceur transmet des chemins de manifeste absolus a cargo-mutants, y compris
+pour le workspace racine, et conserve les lockfiles avec `--locked`. La
+concurrence est bornee entre 1 et 4 workers (2 par defaut). Les tests PostgreSQL
+necessitent une base locale jetable explicite via
+`NVBES_SECURITY_TEST_DATABASE_URL` ; les tests de composant ne sont pas exclus
+de cette campagne. Aucun resultat partiel ne vaut validation des seuils.
+
 `pnpm test:rust:mutation` mesure toutes les crates de production du catalogue V1,
 sur chaque workspace Cargo, avec un seuil minimal de 90%. Utiliser
 `pnpm exec nx run rust-workspace:mutation -- --list` pour inspecter le perimetre.
@@ -68,3 +75,26 @@ Stryker reste execute par `test-summary:mutation:typescript` pour `email-ui`.
 Ces campagnes longues sont distinctes des micro-tests et n'ajoutent aucun service
 ni cout recurrent. Un resultat local ne remplace pas une preuve CI authentifiee
 sur le SHA final ; aucun score courant n'est deduit d'une ancienne baseline.
+
+## Cache de compilation en CI
+
+Les PR utilisent le backend GitHub natif de sccache, avec les jetons temporaires
+du runner et la portee du ref de merge de la PR. Les runs suivants de cette PR
+peuvent reutiliser ses objets compiles ; `main` ne restaure jamais ce backend et
+conserve le stockage Scaleway protege. Une PR ne publie pas dans ce dernier.
+Sans jeton GitHub de runtime, le repli est le disque ephemere, annonce dans les logs.
+
+Les cles sccache distinguent les sources, le compilateur et les options, donc
+les objets instrumentes pour la couverture ne remplacent pas ceux des tests
+ordinaires. Les tests et les rapports restent executes/regeneres a chaque run.
+Le nettoyage llvm-cov est conserve pour eviter des mesures perimees. Les etapes
+de compilation et de link non prises en charge par sccache restent necessaires.
+
+Le cache est active avant l'installation de cargo-llvm-cov. Le resume de job
+affiche les hits, misses et erreurs de lecture/ecriture : un second run de la
+meme PR est necessaire pour mesurer le gain, pas seulement constater un build
+vert. Aucun serveur ni quota payant n'est ajoute ; les entrees restent soumises
+au quota et a l'eviction du cache Actions du depot, sans changement de facturation.
+
+References : [backend GHA sccache](https://github.com/mozilla/sccache/blob/main/docs/GHA.md)
+et [portees du cache GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching).

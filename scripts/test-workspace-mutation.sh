@@ -50,6 +50,7 @@ fi
 
 CARGO_MUTANTS_ARGS=(
   "${CARGO_PACKAGE_ARGS[@]}"
+  --locked
   --timeout "$TIMEOUT"
   --no-times
   -o "$OUT_ROOT"
@@ -59,7 +60,13 @@ if [ -n "$JOBS" ]; then
     printf 'error: NVBES_MUTATION_JOBS must be a positive integer\n' >&2
     exit 1
   fi
+  if [ "$JOBS" -gt 8 ]; then
+    printf 'error: NVBES_MUTATION_JOBS must not exceed 8\n' >&2
+    exit 1
+  fi
   CARGO_MUTANTS_ARGS+=(--jobs "$JOBS")
+else
+  CARGO_MUTANTS_ARGS+=(--jobs 2)
 fi
 
 mkdir -p "$OUT_ROOT"
