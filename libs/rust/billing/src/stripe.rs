@@ -265,3 +265,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "stripe.property.tests.rs"]
+mod property_tests;

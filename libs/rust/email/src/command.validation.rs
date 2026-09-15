@@ -161,7 +161,7 @@ fn validate_credential(
     validate_credential_expiry(expiry, deadline, now, max_ttl)
 }
 
-fn validate_credential_expiry(
+pub(super) fn validate_credential_expiry(
     expiry: DateTime<Utc>,
     deadline: DateTime<Utc>,
     now: DateTime<Utc>,
@@ -173,7 +173,7 @@ fn validate_credential_expiry(
     Ok(())
 }
 
-fn validate_identifier(
+pub(super) fn validate_identifier(
     field: &'static str,
     value: &str,
     max: usize,
@@ -189,7 +189,7 @@ fn validate_identifier(
     Ok(())
 }
 
-fn validate_email(value: &str) -> Result<(), EmailCommandError> {
+pub(super) fn validate_email(value: &str) -> Result<(), EmailCommandError> {
     if value.len() > MAX_EMAIL_LENGTH {
         return Err(EmailCommandError::field("recipient.email"));
     }
@@ -199,7 +199,7 @@ fn validate_email(value: &str) -> Result<(), EmailCommandError> {
         .map_err(|_| EmailCommandError::field("recipient.email"))
 }
 
-fn validate_optional_email(
+pub(super) fn validate_optional_email(
     field: &'static str,
     value: Option<&str>,
 ) -> Result<(), EmailCommandError> {
@@ -212,7 +212,7 @@ fn validate_optional_email(
     Ok(())
 }
 
-fn validate_text(field: &'static str, value: &str) -> Result<(), EmailCommandError> {
+pub(super) fn validate_text(field: &'static str, value: &str) -> Result<(), EmailCommandError> {
     if value.trim().is_empty()
         || value.len() > MAX_TEXT_FIELD_LENGTH
         || value.contains(['\r', '\n'])
@@ -222,7 +222,7 @@ fn validate_text(field: &'static str, value: &str) -> Result<(), EmailCommandErr
     Ok(())
 }
 
-fn validate_optional_text(
+pub(super) fn validate_optional_text(
     field: &'static str,
     value: Option<&str>,
 ) -> Result<(), EmailCommandError> {
@@ -232,7 +232,7 @@ fn validate_optional_text(
     }
 }
 
-fn validate_money(amount_minor: i64, currency: &str) -> Result<(), EmailCommandError> {
+pub(super) fn validate_money(amount_minor: i64, currency: &str) -> Result<(), EmailCommandError> {
     if amount_minor < 0
         || currency.len() != 3
         || !currency.bytes().all(|byte| byte.is_ascii_alphabetic())
@@ -242,7 +242,10 @@ fn validate_money(amount_minor: i64, currency: &str) -> Result<(), EmailCommandE
     Ok(())
 }
 
-fn validate_https_url(field: &'static str, value: &str) -> Result<(), EmailCommandError> {
+pub(super) fn validate_https_url(
+    field: &'static str,
+    value: &str,
+) -> Result<(), EmailCommandError> {
     if value.len() > MAX_URL_LENGTH {
         return Err(EmailCommandError::field(field));
     }

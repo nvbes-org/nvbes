@@ -99,3 +99,7 @@ fn associated_data(factor_id: Uuid) -> Vec<u8> {
 #[cfg(test)]
 #[path = "identity.mfa.crypto.tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "identity.mfa.crypto.property.tests.rs"]
+mod property_tests;
