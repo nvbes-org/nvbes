@@ -5,6 +5,7 @@ import path from 'node:path';
 import { loadV1 } from '../test-summary/v1-context.mjs';
 import { productionUnits } from '../test-summary/v1-catalogue.mjs';
 import { rustMutation } from '../test-summary/v1-rust-measurements.mjs';
+import { mutationCommand } from './mutation-v1.command.mjs';
 
 const context = loadV1(process.cwd());
 const units = productionUnits(context.root, context.domains, process.cwd()).filter(
@@ -52,19 +53,11 @@ if (args[0] === '--list') {
     const output = path.join(directory, String(index));
     const result = spawnSync(
       'cargo',
-      [
-        'mutants',
-        '--manifest-path',
+      mutationCommand(
         manifest,
-        ...selected.flatMap((unit) => ['--package', unit.name]),
-        '--jobs',
-        process.env.NVBES_MUTATION_JOBS ?? '2',
-        '--timeout',
-        process.env.NVBES_MUTATION_TIMEOUT ?? '600',
-        '--no-times',
-        '-o',
+        selected.map((unit) => unit.name),
         output,
-      ],
+      ),
       { stdio: 'inherit' },
     );
     assert([0, 2, 3].includes(result.status), `Mutation tool failed: ${manifest}`);
