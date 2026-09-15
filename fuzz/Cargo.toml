@@ -1,0 +1,30 @@
+[package]
+name = "nvbes-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+nvbes-core = { path = "../libs/rust/core" }
+nvbes-billing = { path = "../libs/rust/billing" }
+
+[[bin]]
+name = "content-digest"
+path = "fuzz_targets/content_digest.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "stripe-signature"
+path = "fuzz_targets/stripe_signature.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]

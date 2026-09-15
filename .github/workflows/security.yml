@@ -204,4 +204,4 @@ jobs:
         run: cargo install cargo-fuzz --version 0.13.2 --locked
       - name: Run bounded parser fuzz targets
         run: |
-          cargo fuzz run dpop-proof -- -max_total_time=30
+          cargo fuzz run content-digest -- -max_total_time=30
