@@ -58,7 +58,9 @@ messages must also follow the convention.
 After installing dependencies, run `pnpm exec lefthook install` to enable the
 local `commit-msg` check. To check an existing commit, run
 `pnpm exec commitlint --last --verbose`. CI validates all PR commits and the PR
-title, including title edits, using the same configuration. The title must also
+title, including title edits, using the same configuration. CI excludes merge
+commits by their Git parent count, allowing GitHub's generated branch-update
+messages; ordinary commits receive no message exemptions. The title must also
 describe the final change because it becomes the squash commit subject.
 
 This check validates message structure; it does not determine release readiness
