@@ -90,11 +90,11 @@ pub async fn apply_subscription_event_on_connection(
     .fetch_optional(&mut *db)
     .await?;
 
-    if let Some((Some(last_created), _)) = existing {
-        if last_created >= event_created {
-            // Out of order: existing record was updated by a newer event, skip updating state
-            return Ok(());
-        }
+    if let Some((Some(last_created), _)) = existing
+        && last_created >= event_created
+    {
+        // Out of order: existing record was updated by a newer event, skip updating state
+        return Ok(());
     }
 
     let raw_status = match event_type {

@@ -65,7 +65,7 @@ async function main() {
     // Run migrations before seeding, including when started independently.
     runPrivate(
       'cargo',
-      ['run', '--manifest-path', 'apps/billing-service/Cargo.toml', '--', 'migrate'],
+      ['run', '--package', 'nvbes-billing-service', '--', 'migrate'],
       env,
       300000,
     );
@@ -112,12 +112,7 @@ async function main() {
   } else {
     throw new Error('NVBES_STRIPE_DEV_MODE must be sandbox or mock.');
   }
-  if (!stopping)
-    start(
-      'cargo',
-      ['run', '--manifest-path', 'apps/billing-service/Cargo.toml', '--', 'serve'],
-      env,
-    );
+  if (!stopping) start('cargo', ['run', '--package', 'nvbes-billing-service', '--', 'serve'], env);
 }
 
 if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? '')).href) {

@@ -24,7 +24,6 @@
         "{workspaceRoot}/package.json",
         "{workspaceRoot}/tools/security/ci-secret-policy.mjs",
         "{workspaceRoot}/Cargo.lock",
-        "{workspaceRoot}/apps/billing-service/Cargo.lock",
         "{workspaceRoot}/archive/libs/rust/redis/Cargo.toml",
         "{workspaceRoot}/.devcontainer/**/*"
       ],
