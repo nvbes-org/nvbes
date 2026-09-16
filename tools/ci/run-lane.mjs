@@ -136,6 +136,15 @@ switch (lane) {
       ]);
     }
     selected('test:database', plan.databases, plan.baseline.databases, dbParallel);
+    if (process.env.RUSTC_WRAPPER === 'sccache' || process.env.SCCACHE_SERVER_UDS) {
+      try {
+        if (spawnSync('which', ['sccache']).status === 0) {
+          run('sccache', ['--show-stats']);
+        }
+      } catch {
+        // sccache stats display is observational only
+      }
+    }
     break;
   }
   case 'containers':
