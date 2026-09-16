@@ -21,14 +21,13 @@ IDENTITY_MIGRATION_TEST_RUN_ID="$(
 )"
 
 cleanup() {
-  cargo test \
+  cargo nextest run \
     --package nvbes-identity-service \
     --locked \
     database_migrations_tests::cleanup_ephemeral_databases_for_current_run \
-    -- \
     --exact \
-    --ignored \
-    --nocapture
+    --run-ignored ignored-only \
+    --no-capture
 }
 
 finalize_exit() {
@@ -54,22 +53,20 @@ trap finalize_exit EXIT
 trap 'finalize_signal 130' INT
 trap 'finalize_signal 143' TERM
 
-cargo test \
+cargo nextest run \
   --package nvbes-identity-service \
   --locked \
   database_migrations_tests:: \
-  -- \
   --test-threads=1 \
-  --nocapture
+  --no-capture
 
 # Leave one database and its persisted role snapshot behind in a completed test
 # process. The EXIT cleanup below must recover the same state as after an
 # interrupted process, without deleting a role that predated this test run.
-cargo test \
+cargo nextest run \
   --package nvbes-identity-service \
   --locked \
   database_migrations_tests::prepare_interrupted_cluster_state_for_recovery_test \
-  -- \
   --exact \
-  --ignored \
-  --nocapture
+  --run-ignored ignored-only \
+  --no-capture
