@@ -1,53 +1,48 @@
 {
-	"name": "account-service",
-	"projectType": "application",
-	"root": "apps/account-service",
-	"sourceRoot": "apps/account-service/src",
-	"targets": {
-		"check": {
-			"executor": "nx:run-commands",
-			"cache": true,
-			"inputs": [
-				"{projectRoot}/**/*",
-				"{workspaceRoot}/Cargo.toml",
-				"{workspaceRoot}/Cargo.lock",
-				"{workspaceRoot}/libs/rust/observability/**/*"
-			],
-			"options": {
-				"command": "cargo check --locked --package nvbes-account-service --all-targets",
-				"cwd": "."
-			}
-		},
-		"test": {
-			"executor": "nx:run-commands",
-			"cache": false,
-			"options": {
-				"command": "cargo test --locked --package nvbes-account-service",
-				"cwd": "."
-			}
-		},
-		"test:contract": {
-			"executor": "nx:run-commands",
-			"cache": true,
-			"inputs": [
-				"{projectRoot}/Dockerfile",
-				"{projectRoot}/tests/**/*",
-				"{projectRoot}/src/**/*"
-			],
-			"options": {
-				"command": "node --test apps/account-service/tests/container-contract.test.mjs",
-				"cwd": "."
-			}
-		},
-		"test:database": {
-			"executor": "nx:run-commands",
-			"cache": false,
-			"parallelism": false,
-			"options": {
-				"command": "bash scripts/test-account-service-database.sh",
-				"cwd": "."
-			}
-		}
-	},
-	"tags": ["scope:platform", "type:app", "domain:account", "layer:app"]
+  "name": "account-service",
+  "projectType": "application",
+  "root": "apps/account-service",
+  "sourceRoot": "apps/account-service/src",
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/libs/rust/observability/**/*"
+      ],
+      "options": {
+        "command": "cargo check --locked --package nvbes-account-service --all-targets",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "cargo test --locked --package nvbes-account-service",
+        "cwd": "."
+      }
+    },
+    "test:contract": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["{projectRoot}/Dockerfile", "{projectRoot}/tests/**/*", "{projectRoot}/src/**/*"],
+      "options": {
+        "command": "node --test apps/account-service/tests/container-contract.test.mjs",
+        "cwd": "."
+      }
+    },
+    "test:database": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "bash scripts/test-account-service-database.sh",
+        "cwd": "."
+      }
+    }
+  },
+  "tags": ["scope:platform", "type:app", "domain:account", "layer:app"]
 }
