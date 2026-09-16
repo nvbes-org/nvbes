@@ -80,6 +80,7 @@ jobs:
         with:
           name: v1-receipt-${{ matrix.suite }}-${{ github.sha }}
           path: .temp/v1-receipts/${{ matrix.suite }}.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
@@ -129,6 +130,7 @@ jobs:
         with:
           name: v1-measurement-rust-${{ github.sha }}
           path: .temp/v1-measurements/rust
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
       - name: Publish Rust diagnostics
@@ -139,6 +141,7 @@ jobs:
           path: |
             .temp/v1-rust/llvm.json
             .temp/v1-rust/mutants.out/outcomes.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
@@ -194,6 +197,7 @@ jobs:
         with:
           name: v1-measurement-typescript-${{ matrix.package }}-${{ github.sha }}
           path: .temp/v1-measurements/typescript-${{ matrix.package }}
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
       - name: Publish TypeScript diagnostics
@@ -204,6 +208,7 @@ jobs:
           path: |
             .temp/typescript/${{ matrix.package }}/coverage/coverage-summary.json
             .temp/typescript/${{ matrix.package }}/mutation.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 

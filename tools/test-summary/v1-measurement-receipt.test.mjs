@@ -128,10 +128,11 @@ test('manual trusted CI publishes bounded TypeScript measurement artifacts', () 
   const setup = job.steps.findIndex((step) => step.uses === './.github/actions/ci-setup');
   assert.ok(security >= 0 && security < setup);
   const upload = job.steps.find((step) => step.name === 'Publish TypeScript measurement');
-  assert.equal(upload.uses, 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02');
+  assert.equal(upload.uses, 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a');
   assert.deepEqual(upload.with, {
     name: 'v1-measurement-typescript-${{ matrix.package }}-${{ github.sha }}',
     path: '.temp/v1-measurements/typescript-${{ matrix.package }}',
+    'include-hidden-files': true,
     'if-no-files-found': 'error',
     'retention-days': 7,
   });
