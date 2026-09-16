@@ -76,10 +76,11 @@ jobs:
         run: ./node_modules/.bin/nx run test-summary:receipt --suite=${{ matrix.suite }}
       - name: Publish suite receipt
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: v1-receipt-${{ matrix.suite }}-${{ github.sha }}
           path: .temp/v1-receipts/${{ matrix.suite }}.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
@@ -125,20 +126,22 @@ jobs:
           --llvm=.temp/v1-rust/llvm.json
           --mutation=.temp/v1-rust/mutants.out/outcomes.json
       - name: Publish Rust measurements
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: v1-measurement-rust-${{ github.sha }}
           path: .temp/v1-measurements/rust
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
       - name: Publish Rust diagnostics
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: v1-diagnostic-rust-${{ github.sha }}
           path: |
             .temp/v1-rust/llvm.json
             .temp/v1-rust/mutants.out/outcomes.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
@@ -190,20 +193,22 @@ jobs:
           --coverage=.temp/typescript/${{ matrix.package }}/coverage/coverage-summary.json
           --mutation=.temp/typescript/${{ matrix.package }}/mutation.json
       - name: Publish TypeScript measurement
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: v1-measurement-typescript-${{ matrix.package }}-${{ github.sha }}
           path: .temp/v1-measurements/typescript-${{ matrix.package }}
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
       - name: Publish TypeScript diagnostics
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: v1-diagnostic-typescript-${{ matrix.package }}-${{ github.sha }}
           path: |
             .temp/typescript/${{ matrix.package }}/coverage/coverage-summary.json
             .temp/typescript/${{ matrix.package }}/mutation.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
