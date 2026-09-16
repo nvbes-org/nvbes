@@ -19,7 +19,7 @@
     "testDataMustBeSynthetic": true,
     "productionLoadTestingAllowed": false
   },
-  "cargoManifests": ["Cargo.toml", "apps/billing-service/Cargo.toml"],
+  "cargoManifests": ["Cargo.toml"],
   "sharedCargoPackages": ["nvbes-audit", "nvbes-billing", "nvbes-region"],
   "typescriptExclusions": {
     "@nvbes/identity-sdk-core": "OpenAPI and generated declarations only; contract tests remain mandatory."

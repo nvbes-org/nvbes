@@ -4,7 +4,7 @@ import test from 'node:test';
 import { parse } from 'yaml';
 
 test('active Cargo workspaces contain no Redis package or adapter', () => {
-  for (const file of ['Cargo.lock', 'apps/billing-service/Cargo.lock']) {
+  for (const file of ['Cargo.lock', 'apps/billing-service/Cargo.lock'].filter(existsSync)) {
     assert.doesNotMatch(readFileSync(file, 'utf8'), /^name = "(?:redis|nvbes-redis|bb8-redis)"$/mu);
   }
   assert.equal(existsSync('libs/rust/redis/Cargo.toml'), false);

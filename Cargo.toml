@@ -2,6 +2,7 @@
 members = [
   "apps/email-worker",
   "apps/account-service",
+  "apps/billing-service",
   "apps/identity-service",
   "apps/trust-risk-service",
   "libs/rust/audit",
@@ -71,6 +72,7 @@ pyroscope = { version = "2.0.6", features = ["backend-pprof-rs"] }
 tracing-opentelemetry = "0.33"
 tonic = "0.14.6"
 tonic-health = "0.14.6"
+tower = "0.5"
 tower-http = { version = "0.7.1", features = ["cors", "timeout", "compression-full"] }
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }

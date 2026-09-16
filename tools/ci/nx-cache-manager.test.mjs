@@ -38,7 +38,7 @@ test('micro-test harness, inventories, and isolated TypeScript select the Rust l
     'docs/testing/v1/manifest.json',
     'libs/ts/email-ui/src/email-ui.test.tsx',
     'libs/ts/identity-sdk-core/openapi.contract.test.mjs',
-    'apps/billing-service/Cargo.lock',
+    'apps/billing-service/Cargo.toml',
   ])
     assert.equal(isRustWorkspaceAffected([path]), true, path);
 });
