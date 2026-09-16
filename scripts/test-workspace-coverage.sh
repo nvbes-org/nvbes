@@ -16,7 +16,7 @@ fi
 cargo llvm-cov --version >/dev/null
 
 mkdir -p "$COVERAGE_DIR"
-cargo llvm-cov clean --workspace
+cargo llvm-cov clean --profraw-only
 cargo llvm-cov \
   --workspace \
   --all-targets \

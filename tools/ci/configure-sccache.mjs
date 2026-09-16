@@ -13,7 +13,11 @@ if (result.status !== 0) throw new Error('sccache startup failed');
 if (env.SCCACHE_GHA_ENABLED) console.log('Rust compilation cache: GitHub PR-scoped cache');
 else if (env.SCCACHE_BUCKET) console.log('Rust compilation cache: protected Scaleway cache');
 else console.log('Rust compilation cache: ephemeral local cache');
+const hasLld =
+  (process.platform === 'linux' || env.RUNNER_OS === 'Linux') &&
+  spawnSync('which', ['lld']).status === 0;
+const rustflags = hasLld ? '-C debuginfo=0 -C link-arg=-fuse-ld=lld' : '-C debuginfo=0';
 appendFileSync(
   process.env.GITHUB_ENV,
-  `SCCACHE_SERVER_UDS=${env.SCCACHE_SERVER_UDS}\nRUSTC_WRAPPER=sccache\nCARGO_INCREMENTAL=0\nRUSTFLAGS=-C debuginfo=0\n`,
+  `SCCACHE_SERVER_UDS=${env.SCCACHE_SERVER_UDS}\nRUSTC_WRAPPER=sccache\nCARGO_INCREMENTAL=0\nRUSTFLAGS=${rustflags}\n`,
 );
