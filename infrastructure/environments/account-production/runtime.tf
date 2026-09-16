@@ -92,6 +92,7 @@ resource "scaleway_job_definition" "account_database_migration" {
   memory_limit           = 1024
   local_storage_capacity = 1024
   image_uri              = var.account_image
+  startup_command        = ["/app/account-service"]
   args                   = ["migrate"]
 
   secret_reference {
