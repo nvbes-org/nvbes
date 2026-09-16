@@ -396,7 +396,7 @@
     "TRUST_RISK_TERRAFORM_STATE_SECRET_KEY"
   ],
   "allowedContinueOnError": [],
-  "allowedWritePermissions": ["id-token", "packages", "security-events"],
+  "allowedWritePermissions": ["attestations", "id-token", "packages", "security-events"],
   "requiredWorkflowIncludes": [
     "permissions:",
     "actions: read",
