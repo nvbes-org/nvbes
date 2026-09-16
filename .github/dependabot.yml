@@ -54,6 +54,10 @@ updates:
     rebase-strategy: disabled
     cooldown:
       default-days: 7
+    groups:
+      github-actions-compatible:
+        patterns:
+          - "*"
   - package-ecosystem: docker
     directory: /apps/email-worker
     schedule:
