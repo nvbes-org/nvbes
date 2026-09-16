@@ -136,3 +136,7 @@ pub(super) fn validate_birthdate_on(
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "auth.helpers.birthdate.property.tests.rs"]
+mod property_tests;

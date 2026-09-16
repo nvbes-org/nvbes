@@ -22,6 +22,10 @@
       "threshold": { "lines": 0, "functions": 2, "regions": 0 },
       "baseline": { "lines": 2.4, "functions": 3.5, "regions": 2.3 }
     },
+    "nvbes-billing-service": {
+      "threshold": { "lines": 0, "functions": 3, "regions": 0 },
+      "baseline": { "lines": 2.0, "functions": 5.0, "regions": 2.3 }
+    },
     "nvbes-identity-service": {
       "threshold": { "lines": 33, "functions": 41, "regions": 28 },
       "baseline": { "lines": 35.0, "functions": 43.3, "regions": 29.9 }

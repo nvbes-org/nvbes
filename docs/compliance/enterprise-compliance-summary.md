@@ -54,8 +54,7 @@ minimum :
 
 ## Programmes de conformité possibles
 
-Ces programmes ne sont ni engagés ni acquis. Ils sont évalués seulement après
-validation du marché, de l'applicabilité et du financement :
+Ces programmes constituent des objectifs de maturité futurs et ne sont pas des certifications ou attestations acquises. Ils sont évalués seulement après validation du marché, de l'applicabilité et du financement :
 
 - SOC 2 Type I puis Type II ;
 - ISO/IEC 27001 et son Statement of Applicability ;

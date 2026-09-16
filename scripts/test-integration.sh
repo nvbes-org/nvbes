@@ -11,7 +11,6 @@ cd "$ROOT_DIR"
 
 log_step "rust integration test targets"
 RUST_TEST_THREADS=1 cargo test --workspace --tests --locked
-RUST_TEST_THREADS=1 cargo test --manifest-path apps/billing-service/Cargo.toml --tests --locked
 
 log_step "infrastructure validation"
 tofu -chdir=infrastructure/environments/development init -backend=false >/dev/null

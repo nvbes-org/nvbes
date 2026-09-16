@@ -97,13 +97,12 @@
           "description": "Prevent persisted checkout credentials, require secrets to be allowlisted, and keep secret-bearing steps scoped to trusted push builds or explicitly validated protected-Environment workflows.",
           "evidence": [
             {
-              "path": ".github/workflows-archive/deploy-web.yml",
+              "path": ".github/workflows/deploy.yml",
               "includes": [
-                "persist-credentials: false",
-                "SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}",
-                "POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}",
-                "GRAFANA_FARO_SOURCEMAP_API_KEY: ${{ secrets.GRAFANA_FARO_SOURCEMAP_API_KEY }}",
-                "if: github.event_name == 'push' && github.ref == 'refs/heads/main'"
+                "name: production-billing",
+                "github.ref == 'refs/heads/main'",
+                "TF_VAR_stripe_secret_key: ${{ secrets.STRIPE_SECRET_KEY }}",
+                "TF_VAR_stripe_webhook_secret: ${{ secrets.STRIPE_WEBHOOK_SECRET }}"
               ]
             },
             {
@@ -115,58 +114,20 @@
               ]
             },
             {
-              "path": ".github/workflows-archive/dast.yml",
+              "path": ".github/workflows/stripe-sandbox.yml",
               "includes": [
-                "node tools/security/validate-dast-targets.mjs",
-                "node tools/account-quality/check-dast-authentication.mjs",
-                "name: account-dast-staging",
-                "[[ \"$GITHUB_REF\" == \"refs/heads/main\" ]]",
-                "[[ \"$(git rev-parse HEAD)\" == \"$GITHUB_SHA\" ]]",
-                "ref: ${{ github.sha }}",
-                "DAST_EXPECTED_SUBJECT_ID: ${{ vars.DAST_EXPECTED_SUBJECT_ID }}",
-                "DAST_EXPECTED_TENANT_ID: ${{ vars.DAST_EXPECTED_TENANT_ID }}",
-                "${{ secrets.DAST_ACCOUNT_SESSION_COOKIE }}",
-                "${{ secrets.DAST_API_AUTHORIZATION }}",
-                "${{ secrets.DAST_BACKOFFICE_SESSION_COOKIE }}"
+                "name: stripe-ci",
+                "github.ref == 'refs/heads/main'",
+                "NVBES_STRIPE_SECRET_KEY: ${{ secrets.STRIPE_CI_SECRET_KEY }}"
               ]
             },
             {
-              "path": "tools/account-quality/check-dast-authentication.mjs",
+              "path": ".github/workflows/rotate-ci-cache-credentials.yml",
               "includes": [
-                "/auth/me",
-                "/oauth/userinfo",
-                "/admin/users/{syntheticSubject}",
-                "redirect: 'manual'",
-                "response.status !== 200"
-              ]
-            },
-            {
-              "path": ".github/workflows-archive/account-acceptance-source.yml",
-              "includes": [
-                "name: account-acceptance-source",
-                "verify-account-release-ref.mjs",
-                "ref: ${{ github.ref }}",
-                "Block candidate-controlled evidence import",
-                "externally pinned importer",
-                "exit 1"
-              ]
-            },
-            {
-              "path": ".github/workflows-archive/account-acceptance-ingest.yml",
-              "includes": [
-                "run.path !== \".github/workflows/account-acceptance-source.yml\"",
-                "prepare-account-acceptance-publication.mjs",
-                "name: account-acceptance-${{ github.sha }}"
-              ]
-            },
-            {
-              "path": ".github/workflows-archive/account-release.yml",
-              "includes": [
-                "name: production-account",
-                "verify-account-release-ref.mjs",
-                "ref: ${{ github.ref }}",
-                "ACCOUNT_PRODUCTION_DENIED_ORIGINS: ${{ vars.ACCOUNT_PRODUCTION_DENIED_ORIGINS }}",
-                "scripts/release-gate.sh production"
+                "name: production-bootstrap",
+                "github.ref == 'refs/heads/main'",
+                "GITHUB_TOKEN: ${{ secrets.CI_CACHE_GITHUB_TOKEN }}",
+                "AWS_SECRET_ACCESS_KEY: ${{ secrets.BOOTSTRAP_TERRAFORM_STATE_SECRET_KEY }}"
               ]
             },
             {
@@ -284,10 +245,10 @@
               ]
             },
             {
-              "path": ".github/workflows-archive/ci-applications.yml",
+              "path": ".github/workflows/stripe-sandbox.yml",
               "includes": [
-                "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
-                "cargo check --locked --package"
+                "dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4",
+                "cargo build --locked --manifest-path apps/billing-service/Cargo.toml"
               ]
             }
           ]
@@ -435,7 +396,7 @@
     "TRUST_RISK_TERRAFORM_STATE_SECRET_KEY"
   ],
   "allowedContinueOnError": [],
-  "allowedWritePermissions": ["id-token", "packages", "security-events"],
+  "allowedWritePermissions": ["attestations", "id-token", "packages", "security-events"],
   "requiredWorkflowIncludes": [
     "permissions:",
     "actions: read",

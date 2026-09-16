@@ -7,6 +7,11 @@ pre-commit:
       run: pnpm exec vp check --fix {staged_files}
       stage_fixed: true
 
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit "{1}"
+
 pre-push:
   commands:
     doc-validate:

@@ -126,10 +126,10 @@ impl FromRequestParts<BillingState> for OperatorAuth {
             .and_then(|value| value.strip_prefix("Bearer "))
             .ok_or(BillingError::Unauthorized)?;
 
-        if let Some(expected) = &state.config.operator_token {
-            if nvbes_billing::stripe::constant_time_eq(token.as_bytes(), expected.as_bytes()) {
-                return Ok(OperatorAuth);
-            }
+        if let Some(expected) = &state.config.operator_token
+            && nvbes_billing::stripe::constant_time_eq(token.as_bytes(), expected.as_bytes())
+        {
+            return Ok(OperatorAuth);
         }
         Err(BillingError::Unauthorized)
     }

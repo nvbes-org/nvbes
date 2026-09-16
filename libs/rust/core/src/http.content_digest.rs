@@ -57,7 +57,7 @@ pub async fn content_digest_guard(
     Ok(next.run(request).await)
 }
 
-fn parse_sha256_digest(header_value: &str) -> Option<String> {
+pub(crate) fn parse_sha256_digest(header_value: &str) -> Option<String> {
     let value = header_value.trim();
 
     let stripped = value.strip_prefix(SHA256_ALGO)?.strip_prefix('=')?;
@@ -86,3 +86,7 @@ pub fn sha256_digest_base64(bytes: &[u8]) -> String {
 pub fn content_digest_header_value(bytes: &[u8]) -> String {
     format!("{SHA256_ALGO}=:{}:", sha256_digest_base64(bytes))
 }
+
+#[cfg(test)]
+#[path = "http.content_digest.property.tests.rs"]
+mod property_tests;

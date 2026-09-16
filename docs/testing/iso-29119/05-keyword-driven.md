@@ -443,7 +443,6 @@ pnpm test:unit           # Unit (Rust + web typecheck)
 pnpm test:integration    # Integration (Rust + Terraform)
 pnpm test:e2e:critical   # E2E (Playwright)
 pnpm test:smoke          # Smoke (HTTP)
-pnpm security:fuzz       # Fuzz (3 cibles, 30s)
 pnpm check:security      # Sécurité complète
 
 # Exécution par service
