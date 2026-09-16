@@ -14,16 +14,43 @@ const lane = process.argv[2];
 if (plan.version !== 1 || plan.candidate[lane] !== true)
   throw new Error('Lane not required by valid plan');
 
+console.log(`[${lane}] Starting execution`);
+
 const cache = { hits: 0, total: 0 };
-function run(binary, args, capture = false) {
+
+function deriveTag(binary, args, tag) {
+  if (tag) return tag;
+  if (binary === 'cargo') return 'cargo';
+  if (binary === 'pnpm') {
+    if (args[0] === 'exec' && args[1]) return args[1];
+    if (args[0]) return args[0];
+  }
+  return binary;
+}
+
+function writePrefixed(stream, text, prefix) {
+  if (!text) return;
+  const lines = text.split(/\r?\n/u);
+  for (let i = 0; i < lines.length; i++) {
+    if (i === lines.length - 1 && lines[i] === '') break;
+    const line = lines[i];
+    stream.write(line ? `${prefix} ${line}\n` : `${prefix}\n`);
+  }
+}
+
+function run(binary, args, capture = true, tag = '') {
+  const stepTag = deriveTag(binary, args, tag);
+  const prefix = `[${lane}:${stepTag}]`;
+  console.log(`${prefix} > ${binary} ${args.join(' ')}`);
+  const startedAt = Date.now();
   const result = spawnSync(binary, args, {
     stdio: capture ? 'pipe' : 'inherit',
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
   });
   if (capture) {
-    process.stdout.write(result.stdout ?? '');
-    process.stderr.write(result.stderr ?? '');
+    writePrefixed(process.stdout, result.stdout, prefix);
+    writePrefixed(process.stderr, result.stderr, prefix);
     const ansiPattern = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'gu');
     const output = (result.stdout ?? '').replace(ansiPattern, '');
     const match = output.match(/Cache:\s+(\d+)\/(\d+) hit/u);
@@ -32,16 +59,21 @@ function run(binary, args, capture = false) {
       cache.total += Number(match[2]);
     }
   }
+  const duration = Date.now() - startedAt;
   if (result.status !== 0) {
+    console.error(`${prefix} failed with status ${result.status} in ${duration}ms`);
     checkOomExit(result.status, result.signal, `${binary} ${args.join(' ')}`);
     throw new Error(`${binary} failed (${result.status})`);
   }
+  console.log(`${prefix} completed in ${duration}ms`);
 }
+
 function nx(target, projects, parallel = 4) {
   if (!projects.length) return;
   if (!projects.every((project) => /^[a-zA-Z0-9@/_.-]+$/u.test(project)))
     throw new Error('Invalid project name');
   const targetArgs = Array.isArray(target) ? target.flatMap((t) => ['-t', t]) : ['-t', target];
+  const tag = Array.isArray(target) ? target.join(',') : target;
   run(
     'pnpm',
     [
@@ -54,6 +86,7 @@ function nx(target, projects, parallel = 4) {
       '--outputStyle=static',
     ],
     true,
+    tag,
   );
 }
 const started = Date.now();
@@ -168,10 +201,13 @@ const metric = {
     ? memoryStats.minAvailableMbSeen
     : null,
 };
+console.log(`[${lane}] Execution completed in ${metric.durationMs}ms`);
 const durationSec = (metric.durationMs / 1000).toFixed(1);
 const cacheInfo = cache.total
   ? `${cache.hits}/${cache.total} (${Math.round((cache.hits / cache.total) * 100)}%)`
   : 'N/A';
 const summaryMd = `### 🏁 CI Lane: \`${lane}\`\n\n| Metric | Value |\n| :--- | :--- |\n| **Status** | ✅ Passed |\n| **Duration** | ${durationSec}s |\n| **Nx Cache Hits** | ${cacheInfo} |\n| **Rollout Mode** | ${plan.shadow ? 'Shadow' : 'Affected'} |\n\nCI_METRIC ${JSON.stringify(metric)}\n`;
 console.log(`CI_METRIC ${JSON.stringify(metric)}`);
-appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n${summaryMd}\n`);
+if (process.env.GITHUB_STEP_SUMMARY) {
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n${summaryMd}\n`);
+}
