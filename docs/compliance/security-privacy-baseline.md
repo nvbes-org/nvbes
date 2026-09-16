@@ -88,6 +88,14 @@ aux organisations Enterprise ou à une API produit sont futures.
 Le [runbook opérateur solo](../operations/platform-operations-manual-runbook.md)
 définit le traitement des dossiers.
 
+### Incident Response Operationnel
+
+En cas d'incident de sécurité ou d'abus avéré, l'opérateur applique le runbook d'incident, isole les accès concernés, consigne les actions menées et notifie selon les délais légaux applicables.
+
+### Exigences Audit V1
+
+Les événements d'audit enregistrent de manière immuable les créations, mutations de statut, élévations de privilèges et révocations de session sans fuite de secrets ou de données sensibles.
+
 ## Privacy V1
 
 - registre des traitements et sous-traitants réels ;
