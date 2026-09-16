@@ -19,4 +19,4 @@ require_destructive_account_test_database
 
 export DATABASE_URL="$NVBES_DATABASE_URL"
 export RUST_TEST_THREADS=1
-exec cargo test --package nvbes-identity-service --locked -- --test-threads=1
+exec cargo nextest run --package nvbes-identity-service --locked --test-threads=1
