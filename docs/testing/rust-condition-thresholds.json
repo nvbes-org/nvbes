@@ -33,6 +33,11 @@
       "baseline": { "score": 0.0, "count": 0, "covered": 0 }
     },
     {
+      "crate": "nvbes-billing-service",
+      "reason": "Couverture de condition mesurée 0.0% (0/0), sous le plancher de 50% : le service s'appuie sur les tests de base de données et Stripe. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": { "score": 0.0, "count": 0, "covered": 0 }
+    },
+    {
       "crate": "nvbes-billing",
       "reason": "Couverture de condition mesurée 39.1% (216/552), sous le plancher de 50% : la logique Stripe est majoritairement exercée par des tests d'intégration dépendants d'un service Redis/du réseau non provisionnés en CI. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
       "baseline": { "score": 39.1, "count": 552, "covered": 216 }

@@ -185,7 +185,6 @@ jobs:
         uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
         with:
           category: /language:${{ matrix.language }}
-
   fuzz-smoke:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

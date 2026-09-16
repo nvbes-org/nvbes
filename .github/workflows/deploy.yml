@@ -20,6 +20,14 @@ on:
         required: false
         default: false
         type: boolean
+      runner:
+        description: "GitHub-hosted first; local for a confirmed hosted outage"
+        required: false
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - local
 
 concurrency:
   group: deploy-production-${{ inputs.service || 'all' }}
@@ -36,7 +44,7 @@ defaults:
 jobs:
   ci-provenance:
     if: ${{ !inputs.email_observability_only }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -60,7 +68,7 @@ jobs:
 
   build-scan-sign-account:
     needs: [ci-provenance]
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     if: ${{ success() && (inputs.service == 'all' || inputs.service == 'account' || !inputs.service) }}
     timeout-minutes: 60
     environment:
@@ -71,6 +79,7 @@ jobs:
       id-token: write
       packages: write
       security-events: write
+      attestations: write
     env:
       CI_CACHE_REGISTRY: ${{ vars.SCW_CI_CACHE_REGISTRY_ENDPOINT }}
       REGISTRY: ghcr.io
@@ -139,6 +148,13 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           format: table
+      - name: Attest container build provenance
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Sign container image
         if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
@@ -156,7 +172,7 @@ jobs:
   deploy-account:
     needs: [ci-provenance, build-scan-sign-account]
     if: ${{ success() && github.ref == 'refs/heads/main' && (inputs.service == 'all' || inputs.service == 'account' || !inputs.service) }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 90
     environment:
       name: production-account
@@ -359,7 +375,7 @@ jobs:
 
   build-scan-sign-billing:
     needs: [ci-provenance]
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     if: ${{ success() && (inputs.service == 'all' || inputs.service == 'billing' || !inputs.service) }}
     timeout-minutes: 60
     environment:
@@ -370,6 +386,7 @@ jobs:
       id-token: write
       packages: write
       security-events: write
+      attestations: write
     env:
       CI_CACHE_REGISTRY: ${{ vars.SCW_CI_CACHE_REGISTRY_ENDPOINT }}
       REGISTRY: ghcr.io
@@ -440,6 +457,13 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           format: table
+      - name: Attest container build provenance
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Sign container image
         if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
@@ -457,7 +481,7 @@ jobs:
   deploy-billing:
     needs: [ci-provenance, build-scan-sign-billing]
     if: ${{ success() && github.ref == 'refs/heads/main' && (inputs.service == 'all' || inputs.service == 'billing' || !inputs.service) }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 90
     environment:
       name: production-billing
@@ -570,7 +594,7 @@ jobs:
 
   build-scan-sign-email:
     needs: [ci-provenance]
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     if: ${{ success() && !inputs.email_observability_only && (inputs.service == 'all' || inputs.service == 'email' || !inputs.service) }}
     timeout-minutes: 75
     environment:
@@ -581,6 +605,7 @@ jobs:
       id-token: write
       packages: write
       security-events: write
+      attestations: write
     env:
       CI_CACHE_REGISTRY: ${{ vars.SCW_CI_CACHE_REGISTRY_ENDPOINT }}
       REGISTRY: ghcr.io
@@ -662,6 +687,13 @@ jobs:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
           format: cyclonedx
           output: sbom.json
+      - name: Attest container build provenance
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Sign container image
         run: |
@@ -696,7 +728,7 @@ jobs:
   deploy-email:
     needs: [ci-provenance, build-scan-sign-email]
     if: ${{ success() && github.ref == 'refs/heads/main' && (inputs.service == 'all' || inputs.service == 'email' || !inputs.service) }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 90
     environment:
       name: production-email
@@ -1343,7 +1375,7 @@ jobs:
 
   build-scan-sign-identity:
     needs: [ci-provenance]
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     if: ${{ success() && (inputs.service == 'all' || inputs.service == 'identity' || !inputs.service) }}
     timeout-minutes: 60
     environment:
@@ -1354,6 +1386,7 @@ jobs:
       id-token: write
       packages: write
       security-events: write
+      attestations: write
     env:
       CI_CACHE_REGISTRY: ${{ vars.SCW_CI_CACHE_REGISTRY_ENDPOINT }}
       REGISTRY: ghcr.io
@@ -1424,6 +1457,13 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           format: table
+      - name: Attest container build provenance
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Sign container image
         if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
@@ -1441,7 +1481,7 @@ jobs:
   deploy-identity:
     needs: [ci-provenance, build-scan-sign-identity]
     if: ${{ success() && github.ref == 'refs/heads/main' && (inputs.service == 'all' || inputs.service == 'identity' || !inputs.service) }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 90
     environment:
       name: production-identity
@@ -1725,7 +1765,7 @@ jobs:
 
   build-scan-sign-trust-risk:
     needs: [ci-provenance]
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     if: ${{ success() && (inputs.service == 'all' || inputs.service == 'trust-risk' || !inputs.service) }}
     timeout-minutes: 60
     environment:
@@ -1736,6 +1776,7 @@ jobs:
       id-token: write
       packages: write
       security-events: write
+      attestations: write
     env:
       CI_CACHE_REGISTRY: ${{ vars.SCW_CI_CACHE_REGISTRY_ENDPOINT }}
       REGISTRY: ghcr.io
@@ -1806,6 +1847,13 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           format: table
+      - name: Attest container build provenance
+        if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Sign container image
         if: env.REUSED_SOURCE_IMAGE_DIGEST == ''
@@ -1823,7 +1871,7 @@ jobs:
   deploy-trust-risk:
     needs: [ci-provenance, build-scan-sign-trust-risk]
     if: ${{ success() && github.ref == 'refs/heads/main' && (inputs.service == 'all' || inputs.service == 'trust-risk' || !inputs.service) }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 90
     environment:
       name: production-trust-risk

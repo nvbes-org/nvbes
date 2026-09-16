@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 
 const IGNORE_FILENAME_REGEX = /(\.tests\.rs|\.test_support\.rs)$/u;
 
@@ -129,6 +129,29 @@ export function formatCoverageTable(rows) {
   return [pad(header), lines.map(pad).join('\n')].join('\n');
 }
 
+export function formatCoverageMarkdown(result) {
+  let md = '### 📊 Rust Workspace Code Coverage\n\n';
+  md += '| Crate | Lines | Functions | Regions | Status |\n';
+  md += '| :--- | :--- | :--- | :--- | :---: |\n';
+  for (const row of result.rows) {
+    const hasGap = row.lineGap || row.functionGap || row.regionGap;
+    const status = !row.present ? '⚠️ Missing' : hasGap ? '❌ Gap' : '✅ Pass';
+    const lines = row.present ? `${row.lines.toFixed(1)}% (≥${row.threshold.lines}%)` : 'N/A';
+    const functions = row.present
+      ? `${row.functions.toFixed(1)}% (≥${row.threshold.functions}%)`
+      : 'N/A';
+    const regions = row.present ? `${row.regions.toFixed(1)}% (≥${row.threshold.regions}%)` : 'N/A';
+    md += `| \`${row.crate}\` | ${lines} | ${functions} | ${regions} | ${status} |\n`;
+  }
+  if (result.failures.length > 0) {
+    md += `\n> [!CAUTION]\n> **${result.failures.length} coverage threshold gap(s) detected:**\n`;
+    for (const f of result.failures) {
+      md += `> - ${f}\n`;
+    }
+  }
+  return md + '\n';
+}
+
 export function loadCargoMetadata() {
   const metadata = JSON.parse(
     execFileSync('cargo', ['metadata', '--format-version', '1', '--locked', '--no-deps'], {
@@ -149,6 +172,9 @@ if (isCli) {
   const packages = loadCargoMetadata();
   const result = evaluateCoverage(report, packages, config);
   console.log(formatCoverageTable(result.rows));
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, formatCoverageMarkdown(result));
+  }
   if (result.uncovered.length) {
     console.error(`error: uncovered workspace members: ${result.uncovered.join(', ')}`);
   }

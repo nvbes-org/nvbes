@@ -15,7 +15,6 @@ use crate::{config::BillingConfig, synthetic};
 
 #[sqlx::test(migrations = "./migrations")]
 async fn billing_lifecycle_is_isolated_deduplicated_and_audited(pool: PgPool) {
-
     let workspace_id = Uuid::new_v4();
     let owner_id = Uuid::new_v4();
     let customer_id = format!("cus_test_{}", Uuid::new_v4().simple());

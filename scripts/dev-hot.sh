@@ -60,7 +60,7 @@ cargo run --package nvbes-email-worker -- migrate
 cargo run --package nvbes-trust-risk-service -- migrate
 cargo run --package nvbes-identity-service -- migrate
 cargo run --package nvbes-account-service -- migrate
-cargo run --manifest-path apps/billing-service/Cargo.toml -- migrate
+cargo run --package nvbes-billing-service -- migrate
 
 # Trap for cleanup
 cleanup() {

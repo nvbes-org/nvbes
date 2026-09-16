@@ -63,6 +63,13 @@ runs:
       with:
         version: v0.17.0
         disable_annotations: false
+    - name: Ensure fast linker
+      if: inputs.rust == 'true' && runner.os == 'Linux'
+      shell: bash --noprofile --norc -euo pipefail {0}
+      run: |
+        if ! command -v lld >/dev/null 2>&1; then
+          sudo apt-get update -qq && sudo apt-get install -qq -y lld
+        fi
     - name: Configure compilation cache
       if: inputs.rust == 'true'
       shell: bash --noprofile --norc -euo pipefail {0}
@@ -74,7 +81,25 @@ runs:
     - name: Install cargo-llvm-cov
       if: inputs.rust == 'true' && inputs.coverage == 'true'
       shell: bash --noprofile --norc -euo pipefail {0}
-      run: cargo install cargo-llvm-cov --locked --version 0.8.7
+      run: |
+        if ! command -v cargo-llvm-cov >/dev/null 2>&1; then
+          VERSION="0.8.7"
+          ARCH="$(uname -m)"
+          case "$ARCH" in
+            x86_64) ARCH="x86_64" ;;
+            aarch64|arm64) ARCH="aarch64" ;;
+          esac
+          OS="$(uname -s)"
+          case "$OS" in
+            Linux) OS="unknown-linux-gnu" ;;
+            Darwin) OS="apple-darwin" ;;
+            *) OS="unknown-linux-gnu" ;;
+          esac
+          URL="https://github.com/taiki-e/cargo-llvm-cov/releases/download/v${VERSION}/cargo-llvm-cov-${ARCH}-${OS}.tar.gz"
+          mkdir -p "$HOME/.cargo/bin"
+          curl -fsSL "$URL" | tar -xz -C "$HOME/.cargo/bin"
+        fi
+        cargo llvm-cov --version
     - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
       if: inputs.terraform == 'true'
       with:

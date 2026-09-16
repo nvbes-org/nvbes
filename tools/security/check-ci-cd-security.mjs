@@ -11,6 +11,7 @@ const errors = [];
 const forbiddenWorkflowTriggers = ['pull_request_target', 'workflow_run'];
 const forbiddenWritePermissions = [
   'actions',
+  'attestations',
   'checks',
   'contents',
   'deployments',
