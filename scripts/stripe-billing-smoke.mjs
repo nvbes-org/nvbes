@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { join } from 'node:path';
 import { generateKeyPairSync, randomBytes, randomUUID, sign, createHmac } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { localDatabase } from './stripe-dev.mjs';
@@ -13,7 +14,7 @@ import {
 const env = { ...process.env };
 localDatabase(env.NVBES_BILLING_DATABASE_URL);
 await verifySandbox(env);
-const binary = 'apps/billing-service/target/debug/nvbes-billing-service';
+const binary = join(process.env.CARGO_TARGET_DIR || 'target', 'debug', 'nvbes-billing-service');
 runPrivate(binary, ['migrate'], env);
 await seedSandboxPlan(env);
 const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });

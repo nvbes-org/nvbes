@@ -92,6 +92,18 @@ jobs:
       deployment: false
     runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 360
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nvbes_core_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nvbes_core_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -115,6 +127,7 @@ jobs:
       - name: Measure every V1 Rust crate
         env:
           NVBES_MUTATION_JOBS: '4'
+          NVBES_SECURITY_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_core_test
         run: bash scripts/test-v1-rust-measurements.sh
       - name: Produce Rust measurement receipts
         env:
