@@ -21,6 +21,14 @@ on:
         description: Public OpenAPI document URL
         required: true
         type: string
+      runner:
+        description: "GitHub-hosted first; local for a confirmed hosted outage"
+        required: false
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - local
 
 concurrency:
   group: dast-staging-${{ github.repository_id }}

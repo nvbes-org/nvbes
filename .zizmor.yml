@@ -1,0 +1,14 @@
+rules:
+  template-injection:
+    ignore:
+      - "sync-skills.yml"
+  dependabot-cooldown:
+    ignore:
+      - "dependabot.yml"
+  excessive-permissions:
+    ignore:
+      - "security.yml"
+  self-repository:
+    ignore:
+      - "ci.yml"
+      - "v1-testing.yml"

@@ -211,3 +211,29 @@ jobs:
           RUSTUP_TOOLCHAIN: nightly-2026-07-20
         run: |
           cargo +nightly-2026-07-20 fuzz run content-digest -- -max_total_time=30
+
+  zizmor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Run zizmor workflow security audit
+        run: |
+          docker run --rm \
+            --volume "$PWD:/repo" \
+            ghcr.io/zizmorcore/zizmor@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101 \
+            --config /repo/.zizmor.yml \
+            --min-severity=low \
+            --format=sarif \
+            /repo > zizmor-results.sarif
+      - name: Upload zizmor SARIF
+        if: >-
+          always() && hashFiles('zizmor-results.sarif') != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          sarif_file: zizmor-results.sarif
