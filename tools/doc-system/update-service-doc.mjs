@@ -135,7 +135,7 @@ ${endpoints
 
 \`\`\`bash
 # Lancer les tests unitaires du service
-cargo test -p ${serviceName}
+cargo nextest run -p ${serviceName}
 
 # Mettre à jour et valider la documentation du service
 pnpm doc:fix

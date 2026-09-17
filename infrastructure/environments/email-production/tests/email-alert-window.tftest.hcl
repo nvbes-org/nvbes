@@ -23,10 +23,6 @@ variables {
 run "closed_window_does_not_report_missing_samples_as_queue_staleness" {
   command = plan
 
-  plan_options {
-    target = [grafana_rule_group.email]
-  }
-
   assert {
     condition = alltrue([
       for rule in grafana_rule_group.email["nvbes-email"].rule :
@@ -52,10 +48,6 @@ run "open_window_detects_missing_queue_telemetry" {
 
   variables {
     email_internal_validation_enabled = true
-  }
-
-  plan_options {
-    target = [grafana_rule_group.email]
   }
 
   assert {

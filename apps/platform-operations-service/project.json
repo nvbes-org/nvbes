@@ -17,7 +17,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "cargo test --package nvbes-platform",
+        "command": "cargo nextest run --package nvbes-platform",
         "cwd": "."
       }
     },

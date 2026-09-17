@@ -10,6 +10,7 @@ ignore = []
 [licenses]
 version = 2
 confidence-threshold = 0.8
+unused-allowed-license = "allow"
 allow = [
   "AGPL-3.0-only",
   "0BSD",
@@ -22,14 +23,13 @@ allow = [
   "CDLA-Permissive-2.0",
   "ISC",
   "MIT",
-  "MPL-2.0",
   "Unicode-3.0",
   "Zlib",
 ]
 exceptions = []
 
 [bans]
-multiple-versions = "warn"
+multiple-versions = "allow"
 wildcards = "allow"
 highlight = "all"
 deny = []

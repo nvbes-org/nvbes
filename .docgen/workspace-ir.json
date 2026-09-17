@@ -1,9 +1,9 @@
 {
-  "extractedAt": "2026-09-12T15:27:48.025Z",
+  "extractedAt": "2026-09-17T21:34:08.257Z",
   "monorepo": {
     "totalProjects": 61,
     "totalTsPackages": 18,
-    "totalRustCrates": 43,
+    "totalRustCrates": 44,
     "totalOpenApiServices": 9,
     "totalAdrs": 11
   },
@@ -334,7 +334,7 @@
       "name": "terraform-modules",
       "projectType": "library",
       "root": "infrastructure/modules",
-      "tags": ["scope:infrastructure", "type:terraform-module"],
+      "tags": ["scope:infrastructure", "type:terraform-module", "domain:shared"],
       "sourceRoot": "infrastructure/modules"
     },
     {
@@ -961,8 +961,16 @@
       "isApp": false,
       "isLib": true,
       "dependencies": [],
-      "devDependencies": ["openapi-typescript"],
-      "scripts": ["check", "generate:ts", "generate:rust", "test"],
+      "devDependencies": ["openapi-typescript", "typescript"],
+      "scripts": [
+        "check",
+        "format:check",
+        "generate:ts",
+        "generate:rust",
+        "lint",
+        "test",
+        "typecheck"
+      ],
       "description": "OpenAPI specification for nvbes Identity - cross-language SDK generation"
     }
   ],
@@ -977,7 +985,7 @@
     },
     {
       "name": "nvbes-billing-service",
-      "version": "0.1.0",
+      "version": "10.3.0",
       "path": "apps/billing-service",
       "isApp": true,
       "isLib": false,
@@ -985,7 +993,7 @@
     },
     {
       "name": "nvbes-email-worker",
-      "version": "=1.102.0",
+      "version": "=1.109.0",
       "path": "apps/email-worker",
       "isApp": true,
       "isLib": false,
@@ -1343,6 +1351,14 @@
       "isApp": false,
       "isLib": false,
       "internalDependencies": ["nvbes-dpop"]
+    },
+    {
+      "name": "nvbes-fuzz",
+      "version": "0.0.0",
+      "path": "fuzz",
+      "isApp": false,
+      "isLib": false,
+      "internalDependencies": ["nvbes-core", "nvbes-billing"]
     },
     {
       "name": "nvbes-email-scaleway",
