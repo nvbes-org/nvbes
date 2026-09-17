@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url);
 // pnpm parser. Nx upgrades must keep this integration contract passing.
 const { filterAffected } = require('nx/src/project-graph/affected/affected-project-graph.js');
 const { LockFileChange, WholeFileChange } = require('nx/src/project-graph/file-utils.js');
+const { output } = require('nx/src/utils/output.js');
 const config = { pluginsConfig: { '@nx/js': { projectsAffectedByDependencyUpdates: 'auto' } } };
 const nodes = Object.fromEntries(
   ['consumer', 'dependent', 'unrelated'].map((name) => [
@@ -66,9 +67,20 @@ test('grouped npm update selects both consumers and their dependents', async () 
 });
 test('unreadable or malformed lockfile selects all projects', async () => {
   assert.deepEqual(await affected(new WholeFileChange()), ['consumer', 'dependent', 'unrelated']);
-  assert.deepEqual(await affected(new LockFileChange(lock('sha512-before'), 'invalid: [')), [
-    'consumer',
-    'dependent',
-    'unrelated',
-  ]);
+  const originalWarn = output.warn.bind(output);
+  const warnings = [];
+  output.warn = (warning) => {
+    warnings.push(warning);
+  };
+  try {
+    assert.deepEqual(await affected(new LockFileChange(lock('sha512-before'), 'invalid: [')), [
+      'consumer',
+      'dependent',
+      'unrelated',
+    ]);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0].title, /Failed to parse "pnpm-lock.yaml"/);
+  } finally {
+    output.warn = originalWarn;
+  }
 });
