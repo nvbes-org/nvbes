@@ -78,6 +78,7 @@
     "security:licenses": "node tools/security/check-javascript-licenses.mjs",
     "security:gitleaks-history": "docker run --rm -v \"$PWD:/repo\" ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f detect --source=/repo --log-opts=--all --redact",
     "security:trivy": "docker run --rm -v \"$PWD:/workspace\" ghcr.io/aquasecurity/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --exit-code 1 --skip-dirs .git,.nx,.pnpm-store,.temp,node_modules,target,infrastructure/local/observability/app-logs /workspace",
+    "security:socket": "pnpm dlx @socketsecurity/cli scan create --dry-run",
     "agent:sync": "node scripts/agent/sync-instructions.mjs",
     "agent:skills": "node scripts/agent/index-skills.mjs",
     "agent:research": "node scripts/agent/index-research.mjs",
