@@ -123,6 +123,11 @@ jobs:
       - name: Enforce FinOps contract
         if: steps.preflight.outputs.graph-required == 'true'
         run: pnpm check:finops
+      - name: Verify workflows and documentation drift
+        if: steps.preflight.outputs.graph-required == 'true'
+        run: |
+          pnpm check:workflows
+          pnpm doc:check-drift
       - name: Configure affected scope
         id: plan
         env:
