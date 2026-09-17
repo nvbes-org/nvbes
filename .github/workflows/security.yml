@@ -38,7 +38,7 @@ jobs:
         with:
           scan-args: >-
             --format=sarif
-            --output=osv-results.sarif
+            --output-file=osv-results.sarif
             --lockfile=./Cargo.lock
             --lockfile=./pnpm-lock.yaml
             --config=./.osv-scanner.toml
@@ -115,6 +115,8 @@ jobs:
   trivy-filesystem:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      TRIVY_SKIP_VERSION_CHECK: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
