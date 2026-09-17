@@ -1,0 +1,15 @@
+version: 2
+projectIgnorePaths:
+  - "archive/**"
+  - "target/**"
+  - ".nx/**"
+  - "infrastructure/**"
+triggerPaths:
+  - "package.json"
+  - "pnpm-lock.yaml"
+  - "pnpm-workspace.yaml"
+  - "apps/*/package.json"
+  - "libs/ts/*/package.json"
+githubApp:
+  enabled: true
+  dependencyOverviewEnabled: true
