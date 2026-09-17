@@ -1,5 +1,5 @@
 output "billing_endpoint" {
-  value       = "https://${scaleway_container.billing.domain_name}"
+  value       = scaleway_container.billing.public_endpoint
   description = "Public HTTPS endpoint for the isolated Billing runtime."
 }
 
