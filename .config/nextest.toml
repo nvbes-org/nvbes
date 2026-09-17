@@ -1,0 +1,12 @@
+# Nextest configuration for nvbes workspace
+# Reference: https://nexte.st/book/configuration.html
+
+[profile.default]
+fail-fast = false
+slow-timeout = { period = "30s", terminate-after = 2 }
+
+[profile.ci]
+status-level = "fail"
+final-status-level = "flaky"
+fail-fast = false
+slow-timeout = { period = "60s", terminate-after = 2 }

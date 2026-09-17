@@ -96,6 +96,7 @@
     "test:post-deploy": "bash scripts/test-smoke.sh",
     "test:unit": "bash scripts/test-unit.sh",
     "test:integration": "bash scripts/test-integration.sh",
+    "test:rust:nextest": "bash scripts/test-nextest.sh",
     "test:rust:coverage": "bash scripts/test-workspace-coverage.sh",
     "test:rust:mutation": "pnpm exec nx run rust-workspace:mutation",
     "test:rust:mutation:baseline": "pnpm exec nx run rust-workspace:mutation:baseline",
