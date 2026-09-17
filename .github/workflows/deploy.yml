@@ -701,7 +701,7 @@ jobs:
 
   reconcile-email-idle-alert:
     if: ${{ success() && github.ref == 'refs/heads/main' && inputs.service == 'email' && inputs.email_observability_only }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 5
     environment:
       name: production-email

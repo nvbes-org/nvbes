@@ -6,7 +6,7 @@
     {
       "id": "AUTHZ_REG_CMD_001",
       "name": "Core policy regression suite",
-      "command": "cargo test -p nvbes-core authz --locked",
+      "command": "cargo nextest run --locked -p nvbes-core authz",
       "purpose": "Run the fast actor-resource-action matrix, horizontal ownership, vertical role boundary, and step-up policy tests.",
       "evidence": [
         {

@@ -6,7 +6,7 @@ import { networkSandbox, isolatedRun, verifySandbox } from './micro-test.sandbox
 import { emailTestArguments } from './micro-test.typescript.mjs';
 
 // All ordinary lib/bin tests are included unless explicitly classified as components.
-// Default cargo test and the existing CI component/database lanes retain those tests.
+// The default cargo-nextest lane and existing CI component/database lanes retain those tests.
 const components = JSON.parse(
   readFileSync('tools/rust-workspace/micro-test.components.json', 'utf8'),
 );

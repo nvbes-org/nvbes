@@ -15,7 +15,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "cargo test --locked --package nvbes-email-scaleway",
+        "command": "cargo nextest run --locked --package nvbes-email-scaleway",
         "cwd": "."
       }
     }

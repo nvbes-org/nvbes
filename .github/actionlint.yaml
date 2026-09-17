@@ -1,0 +1,6 @@
+self-hosted-runner:
+  labels:
+    - docker
+    - ARM64
+    - Linux
+    - self-hosted

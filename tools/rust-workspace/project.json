@@ -90,7 +90,7 @@
       "inputs": ["default"],
       "outputs": [],
       "options": {
-        "command": "cargo test --workspace --locked"
+        "command": "cargo nextest run --workspace --locked"
       },
       "configurations": {},
       "parallelism": true,
@@ -153,7 +153,7 @@
       "cache": false,
       "inputs": ["default"],
       "options": {
-        "command": "cargo test --locked -p nvbes-core --lib"
+        "command": "cargo nextest run --locked -p nvbes-core --lib"
       }
     }
   }

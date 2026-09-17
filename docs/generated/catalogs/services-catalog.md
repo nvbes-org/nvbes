@@ -4,7 +4,7 @@ description: Inventaire auto-généré des runtimes actifs et des applications a
 ---
 
 > Ce document est généré automatiquement de manière déterministe à partir de l'état réel du monorepo.
-> Dernière mise à jour : `2026-09-12T15:27:48.025Z`
+> Dernière mise à jour : `2026-09-17T21:34:08.257Z`
 
 ## Vue d'ensemble
 
@@ -56,13 +56,13 @@ Les **19 projets** ci-dessous sont conservés comme historique. Ils ne sont ni d
 ### `nvbes-billing-service`
 
 - **Chemin** : `apps/billing-service`
-- **Version** : `0.1.0`
+- **Version** : `10.3.0`
 - **Dépendances internes** : `nvbes-billing`, `nvbes-core`, `nvbes-observability`
 
 ### `nvbes-email-worker`
 
 - **Chemin** : `apps/email-worker`
-- **Version** : `=1.102.0`
+- **Version** : `=1.109.0`
 - **Dépendances internes** : `nvbes-core`, `nvbes-email`, `nvbes-email-scaleway`, `nvbes-observability`
 
 ### `nvbes-identity-service`
