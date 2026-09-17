@@ -13,6 +13,9 @@ inputs:
   coverage:
     description: Install cargo-llvm-cov for coverage validation
     default: 'false'
+  nextest:
+    description: Install cargo-nextest for fast test execution
+    default: 'false'
   caches:
     description: Space-separated cache kinds
     default: 'pnpm nx'
@@ -104,6 +107,32 @@ runs:
           curl -fsSL "$URL" | tar -xz -C "$HOME/.cargo/bin"
         fi
         cargo llvm-cov --version
+    - name: Install cargo-nextest
+      if: inputs.rust == 'true' && inputs.nextest == 'true'
+      shell: bash --noprofile --norc -euo pipefail {0}
+      run: |
+        if ! command -v cargo-nextest >/dev/null 2>&1; then
+          VERSION="0.9.144"
+          OS="$(uname -s)"
+          case "$OS" in
+            Linux)
+              ARCH="$(uname -m)"
+              case "$ARCH" in
+                x86_64) TARGET="x86_64-unknown-linux-gnu" ;;
+                aarch64|arm64) TARGET="aarch64-unknown-linux-gnu" ;;
+                *) TARGET="x86_64-unknown-linux-gnu" ;;
+              esac
+              ;;
+            Darwin)
+              TARGET="universal-apple-darwin"
+              ;;
+            *) TARGET="x86_64-unknown-linux-gnu" ;;
+          esac
+          URL="https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-${VERSION}/cargo-nextest-${VERSION}-${TARGET}.tar.gz"
+          mkdir -p "$HOME/.cargo/bin"
+          curl -fsSL "$URL" | tar -xz -C "$HOME/.cargo/bin"
+        fi
+        cargo nextest --version
     - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
       if: inputs.terraform == 'true'
       with:
