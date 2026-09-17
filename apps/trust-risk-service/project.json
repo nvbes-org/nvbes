@@ -24,7 +24,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "cargo test --locked --package nvbes-trust-risk --package nvbes-trust-risk-service",
+        "command": "cargo nextest run --locked --package nvbes-trust-risk --package nvbes-trust-risk-service",
         "cwd": "."
       }
     },

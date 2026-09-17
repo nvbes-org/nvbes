@@ -81,6 +81,10 @@ runs:
         AWS_SECRET_ACCESS_KEY: ${{ inputs.cache-secret }}
       run: |
         node tools/ci/configure-sccache.mjs
+    - name: Install cargo-nextest
+      if: inputs.rust == 'true'
+      shell: bash --noprofile --norc -euo pipefail {0}
+      run: cargo install cargo-nextest --version 0.9.144 --locked
     - name: Install cargo-llvm-cov
       if: inputs.rust == 'true' && inputs.coverage == 'true'
       shell: bash --noprofile --norc -euo pipefail {0}
