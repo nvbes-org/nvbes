@@ -387,10 +387,60 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
         run: node tools/ci/scaleway-cache-manager.mjs save pnpm nx
 
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce Rust advisory, license, ban and source policy
+        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+        with:
+          command: check
+          arguments: --all-features
+      - name: Scan committed lockfiles with OSV
+        uses: google/osv-scanner-action/osv-scanner-action@6e4298ebc4db23e847df9b2e2de2939d6f066c67 # v2.5.1
+        with:
+          scan-args: >-
+            --format=sarif
+            --output=osv-results.sarif
+            --lockfile=./Cargo.lock
+            --lockfile=./pnpm-lock.yaml
+            --config=./.osv-scanner.toml
+      - name: Upload OSV SARIF
+        if: always() && hashFiles('osv-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          sarif_file: osv-results.sarif
+      - name: Scan the complete Git history with Gitleaks
+        run: |
+          docker run --rm \
+            --volume "$PWD:/repo" \
+            ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            detect \
+            --source=/repo \
+            --log-opts=--all \
+            --redact
+      - name: Scan filesystem, secrets and infrastructure configuration with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: '1'
+          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
+
   ci-gate:
     name: ci-gate
     if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) }}
-    needs: [authorize-cache, scope, contracts, typescript, rust, database, terraform, containers]
+    needs: [authorize-cache, scope, contracts, typescript, rust, database, terraform, containers, security]
     runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:

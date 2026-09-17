@@ -23,7 +23,7 @@ for (const [failBaseline, failMicro, failClippy] of [
           dependencies: [],
         })),
       };
-      const cargo = `#!${process.execPath}\nconst fs=require('node:fs');const args=process.argv.slice(2);fs.appendFileSync(process.env.TEST_CALLS,JSON.stringify(args)+'\\n');if(args[0]==='metadata') console.log(process.env.TEST_METADATA);if(args[0]==='test'&&args.includes('--workspace')&&process.env.TEST_FAIL==='true')process.exit(1);if(args[0]==='clippy'&&process.env.TEST_CLIPPY_FAIL==='true')process.exit(1);`;
+      const cargo = `#!${process.execPath}\nconst fs=require('node:fs');const args=process.argv.slice(2);fs.appendFileSync(process.env.TEST_CALLS,JSON.stringify(args)+'\\n');if(args[0]==='metadata') console.log(process.env.TEST_METADATA);if(args[0]==='nextest'&&args[1]==='run'&&args.includes('--workspace')&&process.env.TEST_FAIL==='true')process.exit(1);if(args[0]==='clippy'&&process.env.TEST_CLIPPY_FAIL==='true')process.exit(1);`;
       writeFileSync(join(directory, 'cargo'), cargo, { mode: 0o755 });
       writeFileSync(
         join(directory, 'pnpm'),
@@ -70,17 +70,17 @@ for (const [failBaseline, failMicro, failClippy] of [
           failClippy ? /Rust linting failed/u : /Isolated micro-tests failed/u,
         );
         assert.equal(
-          calls.some((args) => args[0] === 'test'),
+          calls.some((args) => args[0] === 'nextest'),
           false,
         );
         assert.doesNotMatch(result.stdout, /CI_RUST_EVIDENCE/u);
         return;
       }
       assert.deepEqual(
-        calls.filter((args) => args[0] === 'test'),
+        calls.filter((args) => args[0] === 'nextest'),
         [
-          ['test', '--locked', '--package', 'a'],
-          ['test', '--workspace', '--locked'],
+          ['nextest', 'run', '--locked', '--package', 'a'],
+          ['nextest', 'run', '--workspace', '--locked'],
         ],
       );
       const evidence = JSON.parse(result.stdout.match(/CI_RUST_EVIDENCE (.+)/u)[1]);

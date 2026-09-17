@@ -195,6 +195,11 @@ for (const file of ['.github/workflows/ci.yml', '.github/workflows/v1-testing.ym
     assert.equal(permitsFallbackDispatch(file, text), true);
     for (const [name, job] of Object.entries(workflow.jobs)) {
       if (name === 'local-fallback') continue;
+      if (file === '.github/workflows/ci.yml' && name === 'security') {
+        assert.equal(job['runs-on'], 'ubuntu-latest');
+        assert.equal(job.if, undefined);
+        continue;
+      }
       assert.equal(job['runs-on'], runnerSelector);
       assert(job.if.includes(candidateGuard));
       assert.equal(job.permissions?.actions, undefined);

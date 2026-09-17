@@ -80,6 +80,37 @@ But:
 
 - Verifier les parcours utilisateur complets sur environnement proche reel.
 
+### Standard frontend V1
+
+Tout frontend produit réintroduit dans le périmètre V1 doit utiliser la même
+chaîne de validation :
+
+- **Vitest** pour les tests unitaires et de composants ;
+- **Testing Library** (`@testing-library/react`, `@testing-library/user-event`
+  et `@testing-library/jest-dom`) pour tester le comportement observable des
+  composants React ;
+- **Playwright** (`@playwright/test`) pour les parcours E2E navigateur ;
+- **axe-core** via `@axe-core/playwright` pour les contrôles
+  d’accessibilité automatisés sur les parcours critiques.
+
+Règles de wiring :
+
+- chaque package frontend doit exposer des cibles Nx `test` et
+  `test:e2e` adaptées à son périmètre ;
+- les tests Vitest doivent rester rapides, déterministes et sans navigateur
+  réel ;
+- Playwright doit couvrir uniquement les parcours critiques et s’exécuter
+  contre un environnement V1 explicitement ciblé ;
+- chaque parcours Playwright critique doit inclure un contrôle axe-core
+  ciblé, sans remplacer les tests unitaires ou les vérifications manuelles ;
+- les versions et scripts doivent être déclarés dans le package frontend
+  réintroduit, puis validés avec `pnpm install --frozen-lockfile`.
+
+Les frontends archivés ne constituent pas une source d’implémentation :
+`account-web`, `identity-web`, `backoffice-web`, `cloud-web`, `console-web`
+et les autres applications archivées devront appliquer ce standard lors d’une
+réintroduction conforme à la direction V1.
+
 Parcours minimum V1:
 
 - signup -> creation workspace -> premier upload;

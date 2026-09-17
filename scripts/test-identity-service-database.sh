@@ -13,4 +13,4 @@ require_env DATABASE_URL
 node --test "$ROOT_DIR/scripts/validate-identity-test-database.test.mjs"
 node "$ROOT_DIR/scripts/validate-identity-test-database.mjs"
 
-cargo test --locked --package nvbes-identity-service --features database-tests
+cargo nextest run --locked --package nvbes-identity-service --features database-tests

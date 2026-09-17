@@ -22,7 +22,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "cargo test --locked --package nvbes-account-service",
+        "command": "cargo nextest run --locked --package nvbes-account-service",
         "cwd": "."
       }
     },
