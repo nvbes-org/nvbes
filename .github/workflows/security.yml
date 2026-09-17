@@ -199,8 +199,13 @@ jobs:
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
         with:
           toolchain: nightly-2026-07-20
+          components: llvm-tools-preview
       - name: Install cargo-fuzz
+        env:
+          RUSTUP_TOOLCHAIN: nightly-2026-07-20
         run: cargo install cargo-fuzz --version 0.13.2 --locked
       - name: Run bounded parser fuzz targets
+        env:
+          RUSTUP_TOOLCHAIN: nightly-2026-07-20
         run: |
-          cargo fuzz run content-digest -- -max_total_time=30
+          cargo +nightly-2026-07-20 fuzz run content-digest -- -max_total_time=30
