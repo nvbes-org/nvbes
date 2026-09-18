@@ -61,12 +61,12 @@ impl BillingWorkerConfig {
 
         // Strict V1 test-mode check - fail closed if any live key leaked into env
         for key in ["STRIPE_SECRET_KEY", "NVBES_STRIPE_SECRET_KEY"] {
-            if let Ok(val) = std::env::var(key) {
-                if val.starts_with("sk_live_") || val.starts_with("rk_live_") {
-                    anyhow::bail!(
-                        "CRITICAL: Live Stripe credentials are fundamentally prohibited in V1"
-                    );
-                }
+            if std::env::var(key)
+                .is_ok_and(|val| val.starts_with("sk_live_") || val.starts_with("rk_live_"))
+            {
+                anyhow::bail!(
+                    "CRITICAL: Live Stripe credentials are fundamentally prohibited in V1"
+                );
             }
         }
 

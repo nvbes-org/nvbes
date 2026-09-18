@@ -30,7 +30,7 @@ pub async fn run(
     )
     .bind(event_uuid)
     .bind(account_id)
-    .bind(&json!({
+    .bind(json!({
         "recipient_email": "synthetic-worker@nvbes.test",
         "customer_name": "Synthetic Worker",
         "amount_minor": 1500,
