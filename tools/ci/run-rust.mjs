@@ -40,18 +40,18 @@ startMemoryWatchdog({ intervalMs: 2000, thresholdMb: 500 });
 const started = Date.now();
 const scoped = spawnSync(
   'cargo',
-  ['test', '--locked', ...packages.flatMap((name) => ['--package', name])],
+  ['nextest', 'run', '--locked', ...packages.flatMap((name) => ['--package', name])],
   { stdio: 'inherit' },
 );
-checkOomExit(scoped.status, scoped.signal, 'cargo test scoped');
+checkOomExit(scoped.status, scoped.signal, 'cargo nextest scoped');
 // Avoid an identical second execution for global changes. For smaller scopes,
 // run the full baseline even when the candidate fails so divergence is visible.
 const full =
   plan.rustMode === 'scoped' || packages.length === members.length
     ? scoped
-    : spawnSync('cargo', ['test', '--workspace', '--locked'], { stdio: 'inherit' });
+    : spawnSync('cargo', ['nextest', 'run', '--workspace', '--locked'], { stdio: 'inherit' });
 if (full !== scoped) {
-  checkOomExit(full.status, full.signal, 'cargo test workspace');
+  checkOomExit(full.status, full.signal, 'cargo nextest workspace');
 }
 const memoryStats = stopMemoryWatchdog();
 const evidence = {

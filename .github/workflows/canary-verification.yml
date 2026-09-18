@@ -1,0 +1,44 @@
+name: canary verification
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Base URL to probe
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: canary-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Run canary health and security headers verification
+        env:
+          NVBES_CANARY_BASE_URL: ${{ inputs.base_url }}
+        run: |
+          if [[ -n "$NVBES_CANARY_BASE_URL" ]]; then
+            node tools/ci/verify-deployment-canary.mjs --base_url="$NVBES_CANARY_BASE_URL"
+          else
+            node tools/ci/verify-deployment-canary.mjs --dry-run
+          fi

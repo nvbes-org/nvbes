@@ -43,7 +43,7 @@ La configuration locale complète est documentée dans `.env.example`. Les
 tests de rendu et d’échéance se lancent avec :
 
 ```bash
-cargo test -p nvbes-email -p nvbes-email-worker
+cargo nextest run -p nvbes-email -p nvbes-email-worker
 ```
 
 Les tokens, codes, destinataires et corps rendus ne sont jamais écrits dans

@@ -54,7 +54,7 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 - `release-gate.sh`: gate staging et gate production post-déploiement; ce dernier exige
   le paquet d'acceptation Account signé, l'attestation control-plane du release et le
   smoke sur les URLs de production.
-- `check-llm-structure.sh`: verifie la platitude de `src/`, et les seuils de taille des fichiers Rust.
+- `check-llm-structure.sh`: verifie la platitude de `src/`, et les seuils de taille des fichiers Rust et TypeScript/frontend (< 500 lignes bloquant, alerte > 300 lignes).
 - `dev.sh`: prépare les bases locales puis lance Email, Trust/Risk, Identity, Account et Billing.
 - `dev-account-service.sh`: lance Account en isolation sur le port local 3070.
 - `dev-billing-service.sh`: lance le workspace Cargo Billing autonome sur le port local 3080.

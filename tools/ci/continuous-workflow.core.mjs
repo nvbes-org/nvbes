@@ -9,7 +9,7 @@ export function validateContinuousWorkflow(text, setupText) {
   const shell = 'bash --noprofile --norc -euo pipefail {0}';
   assert.deepEqual(
     Object.keys(jobs).sort(),
-    ['authorize-cache', 'scope', ...lanes, 'ci-gate', 'local-fallback'].sort(),
+    ['authorize-cache', 'scope', ...lanes, 'security', 'ci-gate', 'local-fallback'].sort(),
   );
   assert.deepEqual(workflow.defaults, { run: { shell } });
   assert.deepEqual(workflow.permissions, {
@@ -22,11 +22,11 @@ export function validateContinuousWorkflow(text, setupText) {
     jobs['local-fallback'],
     parse(fallbackJob('.github/workflows/ci.yml'))['local-fallback'],
   );
-  assert.deepEqual(jobs['ci-gate'].needs, ['authorize-cache', 'scope', ...lanes]);
+  assert.deepEqual(jobs['ci-gate'].needs, ['authorize-cache', 'scope', ...lanes, 'security']);
   assert.equal(jobs['ci-gate'].steps.at(-1).run, 'node tools/ci/ci-gate.mjs');
   for (const [name, job] of Object.entries(jobs)) {
     if (name === 'local-fallback') continue;
-    assert.equal(job['runs-on'], runnerSelector);
+    assert.equal(job['runs-on'], name === 'security' ? 'ubuntu-latest' : runnerSelector);
     assert.ok(job['timeout-minutes'] > 0 && job['timeout-minutes'] <= 45);
     assert.equal(job['continue-on-error'], undefined);
     assert.equal(job.defaults, undefined);
