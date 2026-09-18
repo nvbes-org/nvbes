@@ -260,13 +260,20 @@ pub async fn run(
             .fetch_one(db)
             .await?;
 
+    let final_status: String = sqlx::query_scalar(
+        "SELECT status FROM billing_subscriptions WHERE stripe_subscription_id = $1",
+    )
+    .bind(&sub_id)
+    .fetch_one(db)
+    .await?;
+
     Ok(SyntheticBillingResult {
         workspace_id,
         customer_id,
         checkout_session_id: session_id,
         checkout_idempotent,
         subscription_id: sub_id,
-        subscription_status: current_status,
+        subscription_status: final_status,
         webhook_deduplicated,
         out_of_order_protected,
         invoice_paid_processed,
