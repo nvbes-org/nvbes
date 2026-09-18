@@ -148,6 +148,7 @@ switch (lane) {
     break;
   }
   case 'containers':
+    run('pnpm', ['check:containers']);
     selected('test:contract', plan.containers, plan.baseline.containers);
     break;
   case 'terraform':
@@ -191,6 +192,7 @@ switch (lane) {
         'check:nx-boundaries',
         'check:product-boundaries',
         'check:secrets',
+        'check:containers',
       ])
         run('pnpm', [check]);
     }

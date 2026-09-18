@@ -59,6 +59,7 @@ for (const dockerfile of dockerfiles) {
   requireText(dockerfile, 'USER 10001:10001');
   requireText(dockerfile, 'STOPSIGNAL SIGTERM');
   requireText(dockerfile, '/health/live');
+  requireText(dockerfile, 'apt-get upgrade -y');
   if (existsSync(dockerfile)) {
     const content = readFileSync(dockerfile, 'utf8');
     if (content.includes('/health/ready')) {

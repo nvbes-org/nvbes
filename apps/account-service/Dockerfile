@@ -2,7 +2,6 @@ FROM rust:1.98.1-slim-bookworm@sha256:ebd900bae66fd508b466cef82d64a83a5fb34682e4
 
 ARG TARGETPLATFORM
 ARG SOURCE_DATE_EPOCH=0
-ARG DEBIAN_SNAPSHOT=20260918T000000Z
 ARG DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=C \
     TZ=UTC \
@@ -14,12 +13,7 @@ ENV LC_ALL=C \
 
 WORKDIR /usr/src/nvbes
 
-RUN rm -f /etc/apt/sources.list.d/debian.sources \
-    && printf '%s\n' \
-      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
-      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
-      > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends pkg-config libssl-dev perl make \
     && rm -rf /var/lib/apt/lists/*
 
@@ -37,14 +31,8 @@ RUN --mount=type=cache,id=nvbes-cargo-registry-rust-1.98.1-${TARGETPLATFORM},tar
 
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS runtime
 
-ARG DEBIAN_SNAPSHOT=20260918T000000Z
 ARG DEBIAN_FRONTEND=noninteractive
-RUN rm -f /etc/apt/sources.list.d/debian.sources \
-    && printf '%s\n' \
-      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
-      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
-      > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
+RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends ca-certificates curl libssl3 \
     && rm -rf /var/lib/apt/lists/* \
