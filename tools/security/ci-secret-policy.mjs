@@ -28,6 +28,7 @@ export function assertSecrets(
       'IDENTITY_SENTRY_DSN',
       'IDENTITY_SYNTHETIC_PASSWORD',
       'IDENTITY_SYNTHETIC_RECOVERED_PASSWORD',
+      'IDENTITY_TOKEN_PRIVATE_KEY_PEM',
     ].map((secret) => [secret, new Set(['.github/workflows/deploy.yml'])]),
     ...['IDENTITY_TERRAFORM_STATE_ACCESS_KEY', 'IDENTITY_TERRAFORM_STATE_SECRET_KEY'].map(
       (secret) => [
@@ -65,6 +66,19 @@ export function assertSecrets(
     const allowedWorkflows = protectedSecretWorkflows.get(secret);
     if (allowedWorkflows && !allowedWorkflows.has(path)) {
       errors.push(`${path}: protected release secret ${secret} is not allowed here`);
+    }
+  }
+
+  if (referencedSecrets.includes('IDENTITY_TOKEN_PRIVATE_KEY_PEM')) {
+    const identityJob = text.match(/^  deploy-identity:\n(?: {4}[^\n]*\n|\n)*/mu)?.[0] ?? '';
+    if (
+      !identityJob.includes('name: production-identity') ||
+      !identityJob.includes("if: ${{ success() && github.ref == 'refs/heads/main' &&") ||
+      extractSecrets(text.replace(identityJob, '')).includes('IDENTITY_TOKEN_PRIVATE_KEY_PEM')
+    ) {
+      errors.push(
+        `${path}: Identity signing key must remain in the protected Identity deployment job`,
+      );
     }
   }
 

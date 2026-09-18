@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, mkdirSync } from 'node:fs';
+import { stripVTControlCharacters } from 'node:util';
 import {
   checkOomExit,
   recommendedParallelism,
@@ -51,8 +52,7 @@ function run(binary, args, capture = true, tag = '') {
   if (capture) {
     writePrefixed(process.stdout, result.stdout, prefix);
     writePrefixed(process.stderr, result.stderr, prefix);
-    const ansiPattern = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'gu');
-    const output = (result.stdout ?? '').replace(ansiPattern, '');
+    const output = stripVTControlCharacters(result.stdout ?? '');
     const match = output.match(/Cache:\s+(\d+)\/(\d+) hit/u);
     if (match) {
       cache.hits += Number(match[1]);

@@ -1,82 +1,17 @@
+use crate::{app::AccountState, error::AccountError};
 use axum::{extract::FromRequestParts, http::request::Parts};
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
-use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{app::AccountState, config::AccountConfig, error::AccountError};
-
-#[derive(Debug, Clone, Deserialize)]
-struct AccessTokenClaims {
-    sub: String,
-    token_type: String,
-    scope: String,
-    amr: Vec<String>,
-    iss: String,
-    aud: String,
-    exp: u64,
-    iat: u64,
-    nbf: u64,
-    jti: String,
-    sid: String,
-}
-
-pub struct TokenVerifier {
-    decoding_key: DecodingKey,
-    issuer: String,
-    audience: String,
-    key_id: String,
-}
-
-impl TokenVerifier {
-    pub fn new(config: &AccountConfig) -> anyhow::Result<Self> {
-        Ok(Self {
-            decoding_key: DecodingKey::from_rsa_pem(config.token_public_key_pem.as_bytes())?,
-            issuer: config.token_issuer.clone(),
-            audience: config.token_audience.clone(),
-            key_id: config.token_key_id.clone(),
-        })
-    }
-
-    fn verify(&self, token: &str) -> Result<Principal, AccountError> {
-        let header = decode_header(token).map_err(|_| AccountError::Unauthorized)?;
-        if header.alg != Algorithm::RS256
-            || header.kid.as_deref() != Some(&self.key_id)
-            || header.typ.as_deref() != Some("at+jwt")
-        {
-            return Err(AccountError::Unauthorized);
-        }
-        let mut validation = Validation::new(Algorithm::RS256);
-        validation.set_issuer(&[&self.issuer]);
-        validation.set_audience(&[&self.audience]);
-        validation.set_required_spec_claims(&["exp", "iat", "iss", "aud", "sub", "nbf"]);
-        let claims = decode::<AccessTokenClaims>(token, &self.decoding_key, &validation)
-            .map_err(|_| AccountError::Unauthorized)?
-            .claims;
-        if claims.token_type != "access"
-            || claims.iss != self.issuer
-            || claims.aud != self.audience
-            || Uuid::parse_str(&claims.sid).is_err()
-            || Uuid::parse_str(&claims.jti).is_err()
-            || claims.exp <= claims.iat
-            || claims.nbf > claims.iat
-        {
-            return Err(AccountError::Unauthorized);
-        }
-        Ok(Principal {
-            id: Uuid::parse_str(&claims.sub).map_err(|_| AccountError::Unauthorized)?,
-            scopes: claims.scope.split_whitespace().map(str::to_owned).collect(),
-            authentication_methods: claims.amr,
-        })
-    }
-}
+#[path = "account.auth.tokens.rs"]
+mod tokens;
+pub use tokens::TokenVerifier;
 
 #[derive(Debug, Clone)]
 pub struct Principal {
     pub id: Uuid,
     scopes: Vec<String>,
-    authentication_methods: Vec<String>,
+    strong_until: Option<u64>,
 }
-
 impl Principal {
     pub fn require(&self, scope: &str) -> Result<(), AccountError> {
         self.scopes
@@ -85,52 +20,46 @@ impl Principal {
             .then_some(())
             .ok_or(AccountError::Forbidden)
     }
-
     pub fn require_step_up(&self) -> Result<(), AccountError> {
-        self.authentication_methods
-            .iter()
-            .any(|method| matches!(method.as_str(), "totp" | "webauthn"))
+        self.strong_until
+            .is_some_and(|until| until > chrono::Utc::now().timestamp() as u64)
             .then_some(())
             .ok_or(AccountError::Forbidden)
     }
-}
 
+    /// Revalidate after all potentially blocking SQL, before commit or disclosure.
+    pub async fn require_step_up_at_database(
+        &self,
+        connection: &mut sqlx::PgConnection,
+    ) -> Result<(), AccountError> {
+        let until = self
+            .strong_until
+            .and_then(|until| i64::try_from(until).ok())
+            .and_then(|until| chrono::DateTime::from_timestamp(until, 0))
+            .ok_or(AccountError::Forbidden)?;
+        let fresh: bool = sqlx::query_scalar("SELECT clock_timestamp() < $1")
+            .bind(until)
+            .fetch_one(connection)
+            .await?;
+        fresh.then_some(()).ok_or(AccountError::Forbidden)
+    }
+}
 impl FromRequestParts<AccountState> for Principal {
     type Rejection = AccountError;
-
     async fn from_request_parts(
         parts: &mut Parts,
         state: &AccountState,
     ) -> Result<Self, Self::Rejection> {
-        let token = parts
-            .headers
-            .get("authorization")
-            .and_then(|value| value.to_str().ok())
-            .and_then(|value| value.strip_prefix("Bearer "))
-            .ok_or(AccountError::Unauthorized)?;
-        state.tokens.verify(token)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Principal;
-    use uuid::Uuid;
-
-    #[test]
-    fn destructive_actions_require_a_step_up_method() {
-        let password_only = Principal {
-            id: Uuid::new_v4(),
-            scopes: vec!["account:close".into()],
-            authentication_methods: vec!["pwd".into()],
-        };
-        assert!(password_only.require("account:close").is_ok());
-        assert!(password_only.require_step_up().is_err());
-
-        let stepped_up = Principal {
-            authentication_methods: vec!["pwd".into(), "webauthn".into()],
-            ..password_only
-        };
-        assert!(stepped_up.require_step_up().is_ok());
+        let credentials = nvbes_dpop::resource::Credentials::from_headers(&parts.headers)
+            .map_err(|_| AccountError::Unauthorized)?;
+        let uri = parts
+            .extensions
+            .get::<axum::extract::OriginalUri>()
+            .map(|original| &original.0)
+            .unwrap_or(&parts.uri);
+        state
+            .tokens
+            .authenticate(&credentials, &parts.method, uri, &state.db)
+            .await
     }
 }

@@ -4,10 +4,8 @@ use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::auth::{
-    RecoveryNotification, authenticate, create_synthetic_identity, hash_token, request_recovery,
-    reset_password, validate_password_pair,
-};
+use crate::auth::{RecoveryNotification, authenticate, create_synthetic_identity, hash_token};
+use crate::recovery::{request_recovery, reset_password, validate_password_pair};
 
 #[derive(Debug, Serialize)]
 pub struct SyntheticSmokeResult {

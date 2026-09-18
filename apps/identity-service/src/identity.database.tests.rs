@@ -23,8 +23,9 @@ use crate::{
     synthetic::{
         run as run_synthetic_smoke, run_with_delivery as run_synthetic_smoke_with_delivery,
     },
-    tokens::{TokenService, run_synthetic_smoke as run_synthetic_token_smoke},
+    tokens::TokenService,
     tokens_config::TokenConfig,
+    tokens_synthetic::run_synthetic_smoke as run_synthetic_token_smoke,
 };
 
 #[sqlx::test(migrations = "./migrations")]
@@ -176,7 +177,7 @@ async fn access_token_introspection_tracks_session_revocation(pool: PgPool) {
     let service = TokenService::new(
         TokenConfig::from_values(
             "test",
-            "http://identity.test".into(),
+            "http://localhost:3000".into(),
             "identity-key-1".into(),
             String::from_utf8(private.private_key_to_pem_pkcs8().unwrap()).unwrap(),
             String::from_utf8(private.public_key_to_pem().unwrap()).unwrap(),
@@ -199,9 +200,30 @@ async fn access_token_introspection_tracks_session_revocation(pool: PgPool) {
 
     assert_eq!(result.algorithm, "RS256");
     assert_eq!(result.expires_in_seconds, 900);
+    assert_eq!(
+        result
+            .scope
+            .split_whitespace()
+            .collect::<std::collections::BTreeSet<_>>(),
+        std::collections::BTreeSet::from([
+            "account:read",
+            "account:write",
+            "account:export",
+            "account:close"
+        ])
+    );
+    assert_eq!(result.amr, ["pwd"]);
     assert!(result.active_before_revocation);
     assert!(result.inactive_for_wrong_audience);
     assert!(result.inactive_after_revocation);
+    let audit_mutation = sqlx::query("DELETE FROM identity_audit_events WHERE principal_id=$1")
+        .bind(result.principal_id)
+        .execute(&pool)
+        .await;
+    assert!(
+        audit_mutation.is_err(),
+        "Identity audit events are append-only"
+    );
 }
 
 fn timestamp(value: chrono::DateTime<Utc>) -> prost_types::Timestamp {

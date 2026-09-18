@@ -3,11 +3,11 @@ use axum::{
     extract::{Path, State},
 };
 use serde::Serialize;
-use uuid::Uuid;
 
 use crate::{
     app::BillingState,
     auth::BillingPrincipal,
+    authorization::{self, BillingAccount},
     customer::get_or_create_customer,
     error::{BillingError, BillingResult},
 };
@@ -19,7 +19,7 @@ pub struct PortalSessionResponse {
 
 #[derive(Debug, Serialize)]
 pub struct BillingOverviewResponse {
-    pub account_id: Uuid,
+    pub account_id: uuid::Uuid,
     pub customer_id: Option<String>,
     pub plan_code: String,
     pub status: String,
@@ -30,12 +30,25 @@ pub struct BillingOverviewResponse {
 pub async fn create_portal_handler(
     State(state): State<BillingState>,
     principal: BillingPrincipal,
-    Path(workspace_id): Path<Uuid>,
+    Path(account): Path<BillingAccount>,
 ) -> BillingResult<Json<PortalSessionResponse>> {
     principal.require_scope("billing:read")?;
+    authorization::require(
+        state.config.account_authority.as_ref(),
+        principal.id(),
+        &account,
+    )
+    .await?;
+    let workspace_id = account.id;
 
-    let customer_id =
-        get_or_create_customer(&state.db, &state.config, workspace_id, "team", None).await?;
+    let customer_id = get_or_create_customer(
+        &state.db,
+        &state.config,
+        workspace_id,
+        account.account_type.as_str(),
+        None,
+    )
+    .await?;
 
     let url = if state.config.stripe_secret_key.starts_with("sk_test_dummy") {
         format!(
@@ -64,14 +77,22 @@ pub async fn create_portal_handler(
 pub async fn get_overview_handler(
     State(state): State<BillingState>,
     principal: BillingPrincipal,
-    Path(workspace_id): Path<Uuid>,
+    Path(account): Path<BillingAccount>,
 ) -> BillingResult<Json<BillingOverviewResponse>> {
     principal.require_scope("billing:read")?;
+    authorization::require(
+        state.config.account_authority.as_ref(),
+        principal.id(),
+        &account,
+    )
+    .await?;
+    let workspace_id = account.id;
 
     let customer: Option<String> = sqlx::query_scalar(
-        "SELECT stripe_customer_id FROM billing_customers WHERE account_id = $1",
+        "SELECT stripe_customer_id FROM billing_customers WHERE account_id = $1 AND account_type = $2",
     )
     .bind(workspace_id)
+    .bind(account.account_type.as_str())
     .fetch_optional(&state.db)
     .await?;
 
@@ -80,12 +101,13 @@ pub async fn get_overview_handler(
             r#"
         SELECT plan_code, status, current_period_end, cancel_at_period_end
         FROM billing_subscriptions
-        WHERE account_id = $1
+        WHERE account_id = $1 AND account_type = $2
         ORDER BY updated_at DESC
         LIMIT 1
         "#,
         )
         .bind(workspace_id)
+        .bind(account.account_type.as_str())
         .fetch_optional(&state.db)
         .await?;
 

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/identity/access-token.v1.schema.json",
+  "title": "Identity access token v1",
+  "description": "RS256 JWT (typ at+jwt) bound to an OAuth grant, session, client and resource audience. Cryptographic verification does not check revocation; introspection additionally checks the active grant/session/principal and current client policy.",
+  "type": "object",
+  "required": [
+    "sub",
+    "token_type",
+    "scope",
+    "amr",
+    "iss",
+    "aud",
+    "exp",
+    "iat",
+    "nbf",
+    "jti",
+    "sid",
+    "client_id",
+    "grant_id",
+    "auth_time"
+  ],
+  "properties": {
+    "sub": { "type": "string", "format": "uuid", "description": "Principal identifier." },
+    "token_type": { "const": "access" },
+    "scope": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^([a-z0-9][a-z0-9:._-]*)( [a-z0-9][a-z0-9:._-]*)*$",
+      "description": "Space-delimited scopes allowed for the token audience."
+    },
+    "amr": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["pwd", "totp", "webauthn"] },
+      "contains": { "enum": ["pwd", "webauthn"] },
+      "description": "Methods derived from the recorded authentication. A passwordless session does not claim pwd. AMR alone does not establish a fresh step-up or an assurance level."
+    },
+    "iss": {
+      "type": "string",
+      "format": "uri",
+      "description": "Identity token issuer HTTPS origin."
+    },
+    "aud": {
+      "type": "string",
+      "description": "Target runtime audience, for example nvbes-account-service."
+    },
+    "exp": { "type": "integer", "minimum": 1 },
+    "iat": { "type": "integer", "minimum": 0 },
+    "nbf": { "type": "integer", "minimum": 0 },
+    "jti": { "type": "string", "format": "uuid" },
+    "sid": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Session bound to this access token."
+    },
+    "client_id": { "type": "string", "minLength": 3, "maxLength": 128 },
+    "grant_id": { "type": "string", "format": "uuid" },
+    "auth_time": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Primary authentication UTC epoch seconds; issuing another token does not refresh this time."
+    },
+    "step_up_time": { "type": "integer", "minimum": 0 },
+    "step_up_expires_at": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Consumers requiring step-up must check freshness at the time of the operation, even if the access token has not expired."
+    },
+    "cnf": {
+      "type": "object",
+      "required": ["jkt"],
+      "properties": { "jkt": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$" } },
+      "additionalProperties": false
+    }
+  },
+  "dependentRequired": {
+    "step_up_time": ["step_up_expires_at"],
+    "step_up_expires_at": ["step_up_time"]
+  },
+  "additionalProperties": false
+}

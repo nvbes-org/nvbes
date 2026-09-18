@@ -3,6 +3,7 @@
   "projectType": "application",
   "root": "apps/billing-service",
   "sourceRoot": "apps/billing-service/src",
+  "implicitDependencies": ["identity-sdk-backend"],
   "targets": {
     "check": {
       "executor": "nx:run-commands",
@@ -13,7 +14,9 @@
         "{workspaceRoot}/Cargo.lock",
         "{workspaceRoot}/libs/rust/billing/**/*",
         "{workspaceRoot}/libs/rust/core/**/*",
+        "{workspaceRoot}/libs/rust/dpop/**/*",
         "{workspaceRoot}/libs/rust/email/**/*",
+        "{workspaceRoot}/libs/rust/identity-sdk-backend/**/*",
         "{workspaceRoot}/libs/rust/observability/**/*"
       ],
       "options": {
@@ -41,6 +44,7 @@
     "test:database": {
       "executor": "nx:run-commands",
       "cache": false,
+      "parallelism": false,
       "options": {
         "command": "bash scripts/test-billing-service-database.sh",
         "cwd": "."

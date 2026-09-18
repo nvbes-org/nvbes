@@ -1,250 +1,297 @@
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::Utc;
-use jsonwebtoken::{
-    Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, decode_header, encode,
-};
-use openssl::pkey::PKey;
-use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use jsonwebtoken::{Algorithm, Validation, decode, decode_header};
+use sha2::{Digest, Sha256};
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
-use crate::auth;
-use crate::tokens_config::TokenConfig;
+use crate::{
+    oauth::{clients::ClientRegistry, codes::AuthorizedGrant},
+    tokens_claims::{AccessTokenClaims, IdTokenClaims, JsonWebKeySet, ProofConfirmation, TokenSet},
+    tokens_config::TokenConfig,
+    tokens_error::TokenError,
+    tokens_grants::{self, ActiveGrant},
+    tokens_keys::KeyRing,
+    tokens_policy,
+};
 
-const ACCESS_TOKEN_TTL_SECONDS: u64 = 15 * 60;
+#[path = "identity.tokens.refresh.rs"]
+mod refresh;
+pub use refresh::RefreshRequest;
+#[path = "identity.tokens.exchange.rs"]
+mod exchange;
+pub use exchange::AuthorizationCodeRequest;
+#[path = "identity.tokens.logout.rs"]
+mod logout;
+#[path = "identity.tokens.userinfo.rs"]
+mod userinfo;
+pub use logout::LogoutHint;
+#[path = "identity.tokens.logout_ticket.rs"]
+mod logout_ticket;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccessTokenClaims {
-    pub sub: String,
-    pub token_type: String,
-    pub scope: String,
-    pub amr: Vec<String>,
-    pub iss: String,
-    pub aud: String,
-    pub exp: u64,
-    pub iat: u64,
-    pub nbf: u64,
-    pub jti: String,
-    pub sid: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct JsonWebKeySet {
-    pub keys: Vec<JsonWebKey>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct JsonWebKey {
-    pub kid: String,
-    pub kty: &'static str,
-    #[serde(rename = "use")]
-    pub usage: &'static str,
-    pub alg: &'static str,
-    pub n: String,
-    pub e: String,
-}
+pub const ACCESS_TOKEN_TTL_SECONDS: u64 = 15 * 60;
 
 pub struct TokenService {
-    config: TokenConfig,
-    encoding_key: EncodingKey,
-    decoding_key: DecodingKey,
-    jwks: JsonWebKeySet,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SyntheticTokenResult {
-    pub principal_id: Uuid,
-    pub session_id: Uuid,
-    pub algorithm: &'static str,
-    pub key_id: String,
-    pub expires_in_seconds: u64,
-    pub active_before_revocation: bool,
-    pub inactive_for_wrong_audience: bool,
-    pub inactive_after_revocation: bool,
+    issuer: String,
+    audiences: std::collections::BTreeSet<String>,
+    keys: KeyRing,
 }
 
 impl TokenService {
-    pub fn new(config: TokenConfig) -> anyhow::Result<Self> {
-        let encoding_key = EncodingKey::from_rsa_pem(config.private_key_pem.as_bytes())?;
-        let decoding_key = DecodingKey::from_rsa_pem(config.public_key_pem.as_bytes())?;
-        let public_key = PKey::public_key_from_pem(config.public_key_pem.as_bytes())?.rsa()?;
-        let jwks = JsonWebKeySet {
-            keys: vec![JsonWebKey {
-                kid: config.key_id.clone(),
-                kty: "RSA",
-                usage: "sig",
-                alg: "RS256",
-                n: URL_SAFE_NO_PAD.encode(public_key.n().to_vec()),
-                e: URL_SAFE_NO_PAD.encode(public_key.e().to_vec()),
-            }],
-        };
+    pub fn new(config: TokenConfig) -> Result<Self, TokenError> {
+        let keys = KeyRing::new(&config)?;
         Ok(Self {
-            config,
-            encoding_key,
-            decoding_key,
-            jwks,
+            issuer: config.issuer,
+            audiences: config.allowed_audiences,
+            keys,
         })
     }
 
-    pub fn jwks(&self) -> &JsonWebKeySet {
-        &self.jwks
+    pub fn issuer(&self) -> &str {
+        &self.issuer
     }
 
-    pub fn issue(
+    pub(crate) fn endpoint(&self, path: &str) -> String {
+        format!("{}/{path}", self.issuer.trim_end_matches('/'))
+    }
+
+    pub fn jwks(&self) -> JsonWebKeySet {
+        self.keys.jwks(Utc::now().timestamp() as u64)
+    }
+
+    /// A code exchange capability may issue exactly one response. Authentication,
+    /// audience, client and proof binding come exclusively from stored evidence.
+    pub async fn issue_grant(
         &self,
-        principal_id: Uuid,
-        session_id: Uuid,
-        audience: &str,
-        scope: &str,
-        amr: Vec<String>,
-    ) -> anyhow::Result<String> {
-        if !self.config.allowed_audiences.contains(audience) {
-            anyhow::bail!("token audience is not allowed");
+        db: &PgPool,
+        clients: &ClientRegistry,
+        grant: &AuthorizedGrant,
+    ) -> Result<TokenSet, TokenError> {
+        let mut tx = db.begin().await?;
+        let response = self.issue_grant_in(&mut tx, clients, grant).await?;
+        tx.commit().await?;
+        Ok(response)
+    }
+
+    async fn issue_grant_in(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+        clients: &ClientRegistry,
+        grant: &AuthorizedGrant,
+    ) -> Result<TokenSet, TokenError> {
+        let active = tokens_grants::load(tx, clients, grant.id).await?;
+        if active.token_issued_at.is_some() {
+            return Err(TokenError::InactiveGrant);
         }
-        validate_scope(scope)?;
-        let issued_at = Utc::now().timestamp() as u64;
-        let claims = AccessTokenClaims {
-            sub: principal_id.to_string(),
+        let request = &active.request;
+        let response = self.sign_grant(&active)?;
+        sqlx::query(
+            "UPDATE identity_oauth_grants SET token_issued_at=clock_timestamp() WHERE id=$1",
+        )
+        .bind(active.id)
+        .execute(&mut **tx)
+        .await?;
+        let refresh_token = if request_allows_refresh(request) {
+            let value = crate::oauth::store::random_secret();
+            let family_id = Uuid::new_v4();
+            sqlx::query("INSERT INTO identity_oauth_refresh_tokens(token_hash,family_id,grant_id,principal_id,client_id) VALUES($1,$2,$3,$4,$5)")
+                .bind(Sha256::digest(value.as_bytes()).to_vec())
+                .bind(family_id)
+                .bind(active.id)
+                .bind(active.principal_id)
+                .bind(request.client_id())
+                .execute(&mut **tx)
+                .await?;
+            Some(value)
+        } else {
+            None
+        };
+        crate::oauth::store::audit(tx, active.principal_id, "identity.oauth.tokens_issued").await?;
+        Ok(TokenSet {
+            refresh_token,
+            ..response
+        })
+    }
+
+    pub(crate) fn sign_grant(&self, grant: &ActiveGrant) -> Result<TokenSet, TokenError> {
+        let now = Utc::now();
+        let issued_at = now.timestamp() as u64;
+        let mut expires_at =
+            (issued_at + ACCESS_TOKEN_TTL_SECONDS).min(grant.session_expires_at.timestamp() as u64);
+        if let Some(deadline) = grant
+            .request
+            .minimum_authentication
+            .deadline(&grant.authentication, now)?
+        {
+            expires_at = expires_at.min(deadline.timestamp() as u64);
+        }
+        if expires_at <= issued_at {
+            return Err(TokenError::InactiveGrant);
+        }
+        let request = &grant.request;
+        if !self.audiences.contains(request.audience()) {
+            return Err(TokenError::InvalidPolicy);
+        }
+        // OIDC scopes authorize identity claims, not operations on resource APIs.
+        if request.audience() == tokens_policy::USERINFO_AUDIENCE
+            && request.resource() != self.endpoint("oauth/userinfo")
+        {
+            return Err(TokenError::InvalidPolicy);
+        }
+        let api_scope = tokens_policy::access_scope(request.audience(), request.scope())?;
+        grant.authentication.validate(now)?;
+        let amr = grant.authentication.amr(now);
+        tokens_policy::validate_amr(&amr)?;
+        let step_up = grant.authentication.fresh_step_up(now);
+        let access = AccessTokenClaims {
+            sub: grant.principal_id.to_string(),
             token_type: "access".into(),
-            scope: scope.into(),
-            amr,
-            iss: self.config.issuer.clone(),
-            aud: audience.into(),
-            exp: issued_at + ACCESS_TOKEN_TTL_SECONDS,
+            client_id: request.client_id().into(),
+            scope: api_scope,
+            amr: amr.clone(),
+            auth_time: grant.authentication.authenticated_at.timestamp() as u64,
+            step_up_time: step_up.map(|value| value.0),
+            step_up_expires_at: step_up.map(|value| value.1),
+            iss: self.issuer.clone(),
+            aud: request.audience().into(),
+            exp: expires_at,
             iat: issued_at,
             nbf: issued_at,
             jti: Uuid::new_v4().to_string(),
-            sid: session_id.to_string(),
+            sid: grant.session_id.to_string(),
+            grant_id: grant.id.to_string(),
+            cnf: request
+                .dpop_jkt
+                .clone()
+                .map(|jkt| ProofConfirmation { jkt }),
         };
-        let mut header = Header::new(Algorithm::RS256);
-        header.kid = Some(self.config.key_id.clone());
-        header.typ = Some("at+jwt".into());
-        Ok(encode(&header, &claims, &self.encoding_key)?)
+        let access_token = self.keys.sign("at+jwt", &access)?;
+        let digest = Sha256::digest(access_token.as_bytes());
+        let identity = IdTokenClaims {
+            iss: self.issuer.clone(),
+            sub: access.sub,
+            aud: request.client_id().into(),
+            exp: expires_at,
+            iat: issued_at,
+            auth_time: access.auth_time,
+            amr,
+            nonce: request.nonce.clone(),
+            sid: access.sid,
+            at_hash: URL_SAFE_NO_PAD.encode(&digest[..16]),
+        };
+        Ok(TokenSet {
+            access_token,
+            id_token: self.keys.sign("JWT", &identity)?,
+            token_type: if access.cnf.is_some() {
+                "DPoP"
+            } else {
+                "Bearer"
+            },
+            expires_in: expires_at - issued_at,
+            scope: request.scope().into(),
+            refresh_token: None,
+        })
     }
 
-    pub fn verify(
-        &self,
-        token: &str,
-        expected_audience: &str,
-    ) -> anyhow::Result<AccessTokenClaims> {
-        if !self.config.allowed_audiences.contains(expected_audience) {
-            anyhow::bail!("token audience is not allowed");
+    /// Cryptographic validation alone does not check session/grant revocation.
+    pub fn verify(&self, token: &str, audience: &str) -> Result<AccessTokenClaims, TokenError> {
+        if token.len() > 16_384 || !self.audiences.contains(audience) {
+            return Err(TokenError::InvalidToken);
         }
+        let now = Utc::now().timestamp() as u64;
         let header = decode_header(token)?;
         if header.alg != Algorithm::RS256
-            || header.kid.as_deref() != Some(&self.config.key_id)
             || header.typ.as_deref() != Some("at+jwt")
+            || header.jku.is_some()
+            || header.jwk.is_some()
+            || header.x5u.is_some()
         {
-            anyhow::bail!("token header is invalid");
+            return Err(TokenError::InvalidToken);
         }
+        let key = self
+            .keys
+            .decoding_key(header.kid.as_deref().ok_or(TokenError::InvalidToken)?, now)?;
         let mut validation = Validation::new(Algorithm::RS256);
-        validation.set_issuer(&[&self.config.issuer]);
-        validation.set_audience(&[expected_audience]);
+        validation.set_issuer(&[&self.issuer]);
+        validation.set_audience(&[audience]);
         validation.set_required_spec_claims(&["exp", "iat", "iss", "aud", "sub", "nbf"]);
-        let claims = decode::<AccessTokenClaims>(token, &self.decoding_key, &validation)?.claims;
-        if claims.token_type != "access" {
-            anyhow::bail!("token type is invalid");
+        validation.validate_nbf = true;
+        validation.leeway = 0;
+        let claims = decode::<AccessTokenClaims>(token, key, &validation)?.claims;
+        if claims.token_type != "access"
+            || claims.iat > now
+            || claims.nbf != claims.iat
+            || claims.exp <= now
+            || claims.exp <= claims.iat
+            || claims.exp - claims.iat > ACCESS_TOKEN_TTL_SECONDS
+            || claims.auth_time > claims.iat
+            || claims.client_id.is_empty()
+            || Uuid::parse_str(&claims.sub).is_err()
+            || Uuid::parse_str(&claims.sid).is_err()
+            || Uuid::parse_str(&claims.grant_id).is_err()
+            || Uuid::parse_str(&claims.jti).is_err()
+            || claims
+                .cnf
+                .as_ref()
+                .is_some_and(|c| !crate::oauth::pkce::is_sha256_base64url(&c.jkt))
+        {
+            return Err(TokenError::InvalidToken);
         }
+        match (claims.step_up_time, claims.step_up_expires_at) {
+            (None, None) => {}
+            (Some(at), Some(until))
+                if at >= claims.auth_time && at <= claims.iat && until > claims.iat => {}
+            _ => return Err(TokenError::InvalidToken),
+        }
+        tokens_policy::validate_scopes(audience, &claims.scope)?;
+        tokens_policy::validate_amr(&claims.amr)?;
         Ok(claims)
     }
 
     pub async fn introspect(
         &self,
         db: &PgPool,
+        clients: &ClientRegistry,
         token: &str,
-        expected_audience: &str,
-    ) -> anyhow::Result<Option<AccessTokenClaims>> {
-        let Ok(claims) = self.verify(token, expected_audience) else {
+        audience: &str,
+    ) -> Result<Option<AccessTokenClaims>, TokenError> {
+        let Ok(claims) = self.verify(token, audience) else {
             return Ok(None);
         };
-        let Ok(session_id) = Uuid::parse_str(&claims.sid) else {
-            return Ok(None);
+        let id = Uuid::parse_str(&claims.grant_id).map_err(|_| TokenError::InvalidToken)?;
+        let mut tx = db.begin().await?;
+        let grant = match tokens_grants::load(&mut tx, clients, id).await {
+            Ok(grant) => grant,
+            Err(TokenError::Database(error)) => return Err(error.into()),
+            Err(_) => return Ok(None),
         };
-        let Ok(principal_id) = Uuid::parse_str(&claims.sub) else {
-            return Ok(None);
-        };
-        let active: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM identity_sessions s JOIN identity_principals p ON p.id = s.principal_id WHERE s.id = $1 AND s.principal_id = $2 AND s.revoked_at IS NULL AND s.expires_at > clock_timestamp() AND p.status = 'active')",
-        )
-        .bind(session_id)
-        .bind(principal_id)
-        .fetch_one(db)
-        .await?;
+        let active = grant.token_issued_at.is_some()
+            && grant.session_id.to_string() == claims.sid
+            && grant.principal_id.to_string() == claims.sub
+            && grant.request.client_id() == claims.client_id
+            && grant.request.audience() == claims.aud
+            && grant.request.dpop_jkt.as_deref() == claims.cnf.as_ref().map(|c| c.jkt.as_str());
+        tx.commit().await?;
         Ok(active.then_some(claims))
     }
 }
 
-pub async fn run_synthetic_smoke(
-    db: &PgPool,
-    service: &TokenService,
-    email: &str,
-    password: &str,
-    audience: &str,
-) -> anyhow::Result<SyntheticTokenResult> {
-    let principal_id = auth::create_synthetic_identity(db, email, password).await?;
-    let session_token = auth::authenticate(db, email, password).await?;
-    let session_id: Uuid = sqlx::query_scalar(
-        "SELECT id FROM identity_sessions WHERE token_hash = $1 AND principal_id = $2",
-    )
-    .bind(auth::hash_token(&session_token))
-    .bind(principal_id)
-    .fetch_one(db)
-    .await?;
-    let access_token = service.issue(
-        principal_id,
-        session_id,
-        audience,
-        "account:read",
-        vec!["pwd".into()],
-    )?;
-    let active_before_revocation = service
-        .introspect(db, &access_token, audience)
-        .await?
-        .is_some();
-    let inactive_for_wrong_audience = service
-        .introspect(db, &access_token, "unregistered-audience")
-        .await?
-        .is_none();
-    sqlx::query("UPDATE identity_sessions SET revoked_at = clock_timestamp() WHERE id = $1")
-        .bind(session_id)
-        .execute(db)
-        .await?;
-    let inactive_after_revocation = service
-        .introspect(db, &access_token, audience)
-        .await?
-        .is_none();
-    let key = &service.jwks().keys[0];
-    Ok(SyntheticTokenResult {
-        principal_id,
-        session_id,
-        algorithm: key.alg,
-        key_id: key.kid.clone(),
-        expires_in_seconds: ACCESS_TOKEN_TTL_SECONDS,
-        active_before_revocation,
-        inactive_for_wrong_audience,
-        inactive_after_revocation,
-    })
-}
-
-fn validate_scope(scope: &str) -> anyhow::Result<()> {
-    let valid = !scope.is_empty()
-        && scope.len() <= 1024
-        && scope.split(' ').all(|item| {
-            !item.is_empty()
-                && item.bytes().all(|byte| {
-                    byte.is_ascii_alphanumeric() || matches!(byte, b':' | b'-' | b'_' | b'.')
-                })
-        });
-    if !valid {
-        anyhow::bail!("token scope is invalid")
-    }
-    Ok(())
+fn request_allows_refresh(request: &crate::oauth::request::AuthorizationRequest) -> bool {
+    request
+        .scope()
+        .split(' ')
+        .any(|scope| scope == "offline_access")
 }
 
 #[cfg(test)]
 #[path = "identity.tokens.tests.rs"]
-mod tests;
+pub(crate) mod tests;
 
 #[cfg(test)]
 #[path = "identity.tokens.property.tests.rs"]
 mod property_tests;
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "identity.tokens.database.tests.rs"]
+mod database_tests;
+

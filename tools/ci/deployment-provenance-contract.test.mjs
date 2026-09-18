@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { assertSecrets } from '../security/ci-secret-policy.mjs';
 
 const deployableWorkflows = ['account', 'billing', 'email', 'identity', 'trust-risk'];
 
@@ -31,6 +32,44 @@ test('state policy fits Scaleway limits with shared listing and isolated object 
 });
 
 const deployWorkflow = readFileSync('.github/workflows/deploy.yml', 'utf8');
+
+test('Identity signing key is confined to the protected Identity deployment job', () => {
+  const allowed = JSON.parse(
+    readFileSync('docs/security/ci-cd-security-controls.json', 'utf8'),
+  ).allowedSecrets;
+  const errorsFor = (text, path = '.github/workflows/deploy.yml') => {
+    const errors = [];
+    assertSecrets(path, text, allowed, {
+      errors,
+      githubExpression: (value) => '${{ ' + value + ' }}',
+      cacheEnvironmentSelector: '',
+      extractSecrets: (source) =>
+        [...source.matchAll(/secrets\.([A-Z0-9_]+)/gu)].map((match) => match[1]),
+    });
+    return errors;
+  };
+  assert.deepEqual(errorsFor(deployWorkflow), []);
+  const exposure = '      PRIVATE_KEY: ${{ secrets.IDENTITY_TOKEN_PRIVATE_KEY_PEM }}\n';
+  for (const altered of [
+    `env:\n${exposure}${deployWorkflow}`,
+    deployWorkflow.replace(
+      '  build-scan-sign-identity:\n',
+      `  build-scan-sign-identity:\n    env:\n${exposure}`,
+    ),
+    deployWorkflow.replace('name: production-identity', 'name: unprotected-identity'),
+    deployWorkflow.replace('  deploy-identity:\n', '  deploy-untrusted:\n'),
+  ]) {
+    assert.notEqual(altered, deployWorkflow);
+    assert.ok(
+      errorsFor(altered).some((error) => error.includes('Identity signing key must remain')),
+    );
+  }
+  assert.ok(
+    errorsFor(deployWorkflow, '.github/workflows/other.yml').some((error) =>
+      error.includes('protected release secret IDENTITY_TOKEN_PRIVATE_KEY_PEM'),
+    ),
+  );
+});
 
 for (const service of deployableWorkflows) {
   test(`${service} deployment promotes only an exactly validated main revision`, () => {

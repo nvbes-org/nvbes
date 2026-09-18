@@ -108,17 +108,26 @@ async fn update_profile(
 
 pub async fn ensure_profile(db: &PgPool, principal_id: Uuid) -> AccountResult<ProfileRow> {
     let mut tx = db.begin().await?;
+    let row = ensure_profile_in_transaction(&mut tx, principal_id).await?;
+    tx.commit().await?;
+    Ok(row)
+}
+
+pub(crate) async fn ensure_profile_in_transaction(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    principal_id: Uuid,
+) -> AccountResult<ProfileRow> {
     let row = sqlx::query_as::<_, ProfileRow>("INSERT INTO account_profiles(principal_id) VALUES($1) ON CONFLICT(principal_id) DO NOTHING RETURNING principal_id, firstname, lastname, username, birthdate, region, created_at")
-        .bind(principal_id).fetch_optional(&mut *tx).await?;
+        .bind(principal_id).fetch_optional(&mut **tx).await?;
     if row.is_some() {
         sqlx::query(
             "INSERT INTO account_preferences(principal_id) VALUES($1) ON CONFLICT DO NOTHING",
         )
         .bind(principal_id)
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
         audit::record(
-            &mut tx,
+            tx,
             AuditInput {
                 principal_id,
                 actor_principal_id: principal_id,
@@ -131,17 +140,16 @@ pub async fn ensure_profile(db: &PgPool, principal_id: Uuid) -> AccountResult<Pr
         )
         .await?;
         audit::enqueue(
-            &mut tx,
+            tx,
             "account.profile.created.v1",
             principal_id,
             json!({"principal_id": principal_id}),
         )
         .await?;
     }
-    tx.commit().await?;
     match row {
         Some(value) => Ok(value),
-        None => sqlx::query_as("SELECT principal_id, firstname, lastname, username, birthdate, region, created_at FROM account_profiles WHERE principal_id=$1").bind(principal_id).fetch_one(db).await.map_err(Into::into),
+        None => sqlx::query_as("SELECT principal_id, firstname, lastname, username, birthdate, region, created_at FROM account_profiles WHERE principal_id=$1").bind(principal_id).fetch_one(&mut **tx).await.map_err(Into::into),
     }
 }
 

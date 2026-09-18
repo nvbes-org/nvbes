@@ -1,7 +1,0 @@
-{
-  "name": "identity-sdk-backend",
-  "projectType": "library",
-  "root": "libs/rust/identity-sdk-backend",
-  "sourceRoot": "libs/rust/identity-sdk-backend/src",
-  "tags": ["scope:oss", "type:lib", "domain:identity", "layer:sdk"]
-}

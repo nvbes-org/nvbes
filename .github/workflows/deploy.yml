@@ -1509,6 +1509,11 @@ jobs:
       TF_VAR_identity_synthetic_recovered_password: ${{ secrets.IDENTITY_SYNTHETIC_RECOVERED_PASSWORD }}
       TF_VAR_identity_sentry_dsn: ${{ secrets.IDENTITY_SENTRY_DSN }}
       TF_VAR_identity_sentry_traces_sample_rate: ${{ vars.IDENTITY_SENTRY_TRACES_SAMPLE_RATE }}
+      TF_VAR_identity_token_issuer: ${{ vars.IDENTITY_TOKEN_ISSUER }}
+      TF_VAR_identity_token_key_id: ${{ vars.IDENTITY_TOKEN_KEY_ID }}
+      TF_VAR_identity_token_private_key_pem: ${{ secrets.IDENTITY_TOKEN_PRIVATE_KEY_PEM }}
+      TF_VAR_identity_token_public_key_pem: ${{ secrets.IDENTITY_TOKEN_PUBLIC_KEY_PEM }}
+      TF_VAR_identity_token_audiences: nvbes-account-service,nvbes-billing-service
       TERRAFORM_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
       IDENTITY_TERRAFORM_STATE_KEY: production/identity/terraform.tfstate
       IDENTITY_REGISTRY_ENDPOINT: rg.fr-par.scw.cloud/nvbes-prod-identity
@@ -1756,6 +1761,24 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.IDENTITY_TERRAFORM_STATE_SECRET_KEY }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
         run: tools/deployment/prove-identity-synthetic-auth.sh
+      - name: Prove Account token claims and revocation
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.IDENTITY_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.IDENTITY_TERRAFORM_STATE_SECRET_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: tools/deployment/prove-identity-synthetic-token.sh
+      - name: Prove MFA encryption and step-up
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.IDENTITY_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.IDENTITY_TERRAFORM_STATE_SECRET_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: tools/deployment/prove-identity-synthetic-mfa.sh
+      - name: Prove invitation-only account creation
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.IDENTITY_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.IDENTITY_TERRAFORM_STATE_SECRET_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: tools/deployment/prove-identity-synthetic-invitation.sh
       - name: Verify public Identity health and readiness
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.IDENTITY_TERRAFORM_STATE_ACCESS_KEY }}

@@ -3,6 +3,7 @@
   "projectType": "application",
   "root": "apps/account-service",
   "sourceRoot": "apps/account-service/src",
+  "implicitDependencies": ["identity-sdk-backend"],
   "targets": {
     "check": {
       "executor": "nx:run-commands",
@@ -11,6 +12,8 @@
         "{projectRoot}/**/*",
         "{workspaceRoot}/Cargo.toml",
         "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/libs/rust/dpop/**/*",
+        "{workspaceRoot}/libs/rust/identity-sdk-backend/**/*",
         "{workspaceRoot}/libs/rust/observability/**/*"
       ],
       "options": {
@@ -38,6 +41,7 @@
     "test:database": {
       "executor": "nx:run-commands",
       "cache": false,
+      "parallelism": false,
       "options": {
         "command": "bash scripts/test-account-service-database.sh",
         "cwd": "."

@@ -205,7 +205,7 @@ test('missing base, inaccessible history, and missing ancestor use full fallback
       await resolveScopeBase(environment, {
         ...io,
         runs: async function* () {
-          throw new Error('403');
+          yield await Promise.reject(new Error('403'));
         },
       })
     ).fallback,

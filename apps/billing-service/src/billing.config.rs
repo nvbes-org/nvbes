@@ -1,13 +1,21 @@
 use std::net::SocketAddr;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct BillingConfig {
+    pub browser_origins: nvbes_core::security::resource_cors::ResourceCorsOrigins,
+    pub public_origin: Option<String>,
+    pub account_authority: Option<crate::authorization::AccountAuthority>,
     pub bind_addr: SocketAddr,
     pub database_url: String,
     pub stripe_secret_key: String,
     pub stripe_webhook_secret: String,
     pub stripe_api_base_url: String,
     pub identity_public_key_pem: Option<String>,
+    pub identity_token_issuer: Option<String>,
+    pub identity_token_key_id: Option<String>,
+    pub identity_verification_keys: String,
+    pub identity_resource_client_id: Option<String>,
+    pub identity_resource_secret: Option<String>,
     pub metrics_token: Option<String>,
     pub operator_token: Option<String>,
     pub app_url: String,
@@ -17,6 +25,24 @@ pub struct BillingConfig {
 
 impl BillingConfig {
     pub fn from_env() -> anyhow::Result<Self> {
+        let environment =
+            std::env::var("NVBES_ENVIRONMENT").unwrap_or_else(|_| "development".into());
+        let browser_origins = nvbes_core::security::resource_cors::ResourceCorsOrigins::from_json(
+            &std::env::var("NVBES_BILLING_BROWSER_ORIGINS_JSON").unwrap_or_else(|_| "[]".into()),
+            matches!(environment.as_str(), "development" | "test"),
+        )?;
+        let account_authority = match (
+            std::env::var("NVBES_BILLING_ACCOUNT_ORIGIN").ok(),
+            std::env::var("NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET").ok(),
+        ) {
+            (None, None) => None,
+            (Some(origin), Some(secret)) => Some(crate::authorization::AccountAuthority::new(
+                &origin, &secret,
+            )?),
+            _ => anyhow::bail!(
+                "Account authorization origin and credential must be configured together"
+            ),
+        };
         let bind_addr: SocketAddr = std::env::var("NVBES_BILLING_BIND_ADDR")
             .unwrap_or_else(|_| "0.0.0.0:8080".to_string())
             .parse()?;
@@ -38,7 +64,12 @@ impl BillingConfig {
         let stripe_api_base_url = std::env::var("NVBES_STRIPE_API_BASE_URL")
             .unwrap_or_else(|_| "https://api.stripe.com".to_string());
 
-        let identity_public_key_pem = std::env::var("NVBES_IDENTITY_PUBLIC_KEY_PEM").ok();
+        let identity_public_key_pem = std::env::var("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM").ok();
+        let identity_token_issuer = std::env::var("NVBES_IDENTITY_TOKEN_ISSUER").ok();
+        let identity_token_key_id = std::env::var("NVBES_IDENTITY_TOKEN_KEY_ID").ok();
+        let identity_resource_client_id =
+            std::env::var("NVBES_BILLING_IDENTITY_RESOURCE_CLIENT_ID").ok();
+        let identity_resource_secret = std::env::var("NVBES_BILLING_IDENTITY_RESOURCE_SECRET").ok();
         let metrics_token = std::env::var("NVBES_BILLING_METRICS_TOKEN").ok();
         let operator_token = std::env::var("NVBES_BILLING_OPERATOR_TOKEN").ok();
 
@@ -51,12 +82,26 @@ impl BillingConfig {
             .or_else(|| std::env::var("NVBES_EMAIL_INTERNAL_TOKEN").ok());
 
         Ok(Self {
+            browser_origins,
+            public_origin: std::env::var("NVBES_BILLING_PUBLIC_ORIGIN").ok(),
+            account_authority,
             bind_addr,
             database_url,
             stripe_secret_key,
             stripe_webhook_secret,
             stripe_api_base_url,
             identity_public_key_pem,
+            identity_token_issuer,
+            identity_token_key_id,
+            identity_verification_keys: match std::env::var(
+                "NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS",
+            ) {
+                Ok(value) => value,
+                Err(std::env::VarError::NotPresent) => "[]".into(),
+                Err(_) => anyhow::bail!("invalid Identity verification key encoding"),
+            },
+            identity_resource_client_id,
+            identity_resource_secret,
             metrics_token,
             operator_token,
             app_url,

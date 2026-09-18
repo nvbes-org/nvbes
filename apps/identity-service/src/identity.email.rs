@@ -15,16 +15,21 @@ pub async fn deliver_recovery(
     Ok(())
 }
 
-fn recovery_command(
+pub(crate) fn recovery_command(
     recovery_base_url: &str,
     recovery: &RecoveryNotification,
 ) -> anyhow::Result<EmailCommand> {
-    let separator = if recovery_base_url.contains('?') {
-        '&'
-    } else {
-        '?'
-    };
-    let reset_url = format!("{recovery_base_url}{separator}token={}", recovery.token);
+    let mut reset = reqwest::Url::parse(recovery_base_url)?;
+    anyhow::ensure!(
+        reset.scheme() == "https"
+            && reset.username().is_empty()
+            && reset.password().is_none()
+            && reset.query().is_none()
+            && reset.fragment().is_none(),
+        "invalid recovery destination"
+    );
+    reset.set_fragment(Some(&format!("token={}", recovery.token)));
+    let reset_url = reset.to_string();
     let correlation_id = recovery.challenge_id.to_string();
     let command = EmailCommand {
         context: EmailRequestContext {

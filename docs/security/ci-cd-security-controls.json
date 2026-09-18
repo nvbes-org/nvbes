@@ -99,6 +99,10 @@
             {
               "path": ".github/workflows/deploy.yml",
               "includes": [
+                "persist-credentials: false",
+                "TF_VAR_identity_token_private_key_pem: ${{ secrets.IDENTITY_TOKEN_PRIVATE_KEY_PEM }}",
+                "name: production-identity",
+                "[[ \"$IDENTITY_DEPLOY_APPROVED_SHA\" == \"$GITHUB_SHA\" ]]",
                 "name: production-billing",
                 "github.ref == 'refs/heads/main'",
                 "TF_VAR_stripe_secret_key: ${{ secrets.STRIPE_SECRET_KEY }}",
@@ -106,11 +110,16 @@
               ]
             },
             {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": ["allowedSecrets", "persist-credentials: false"]
+            },
+            {
               "path": "tools/security/ci-secret-policy.mjs",
               "includes": [
                 "assertSecrets",
                 "validated protected-Environment workflow",
-                "secret-bearing step must be restricted"
+                "secret-bearing step must be restricted",
+                "Identity signing key must remain in the protected Identity deployment job"
               ]
             },
             {
@@ -376,6 +385,7 @@
     "IDENTITY_SYNTHETIC_RECOVERED_PASSWORD",
     "IDENTITY_TERRAFORM_STATE_ACCESS_KEY",
     "IDENTITY_TERRAFORM_STATE_SECRET_KEY",
+    "IDENTITY_TOKEN_PRIVATE_KEY_PEM",
     "IDENTITY_TOKEN_PUBLIC_KEY_PEM",
     "NVBES_STAGING_ACCOUNT_PASSWORD",
     "POSTHOG_CLI_API_KEY",
