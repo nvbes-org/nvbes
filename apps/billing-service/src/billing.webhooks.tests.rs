@@ -24,12 +24,15 @@ async fn failed_delivery_rolls_back_then_retries_once() {
         metrics_token: None,
         operator_token: Some("fixture".into()),
         app_url: "https://nvbes.test".into(),
+        email_grpc_endpoint: None,
+        email_token: None,
     };
     let state = crate::app::BillingState {
         db: pool.clone(),
         tokens: crate::auth::TokenVerifier::new(&config).unwrap(),
         metrics: crate::metrics::install(),
         config,
+        email_client: None,
     };
     let app = crate::app::create_router(state);
     let event_id = format!("evt_{}", Uuid::new_v4().simple());

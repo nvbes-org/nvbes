@@ -9,6 +9,8 @@ pub mod checkout_sessions;
 mod checkout_sessions_audit;
 #[path = "checkout_sessions.fraud.rs"]
 mod checkout_sessions_fraud;
+#[path = "billing.client.rs"]
+pub mod client;
 pub mod db;
 pub mod dunning;
 pub mod dunning_db;
@@ -38,6 +40,8 @@ mod portal_views_payment_methods;
 #[path = "portal_views.subscriptions.rs"]
 mod portal_views_subscriptions;
 pub mod pricing;
+#[path = "billing.proto.rs"]
+pub mod proto;
 pub mod provider;
 pub mod psp_signals;
 pub mod reconciliation;
@@ -83,6 +87,7 @@ pub use cb::{
     CbCapabilityDecision, CbIntegrationPort, CbPaymentContext, CbServiceKind, cb_service_codes,
     evaluate_cb_capability, validate_cb_integration_port,
 };
+pub use client::{BillingClient, BillingClientConfig, BillingClientError};
 pub use fraud::{
     CheckoutFraudAssessment, CheckoutFraudDecision, CheckoutFraudEnforcementAction,
     CheckoutFraudInput, CheckoutFraudPolicy, NetworkThreatLevel, assess_checkout_fraud,

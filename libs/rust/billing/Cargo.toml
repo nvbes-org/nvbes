@@ -5,21 +5,31 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
+async-trait = "0.1"
 chrono.workspace = true
 nvbes-core = { path = "../core" }
 nvbes-audit = { path = "../audit" }
 nvbes-region = { path = "../region" }
+prost = "0.14.4"
+prost-types = "0.14"
 reqwest.workspace = true
+rustls = { version = "0.23.41", default-features = false, features = ["aws_lc_rs", "std"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tonic = { workspace = true, features = ["tls-webpki-roots"] }
+tonic-prost = "0.14.6"
 tracing.workspace = true
 utoipa.workspace = true
 url = "2.5"
 uuid.workspace = true
+
+[build-dependencies]
+protoc-bin-vendored = "3.2.0"
+tonic-prost-build = "0.14.6"
 
 [dev-dependencies]
 proptest.workspace = true

@@ -23,6 +23,7 @@ locals {
   billing_runtime_environment = {
     NVBES_ENVIRONMENT         = local.environment
     NVBES_BILLING_BIND_ADDR   = "0.0.0.0:8080"
+    NVBES_APP_URL             = var.app_url
     NVBES_OTLP_ENDPOINT       = var.grafana_otlp_endpoint
     SENTRY_RELEASE            = local.billing_image_digest
     SENTRY_TRACES_SAMPLE_RATE = tostring(var.billing_sentry_traces_sample_rate)
@@ -34,6 +35,7 @@ locals {
     NVBES_STRIPE_WEBHOOK_SECRET     = var.stripe_webhook_secret
     NVBES_BILLING_METRICS_TOKEN     = var.billing_metrics_token
     NVBES_BILLING_OPERATOR_TOKEN    = var.billing_operator_token
+    NVBES_IDENTITY_PUBLIC_KEY_PEM   = var.identity_public_key_pem
     NVBES_OTLP_AUTHORIZATION_HEADER = var.grafana_otlp_authorization_header
     SENTRY_DSN                      = var.billing_sentry_dsn
   }
@@ -47,7 +49,7 @@ resource "scaleway_container" "billing" {
   image                  = var.billing_image
   privacy                = "public"
   port                   = 8080
-  protocol               = "http1"
+  protocol               = "h2c"
   https_connections_only = true
   cpu_limit              = 560
   memory_limit_bytes     = 1073741824

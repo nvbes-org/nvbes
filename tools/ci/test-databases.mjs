@@ -5,17 +5,21 @@ if (process.argv[2] === 'stop') stopService('postgres');
 else {
   const plan = JSON.parse(process.env.NVBES_CI_PLAN);
   const { name, host, port } = await startService('postgres');
+  const createdScopes = new Set();
   try {
     for (const project of plan.databaseExecution) {
       const scope = {
         'email-worker': 'email',
         'account-service': 'account',
         'billing-service': 'billing',
+        'billing-worker': 'billing',
         'identity-service': 'identity',
         'trust-risk-service': 'trust_risk',
         'platform-operations-service': 'platform_operations',
       }[project];
       if (!scope) throw new Error(`No isolated database for ${project}`);
+      if (createdScopes.has(scope)) continue;
+      createdScopes.add(scope);
       const database = `nvbes_${scope}_test`;
       docker('exec', name, 'createdb', '--host', '127.0.0.1', '--username', 'postgres', database);
       appendFileSync(

@@ -139,3 +139,11 @@ async fn create_stripe_portal(state: &BillingState, customer_id: &str) -> Billin
         .map(str::to_owned)
         .ok_or_else(|| BillingError::Stripe("missing portal url in Stripe response".into()))
 }
+
+/// Used by the gRPC handler — calls the private Stripe portal helper.
+pub async fn create_stripe_portal_grpc(
+    state: &BillingState,
+    customer_id: &str,
+) -> BillingResult<String> {
+    create_stripe_portal(state, customer_id).await
+}
