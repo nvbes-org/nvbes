@@ -216,5 +216,8 @@ test('CI lanes separate PR compilation writes from the protected S3 cache', () =
   assert.equal(pr.AWS_SECRET_ACCESS_KEY, undefined);
   assert.equal(pr.SCCACHE_GHA_ENABLED, 'on');
   assert.equal(pr.SCCACHE_GHA_RW_MODE, 'READ_WRITE');
-  assert.match(ciWorkflow, /success\(\) && github\.event_name == 'push'/u);
+  assert.match(
+    ciWorkflow,
+    /success\(\) && \(github\.event_name == 'push' && \(github\.ref == 'refs\/heads\/main'\) \|\| github\.event_name == 'pull_request' && needs\.authorize-cache\.outputs\.trusted == 'true'\)/u,
+  );
 });

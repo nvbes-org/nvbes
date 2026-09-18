@@ -165,7 +165,7 @@ jobs:
       - name: Validate contracts
         run: node tools/ci/run-lane.mjs contracts
       - name: Publish successful protected lane caches
-        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
+        if: success() && (github.event_name == 'push' && (github.ref == 'refs/heads/main') || github.event_name == 'pull_request' && needs.authorize-cache.outputs.trusted == 'true')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
@@ -202,7 +202,7 @@ jobs:
       - name: Validate typescript
         run: node tools/ci/run-lane.mjs typescript
       - name: Publish successful protected lane caches
-        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
+        if: success() && (github.event_name == 'push' && (github.ref == 'refs/heads/main') || github.event_name == 'pull_request' && needs.authorize-cache.outputs.trusted == 'true')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
@@ -270,7 +270,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Publish successful protected lane caches
-        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
+        if: success() && (github.event_name == 'push' && (github.ref == 'refs/heads/main') || github.event_name == 'pull_request' && needs.authorize-cache.outputs.trusted == 'true')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
@@ -312,7 +312,7 @@ jobs:
         if: always()
         run: node tools/ci/test-databases.mjs stop
       - name: Publish successful protected lane caches
-        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
+        if: success() && (github.event_name == 'push' && (github.ref == 'refs/heads/main') || github.event_name == 'pull_request' && needs.authorize-cache.outputs.trusted == 'true')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
@@ -349,7 +349,7 @@ jobs:
       - name: Validate terraform
         run: node tools/ci/run-lane.mjs terraform
       - name: Publish successful protected lane caches
-        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
+        if: success() && (github.event_name == 'push' && (github.ref == 'refs/heads/main') || github.event_name == 'pull_request' && needs.authorize-cache.outputs.trusted == 'true')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
@@ -386,7 +386,7 @@ jobs:
       - name: Validate containers
         run: node tools/ci/run-lane.mjs containers
       - name: Publish successful protected lane caches
-        if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main')
+        if: success() && (github.event_name == 'push' && (github.ref == 'refs/heads/main') || github.event_name == 'pull_request' && needs.authorize-cache.outputs.trusted == 'true')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
