@@ -2,7 +2,7 @@ use super::{BrowserError, BrowserSecurity, read_cookie};
 use crate::oauth::pkce::is_sha256_base64url;
 use axum::http::{HeaderMap, HeaderValue, Method};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 
 #[derive(Clone)]

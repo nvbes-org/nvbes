@@ -1,7 +1,11 @@
 use crate::http::client_ip::client_ip;
 use crate::http::error::AppError;
 use axum::http::{HeaderMap, HeaderName, HeaderValue};
+use sha2::{Digest, Sha256};
 use std::time::Duration;
+
+/// Apply with a migration role before constructing a limiter with a DML-only pool.
+pub const SCHEMA: &str = include_str!("limiter.postgres.sql");
 
 static RATELIMIT_LIMIT: HeaderName = HeaderName::from_static("ratelimit-limit");
 static RATELIMIT_REMAINING: HeaderName = HeaderName::from_static("ratelimit-remaining");
@@ -37,12 +41,12 @@ impl RateLimitInfo {
 
 #[derive(Clone)]
 pub struct RateLimiter {
-    redis: nvbes_redis::RedisPool,
+    db: sqlx::PgPool,
 }
 
 impl RateLimiter {
-    pub fn new(redis: nvbes_redis::RedisPool) -> Self {
-        Self { redis }
+    pub fn new(db: sqlx::PgPool) -> Self {
+        Self { db }
     }
 
     pub async fn check(
@@ -52,54 +56,78 @@ impl RateLimiter {
         max_hits: usize,
         window: Duration,
     ) -> Result<RateLimitInfo, AppError> {
-        let max_hits_u64 = max_hits as u64;
         let window_secs = window.as_secs();
-        let result = nvbes_redis::rate_limit::check_rate_limit(
-            &self.redis,
-            "default",
-            action,
-            key,
-            max_hits_u64,
-            window_secs,
-        )
-        .await
-        .map_err(|error| {
-            tracing::error!(%error, action, key, "Redis rate limiter failed");
+        if !(1..=1_000_000_000).contains(&max_hits)
+            || !(1..=86400).contains(&window_secs)
+            || action.is_empty()
+            || action.len() > 255
+        {
+            return Err(AppError::internal(
+                "rate_limiter_config",
+                "Invalid rate limit policy.",
+            ));
+        }
+        let (current, ttl_seconds): (i64, i64) = sqlx::query_as(
+            "INSERT INTO rate_limit_windows (action, key_hash, hits, expires_at)
+             VALUES ($1, $2, 1, clock_timestamp() + $3 * interval '1 second')
+             ON CONFLICT (action, key_hash) DO UPDATE SET (hits, expires_at) = (
+               WITH instant AS MATERIALIZED (SELECT clock_timestamp() AS observed_at)
+               SELECT CASE WHEN rate_limit_windows.expires_at <= observed_at THEN 1
+                      ELSE LEAST(rate_limit_windows.hits + 1, 1000000001) END,
+                 CASE WHEN rate_limit_windows.expires_at <= observed_at
+                 THEN observed_at + $3 * interval '1 second'
+                 ELSE rate_limit_windows.expires_at END FROM instant)
+             RETURNING hits, GREATEST(1, CEIL(EXTRACT(EPOCH FROM (expires_at - clock_timestamp()))))::bigint")
+        .bind(action).bind(Sha256::digest(key.as_bytes()).to_vec()).bind(window_secs as i64)
+        .fetch_one(&self.db).await.map_err(|error| {
+            tracing::error!(%error, "PostgreSQL rate limiter failed");
             AppError::internal("rate_limiter_error", "Rate limiter is unavailable.")
         })?;
 
-        let remaining = max_hits.saturating_sub(result.current as usize);
+        let remaining = max_hits.saturating_sub(current as usize);
         let info = RateLimitInfo {
             limit: max_hits,
             remaining,
-            reset: result.ttl_seconds,
+            reset: ttl_seconds as u64,
         };
-        if !result.allowed {
+        if current > max_hits as i64 {
             return Err(AppError::too_many_requests(
                 "rate_limited",
                 "Too many requests. Try again later.",
-                Some(result.ttl_seconds.max(1)),
+                Some(ttl_seconds as u64),
                 Some(info),
             ));
         }
         Ok(info)
     }
+
+    /// Bound retention work; the caller schedules this on its maintenance loop.
+    pub async fn cleanup_expired(&self) -> Result<u64, sqlx::Error> {
+        Ok(sqlx::query(
+            "DELETE FROM rate_limit_windows WHERE (action, key_hash) IN
+            (SELECT action, key_hash FROM rate_limit_windows WHERE expires_at <= clock_timestamp()
+             ORDER BY expires_at LIMIT 1000 FOR UPDATE SKIP LOCKED)",
+        )
+        .execute(&self.db)
+        .await?
+        .rows_affected())
+    }
 }
 
 pub async fn check_rate_limit(
-    redis: &nvbes_redis::RedisPool,
+    db: &sqlx::PgPool,
     action: &str,
     key: &str,
     max_hits: usize,
     window: Duration,
 ) -> Result<RateLimitInfo, AppError> {
-    RateLimiter::new(redis.clone())
+    RateLimiter::new(db.clone())
         .check(action, key, max_hits, window)
         .await
 }
 
 pub async fn check_dual_rate_limit(
-    redis: &nvbes_redis::RedisPool,
+    db: &sqlx::PgPool,
     headers: &HeaderMap,
     action: &str,
     scoped_key: &str,
@@ -108,9 +136,9 @@ pub async fn check_dual_rate_limit(
     window: Duration,
 ) -> Result<(), AppError> {
     let ip_key = client_ip(headers).unwrap_or_else(|| "unknown".to_string());
-    check_rate_limit(redis, action, &format!("ip:{ip_key}"), ip_hits, window).await?;
+    check_rate_limit(db, action, &format!("ip:{ip_key}"), ip_hits, window).await?;
     check_rate_limit(
-        redis,
+        db,
         action,
         &format!("key:{scoped_key}"),
         scoped_hits,
@@ -121,48 +149,41 @@ pub async fn check_dual_rate_limit(
 }
 
 pub async fn check_rate_limit_pair(
-    redis: &nvbes_redis::RedisPool,
+    db: &sqlx::PgPool,
     action: &str,
     first: RateLimitRule<'_>,
     second: RateLimitRule<'_>,
 ) -> Result<(), AppError> {
-    check_rate_limit(redis, action, first.key, first.max_hits, first.window).await?;
-    check_rate_limit(redis, action, second.key, second.max_hits, second.window).await?;
+    check_rate_limit(db, action, first.key, first.max_hits, first.window).await?;
+    check_rate_limit(db, action, second.key, second.max_hits, second.window).await?;
     Ok(())
 }
 
 pub async fn check_rate_limit_rules(
-    redis: &nvbes_redis::RedisPool,
+    db: &sqlx::PgPool,
     action: &str,
     rules: &[RateLimitRule<'_>],
 ) -> Result<(), AppError> {
     for rule in rules {
-        check_rate_limit(redis, action, rule.key, rule.max_hits, rule.window).await?;
+        check_rate_limit(db, action, rule.key, rule.max_hits, rule.window).await?;
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "limiter.postgres.tests.rs"]
+mod postgres_tests;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::time::Duration;
 
-    async fn test_redis_pool() -> Option<nvbes_redis::RedisPool> {
-        let config = nvbes_redis::RedisConfig::from_env();
-        let pool = nvbes_redis::connection::create_pool(&config).await.ok()?;
-        if nvbes_redis::connection::health_check(&pool).await.is_err() {
-            return None;
-        }
-        Some(pool)
-    }
-
     #[tokio::test]
     async fn rate_limiter_blocks_after_limit() {
-        let Some(redis) = test_redis_pool().await else {
-            eprintln!("Skipping rate_limiter_blocks_after_limit: Redis is not reachable");
-            return;
-        };
-        let limiter = RateLimiter::new(redis);
+        let db = nvbes_test_utils::postgres::test_pool().await;
+        sqlx::raw_sql(SCHEMA).execute(&db).await.unwrap();
+        let limiter = RateLimiter::new(db);
         let action = format!("core_rate_limit_test_{}", uuid::Uuid::new_v4());
         let key = "key:rate-limit";
 

@@ -12,13 +12,15 @@
         "{projectRoot}/**/*",
         "{workspaceRoot}/Cargo.toml",
         "{workspaceRoot}/Cargo.lock",
-        "{workspaceRoot}/libs/rust/dpop/**/*",
         "{workspaceRoot}/libs/rust/billing/**/*",
+        "{workspaceRoot}/libs/rust/core/**/*",
+        "{workspaceRoot}/libs/rust/dpop/**/*",
+        "{workspaceRoot}/libs/rust/email/**/*",
         "{workspaceRoot}/libs/rust/identity-sdk-backend/**/*",
         "{workspaceRoot}/libs/rust/observability/**/*"
       ],
       "options": {
-        "command": "cargo check --manifest-path apps/billing-service/Cargo.toml --all-targets",
+        "command": "cargo check --locked --package nvbes-billing-service --all-targets",
         "cwd": "."
       }
     },
@@ -26,7 +28,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "cargo test --manifest-path apps/billing-service/Cargo.toml",
+        "command": "cargo nextest run --locked --package nvbes-billing-service",
         "cwd": "."
       }
     },

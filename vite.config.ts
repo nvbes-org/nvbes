@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite-plus';
 
-const ignoredGeneratedAndBuildOutputs = [
+const ignoredArchivedGeneratedAndBuildOutputs = [
+  '**/archive/**',
   '**/dist/**',
   '**/target/**',
   '**/node_modules/**',
@@ -14,7 +15,7 @@ const ignoredGeneratedAndBuildOutputs = [
 
 export default defineConfig({
   fmt: {
-    ignorePatterns: ignoredGeneratedAndBuildOutputs,
+    ignorePatterns: ignoredArchivedGeneratedAndBuildOutputs,
     printWidth: 100,
     tabWidth: 2,
     singleQuote: true,
@@ -22,7 +23,7 @@ export default defineConfig({
     trailingComma: 'all',
   },
   lint: {
-    ignorePatterns: ignoredGeneratedAndBuildOutputs,
+    ignorePatterns: ignoredArchivedGeneratedAndBuildOutputs,
     options: {
       typeAware: true,
       typeCheck: true,

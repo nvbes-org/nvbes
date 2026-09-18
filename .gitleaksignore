@@ -1,0 +1,30 @@
+# Reviewed historical false positives.
+# Each fingerprint is documented in docs/security/public-repository-secrets-review.md.
+0860bc74a32a4f6d621dc3b48ca072cb09a9c752:apps/developer-service/src/developer.grpc.credentials.contract_tests.rs:generic-api-key:158
+0860bc74a32a4f6d621dc3b48ca072cb09a9c752:apps/developer-service/src/developer.grpc.credentials.contract_tests.rs:generic-api-key:159
+0860bc74a32a4f6d621dc3b48ca072cb09a9c752:apps/developer-service/src/developer.grpc.tokens.contract_tests.rs:generic-api-key:25
+0860bc74a32a4f6d621dc3b48ca072cb09a9c752:apps/developer-service/src/developer.grpc.tokens.contract_tests.rs:generic-api-key:35
+0cd773c3d2bc04d620f0ff68fcfadcedcb170306:infrastructure/environments/billing-production/terraform.tfvars.example:stripe-access-token:7
+30c2269ab6d723eec5e32c5fbe3444410b9ea6a5:libs/ts/http-client/src/index.headers.test.ts:generic-api-key:104
+30c2269ab6d723eec5e32c5fbe3444410b9ea6a5:libs/ts/http-client/src/index.headers.test.ts:generic-api-key:126
+367931c8923fe606283ecf378038b83d64e97311:libs/ts/http-client/src/http.request-e2ee.test.ts:generic-api-key:7
+396fba7e63533974ca4a07cdac1604e90058dd19:docs/operations/platform-operations-api.md:generic-api-key:81
+5e340bb1f33c73ce55a69c0410c8961a50bb7107:docs/architecture/identity-mfa-recovery.md:generic-api-key:72
+5f9c361a5cdac52940b20148966fc7685740ee1a:.agents/skills/age-encryption/SKILL.md:generic-api-key:54
+ad1c43b9c057715537dfe90f6fa0dfe2667135dc:.agents/skills/cloudflare/references/argo-smart-routing/README.md:curl-auth-header:13
+ad1c43b9c057715537dfe90f6fa0dfe2667135dc:.agents/skills/cloudflare/references/argo-smart-routing/api.md:curl-auth-header:27
+ad1c43b9c057715537dfe90f6fa0dfe2667135dc:.agents/skills/cloudflare/references/argo-smart-routing/api.md:curl-auth-header:84
+ad1c43b9c057715537dfe90f6fa0dfe2667135dc:.agents/skills/cloudflare/references/bindings/patterns.md:generic-api-key:182
+ad1c43b9c057715537dfe90f6fa0dfe2667135dc:.agents/skills/cloudflare/references/bindings/patterns.md:generic-api-key:82
+ad1c43b9c057715537dfe90f6fa0dfe2667135dc:.agents/skills/cloudflare/references/pipelines/api.md:curl-auth-header:113
+ad1c43b9c057715537dfe90f6fa0dfe2667135dc:.agents/skills/iris-development/references/setup-auth-token.md:generic-api-key:57
+ad1c43b9c057715537dfe90f6fa0dfe2667135dc:.agents/skills/workers-best-practices/references/rules.md:generic-api-key:82
+c7ca4459e5753c48e760cff04f95806d56f07852:infrastructure/environments/trust-risk-production/terraform.tfvars.example:generic-api-key:9
+cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/cloudflare/references/argo-smart-routing/README.md:curl-auth-header:13
+cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/cloudflare/references/argo-smart-routing/api.md:curl-auth-header:27
+cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/cloudflare/references/argo-smart-routing/api.md:curl-auth-header:84
+cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/cloudflare/references/bindings/patterns.md:generic-api-key:182
+cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/cloudflare/references/bindings/patterns.md:generic-api-key:82
+cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/cloudflare/references/pipelines/api.md:curl-auth-header:113
+cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/iris-development/references/setup-auth-token.md:generic-api-key:57
+cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/workers-best-practices/references/rules.md:generic-api-key:82

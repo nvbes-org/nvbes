@@ -55,3 +55,15 @@ test('pull requests never publish archives or restore untrusted archives', () =>
   assert.equal(writablePrefix(environment), null);
   assert.deepEqual(restorePrefixes(environment), ['trusted']);
 });
+
+test('trusted pull requests restore isolated branch cache with trusted fallback and write strictly to branch prefix', () => {
+  const environment = {
+    eventName: 'pull_request',
+    ref: 'refs/pull/42/merge',
+    headRef: 'feature/cache',
+    pullRequestNumber: 42,
+    isTrustedPr: true,
+  };
+  assert.deepEqual(restorePrefixes(environment), ['branches/pr-42', 'trusted']);
+  assert.equal(writablePrefix(environment), 'branches/pr-42');
+});

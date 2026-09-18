@@ -176,3 +176,7 @@ mod tests {
         assert!(extract_traceparent(&headers).is_some());
     }
 }
+
+#[cfg(test)]
+#[path = "trace_context.property.tests.rs"]
+mod property_tests;

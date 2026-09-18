@@ -1,16 +1,10 @@
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{privacy_jobs, synthetic};
 
-use super::{connect, migrate};
-
-#[tokio::test]
-async fn account_lifecycle_is_isolated_audited_and_privacy_safe() {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = connect(&database_url, 2)
-        .await
-        .expect("test database connects");
-    migrate(&pool).await.expect("account migrations apply");
+#[sqlx::test(migrations = "./migrations")]
+async fn account_lifecycle_is_isolated_audited_and_privacy_safe(pool: PgPool) {
     let owner = Uuid::new_v4();
     let member = Uuid::new_v4();
 

@@ -9,6 +9,7 @@ Service Billing V1 minimal, opérant exclusivement avec Stripe en mode test.
 - Création de sessions de Checkout et Customer Portal uniquement en mode test.
 - Ingestion et vérification cryptographique des webhooks Stripe (tolérance temporelle 300s, déduplication, rejet livemode).
 - Maintien d'un état local minimal des abonnements avec protection contre le désordre des événements.
+- Émission et publication des emails transactionnels de facturation (`BillingReceiptV1`, `BillingPaymentFailureV1`) via `nvbes-email`.
 - File dead-letter et réconciliation manuelle pour l'opérateur solo.
 - Journal d'audit append-only et outbox transactionnelle.
 - Aucun changement d'accès automatique (aucun enforcement produit direct).
@@ -59,6 +60,7 @@ Service Billing V1 minimal, opérant exclusivement avec Stripe en mode test.
 
 ## Actions CLI
 
+<<<<<<< HEAD
 Les sites autorisés à lire les API sont configurés par
 `NVBES_BILLING_BROWSER_ORIGINS_JSON`, par exemple `["https://account.example"]`.
 Valeur absente : `[]`. Limites : 32 origines et 16 Kio ; chaque origine doit être
@@ -71,8 +73,13 @@ jamais les webhooks, l'opérateur, health ou les métriques. Cette liste doit
 rester cohérente avec les sites autorisés par Identity. CORS ne remplace ni
 l'introspection Identity ni l'autorisation Account.
 
+=======
+
+> > > > > > > origin/main
+
 ```bash
 billing-service serve                     # Démarre le serveur HTTP
 billing-service migrate                   # Applique les migrations SQLx
+billing-service publish-outbox            # Dépile et publie les événements outbox
 billing-service synthetic-billing-smoke   # Exécute le test de fumée synthétique
 ```

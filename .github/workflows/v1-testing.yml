@@ -1,0 +1,246 @@
+name: V1 testing campaign
+run-name: ${{ inputs.fallback_of && format('CI local fallback {0}', inputs.fallback_of) || format('V1 {0} {1}', inputs.runner || 'github-hosted', github.run_id) }}
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: GitHub-hosted first; local for a confirmed hosted outage
+        type: choice
+        options: [github-hosted, local]
+        default: github-hosted
+      expected_sha:
+        description: Required exact candidate SHA when using local runners
+        type: string
+      fallback_of:
+        description: Original hosted run ID (automatic fallback deduplication)
+        type: string
+concurrency:
+  group: v1-testing-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  actions: read
+  contents: read
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+env:
+  CI: 'true'
+  NVBES_ENV: ci
+  NX_NO_CLOUD: 'true'
+  NX_DAEMON: 'false'
+  NX_WORKSPACE_DATA_DIRECTORY: .nx/cache/workspace-data
+jobs:
+  automated-suite-receipt:
+    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) }}
+    name: Suite receipt (${{ matrix.suite }})
+    environment:
+      name: ci-no-secrets
+      deployment: false
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        suite:
+          - account.unit
+          - account.check
+          - billing.unit
+          - billing.check
+          - email.unit
+          - email.check
+          - identity.unit
+          - identity.check
+          - platform.unit
+          - platform.check
+          - platform.workspace-lint
+          - platform.workspace-check
+          - platform.workspace-tests
+          - platform.workspace-format
+          - trust-risk.unit
+          - trust-risk.check
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/v1-testing.yml
+      - uses: ./.github/actions/ci-setup
+        with:
+          node: 'true'
+          rust: 'true'
+          terraform: 'false'
+          caches: pnpm cargo
+      - name: Execute suite and produce authenticated receipt
+        run: ./node_modules/.bin/nx run test-summary:receipt --suite=${{ matrix.suite }}
+      - name: Publish suite receipt
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v1-receipt-${{ matrix.suite }}-${{ github.sha }}
+          path: .temp/v1-receipts/${{ matrix.suite }}.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  rust-measurement:
+    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) }}
+    name: Rust exhaustive measurement
+    environment:
+      name: ci-no-secrets
+      deployment: false
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nvbes_core_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nvbes_core_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/v1-testing.yml
+      - uses: ./.github/actions/ci-setup
+        with:
+          node: 'true'
+          rust: 'true'
+          coverage: 'true'
+          terraform: 'false'
+          caches: pnpm cargo
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: nightly-2026-09-09
+          components: llvm-tools-preview
+      - name: Install pinned cargo-mutants
+        run: cargo +1.98.1 install cargo-mutants --locked --version 27.1.0
+      - name: Measure every V1 Rust crate
+        env:
+          NVBES_MUTATION_JOBS: '4'
+          NVBES_SECURITY_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_core_test
+        run: bash scripts/test-v1-rust-measurements.sh
+      - name: Produce Rust measurement receipts
+        env:
+          NVBES_RUST_VERSION: 1.98.1
+          NVBES_LLVM_COV_VERSION: 0.8.7
+          NVBES_CARGO_MUTANTS_VERSION: 27.1.0
+        run: >-
+          ./node_modules/.bin/nx run test-summary:measurement:rust
+          --llvm=.temp/v1-rust/llvm.json
+          --mutation=.temp/v1-rust/mutants.out/outcomes.json
+      - name: Publish Rust measurements
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v1-measurement-rust-${{ github.sha }}
+          path: .temp/v1-measurements/rust
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+      - name: Publish Rust diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v1-diagnostic-rust-${{ github.sha }}
+          path: |
+            .temp/v1-rust/llvm.json
+            .temp/v1-rust/mutants.out/outcomes.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  typescript-measurement:
+    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) }}
+    name: TypeScript measurement (${{ matrix.package }})
+    environment:
+      name: ci-no-secrets
+      deployment: false
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - package: email-ui
+            unit: '@nvbes/email-ui'
+    env:
+      NVBES_COVERAGE_PACKAGE: ${{ matrix.package }}
+      NVBES_MUTATION_PACKAGE: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/v1-testing.yml
+      - uses: ./.github/actions/ci-setup
+        id: setup
+        with:
+          node: 'true'
+          rust: 'false'
+          terraform: 'false'
+          caches: pnpm
+      - name: Measure TypeScript coverage
+        id: coverage
+        run: ./node_modules/.bin/nx run test-summary:coverage:typescript
+      - name: Measure TypeScript mutations
+        id: mutation
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: ./node_modules/.bin/nx run test-summary:mutation:typescript
+      - name: Produce TypeScript measurement receipt
+        run: >-
+          ./node_modules/.bin/nx run test-summary:measurement:typescript
+          --unit=${{ matrix.unit }}
+          --coverage=.temp/typescript/${{ matrix.package }}/coverage/coverage-summary.json
+          --mutation=.temp/typescript/${{ matrix.package }}/mutation.json
+      - name: Publish TypeScript measurement
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v1-measurement-typescript-${{ matrix.package }}-${{ github.sha }}
+          path: .temp/v1-measurements/typescript-${{ matrix.package }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+      - name: Publish TypeScript diagnostics
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v1-diagnostic-typescript-${{ matrix.package }}-${{ github.sha }}
+          path: |
+            .temp/typescript/${{ matrix.package }}/coverage/coverage-summary.json
+            .temp/typescript/${{ matrix.package }}/mutation.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  local-fallback:
+    if: ${{ inputs.runner != 'local' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
+    runs-on: [self-hosted, Linux, ARM64, docker]
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      checks: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/v1-testing.yml
+      - name: Retry confirmed hosted startup failure once on local runners
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tools/ci/runner-fallback.mjs

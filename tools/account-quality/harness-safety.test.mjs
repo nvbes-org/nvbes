@@ -50,7 +50,7 @@ test('database-backed Account service gates share fail-closed infrastructure pre
     readFile('scripts/test-account-service-security.sh', 'utf8'),
     readFile('.github/workflows/ci.yml', 'utf8'),
   ]);
-  const cargo = service.indexOf('exec cargo test');
+  const cargo = service.indexOf('exec cargo nextest run');
 
   assert.ok(service.indexOf('source "$ROOT_DIR/scripts/lib/test-env.sh"') < cargo);
   assert.ok(service.indexOf('require_destructive_account_test_database') < cargo);

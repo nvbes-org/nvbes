@@ -18,7 +18,7 @@ const dockerfile = readFileSync(join(serviceRoot, "Dockerfile"), "utf8");
 const mainSource = readFileSync(join(serviceRoot, "src/main.rs"), "utf8");
 
 const lockResolution = {
-	msrv: "1.91.1",
+	msrv: "1.98.1",
 	packageGraphSha256:
 		"0e33b26020a240600577921e195717c16987ea4e2873072ec0a99d6a7a88c8f9",
 };

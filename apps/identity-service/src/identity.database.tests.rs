@@ -7,11 +7,8 @@ use nvbes_email::proto::nvbes::email::v1::{
     transactional_email_template::Template,
 };
 use nvbes_email::{EmailClient, EmailClientConfig};
-use rsa::{
-    RsaPrivateKey,
-    pkcs8::{EncodePrivateKey, EncodePublicKey},
-    rand_core::OsRng,
-};
+use openssl::{pkey::PKey, rsa::Rsa};
+use sqlx::PgPool;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{Request, Response, Status, transport::Server};
@@ -31,15 +28,8 @@ use crate::{
     tokens_synthetic::run_synthetic_smoke as run_synthetic_token_smoke,
 };
 
-use super::{connect, migrate};
-
-#[tokio::test]
-async fn synthetic_identity_authentication_and_recovery_are_transactional() {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = connect(&database_url, 2)
-        .await
-        .expect("test database connects");
-    migrate(&pool).await.expect("identity migrations apply");
+#[sqlx::test(migrations = "./migrations")]
+async fn synthetic_identity_authentication_and_recovery_are_transactional(pool: PgPool) {
     let email = format!("synthetic-{}@example.invalid", Uuid::new_v4());
 
     let result = run_synthetic_smoke(
@@ -78,13 +68,8 @@ impl EmailDeliveryService for CapturingEmailService {
     }
 }
 
-#[tokio::test]
-async fn recovery_is_accepted_by_email_before_it_is_consumed() {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = connect(&database_url, 2)
-        .await
-        .expect("test database connects");
-    migrate(&pool).await.expect("identity migrations apply");
+#[sqlx::test(migrations = "./migrations")]
+async fn recovery_is_accepted_by_email_before_it_is_consumed(pool: PgPool) {
     let service = CapturingEmailService::default();
     let requests = Arc::clone(&service.requests);
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
@@ -141,13 +126,8 @@ async fn recovery_is_accepted_by_email_before_it_is_consumed() {
     server.abort();
 }
 
-#[tokio::test]
-async fn totp_step_up_is_encrypted_audited_and_replay_safe() {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = connect(&database_url, 2)
-        .await
-        .expect("test database connects");
-    migrate(&pool).await.expect("identity migrations apply");
+#[sqlx::test(migrations = "./migrations")]
+async fn totp_step_up_is_encrypted_audited_and_replay_safe(pool: PgPool) {
     let email = format!("synthetic-mfa-{}@example.invalid", Uuid::new_v4());
 
     let result = mfa::run_synthetic_smoke(
@@ -191,25 +171,16 @@ async fn totp_step_up_is_encrypted_audited_and_replay_safe() {
     assert_eq!(rotation_audits, 1);
 }
 
-#[tokio::test]
-async fn access_token_introspection_tracks_session_revocation() {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = connect(&database_url, 2)
-        .await
-        .expect("test database connects");
-    migrate(&pool).await.expect("identity migrations apply");
-    let private = RsaPrivateKey::new(&mut OsRng, 2048).unwrap();
-    let public = private.to_public_key();
+#[sqlx::test(migrations = "./migrations")]
+async fn access_token_introspection_tracks_session_revocation(pool: PgPool) {
+    let private = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
     let service = TokenService::new(
         TokenConfig::from_values(
             "test",
             "http://localhost:3000".into(),
             "identity-key-1".into(),
-            private
-                .to_pkcs8_pem(Default::default())
-                .unwrap()
-                .to_string(),
-            public.to_public_key_pem(Default::default()).unwrap(),
+            String::from_utf8(private.private_key_to_pem_pkcs8().unwrap()).unwrap(),
+            String::from_utf8(private.public_key_to_pem().unwrap()).unwrap(),
             "nvbes-account-service".into(),
         )
         .unwrap(),

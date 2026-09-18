@@ -27,6 +27,13 @@ pub struct BillingState {
     pub config: BillingConfig,
     pub metrics: Arc<PrometheusHandle>,
     pub tokens: TokenVerifier,
+    pub email_client: Option<Arc<nvbes_email::EmailClient>>,
+}
+
+impl BillingState {
+    pub fn email_client(&self) -> Option<&nvbes_email::EmailClient> {
+        self.email_client.as_deref()
+    }
 }
 
 pub fn create_router(state: BillingState) -> Router {

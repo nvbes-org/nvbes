@@ -287,6 +287,11 @@ fn request_allows_refresh(request: &crate::oauth::request::AuthorizationRequest)
 #[path = "identity.tokens.tests.rs"]
 pub(crate) mod tests;
 
+#[cfg(test)]
+#[path = "identity.tokens.property.tests.rs"]
+mod property_tests;
+
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.tokens.database.tests.rs"]
 mod database_tests;
+

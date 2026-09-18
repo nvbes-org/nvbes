@@ -181,8 +181,8 @@ async fn client_secret_version_validation_accepts_only_live_versions() {
     .await
     .expect("oauth client should be seeded");
 
-    let live_secret = "gxo_live_secret_1234567890";
-    let revoked_secret = "gxo_revoked_secret_1234567890";
+    let live_secret = "fixture-active";
+    let revoked_secret = "fixture-revoked";
     let live_hash =
         nvbes_product_identity::oauth::hash_client_secret(live_secret).expect("hash live secret");
     let revoked_hash = nvbes_product_identity::oauth::hash_client_secret(revoked_secret)

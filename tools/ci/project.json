@@ -13,16 +13,22 @@
       "cache": true,
       "inputs": [
         "{projectRoot}/**/*",
+        "{workspaceRoot}/tools/rust-workspace/micro-test.components.json",
+        "{workspaceRoot}/scripts/validate-*-test-database.mjs",
+        "{workspaceRoot}/scripts/lib/ci-test-database-host.mjs",
         "{workspaceRoot}/.github/workflows/**/*",
         "{workspaceRoot}/infrastructure/**/*",
         "{workspaceRoot}/tools/security/check-ci-cd-security.mjs",
         "{workspaceRoot}/.github/actions/**/*",
         "{workspaceRoot}/nx.json",
         "{workspaceRoot}/package.json",
-        "{workspaceRoot}/tools/security/ci-secret-policy.mjs"
+        "{workspaceRoot}/tools/security/ci-secret-policy.mjs",
+        "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/archive/libs/rust/redis/Cargo.toml",
+        "{workspaceRoot}/.devcontainer/**/*"
       ],
       "options": {
-        "command": "node --test tools/ci/authorize-pr-cache.test.mjs tools/ci/cargo-affected.test.mjs tools/ci/continuous-integration-contract.test.mjs tools/ci/deployment-provenance-contract.test.mjs tools/ci/identity-restore-contract.test.mjs tools/ci/nx-cache-manager.test.mjs tools/ci/scaleway-cache-manager.test.mjs tools/ci/verify-ci-provenance.test.mjs tools/ci/scope.test.mjs tools/ci/rollout-report.test.mjs tools/ci/rust-runner.test.mjs",
+        "command": "node --test tools/ci/configure-sccache.test.mjs tools/ci/redis-removal.test.mjs tools/ci/database-host.test.mjs tools/ci/runner-fallback.test.mjs tools/ci/authorize-pr-cache.test.mjs tools/ci/cargo-affected.test.mjs tools/ci/contracts-runner.test.mjs tools/ci/continuous-integration-contract.test.mjs tools/ci/deployment-provenance-contract.test.mjs tools/ci/identity-restore-contract.test.mjs tools/ci/nx-cache-manager.test.mjs tools/ci/scaleway-cache-manager.test.mjs tools/ci/verify-ci-provenance.test.mjs tools/ci/scope.test.mjs tools/ci/rollout-report.test.mjs tools/ci/rust-runner.test.mjs",
         "cwd": "."
       }
     },
@@ -32,6 +38,9 @@
       "inputs": [
         "{workspaceRoot}/package.json",
         "{workspaceRoot}/tools/ci/email-deployment-contract.test.mjs",
+        "{workspaceRoot}/tools/ci/reconcile-email-idle-alert.mjs",
+        "{workspaceRoot}/.github/workflows/deploy.yml",
+        "{workspaceRoot}/infrastructure/local/observability/grafana-provisioning/alerting/nvbes-email.yml",
         "{workspaceRoot}/infrastructure/environments/email-production/**/*",
         "{workspaceRoot}/infrastructure/stacks/email/production/**/*"
       ],

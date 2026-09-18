@@ -56,11 +56,6 @@ prometheus.scrape "nvbes_apis" {
       "job"         = "account-service",
       "service"     = "account-service",
     },
-    {
-      "__address__" = sys.env("NVBES_CLOUD_SERVICE_METRICS_TARGET"),
-      "job"         = "cloud-service",
-      "service"     = "cloud-service",
-    },
   ]
 
   scrape_interval = "15s"
@@ -75,11 +70,6 @@ prometheus.scrape "nvbes_apis" {
 
 prometheus.scrape "nvbes_workers" {
   targets = [
-    {
-      "__address__" = sys.env("NVBES_CLOUD_WORKER_METRICS_TARGET"),
-      "job"         = "cloud-worker",
-      "service"     = "cloud-worker",
-    },
     {
       "__address__" = sys.env("NVBES_ACCOUNT_WORKER_METRICS_TARGET"),
       "job"         = "account-worker",

@@ -13,7 +13,7 @@ test('classifies only archive-rooted paths as archived', () => {
 test('treats only OpenAPI files under active runtime apps as active', () => {
   assert.equal(isActiveRuntimePath('apps/identity-service/openapi.json'), true);
   assert.equal(isActiveRuntimePath('archive/apps/identity-service/openapi.json'), false);
-  assert.equal(isActiveRuntimePath('docs/api/openapi/cloud-public-v1.openapi.json'), false);
+  assert.equal(isActiveRuntimePath('archive/docs/api/openapi/cloud-public-v1.openapi.json'), false);
   assert.equal(isActiveRuntimePath('libs/ts/identity-sdk-core/openapi.json'), false);
   assert.equal(isActiveRuntimePath('apps/docs/openapi.json'), false);
 });

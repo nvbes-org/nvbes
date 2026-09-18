@@ -35,7 +35,6 @@ RUN apt-get update \
     pkg-config \
     postgresql-client \
     python3 \
-    redis-tools \
     ripgrep \
     shellcheck \
     unzip \
@@ -64,6 +63,7 @@ RUN cargo install sqlx-cli --locked --no-default-features --features postgres \
   && cargo install cargo-watch --locked \
   && cargo install systemfd --locked \
   && cargo install watchexec-cli --locked \
+  && cargo install cargo-mutants --locked --version 27.1.0 \
   && chmod -R a+w "${CARGO_HOME}"
 
 RUN curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o /tmp/install-opentofu.sh \

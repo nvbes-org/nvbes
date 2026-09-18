@@ -19,6 +19,8 @@ pub struct BillingConfig {
     pub metrics_token: Option<String>,
     pub operator_token: Option<String>,
     pub app_url: String,
+    pub email_grpc_endpoint: Option<String>,
+    pub email_token: Option<String>,
 }
 
 impl BillingConfig {
@@ -74,6 +76,11 @@ impl BillingConfig {
         let app_url =
             std::env::var("NVBES_APP_URL").unwrap_or_else(|_| "https://nvbes.test".to_string());
 
+        let email_grpc_endpoint = std::env::var("NVBES_EMAIL_GRPC_ENDPOINT").ok();
+        let email_token = std::env::var("NVBES_BILLING_EMAIL_TOKEN")
+            .ok()
+            .or_else(|| std::env::var("NVBES_EMAIL_INTERNAL_TOKEN").ok());
+
         Ok(Self {
             browser_origins,
             public_origin: std::env::var("NVBES_BILLING_PUBLIC_ORIGIN").ok(),
@@ -98,6 +105,8 @@ impl BillingConfig {
             metrics_token,
             operator_token,
             app_url,
+            email_grpc_endpoint,
+            email_token,
         })
     }
 }

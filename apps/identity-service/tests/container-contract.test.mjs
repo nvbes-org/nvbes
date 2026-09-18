@@ -55,7 +55,7 @@ const publicRuntimeProof = readFileSync(
 );
 
 test('image is reproducible and runs Identity as non-root', () => {
-  assert.match(dockerfile, /^FROM rust:1\.91\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
+  assert.match(dockerfile, /^FROM rust:1\.98\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
   assert.match(dockerfile, /cargo build --locked --release --bin nvbes-identity-service/);
   assert.equal(dockerfile.match(/^ARG DEBIAN_FRONTEND=noninteractive$/gm)?.length, 2);
   assert.ok(dockerfile.includes('CARGO_BUILD_JOBS=1'));
@@ -69,6 +69,7 @@ test('container has shallow liveness and graceful shutdown', () => {
     dockerfile,
     /HEALTHCHECK[^\n]*\\\n\s+CMD \["curl", "--fail", "--silent", "--show-error", "http:\/\/127\.0\.0\.1:8080\/health\/live"\]/,
   );
+  assert.equal(dockerfile.includes('/health/ready'), false);
   assert.ok(dockerfile.includes('STOPSIGNAL SIGTERM'));
   assert.ok(mainSource.includes('action == "migrate"'));
   assert.ok(mainSource.includes('SignalKind::terminate()'));

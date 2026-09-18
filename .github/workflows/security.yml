@@ -1,0 +1,239 @@
+name: security
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  osv-lockfiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Scan committed lockfiles with OSV
+        uses: google/osv-scanner-action/osv-scanner-action@6e4298ebc4db23e847df9b2e2de2939d6f066c67 # v2.5.1
+        with:
+          scan-args: >-
+            --format=sarif
+            --output-file=osv-results.sarif
+            --lockfile=./Cargo.lock
+            --lockfile=./pnpm-lock.yaml
+            --config=./.osv-scanner.toml
+      - name: Upload OSV SARIF
+        if: always() && hashFiles('osv-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          sarif_file: osv-results.sarif
+
+  cargo-deny:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Enforce Rust advisory, license, ban and source policy
+        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+        with:
+          command: check
+          arguments: --all-features
+
+  javascript-licenses:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+      - name: Install locked workspace dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+          pnpm install --frozen-lockfile --prefer-offline
+      - name: Enforce JavaScript production license policy
+        run: pnpm security:licenses
+
+  gitleaks-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Scan the complete Git history
+        run: |
+          docker run --rm \
+            --volume "$PWD:/repo" \
+            ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            detect \
+            --source=/repo \
+            --log-opts=--all \
+            --redact \
+            --report-format=sarif \
+            --report-path=/repo/gitleaks-results.sarif
+      - name: Upload Gitleaks SARIF
+        if: >-
+          always() && hashFiles('gitleaks-results.sarif') != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          sarif_file: gitleaks-results.sarif
+
+  trivy-filesystem:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TRIVY_SKIP_VERSION_CHECK: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Scan filesystem, secrets and infrastructure configuration
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: '1'
+          format: sarif
+          limit-severities-for-sarif: true
+          output: trivy-results.sarif
+          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
+      - name: Generate CycloneDX SBOM
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          output: nvbes.cdx.json
+          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
+      - name: Upload CycloneDX SBOM
+        if: always() && hashFiles('nvbes.cdx.json') != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
+        with:
+          name: nvbes-cyclonedx-sbom
+          path: nvbes.cdx.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Upload Trivy SARIF
+        if: >-
+          always() && hashFiles('trivy-results.sarif') != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          sarif_file: trivy-results.sarif
+
+  codeql:
+    name: codeql (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - javascript-typescript
+          - actions
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+      - name: Analyze
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          category: /language:${{ matrix.language }}
+  fuzz-smoke:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Install pinned nightly toolchain
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: nightly-2026-07-20
+          components: llvm-tools-preview
+      - name: Install cargo-fuzz
+        env:
+          RUSTUP_TOOLCHAIN: nightly-2026-07-20
+        run: cargo install cargo-fuzz --version 0.13.2 --locked
+      - name: Run bounded parser fuzz targets
+        env:
+          RUSTUP_TOOLCHAIN: nightly-2026-07-20
+        run: |
+          cargo +nightly-2026-07-20 fuzz run content-digest -- -max_total_time=30
+
+  zizmor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Run zizmor workflow security audit
+        run: |
+          docker run --rm \
+            --volume "$PWD:/repo" \
+            ghcr.io/zizmorcore/zizmor@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101 \
+            --config /repo/.zizmor.yml \
+            --min-severity=low \
+            --format=sarif \
+            /repo > zizmor-results.sarif
+      - name: Upload zizmor SARIF
+        if: >-
+          always() && hashFiles('zizmor-results.sarif') != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          sarif_file: zizmor-results.sarif

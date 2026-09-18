@@ -1,7 +1,8 @@
 use aes_gcm::{
     Aes256Gcm, Nonce,
-    aead::{Aead, AeadCore, KeyInit, OsRng, Payload},
+    aead::{Aead, KeyInit, Payload},
 };
+use rand::RngCore;
 use uuid::Uuid;
 
 pub struct SealedSecret {
@@ -52,7 +53,9 @@ impl MfaCrypto {
     }
 
     fn seal_for(&self, aad: &[u8], secret: &str) -> anyhow::Result<SealedSecret> {
-        let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+        let mut nonce_bytes = [0_u8; 12];
+        rand::rng().fill_bytes(&mut nonce_bytes);
+        let nonce = Nonce::from(nonce_bytes);
         let ciphertext = self
             .active
             .encrypt(
@@ -117,7 +120,7 @@ impl MfaCrypto {
         };
         let plaintext = cipher
             .decrypt(
-                Nonce::from_slice(&nonce),
+                &Nonce::from(nonce),
                 Payload {
                     msg: ciphertext,
                     aad,
@@ -139,3 +142,7 @@ fn recovery_data(principal: Uuid, challenge: Uuid) -> Vec<u8> {
 #[cfg(test)]
 #[path = "identity.mfa.crypto.tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "identity.mfa.crypto.property.tests.rs"]
+mod property_tests;

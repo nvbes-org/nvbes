@@ -56,9 +56,7 @@ Le calcul fiscal, l'e-invoicing, la retention des factures et la revenue recogni
 - Les exports finance et BI futurs doivent provenir du modèle nvbes, pas
   uniquement des pipelines provider.
 
-## Runtime cible V0
+## Contrats historiques
 
-- `apps/billing-service`: API serverless-compatible pour endpoints billing internes et futurs resolvers GraphQL.
-- `apps/billing-worker`: worker separe pour reconciliation, processing PSP et jobs finance.
-- `contracts/protobuf/nvbes/billing/v1/billing.proto`: contrat gRPC interne.
-- `contracts/graphql/schema.graphql`: contrat gateway/BFF, gouverne par `contracts/graphql/governance.json`.
+Les anciens contrats gRPC et GraphQL de la plateforme Billing cible sont conservés
+dans `archive/contracts`. Le runtime actif `apps/billing-service` ne les consomme pas.

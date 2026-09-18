@@ -56,7 +56,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "cargo test --locked --package nvbes-identity-service",
+        "command": "cargo nextest run --locked --package nvbes-identity-service",
         "cwd": "."
       }
     },
@@ -101,7 +101,6 @@
     "test:database": {
       "executor": "nx:run-commands",
       "cache": false,
-      "parallelism": false,
       "options": {
         "command": "bash scripts/test-identity-service-database.sh",
         "cwd": "."

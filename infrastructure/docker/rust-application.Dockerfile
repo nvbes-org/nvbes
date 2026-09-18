@@ -1,10 +1,9 @@
-FROM rust:1.91.1-slim-bookworm@sha256:8514999d4786ef12efe89239e86b3d0a021b94b9d35108c8efe6c79ca7dc1a65 AS builder
+FROM rust:1.98.1-slim-bookworm@sha256:ebd900bae66fd508b466cef82d64a83a5fb34682e4c8b2797a42908bddc95a57 AS builder
 
 ARG CARGO_PACKAGE
 ARG CARGO_BINARY
 ARG APPLICATION_PATH
 ARG SOURCE_DATE_EPOCH=0
-ARG DEBIAN_SNAPSHOT=20260713T000000Z
 ENV LC_ALL=C \
     TZ=UTC \
     SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH}" \
@@ -16,12 +15,7 @@ WORKDIR /usr/src/nvbes
 RUN test -n "${CARGO_PACKAGE}" \
     && test -n "${CARGO_BINARY}" \
     && test -n "${APPLICATION_PATH}" \
-    && rm -f /etc/apt/sources.list.d/debian.sources \
-    && printf '%s\n' \
-      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
-      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
-      > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
       libclang-dev \
       libssl-dev \
@@ -52,13 +46,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS runtime
 
-ARG DEBIAN_SNAPSHOT=20260713T000000Z
-RUN rm -f /etc/apt/sources.list.d/debian.sources \
-    && printf '%s\n' \
-      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
-      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
-      > /etc/apt/sources.list \
-    && apt-get -o Acquire::Check-Valid-Until=false update \
+RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
       ca-certificates \
       curl \

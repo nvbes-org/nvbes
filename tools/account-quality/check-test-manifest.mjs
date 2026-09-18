@@ -2,8 +2,26 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { validateAccountQualityWorkflow } from './workflow-contract.mjs';
 import { deriveReleaseBlockingCategories } from './check-account-release-readiness.mjs';
+import { validateAccountQualityWorkflow } from './workflow-contract.mjs';
+
+export const validIso29119Techniques = [
+  'equivalence-partitioning',
+  'boundary-value-analysis',
+  'state-transition',
+  'cause-effect',
+  'decision-table',
+  'use-case',
+  'error-guessing',
+  'risk-based',
+  'exploratory-testing',
+  'statement-coverage',
+  'branch-coverage',
+  'condition-coverage',
+  'path-coverage',
+  'basis-path-coverage',
+  'mutation-testing',
+];
 
 export const requiredCategories = [
   'acceptance-alpha',
@@ -75,7 +93,7 @@ if (path.resolve(process.argv[1] || '') === fileURLToPath(import.meta.url)) {
 }
 
 export function validateTestManifest(manifest, qualityProject, workflowSource) {
-  assert(manifest.schemaVersion === 3, 'schemaVersion must be 3');
+  assert(manifest.schemaVersion === 4, 'schemaVersion must be 4');
   assert(isRecord(manifest.scope), 'scope must be an object');
   assert(isRecord(manifest.automation), 'automation must be an object');
   assert(isRecord(manifest.lanes), 'lanes must be an object');
@@ -110,7 +128,9 @@ export function validateTestManifest(manifest, qualityProject, workflowSource) {
   assert(unexpected.length === 0, `unexpected categories: ${unexpected.join(', ')}`);
   validateKnownGaps(manifest.knownGaps, categoryContracts);
   const derivedBlockers = deriveReleaseBlockingCategories(manifest);
-  const declaredBlockers = [...(manifest.releaseReadiness.blockingCategories ?? [])].sort();
+  const declaredBlockers = [...(manifest.releaseReadiness.blockingCategories ?? [])].sort((a, b) =>
+    a.localeCompare(b),
+  );
   assert(
     JSON.stringify(declaredBlockers) === JSON.stringify(derivedBlockers),
     'releaseReadiness.blockingCategories must exactly match gaps, limitations and blocking known gaps',
@@ -154,6 +174,16 @@ function validateCoverageContract(contract, lanes, qualityProject) {
     ['automated', 'gap', 'human', 'manual-command'].includes(contract.execution),
     `${contract.category} has an invalid execution mode`,
   );
+  assert(
+    Array.isArray(contract.iso29119Techniques) && contract.iso29119Techniques.length > 0,
+    `${contract.category}.iso29119Techniques must be a non-empty array`,
+  );
+  for (const technique of contract.iso29119Techniques) {
+    assert(
+      validIso29119Techniques.includes(technique),
+      `${contract.category} references unknown ISO 29119-4 technique: ${technique}`,
+    );
+  }
   const laneMode = lanes[contract.lane].mode;
   if ('limitation' in contract) {
     assert(nonEmpty(contract.limitation), `${contract.category}.limitation must be non-empty`);

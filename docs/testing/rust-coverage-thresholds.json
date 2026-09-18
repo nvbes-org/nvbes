@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "description": "Seuils de couverture cargo llvm-cov par crate du workspace Cargo racine. Mesure : `cargo llvm-cov --workspace --all-targets --locked --json --summary-only` sans feature `database-tests`. La mesure de reference est realisee sans service Redis provisionne (etat CI deterministe) : les tests d'integration Redis sont ignores et ne contribuent pas au score. Marge : seuil = baseline mesure - 2 points arrondis (absorbe le bruit run-to-run de llvm-cov), plancher 0. nvbes-email conserve le seuil produit explicite 95/90/90.",
+  "baseline": {
+    "commit": "6af12ea1",
+    "date": "2026-09-09"
+  },
+  "crates": {
+    "nvbes-email": {
+      "threshold": { "lines": 95, "functions": 90, "regions": 90 },
+      "baseline": { "lines": 98.0, "functions": 95.2, "regions": 97.4 }
+    },
+    "nvbes-email-worker": {
+      "threshold": { "lines": 33, "functions": 41, "regions": 38 },
+      "baseline": { "lines": 34.7, "functions": 42.5, "regions": 40.0 }
+    },
+    "nvbes-email-scaleway": {
+      "threshold": { "lines": 85, "functions": 89, "regions": 84 },
+      "baseline": { "lines": 86.6, "functions": 91.3, "regions": 86.4 }
+    },
+    "nvbes-account-service": {
+      "threshold": { "lines": 0, "functions": 2, "regions": 0 },
+      "baseline": { "lines": 2.4, "functions": 3.5, "regions": 2.3 }
+    },
+    "nvbes-billing-service": {
+      "threshold": { "lines": 0, "functions": 3, "regions": 0 },
+      "baseline": { "lines": 2.0, "functions": 5.0, "regions": 2.3 }
+    },
+    "nvbes-billing-worker": {
+      "threshold": { "lines": 30, "functions": 35, "regions": 28 },
+      "baseline": { "lines": 35.0, "functions": 40.5, "regions": 32.4 }
+    },
+    "nvbes-identity-service": {
+      "threshold": { "lines": 33, "functions": 41, "regions": 28 },
+      "baseline": { "lines": 35.0, "functions": 43.3, "regions": 29.9 }
+    },
+    "nvbes-trust-risk-service": {
+      "threshold": { "lines": 14, "functions": 17, "regions": 15 },
+      "baseline": { "lines": 15.6, "functions": 19.4, "regions": 17.0 }
+    },
+    "nvbes-core": {
+      "threshold": { "lines": 43, "functions": 43, "regions": 43 },
+      "baseline": { "lines": 45.1, "functions": 44.6, "regions": 45.1 }
+    },
+    "nvbes-billing": {
+      "threshold": { "lines": 34, "functions": 41, "regions": 40 },
+      "baseline": { "lines": 35.8, "functions": 43.0, "regions": 41.9 }
+    },
+    "nvbes-audit": {
+      "threshold": { "lines": 34, "functions": 54, "regions": 43 },
+      "baseline": { "lines": 36.4, "functions": 55.6, "regions": 44.9 }
+    },
+    "nvbes-region": {
+      "threshold": { "lines": 40, "functions": 42, "regions": 44 },
+      "baseline": { "lines": 41.6, "functions": 43.8, "regions": 45.9 }
+    },
+    "nvbes-platform": {
+      "threshold": { "lines": 53, "functions": 54, "regions": 49 },
+      "baseline": { "lines": 54.7, "functions": 55.5, "regions": 50.7 }
+    },
+    "nvbes-observability": {
+      "threshold": { "lines": 13, "functions": 18, "regions": 12 },
+      "baseline": { "lines": 14.5, "functions": 20.2, "regions": 14.0 }
+    },
+    "nvbes-trust-risk": {
+      "threshold": { "lines": 62, "functions": 55, "regions": 57 },
+      "baseline": { "lines": 64.0, "functions": 57.1, "regions": 59.0 }
+    }
+  },
+  "excluded": [
+    {
+      "crate": "nvbes-test-utils",
+      "reason": "Bibliothèque utilitaire de tests uniquement (support keyword runner, pools de test) ; hors périmètre de production, non mesurée."
+    }
+  ]
+}

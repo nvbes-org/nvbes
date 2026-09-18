@@ -171,7 +171,7 @@ fn string_field(body: &Value, field: &str) -> Option<String> {
         .map(|value| value.trim().to_string())
 }
 
-fn parse_asn(value: String) -> Option<i64> {
+pub(crate) fn parse_asn(value: String) -> Option<i64> {
     value
         .trim_start_matches("AS")
         .chars()

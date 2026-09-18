@@ -37,6 +37,11 @@ updates:
         update-types:
           - patch
           - minor
+    # TypeScript majors require a coordinated Nx compatibility migration.
+    ignore:
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
@@ -49,7 +54,10 @@ updates:
     rebase-strategy: disabled
     cooldown:
       default-days: 7
-
+    groups:
+      github-actions-compatible:
+        patterns:
+          - "*"
   - package-ecosystem: docker
     directory: /apps/email-worker
     schedule:
@@ -61,3 +69,7 @@ updates:
     rebase-strategy: disabled
     cooldown:
       default-days: 7
+    # Rust builder images are upgraded fleet-wide with the compiler, CI cache,
+    # and reproducibility contracts; a per-service bump breaks that lockstep.
+    ignore:
+      - dependency-name: rust

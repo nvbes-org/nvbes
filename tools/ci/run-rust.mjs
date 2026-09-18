@@ -23,22 +23,35 @@ if (!packages.length || packages.some((name) => !members.includes(name)))
   throw new Error('Invalid Rust candidate scope');
 if (spawnSync('cargo', ['fmt', '--all', '--check'], { stdio: 'inherit' }).status !== 0)
   throw new Error('Rust formatting failed');
+if (
+  spawnSync(
+    'cargo',
+    ['clippy', '--workspace', '--all-targets', '--locked', '--', '-D', 'warnings'],
+    { stdio: 'inherit' },
+  ).status !== 0
+)
+  throw new Error('Rust linting failed');
+if (
+  spawnSync('pnpm', ['exec', 'nx', 'run', 'rust-workspace:micro-test'], { stdio: 'inherit' })
+    .status !== 0
+)
+  throw new Error('Isolated micro-tests failed');
 startMemoryWatchdog({ intervalMs: 2000, thresholdMb: 500 });
 const started = Date.now();
 const scoped = spawnSync(
   'cargo',
-  ['test', '--locked', ...packages.flatMap((name) => ['--package', name])],
+  ['nextest', 'run', '--locked', ...packages.flatMap((name) => ['--package', name])],
   { stdio: 'inherit' },
 );
-checkOomExit(scoped.status, scoped.signal, 'cargo test scoped');
+checkOomExit(scoped.status, scoped.signal, 'cargo nextest scoped');
 // Avoid an identical second execution for global changes. For smaller scopes,
 // run the full baseline even when the candidate fails so divergence is visible.
 const full =
   plan.rustMode === 'scoped' || packages.length === members.length
     ? scoped
-    : spawnSync('cargo', ['test', '--workspace', '--locked'], { stdio: 'inherit' });
+    : spawnSync('cargo', ['nextest', 'run', '--workspace', '--locked'], { stdio: 'inherit' });
 if (full !== scoped) {
-  checkOomExit(full.status, full.signal, 'cargo test workspace');
+  checkOomExit(full.status, full.signal, 'cargo nextest workspace');
 }
 const memoryStats = stopMemoryWatchdog();
 const evidence = {
@@ -62,9 +75,26 @@ const evidence = {
     : null,
 };
 console.log(`CI_RUST_EVIDENCE ${JSON.stringify(evidence)}`);
-appendFileSync(
-  process.env.GITHUB_STEP_SUMMARY,
-  `## Rust shadow comparison\n\n\`\`\`json\n${JSON.stringify(evidence, null, 2)}\n\`\`\`\n`,
-);
-if (full.status !== 0 || scoped.status !== 0)
+
+const scopedStatusText = scoped.status === 0 ? '✅ Passed' : '❌ Failed';
+const fullStatusText =
+  plan.rustMode === 'workspace' ? (full.status === 0 ? '✅ Passed' : '❌ Failed') : '⏭️ Skipped';
+const durationSec = (evidence.durationMs / 1000).toFixed(1);
+
+let rustSummary = `### 🦀 Rust Test Results Summary\n\n`;
+rustSummary += `| Scope | Evaluated Packages | Status | Execution Mode |\n`;
+rustSummary += `| :--- | :--- | :---: | :---: |\n`;
+rustSummary += `| **Scoped Candidate** | \`${packages.join('`, `')}\` | ${scopedStatusText} | \`${plan.rustMode}\` |\n`;
+rustSummary += `| **Workspace Baseline** | ${members.length} workspace members | ${fullStatusText} | full check |\n\n`;
+rustSummary += `- **Duration:** ${durationSec}s\n`;
+if (evidence.divergence) {
+  rustSummary += `\n> [!CAUTION]\n> **Divergence Detected:** Scoped tests result differs from full workspace baseline!\n\n`;
+}
+rustSummary += `\n<details><summary>Detailed JSON Evidence</summary>\n\n\`\`\`json\n${JSON.stringify(evidence, null, 2)}\n\`\`\`\n</details>\n\n`;
+
+appendFileSync(process.env.GITHUB_STEP_SUMMARY, rustSummary);
+
+if (full.status !== 0 || scoped.status !== 0) {
+  console.log('::error title=Rust Tests Failed::One or more Rust tests failed.');
   throw new Error('Rust candidate or workspace baseline failed');
+}

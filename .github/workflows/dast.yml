@@ -1,0 +1,194 @@
+name: dast
+
+on:
+  schedule:
+    - cron: '41 2 * * 3'
+  workflow_dispatch:
+    inputs:
+      account_url:
+        description: Account web URL to scan
+        required: true
+        type: string
+      backoffice_url:
+        description: Backoffice web URL to scan
+        required: true
+        type: string
+      api_url:
+        description: Staging Account API URL used to override OpenAPI servers
+        required: true
+        type: string
+      openapi_url:
+        description: Public OpenAPI document URL
+        required: true
+        type: string
+      runner:
+        description: "GitHub-hosted first; local for a confirmed hosted outage"
+        required: false
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - local
+
+concurrency:
+  group: dast-staging-${{ github.repository_id }}
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  zap-auth-api-backoffice:
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    environment:
+      name: account-dast-staging
+    env:
+      ACCOUNT_URL: ${{ inputs.account_url || vars.DAST_ACCOUNT_URL }}
+      API_URL: ${{ inputs.api_url || vars.DAST_API_URL }}
+      BACKOFFICE_URL: ${{ inputs.backoffice_url || vars.DAST_BACKOFFICE_URL }}
+      OPENAPI_URL: ${{ inputs.openapi_url || vars.DAST_OPENAPI_URL }}
+      DAST_ALLOWED_ORIGINS: ${{ vars.DAST_ALLOWED_ORIGINS }}
+      DAST_EXPECTED_SUBJECT_ID: ${{ vars.DAST_EXPECTED_SUBJECT_ID }}
+      DAST_EXPECTED_TENANT_ID: ${{ vars.DAST_EXPECTED_TENANT_ID }}
+      DAST_PRODUCTION_ORIGINS: ${{ vars.DAST_PRODUCTION_ORIGINS }}
+      ACCOUNT_K6_DURATION: 10s
+      ACCOUNT_K6_VUS: '1'
+      ACCOUNT_SERVICE_BASE_URL: ${{ inputs.api_url || vars.DAST_API_URL }}
+      K6_PROFILE: smoke
+      K6_RESULTS_DIR: load-reports
+      K6_SUITE: account-api
+      NVBES_TARGET_ENV: staging
+      ZAP_IMAGE: ghcr.io/zaproxy/zaproxy@sha256:8d387b1a63e3425beef4846e39719f5af2a787753af2d8b6558c6257d7a577a2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Validate trusted DAST release ref
+        run: |
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Test and validate staging targets
+        run: |
+          node --test tools/security/validate-dast-targets.test.mjs
+          node tools/security/validate-dast-targets.mjs
+          mkdir -p zap-reports
+          chmod 0777 zap-reports
+      - name: Run staging k6 smoke load test
+        env:
+          ACCOUNT_LOAD_ALLOWED_ORIGINS: ${{ vars.DAST_ALLOWED_ORIGINS }}
+          ACCOUNT_PRODUCTION_DENIED_ORIGINS: ${{ vars.DAST_PRODUCTION_ORIGINS }}
+        run: bash tools/account-quality/run-account-k6.sh
+      - name: Scan authentication surface
+        env:
+          AUTH_HEADER_VALUE: ${{ secrets.DAST_ACCOUNT_SESSION_COOKIE }}
+          DAST_ACCOUNT_SESSION_COOKIE: ${{ secrets.DAST_ACCOUNT_SESSION_COOKIE }}
+          DAST_API_AUTHORIZATION: ${{ secrets.DAST_API_AUTHORIZATION }}
+          DAST_BACKOFFICE_SESSION_COOKIE: ${{ secrets.DAST_BACKOFFICE_SESSION_COOKIE }}
+        run: |
+          test -n "$AUTH_HEADER_VALUE"
+          DAST_PREFLIGHT_EVIDENCE_PATH=zap-reports/auth-preflight-account-before.json \
+            node tools/account-quality/check-dast-authentication.mjs
+          ZAP_AUTH_HEADER=Cookie
+          ZAP_AUTH_HEADER_VALUE="$AUTH_HEADER_VALUE"
+          ZAP_AUTH_HEADER_SITE="$(node -e "process.stdout.write(new URL(process.env.ACCOUNT_URL).hostname)")"
+          export ZAP_AUTH_HEADER ZAP_AUTH_HEADER_VALUE ZAP_AUTH_HEADER_SITE
+          set +e
+          docker run --rm \
+            --env ZAP_AUTH_HEADER \
+            --env ZAP_AUTH_HEADER_VALUE \
+            --env ZAP_AUTH_HEADER_SITE \
+            --volume "$PWD/zap-reports:/zap/wrk" \
+            "$ZAP_IMAGE" \
+            zap-baseline.py -t "$ACCOUNT_URL" \
+            -j --client-spider \
+            -J account.json -r account.html -x account.xml
+          scan_status=$?
+          set -e
+          DAST_PREFLIGHT_EVIDENCE_PATH=zap-reports/auth-preflight-account-after.json \
+            node tools/account-quality/check-dast-authentication.mjs
+          exit "$scan_status"
+      - name: Scan public API from OpenAPI
+        env:
+          AUTH_HEADER_VALUE: ${{ secrets.DAST_API_AUTHORIZATION }}
+          DAST_ACCOUNT_SESSION_COOKIE: ${{ secrets.DAST_ACCOUNT_SESSION_COOKIE }}
+          DAST_API_AUTHORIZATION: ${{ secrets.DAST_API_AUTHORIZATION }}
+          DAST_BACKOFFICE_SESSION_COOKIE: ${{ secrets.DAST_BACKOFFICE_SESSION_COOKIE }}
+        run: |
+          test -n "$AUTH_HEADER_VALUE"
+          DAST_PREFLIGHT_EVIDENCE_PATH=zap-reports/auth-preflight-api-before.json \
+            node tools/account-quality/check-dast-authentication.mjs
+          API_OVERRIDE="$(node -e "process.stdout.write(new URL(process.env.API_URL).host)")"
+          ZAP_AUTH_HEADER=Authorization
+          ZAP_AUTH_HEADER_VALUE="$AUTH_HEADER_VALUE"
+          ZAP_AUTH_HEADER_SITE="$(node -e "process.stdout.write(new URL(process.env.API_URL).hostname)")"
+          export ZAP_AUTH_HEADER ZAP_AUTH_HEADER_VALUE ZAP_AUTH_HEADER_SITE
+          set +e
+          docker run --rm \
+            --env ZAP_AUTH_HEADER \
+            --env ZAP_AUTH_HEADER_VALUE \
+            --env ZAP_AUTH_HEADER_SITE \
+            --volume "$PWD/zap-reports:/zap/wrk" \
+            "$ZAP_IMAGE" \
+            zap-api-scan.py -t "$OPENAPI_URL" -f openapi \
+            -O "$API_OVERRIDE" \
+            -J api.json -r api.html -x api.xml
+          scan_status=$?
+          set -e
+          DAST_PREFLIGHT_EVIDENCE_PATH=zap-reports/auth-preflight-api-after.json \
+            node tools/account-quality/check-dast-authentication.mjs
+          exit "$scan_status"
+      - name: Scan backoffice surface
+        env:
+          AUTH_HEADER_VALUE: ${{ secrets.DAST_BACKOFFICE_SESSION_COOKIE }}
+          DAST_ACCOUNT_SESSION_COOKIE: ${{ secrets.DAST_ACCOUNT_SESSION_COOKIE }}
+          DAST_API_AUTHORIZATION: ${{ secrets.DAST_API_AUTHORIZATION }}
+          DAST_BACKOFFICE_SESSION_COOKIE: ${{ secrets.DAST_BACKOFFICE_SESSION_COOKIE }}
+        run: |
+          test -n "$AUTH_HEADER_VALUE"
+          DAST_PREFLIGHT_EVIDENCE_PATH=zap-reports/auth-preflight-backoffice-before.json \
+            node tools/account-quality/check-dast-authentication.mjs
+          ZAP_AUTH_HEADER=Cookie
+          ZAP_AUTH_HEADER_VALUE="$AUTH_HEADER_VALUE"
+          ZAP_AUTH_HEADER_SITE="$(node -e "process.stdout.write(new URL(process.env.BACKOFFICE_URL).hostname)")"
+          export ZAP_AUTH_HEADER ZAP_AUTH_HEADER_VALUE ZAP_AUTH_HEADER_SITE
+          set +e
+          docker run --rm \
+            --env ZAP_AUTH_HEADER \
+            --env ZAP_AUTH_HEADER_VALUE \
+            --env ZAP_AUTH_HEADER_SITE \
+            --volume "$PWD/zap-reports:/zap/wrk" \
+            "$ZAP_IMAGE" \
+            zap-baseline.py -t "$BACKOFFICE_URL" \
+            -j --client-spider \
+            -J backoffice.json -r backoffice.html -x backoffice.xml
+          scan_status=$?
+          set -e
+          DAST_PREFLIGHT_EVIDENCE_PATH=zap-reports/auth-preflight-backoffice-after.json \
+            node tools/account-quality/check-dast-authentication.mjs
+          exit "$scan_status"
+      - name: Upload DAST reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: zap-dast-${{ github.run_id }}
+          path: zap-reports/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload k6 smoke results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: k6-staging-smoke-${{ github.run_id }}
+          path: load-reports/
+          retention-days: 30
+          if-no-files-found: error

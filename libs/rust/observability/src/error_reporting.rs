@@ -58,13 +58,11 @@ pub fn init_error_reporting_with_config(config: ErrorReportingConfig<'_>) -> Err
 
     let guard = sentry::init((
         dsn,
-        sentry::ClientOptions {
-            release: release_name(),
-            environment: Some(config.environment.to_owned().into()),
-            traces_sample_rate: config.traces_sample_rate,
-            send_default_pii: false,
-            ..Default::default()
-        },
+        sentry::ClientOptions::default()
+            .maybe_release(release_name())
+            .environment(config.environment.to_owned())
+            .traces_sample_rate(config.traces_sample_rate)
+            .send_default_pii(false),
     ));
 
     sentry::configure_scope(|scope| {

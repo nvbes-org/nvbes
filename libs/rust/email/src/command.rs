@@ -226,5 +226,8 @@ mod test_support;
 #[path = "command.tests.rs"]
 mod tests;
 #[cfg(test)]
+#[path = "command.validation.property.tests.rs"]
+mod validation_property_tests;
+#[cfg(test)]
 #[path = "command.validation.tests.rs"]
 mod validation_tests;

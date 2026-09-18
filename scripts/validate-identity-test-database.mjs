@@ -1,5 +1,6 @@
 import { isIP } from 'node:net';
 import { pathToFileURL } from 'node:url';
+import { isCurrentCiTestDatabaseHost } from './lib/ci-test-database-host.mjs';
 
 function reject(message) {
   throw new Error(message);
@@ -20,7 +21,7 @@ export function validateIdentityTestDatabaseTarget(environment) {
     hostname === 'localhost' ||
     (isIP(hostname) === 4 && hostname.split('.')[0] === '127') ||
     (isIP(hostname) === 6 && hostname === '::1');
-  if (!loopback) {
+  if (!loopback && !isCurrentCiTestDatabaseHost(hostname, environment)) {
     reject(`identity database tests refuse PostgreSQL host ${hostname}`);
   }
   const databaseName = decodeURIComponent(target.pathname.replace(/^\/+/, ''));

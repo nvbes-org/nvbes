@@ -12,7 +12,7 @@ use axum::{
     routing::{get, post},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use nvbes_identity_service::{
     browser::BrowserSecurity,
     rate_limits::{Category, LimitError, RateLimiter},

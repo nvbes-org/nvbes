@@ -1,5 +1,5 @@
 [package]
-name = "nvbes-security-fuzz"
+name = "nvbes-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
@@ -9,27 +9,19 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-nvbes-account-service = { path = "../apps/account-service" }
-nvbes-cloud-service = { path = "../apps/cloud-service" }
-nvbes-dpop = { path = "../libs/rust/dpop" }
+nvbes-core = { path = "../libs/rust/core" }
+nvbes-billing = { path = "../libs/rust/billing" }
 
 [[bin]]
-name = "dpop_proof"
-path = "fuzz_targets/dpop_proof.rs"
+name = "content-digest"
+path = "fuzz_targets/content_digest.rs"
 test = false
 doc = false
 bench = false
 
 [[bin]]
-name = "oauth_authorization_details"
-path = "fuzz_targets/oauth_authorization_details.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
-name = "upload_inputs"
-path = "fuzz_targets/upload_inputs.rs"
+name = "stripe-signature"
+path = "fuzz_targets/stripe_signature.rs"
 test = false
 doc = false
 bench = false

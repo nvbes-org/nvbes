@@ -23,11 +23,39 @@ const action = process.argv[2];
 const selected = new Set(process.argv.slice(3));
 const allKinds = ['pnpm', 'cargo', 'terraform', 'nx'];
 const kinds = selected.size === 0 ? allKinds : allKinds.filter((kind) => selected.has(kind));
+function resolvePullRequestNumber() {
+  if (process.env.PR_NUMBER) {
+    const num = Number.parseInt(process.env.PR_NUMBER, 10);
+    if (Number.isInteger(num)) return num;
+  }
+  const ref = process.env.GITHUB_REF ?? '';
+  const match = /^refs\/pull\/(\d+)\//u.exec(ref);
+  if (match) {
+    return Number.parseInt(match[1], 10);
+  }
+  if (process.env.GITHUB_EVENT_PATH && existsSync(process.env.GITHUB_EVENT_PATH)) {
+    try {
+      const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+      if (Number.isInteger(event.pull_request?.number)) {
+        return event.pull_request.number;
+      }
+    } catch {
+      // Ignore parse failure
+    }
+  }
+  return null;
+}
+
 const environment = {
   eventName: process.env.GITHUB_EVENT_NAME ?? '',
   ref: process.env.GITHUB_REF ?? '',
   refName: process.env.GITHUB_REF_NAME ?? '',
   headRef: process.env.GITHUB_HEAD_REF ?? '',
+  pullRequestNumber: resolvePullRequestNumber(),
+  isTrustedPr:
+    process.env.CI_CACHE_TRUSTED === 'true' ||
+    process.env.CI_CACHE_TRUSTED_PR === 'true' ||
+    (process.env.GITHUB_EVENT_NAME === 'pull_request' && Boolean(process.env.AWS_ACCESS_KEY_ID)),
 };
 const storage = {
   bucket: process.env.SCW_CI_CACHE_BUCKET || process.env.SCCACHE_BUCKET || '',
@@ -79,7 +107,7 @@ function cacheDefinitions() {
     cargo: {
       path: cargoHome,
       members: ['registry', 'git'],
-      key: `v1/cargo/${platform}/rust-1.91.1`,
+      key: `v1/cargo/${platform}/rust-1.98.1`,
     },
     terraform: {
       path: terraformHome,

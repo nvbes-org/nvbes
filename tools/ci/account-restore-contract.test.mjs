@@ -10,7 +10,10 @@ const workflow = fullWorkflow.slice(
 
 test('Account restore is restricted to an exact approved main revision', () => {
   assert.match(workflow, /github\.ref == 'refs\/heads\/main'/u);
-  assert.match(workflow, /ref: \$\{\{ inputs\.approved_sha \}\}/u);
+  assert.match(workflow, /ref: main/u);
+  assert.match(workflow, /fetch-depth: 0/u);
+  assert.match(workflow, /git merge-base --is-ancestor "\$APPROVED_SHA" origin\/main/u);
+  assert.match(workflow, /git checkout --detach "\$APPROVED_SHA"/u);
   assert.match(workflow, /\[\[ "\$APPROVED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u);
   assert.match(workflow, /\[\[ "\$APPROVED_SHA" == "\$\(git rev-parse HEAD\)" \]\]/u);
   assert.match(workflow, /validate-account-production-restore/u);

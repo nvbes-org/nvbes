@@ -60,11 +60,11 @@ pub async fn create_checkout_handler(
         return Err(BillingError::Invalid("invalid_idempotency_key"));
     }
     let idempotency_key = format!(
-        "checkout_{:x}",
-        Sha256::digest(format!(
+        "checkout_{}",
+        hex::encode(Sha256::digest(format!(
             "{workspace_id}:{account_type}:{}:{idempotency_key}",
             payload.plan_code
-        ))
+        )))
     );
 
     // Check existing idempotent checkout
@@ -224,4 +224,31 @@ async fn create_stripe_checkout(
         .ok_or_else(|| BillingError::Stripe("missing checkout url".into()))?;
 
     Ok((checkout_url, session_id))
+}
+
+/// Used by the gRPC handler to create a Stripe checkout session without Axum extractors.
+pub async fn create_stripe_checkout_grpc(
+    state: &BillingState,
+    customer_id: &str,
+    account_id: Uuid,
+    plan_code: &str,
+    idempotency_key: &str,
+) -> BillingResult<(String, String)> {
+    let stripe_price_id: String = sqlx::query_scalar(
+        "SELECT stripe_price_id FROM billing_plans WHERE plan_code = $1 AND is_active = true",
+    )
+    .bind(plan_code)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or(BillingError::Invalid("unknown_or_inactive_plan"))?;
+
+    create_stripe_checkout(
+        state,
+        customer_id,
+        account_id,
+        plan_code,
+        &stripe_price_id,
+        idempotency_key,
+    )
+    .await
 }

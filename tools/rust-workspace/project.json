@@ -10,11 +10,8 @@
     "audit",
     "billing",
     "core",
-    "identity-sdk-backend",
     "observability",
     "platform",
-    "ports",
-    "tenancy",
     "trust-risk"
   ],
   "namedInputs": {
@@ -28,11 +25,32 @@
       "{workspaceRoot}/libs/rust/**/Cargo.toml",
       "{workspaceRoot}/libs/rust/**/src/**/*",
       "{workspaceRoot}/libs/rust/platform/migrations/**/*",
-      "{workspaceRoot}/vendor/xmlsec/**/*"
+      "{workspaceRoot}/vendor/xmlsec/**/*",
+      "{workspaceRoot}/libs/rust/core/src/*.sql"
     ],
     "production": ["default"]
   },
   "targets": {
+    "test:harness": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": { "command": "node --test tools/rust-workspace/*.test.mjs" }
+    },
+    "micro-test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["test:harness"],
+      "cache": false,
+      "parallelism": false,
+      "options": { "command": "node tools/rust-workspace/micro-test.mjs" }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo fmt --all -- --check"
+      },
+      "cache": true,
+      "inputs": ["default"]
+    },
     "build": {
       "executor": "nx:run-commands",
       "inputs": ["production"],
@@ -61,7 +79,7 @@
       "inputs": ["production"],
       "outputs": [],
       "options": {
-        "command": "cargo check --workspace --locked"
+        "command": "cargo clippy --workspace --all-targets --locked -- -D warnings"
       },
       "configurations": {},
       "parallelism": true,
@@ -72,11 +90,71 @@
       "inputs": ["default"],
       "outputs": [],
       "options": {
-        "command": "cargo test --workspace --locked"
+        "command": "cargo nextest run --workspace --locked"
       },
       "configurations": {},
       "parallelism": true,
       "cache": false
+    },
+    "coverage": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "production",
+        "{workspaceRoot}/docs/testing/rust-coverage-thresholds.json",
+        "{workspaceRoot}/tools/rust-workspace/check-coverage.mjs"
+      ],
+      "outputs": ["{workspaceRoot}/.temp/rust"],
+      "options": {
+        "command": "bash scripts/test-workspace-coverage.sh"
+      },
+      "configurations": {},
+      "parallelism": false,
+      "cache": false
+    },
+    "condition": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/docs/testing/rust-condition-thresholds.json",
+        "{workspaceRoot}/tools/rust-workspace/check-coverage.mjs",
+        "{workspaceRoot}/tools/rust-workspace/check-condition.mjs"
+      ],
+      "outputs": ["{workspaceRoot}/.temp/rust"],
+      "options": {
+        "command": "bash scripts/test-workspace-condition.sh"
+      },
+      "configurations": {},
+      "parallelism": false,
+      "cache": false
+    },
+    "mutation": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": { "command": "node tools/rust-workspace/mutation-v1.mjs" }
+    },
+    "mutation:baseline": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/docs/testing/rust-mutation-thresholds.json",
+        "{workspaceRoot}/tools/rust-workspace/check-mutation.mjs"
+      ],
+      "outputs": ["{workspaceRoot}/.temp/rust"],
+      "options": {
+        "command": "bash scripts/test-workspace-mutation.sh"
+      },
+      "configurations": {},
+      "parallelism": false,
+      "cache": false
+    },
+    "test:security-storage": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": ["default"],
+      "options": {
+        "command": "cargo nextest run --locked -p nvbes-core --lib"
+      }
     }
   }
 }

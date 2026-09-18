@@ -3,8 +3,8 @@ use uuid::Uuid;
 
 use crate::provider::ProviderCode;
 use crate::stripe_webhook_persistence::{
-    persist_stripe_invoice_if_present, persist_stripe_payment_method_if_present,
-    persist_stripe_subscription_if_present,
+    PersistStripeSubscriptionInput, persist_stripe_invoice_if_present,
+    persist_stripe_payment_method_if_present, persist_stripe_subscription_if_present,
 };
 use crate::stripe_webhook_processing::{
     BillingWebhookProcessingError, BillingWebhookProcessingResult,
@@ -43,14 +43,16 @@ pub async fn process_invoice_payment_failed(
     persist_stripe_invoice_if_present(tx, workspace_id, object).await?;
     persist_stripe_subscription_if_present(
         tx,
-        workspace_id,
-        object,
-        &subscription_id,
-        "past_due",
-        None,
-        None,
-        subscription_context.primary_for_subscription,
-        "invoice_payment_failed",
+        PersistStripeSubscriptionInput {
+            workspace_id,
+            object,
+            provider_subscription_id: &subscription_id,
+            status: "past_due",
+            current_period_start: None,
+            current_period_end: None,
+            primary_for_subscription: subscription_context.primary_for_subscription,
+            event_name: "invoice_payment_failed",
+        },
     )
     .await?;
     let attempt_count = object
@@ -99,14 +101,16 @@ pub async fn process_invoice_payment_succeeded(
     .await?;
     persist_stripe_subscription_if_present(
         tx,
-        workspace_id,
-        object,
-        &subscription_id,
-        "active",
-        None,
-        None,
-        subscription_context.primary_for_subscription,
-        "invoice_payment_succeeded",
+        PersistStripeSubscriptionInput {
+            workspace_id,
+            object,
+            provider_subscription_id: &subscription_id,
+            status: "active",
+            current_period_start: None,
+            current_period_end: None,
+            primary_for_subscription: subscription_context.primary_for_subscription,
+            event_name: "invoice_payment_succeeded",
+        },
     )
     .await?;
 

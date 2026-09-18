@@ -1,9 +1,8 @@
 use crate::http::error::AppError;
 use argon2::{
     Algorithm, Argon2, Params, Version,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
 };
-use password_hash::rand_core::OsRng;
 
 pub const TARGET_M_COST: u32 = 65536;
 pub const TARGET_T_COST: u32 = 3;
@@ -37,7 +36,6 @@ pub fn hash_password_with_pepper(
     password: &str,
     pepper: Option<&[u8]>,
 ) -> Result<String, AppError> {
-    let salt = SaltString::generate(&mut OsRng);
     let params = Params::new(TARGET_M_COST, TARGET_T_COST, TARGET_P_COST, None).map_err(|_| {
         AppError::internal(
             "password_hash_failed",
@@ -46,7 +44,7 @@ pub fn hash_password_with_pepper(
     })?;
     let argon2 = build_argon2(params, pepper)?;
     argon2
-        .hash_password(password.as_bytes(), &salt)
+        .hash_password(password.as_bytes())
         .map(|hash| hash.to_string())
         .map_err(|_| AppError::internal("password_hash_failed", "Failed to hash password."))
 }

@@ -80,6 +80,37 @@ But:
 
 - Verifier les parcours utilisateur complets sur environnement proche reel.
 
+### Standard frontend V1
+
+Tout frontend produit réintroduit dans le périmètre V1 doit utiliser la même
+chaîne de validation :
+
+- **Vitest** pour les tests unitaires et de composants ;
+- **Testing Library** (`@testing-library/react`, `@testing-library/user-event`
+  et `@testing-library/jest-dom`) pour tester le comportement observable des
+  composants React ;
+- **Playwright** (`@playwright/test`) pour les parcours E2E navigateur ;
+- **axe-core** via `@axe-core/playwright` pour les contrôles
+  d’accessibilité automatisés sur les parcours critiques.
+
+Règles de wiring :
+
+- chaque package frontend doit exposer des cibles Nx `test` et
+  `test:e2e` adaptées à son périmètre ;
+- les tests Vitest doivent rester rapides, déterministes et sans navigateur
+  réel ;
+- Playwright doit couvrir uniquement les parcours critiques et s’exécuter
+  contre un environnement V1 explicitement ciblé ;
+- chaque parcours Playwright critique doit inclure un contrôle axe-core
+  ciblé, sans remplacer les tests unitaires ou les vérifications manuelles ;
+- les versions et scripts doivent être déclarés dans le package frontend
+  réintroduit, puis validés avec `pnpm install --frozen-lockfile`.
+
+Les frontends archivés ne constituent pas une source d’implémentation :
+`account-web`, `identity-web`, `backoffice-web`, `cloud-web`, `console-web`
+et les autres applications archivées devront appliquer ce standard lors d’une
+réintroduction conforme à la direction V1.
+
 Parcours minimum V1:
 
 - signup -> creation workspace -> premier upload;
@@ -138,11 +169,14 @@ Declencheurs:
 Scripts executables:
 
 - `pnpm test:unit`: typecheck web et tests unitaires Rust.
+- `pnpm test:rust:coverage`: couverture `cargo llvm-cov` sur tout le workspace Rust avec seuils par crate (`docs/testing/rust-coverage-thresholds.json`).
+- `pnpm test:rust:mutation`: mutation testing `cargo-mutants` sur les crates Rust incluses avec seuils versionnés (`docs/testing/rust-mutation-thresholds.json`).
+- `pnpm test:rust:condition`: branches instrumentées via `cargo llvm-cov --branch` (nightly épinglé), diagnostic historique hors CI ; ne prouve ni MC/DC ni les seuils V1.
 - `pnpm test:integration`: tests d'integration Rust et validation IaC development/staging.
 - `pnpm test:e2e:critical`: E2E critiques contre `NVBES_WEB_BASE_URL` et `NVBES_API_BASE_URL`.
 - `pnpm test:smoke`: smoke tests contre `NVBES_WEB_BASE_URL` et `NVBES_API_BASE_URL`.
 - `pnpm test:smoke:staging`: wrapper staging pour smoke + E2E critiques avec les URLs staging.
-- `pnpm release:gate:staging`: gate complet avant ou apres deploiement staging selon pipeline, incluant build, preflight Stripe, smoke et E2E critiques.
+- `pnpm release:gate:staging`: décision V1 fondée sur le paquet de preuves vérifié, identique au Test Summary V1 ; échoue si une suite obligatoire manque. Ne déploie pas et ne remplace pas les campagnes.
 - `pnpm release:gate:production`: gate post-déploiement avec approval explicite,
   preuves d'acceptation signées et smoke production obligatoire.
 

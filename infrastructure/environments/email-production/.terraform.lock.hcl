@@ -5,6 +5,7 @@ provider "registry.terraform.io/cloudflare/cloudflare" {
   version     = "5.19.0"
   constraints = "5.19.0"
   hashes = [
+    "h1:/9cWfFsh4Zaa6PSFQqTYv5LEWZUM44G1oGK/ltPB8mg=",
     "h1:18fPH+2UWukAmtbs+CzHjVys7l95jt2gCUs2N0fdfjM=",
     "h1:DfwnA214pLOZnVHnUzCqrDYb+mKbZjcfgYVYtDfMP/w=",
     "h1:d8B13MT3MP7H2a3H+DLqiyT8u8e7If47lMgzfcrU4t8=",
@@ -26,6 +27,7 @@ provider "registry.terraform.io/grafana/grafana" {
   hashes = [
     "h1:EqimatXUHgE9jIko0ifoR+kOLVCQlLGvj13iH5GoCnE=",
     "h1:FidFAmj3ALv3NqC16DXwCJW7AYa3W8kooHp/Mcwwj8M=",
+    "h1:Z6L48TSgZ7v7iP2l00WsbNT3iFh+XhUPRCuMrnTarU0=",
     "h1:znSXAYpsXka6EPWA7ojZDTBqHhOEZ+/MoMMfiCCNy18=",
     "zh:02dcb17aae3e97a4b946e28267a80845b130e4a062ebd0f7dbf15ef1f65713e7",
     "zh:07b57580fe411de152a3b29a5ac1e0ff2541f9a62904c5b9703cf7e3c63bbbfa",
@@ -53,6 +55,7 @@ provider "registry.terraform.io/scaleway/scaleway" {
   version     = "2.79.0"
   constraints = "2.79.0"
   hashes = [
+    "h1:GljF+l7O0uC+DIFxFUzyj7GT7ZYEhj1PxmoQeII4nzU=",
     "h1:LcxR9sNfLg0lMcPGni34/aFAIL0A3x06mZ8Lhg9LYtk=",
     "h1:ppfv4S+zXnjoESuhtHx/wE3GZO1sIn+d7c54uouZQrs=",
     "h1:x3gIy3vBOjxW6HSR1tlGPQU/HuKg+RmjOfOVydFwBFQ=",

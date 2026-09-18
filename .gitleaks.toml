@@ -6,6 +6,8 @@ useDefault = true
 [allowlist]
 description = "Generated and vendored trees do not contain repository-owned credentials."
 paths = [
+  '''^libs/ts/http-client/src/http\.request-e2ee\.test\.ts$''',
+  '''^archive/libs/ts/http-client/src/http\.request-e2ee\.test\.ts$''',
   '''(^|/)node_modules/''',
   '''(^|/)target/''',
   '''^vendor/''',

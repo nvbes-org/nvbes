@@ -237,18 +237,20 @@ async fn mark_mollie_subscription_payment_captured_tx(
     if let Some(provider_customer_id) = payment.provider_customer_id.as_deref() {
         crate::db::upsert_provider_subscription_tx(
             tx,
-            workspace_id,
-            ProviderCode::Mollie,
-            provider_customer_id,
-            provider_subscription_id,
-            "active",
-            None,
-            None,
-            true,
-            json!({
-                "provider_payment_id": payment.provider_payment_id,
-                "updated_from": "recurring_payment",
-            }),
+            crate::db::UpsertProviderSubscriptionInput {
+                workspace_id,
+                provider: ProviderCode::Mollie,
+                provider_customer_id,
+                provider_subscription_id,
+                status: "active",
+                current_period_start: None,
+                current_period_end: None,
+                primary_for_subscription: true,
+                metadata: json!({
+                    "provider_payment_id": payment.provider_payment_id,
+                    "updated_from": "recurring_payment",
+                }),
+            },
         )
         .await?;
     }

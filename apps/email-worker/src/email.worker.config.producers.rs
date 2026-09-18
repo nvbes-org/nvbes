@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-const DEVELOPMENT_PRODUCER_TOKENS: &str = "identity-service=development-email-internal-token-32,identity-worker=development-email-internal-token-32,billing-worker=development-email-internal-token-32,enterprise-service=development-email-internal-token-32,backoffice-service=development-email-internal-token-32";
+const DEVELOPMENT_PRODUCER_TOKENS: &str = "identity-service=development-email-internal-token-32,billing-service=development-email-internal-token-32";
 const MINIMUM_PRODUCER_TOKEN_LENGTH: usize = 32;
 
 pub fn from_environment(

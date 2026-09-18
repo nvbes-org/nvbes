@@ -7,6 +7,14 @@ use super::{
 
 static ENVIRONMENT_LOCK: Mutex<()> = Mutex::new(());
 
+#[test]
+fn development_producers_only_include_active_v1_services() {
+    let producers = producers::from_environment(None, "development").unwrap();
+    let mut names: Vec<_> = producers.keys().map(String::as_str).collect();
+    names.sort_unstable();
+    assert_eq!(names, ["billing-service", "identity-service"]);
+}
+
 const VARIABLES: &[&str] = &[
     "NVBES_ENVIRONMENT",
     "NVBES_EMAIL_DATABASE_URL",
@@ -180,7 +188,10 @@ fn producer_parser_rejects_malformed_credentials() {
         )
         .is_err()
     );
-    assert_eq!(producers::from_environment(None, "test").unwrap().len(), 5);
+    let producers = producers::from_environment(None, "test").unwrap();
+    let mut names: Vec<_> = producers.keys().map(String::as_str).collect();
+    names.sort_unstable();
+    assert_eq!(names, ["billing-service", "identity-service"]);
     assert!(producers::from_environment(None, "production").is_err());
 }
 

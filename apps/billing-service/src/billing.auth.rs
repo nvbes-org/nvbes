@@ -69,10 +69,10 @@ impl FromRequestParts<BillingState> for OperatorAuth {
         state: &BillingState,
     ) -> Result<Self, Self::Rejection> {
         let token = bearer(parts)?;
-        if let Some(expected) = &state.config.operator_token {
-            if nvbes_billing::stripe::constant_time_eq(token.as_bytes(), expected.as_bytes()) {
-                return Ok(OperatorAuth);
-            }
+        if let Some(expected) = &state.config.operator_token
+            && nvbes_billing::stripe::constant_time_eq(token.as_bytes(), expected.as_bytes())
+        {
+            return Ok(OperatorAuth);
         }
         Err(BillingError::Unauthorized)
     }

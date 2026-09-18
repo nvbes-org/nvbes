@@ -56,6 +56,14 @@ on:
         required: false
         default: false
         type: boolean
+      runner:
+        description: "GitHub-hosted first; local for a confirmed hosted outage"
+        required: false
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - local
 
 concurrency:
   group: validate-restore-production-${{ inputs.service }}
@@ -73,7 +81,7 @@ jobs:
 
   validate-account-restore:
     if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'account' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     environment:
       name: production-account
@@ -82,12 +90,20 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.approved_sha }}
+          ref: main
+          fetch-depth: 0
           persist-credentials: false
       - name: CI/CD security gate
         run: >-
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/validate-restore.yml
+      - name: Select approved main revision
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+        run: |
+          [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$APPROVED_SHA" origin/main
+          git checkout --detach "$APPROVED_SHA"
       - name: Enforce recovery approval contract
         env:
           APPROVED_SHA: ${{ inputs.approved_sha }}
@@ -219,7 +235,7 @@ jobs:
 
   validate-billing-restore:
     if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'billing' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     environment:
       name: production-billing
@@ -228,12 +244,20 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.approved_sha }}
+          ref: main
+          fetch-depth: 0
           persist-credentials: false
       - name: CI/CD security gate
         run: >-
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/validate-restore.yml
+      - name: Select approved main revision
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+        run: |
+          [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$APPROVED_SHA" origin/main
+          git checkout --detach "$APPROVED_SHA"
       - name: Enforce recovery approval contract
         env:
           APPROVED_SHA: ${{ inputs.approved_sha }}
@@ -362,7 +386,7 @@ jobs:
 
   validate-email-restore:
     if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'email' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     environment:
       name: production-email
@@ -379,12 +403,20 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
-          ref: ${{ inputs.approved_sha }}
+          ref: main
+          fetch-depth: 0
           persist-credentials: false
       - name: CI/CD security gate
         run: >-
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/validate-restore.yml
+      - name: Select approved main revision
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+        run: |
+          [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$APPROVED_SHA" origin/main
+          git checkout --detach "$APPROVED_SHA"
       - name: Enforce recovery approval contract
         env:
           APPROVED_SHA: ${{ inputs.approved_sha }}
@@ -806,7 +838,7 @@ jobs:
 
   validate-identity-restore:
     if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'identity' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     environment:
       name: production-identity
@@ -815,12 +847,20 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.approved_sha }}
+          ref: main
+          fetch-depth: 0
           persist-credentials: false
       - name: CI/CD security gate
         run: >-
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/validate-restore.yml
+      - name: Select approved main revision
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+        run: |
+          [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$APPROVED_SHA" origin/main
+          git checkout --detach "$APPROVED_SHA"
       - name: Enforce recovery approval contract
         env:
           APPROVED_SHA: ${{ inputs.approved_sha }}
@@ -952,23 +992,34 @@ jobs:
             "$RESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
 
   validate-platform-operations-restore:
-    if: ${{ inputs.service == 'platform-operations' }}
-    runs-on: [self-hosted, macOS, ARM64]
+    if: ${{ github.ref == 'refs/heads/main' && inputs.service == 'platform-operations' }}
+    runs-on: ${{ inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.approved_sha }}
+          ref: main
+          fetch-depth: 0
           persist-credentials: false
       - name: CI/CD security gate
         run: >-
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/validate-restore.yml
+      - name: Select approved main revision
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+        run: |
+          [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$APPROVED_SHA" origin/main
+          git checkout --detach "$APPROVED_SHA"
       - name: Enforce recovery approval contract
         env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
           [[ "$CONFIRMATION" == "validate-platform-operations-restore" ]]
+          [[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.15.8

@@ -48,13 +48,13 @@ pub fn recovery_command(
         },
         producer: "identity-service".into(),
         idempotency_key: EmailIdempotencyKey::new(format!(
-            "identity:{}-notification:{event_id}:{:x}",
+            "identity:{}-notification:{event_id}:{}",
             if event_type == "identity.password_recovered" {
                 "password"
             } else {
                 "mfa"
             },
-            Sha256::digest(recipient.as_bytes())
+            hex::encode(Sha256::digest(recipient.as_bytes()))
         ))?,
         recipient: EmailRecipient {
             email: recipient,

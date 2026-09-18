@@ -12,7 +12,7 @@ const tokenSource = readFileSync(join(serviceRoot, 'src/account.auth.tokens.rs')
 const privacySource = readFileSync(join(serviceRoot, 'src/account.privacy.rs'), 'utf8');
 
 test('image is reproducible and runs Account as non-root', () => {
-  assert.match(dockerfile, /^FROM rust:1\.91\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
+  assert.match(dockerfile, /^FROM rust:1\.98\.1-slim-bookworm@sha256:[a-f0-9]{64} AS builder$/m);
   assert.ok(dockerfile.includes('cargo build --locked --release --bin nvbes-account-service'));
   assert.ok(dockerfile.includes('USER 10001:10001'));
   assert.ok(dockerfile.includes('ENTRYPOINT ["/app/account-service"]'));
@@ -20,6 +20,7 @@ test('image is reproducible and runs Account as non-root', () => {
 
 test('container has shallow liveness and graceful shutdown', () => {
   assert.ok(dockerfile.includes('http://127.0.0.1:8080/health/live'));
+  assert.equal(dockerfile.includes('/health/ready'), false);
   assert.ok(dockerfile.includes('STOPSIGNAL SIGTERM'));
   assert.ok(mainSource.includes('action == "migrate"'));
   assert.ok(mainSource.includes('SignalKind::terminate()'));

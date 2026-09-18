@@ -54,7 +54,13 @@ export async function verifySandbox(env) {
 
 export function runPrivate(command, args, env, timeout = 30000) {
   const result = spawnSync(command, args, { env, encoding: 'utf8', timeout });
-  if (result.status !== 0) throw new Error(`${command} failed; private output suppressed.`);
+  if (result.error) throw new Error(`${command} failed to start: ${result.error.code}.`);
+  if (result.status !== 0) {
+    const detail = (result.stderr || '').trim().split('\n').at(-1) || `exit ${result.status}`;
+    throw new Error(
+      `${command} failed: ${detail.replaceAll(env.NVBES_BILLING_DATABASE_URL || '', '<database-url>')}.`,
+    );
+  }
   return result.stdout;
 }
 

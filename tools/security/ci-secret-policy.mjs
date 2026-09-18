@@ -193,7 +193,10 @@ export function assertSecrets(
       text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
       text.includes('[[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
       text.includes('[[ "$APPROVED_SHA" == "$(git rev-parse HEAD)" ]]') &&
-      text.includes(`ref: ${githubExpression('inputs.approved_sha')}`) &&
+      text.includes('ref: main') &&
+      text.includes('fetch-depth: 0') &&
+      text.includes('git merge-base --is-ancestor "$APPROVED_SHA" origin/main') &&
+      text.includes('git checkout --detach "$APPROVED_SHA"') &&
       text.includes('validate-account-production-restore') &&
       text.includes('validate-billing-production-restore') &&
       text.includes('validate-email-production-restore') &&

@@ -10,33 +10,36 @@ use crate::{
     rules_db,
 };
 
-pub fn evaluation(
-    id: Uuid,
-    score: i16,
-    band: &str,
-    recommendation: &str,
-    reasons: Vec<String>,
-    feature_version: &str,
-    rule_version: &str,
-    evaluated_at: chrono::DateTime<chrono::Utc>,
-    expires_at: chrono::DateTime<chrono::Utc>,
-) -> pb::RiskEvaluation {
+pub struct EvaluationParams<'a> {
+    pub id: Uuid,
+    pub score: i16,
+    pub band: &'a str,
+    pub recommendation: &'a str,
+    pub reasons: Vec<String>,
+    pub feature_version: &'a str,
+    pub rule_version: &'a str,
+    pub evaluated_at: chrono::DateTime<chrono::Utc>,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+}
+
+pub fn evaluation(params: EvaluationParams<'_>) -> pb::RiskEvaluation {
     pb::RiskEvaluation {
-        evaluation_id: id.to_string(),
-        score: score as u32,
-        band: band_value(band),
-        recommendation: recommendation_value(recommendation),
-        reasons: reasons
+        evaluation_id: params.id.to_string(),
+        score: params.score as u32,
+        band: band_value(params.band),
+        recommendation: recommendation_value(params.recommendation),
+        reasons: params
+            .reasons
             .into_iter()
             .map(|code| pb::RiskReason {
                 code,
                 parameters: HashMap::new(),
             })
             .collect(),
-        feature_version: feature_version.to_string(),
-        rule_set_version: rule_version.to_string(),
-        evaluated_at: Some(timestamp(evaluated_at)),
-        expires_at: Some(timestamp(expires_at)),
+        feature_version: params.feature_version.to_string(),
+        rule_set_version: params.rule_version.to_string(),
+        evaluated_at: Some(timestamp(params.evaluated_at)),
+        expires_at: Some(timestamp(params.expires_at)),
         duplicate: false,
     }
 }

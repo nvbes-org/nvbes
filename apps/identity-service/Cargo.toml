@@ -18,6 +18,7 @@ aes-gcm.workspace = true
 axum.workspace = true
 base64.workspace = true
 chrono.workspace = true
+hex.workspace = true
 hmac.workspace = true
 jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 metrics-exporter-prometheus.workspace = true
@@ -28,6 +29,7 @@ nvbes-observability = { path = "../../libs/rust/observability", features = ["otl
 rand.workspace = true
 reqwest.workspace = true
 rsa = { version = "0.9.10", features = ["pem"] }
+openssl.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
@@ -44,6 +46,7 @@ webauthn-rs-proto = "0.5.5"
 
 [dev-dependencies]
 webauthn-authenticator-rs = { version = "0.5.5", default-features = false, features = ["softpasskey"] }
+proptest.workspace = true
 prost-types = "0.14"
 tokio-stream = { version = "0.1.18", features = ["net"] }
 tonic.workspace = true

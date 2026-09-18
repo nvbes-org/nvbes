@@ -1,0 +1,29 @@
+{
+  "name": "@nvbes/billing-client",
+  "version": "0.1.0",
+  "description": "Typed browser client for nvbes billing-service",
+  "license": "AGPL-3.0-only",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "scripts": {
+    "build": "node ../../../node_modules/vite-plus/bin/vp pack",
+    "check": "pnpm run typecheck",
+    "dev": "node ../../../node_modules/vite-plus/bin/vp pack --watch",
+    "format:check": "node ../../../node_modules/vite-plus/bin/vp fmt --check src package.json tsconfig.json",
+    "lint": "node ../../../node_modules/vite-plus/bin/vp lint src",
+    "test": "node ../../../node_modules/vite-plus/bin/vp test run",
+    "typecheck": "tsc --pretty false --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nvbes/http-client": "workspace:*",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

@@ -2,17 +2,8 @@ import { readFile } from 'node:fs/promises';
 
 const requirements = [
   {
-    file: 'apps/identity-worker/src/identity.worker.audit_anchor.rs',
-    evidence: [
-      'audit_external_anchors',
-      'snapshot_digest_sha256',
-      'verify_signature',
-      'put_object',
-    ],
-  },
-  {
-    file: 'apps/identity-worker/src/identity.worker.audit_anchor.kms.rs',
-    evidence: ['key-manager/v1alpha1/regions', 'sign_digest', 'verify_signature'],
+    file: 'libs/rust/audit/src/lib.rs',
+    evidence: ['AuditEventInput', 'insert_audit_event_pool', 'insert_audit_event', 'audit_events'],
   },
   {
     file: 'infrastructure/modules/scaleway-audit-archive/main.tf',
@@ -66,49 +57,43 @@ const requirements = [
     ],
   },
   {
-    file: 'apps/backoffice-service/src/internal_admin.privileged_authentication.rs',
+    file: 'libs/rust/core/src/auth.assurance.rs',
     evidence: [
-      'phishing_resistant_authentication_required',
+      'has_recent_phishing_resistant_authentication',
       'PRIVILEGED_AUTHENTICATION_MAX_AGE_SECONDS',
-      'x-nvbes-authentication-event-id',
-      'privileged_authentication_enforced',
+      'webauthn',
+      'passkey',
+      'security_key',
+      'Aal::Aal2',
     ],
   },
   {
-    file: 'apps/enterprise-service/src/enterprise.grpc.privileged_authentication.rs',
+    file: 'apps/identity-service/src/identity.mfa.rs',
     evidence: [
-      'PrivilegedAuthenticationContext',
-      'has_recent_phishing_resistant_authentication',
-      'authentication_event_id',
+      'step_up_expires_at',
+      'grant_step_up',
+      'step_up_granted',
+      'identity.step_up_granted',
     ],
   },
   {
-    file: 'apps/identity-service/src/identity.domains.auth.mfa.policy.rs',
-    evidence: ['privileged_passkey_required', 'vec!["webauthn".to_string()]'],
-  },
-  {
-    file: 'apps/billing-service/src/billing.auth.rs',
+    file: 'libs/rust/platform/src/platform.cockpit.auth.rs',
     evidence: [
-      'has_recent_phishing_resistant_authentication',
-      'authentication_event_id',
-      'privileged_authentication_enforced',
+      'DEFAULT_OPERATOR_ROLE',
+      'MFA_STEP_UP_HEADER',
+      'OperatorSession',
+      'has_mfa_step_up',
+      'Permission',
     ],
   },
   {
-    file: 'apps/developer-service/src/developer.http.auth.rs',
+    file: 'libs/rust/platform/src/platform.cockpit.actions.rs',
     evidence: [
-      'has_recent_phishing_resistant_authentication',
-      'authentication_event_id',
-      'privileged_authentication_enforced',
+      'OperatorCommand',
+      'OperatorActionPayload',
+      'OperatorActionReceipt',
+      'is_reversible',
     ],
-  },
-  {
-    file: 'apps/enterprise-service/src/enterprise.grpc.admin_elevation.rs',
-    evidence: ['authentication_evidence', 'enterprise.admin_elevation.granted'],
-  },
-  {
-    file: 'apps/enterprise-service/src/enterprise.grpc.break_glass.rs',
-    evidence: ['enterprise.break_glass.activated', 'authentication_event_id'],
   },
   {
     file: 'infrastructure/environments/security-audit-archive/main.tf',
@@ -167,7 +152,12 @@ const requirements = [
   },
   {
     file: 'docs/operations/security-incident-exercises.md',
-    evidence: ['Identity Provider compromise', 'KMS compromise', 'CI compromise', 'tenant isolation'],
+    evidence: [
+      'Identity Provider compromise',
+      'KMS compromise',
+      'CI compromise',
+      'tenant isolation',
+    ],
   },
   {
     file: 'docs/operations/production-access-jit.md',
@@ -175,7 +165,12 @@ const requirements = [
   },
   {
     file: 'docs/compliance/independent-pentest-policy.md',
-    evidence: ['avant la première ouverture publique', 'annuellement', 'retest externe', 'Bug bounty'],
+    evidence: [
+      'avant la première ouverture publique',
+      'annuellement',
+      'retest externe',
+      'Bug bounty',
+    ],
   },
 ];
 

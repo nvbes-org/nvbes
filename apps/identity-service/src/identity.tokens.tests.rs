@@ -67,6 +67,7 @@ fn grant() -> ActiveGrant {
     }
 }
 
+<<<<<<< HEAD
 #[test]
 fn oidc_and_api_tokens_have_distinct_audiences_and_types() {
     let service = TokenService::new(config()).unwrap();
@@ -91,6 +92,20 @@ fn oidc_and_api_tokens_have_distinct_audiences_and_types() {
             .decoding_key("identity-key-1", Utc::now().timestamp() as u64)
             .unwrap(),
         &validation,
+=======
+fn service() -> TokenService {
+    let private = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
+    TokenService::new(
+        TokenConfig::from_values(
+            "test",
+            "http://identity.test".into(),
+            "identity-key-1".into(),
+            String::from_utf8(private.private_key_to_pem_pkcs8().unwrap()).unwrap(),
+            String::from_utf8(private.public_key_to_pem().unwrap()).unwrap(),
+            "nvbes-account-service".into(),
+        )
+        .unwrap(),
+>>>>>>> origin/main
     )
     .unwrap()
     .claims;
