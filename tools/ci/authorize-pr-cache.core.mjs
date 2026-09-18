@@ -1,4 +1,4 @@
-const internalAssociations = new Set(['MEMBER', 'OWNER']);
+const internalAssociations = new Set(['MEMBER', 'OWNER', 'COLLABORATOR']);
 
 export function getAllowedUsers() {
   return new Set(
