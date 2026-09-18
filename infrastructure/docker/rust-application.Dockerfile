@@ -4,7 +4,7 @@ ARG CARGO_PACKAGE
 ARG CARGO_BINARY
 ARG APPLICATION_PATH
 ARG SOURCE_DATE_EPOCH=0
-ARG DEBIAN_SNAPSHOT=20260713T000000Z
+ARG DEBIAN_SNAPSHOT=20260918T000000Z
 ENV LC_ALL=C \
     TZ=UTC \
     SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH}" \
@@ -52,7 +52,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS runtime
 
-ARG DEBIAN_SNAPSHOT=20260713T000000Z
+ARG DEBIAN_SNAPSHOT=20260918T000000Z
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
     && printf '%s\n' \
       "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
