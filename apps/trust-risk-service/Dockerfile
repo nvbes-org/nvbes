@@ -2,7 +2,7 @@ FROM rust:1.98.1-slim-bookworm@sha256:ebd900bae66fd508b466cef82d64a83a5fb34682e4
 
 ARG TARGETPLATFORM
 ARG SOURCE_DATE_EPOCH=0
-ARG DEBIAN_SNAPSHOT=20260713T000000Z
+ARG DEBIAN_SNAPSHOT=20260918T000000Z
 ARG DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=C \
     TZ=UTC \
@@ -37,7 +37,7 @@ RUN --mount=type=cache,id=nvbes-cargo-registry-rust-1.98.1-${TARGETPLATFORM},tar
 
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS runtime
 
-ARG DEBIAN_SNAPSHOT=20260713T000000Z
+ARG DEBIAN_SNAPSHOT=20260918T000000Z
 ARG DEBIAN_FRONTEND=noninteractive
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
     && printf '%s\n' \
