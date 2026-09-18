@@ -89,7 +89,47 @@ test('composite actions and compilation-cache setup are trust boundaries', () =>
     'tools/ci/configure-sccache.mjs',
     'tools/ci/configure-sccache.core.mjs',
     'tools/ci/scaleway-cache-manager.mjs',
+    'tools/security/check-ci-cd-security.mjs',
+    'infrastructure/bootstrap/production/main.tf',
   ]) {
     assert.equal(evaluatePullRequestCacheTrust(event, commits, [{ filename }]).trusted, false);
+  }
+});
+
+test('recognizes valid GitHub-verified SSH commit signatures', () => {
+  const { commits } = fixture();
+  const sshCommit = {
+    ...commits[0],
+    commit: {
+      verification: {
+        verified: true,
+        reason: 'valid',
+        signature: '-----BEGIN SSH SIGNATURE-----\nvalid\n-----END SSH SIGNATURE-----',
+      },
+    },
+  };
+  assert.equal(isVerifiedGpgCommit(sshCommit), true);
+});
+
+test('authorizes an external contributor when explicitly present in CI_CACHE_ALLOWED_USERS', () => {
+  const { event, commits, files } = fixture();
+  event.pull_request.author_association = 'CONTRIBUTOR';
+  event.pull_request.user.login = 'trusted-bot';
+  event.sender.login = 'trusted-bot';
+
+  // Initially rejected because not a member and not in allowlist
+  assert.equal(evaluatePullRequestCacheTrust(event, commits, files).trusted, false);
+
+  // When added to CI_CACHE_ALLOWED_USERS
+  const previousAllowed = process.env.CI_CACHE_ALLOWED_USERS;
+  process.env.CI_CACHE_ALLOWED_USERS = 'trusted-bot, external-partner';
+  try {
+    assert.equal(evaluatePullRequestCacheTrust(event, commits, files).trusted, true);
+  } finally {
+    if (previousAllowed !== undefined) {
+      process.env.CI_CACHE_ALLOWED_USERS = previousAllowed;
+    } else {
+      delete process.env.CI_CACHE_ALLOWED_USERS;
+    }
   }
 });
