@@ -1,5 +1,5 @@
 [package]
-name = "nvbes-billing-service"
+name = "nvbes-billing-worker"
 edition.workspace = true
 license.workspace = true
 version.workspace = true
@@ -8,16 +8,17 @@ version.workspace = true
 database-tests = []
 
 [[bin]]
-name = "nvbes-billing-service"
+name = "nvbes-billing-worker"
 path = "src/main.rs"
 
 [dependencies]
 anyhow.workspace = true
+async-trait.workspace = true
+aws-sdk-sqs = { version = "=1.109.0", default-features = false, features = ["default-https-client", "rt-tokio"] }
 axum.workspace = true
 chrono.workspace = true
 hex.workspace = true
 hmac.workspace = true
-jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 metrics.workspace = true
 metrics-exporter-prometheus.workspace = true
 nvbes-billing = { path = "../../libs/rust/billing" }
@@ -31,10 +32,6 @@ sha2.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-tonic.workspace = true
-tonic-health.workspace = true
-prost = "0.14.4"
-prost-types = "0.14"
 tower.workspace = true
 tracing.workspace = true
 uuid.workspace = true

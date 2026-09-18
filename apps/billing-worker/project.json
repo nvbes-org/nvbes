@@ -1,8 +1,8 @@
 {
-  "name": "billing-service",
+  "name": "billing-worker",
   "projectType": "application",
-  "root": "apps/billing-service",
-  "sourceRoot": "apps/billing-service/src",
+  "root": "apps/billing-worker",
+  "sourceRoot": "apps/billing-worker/src",
   "targets": {
     "check": {
       "executor": "nx:run-commands",
@@ -17,7 +17,7 @@
         "{workspaceRoot}/libs/rust/observability/**/*"
       ],
       "options": {
-        "command": "cargo check --locked --package nvbes-billing-service --all-targets",
+        "command": "cargo check --locked --package nvbes-billing-worker --all-targets",
         "cwd": "."
       }
     },
@@ -25,7 +25,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "cargo nextest run --locked --package nvbes-billing-service",
+        "command": "cargo test --locked --package nvbes-billing-worker",
         "cwd": "."
       }
     },
@@ -34,7 +34,7 @@
       "cache": true,
       "inputs": ["{projectRoot}/Dockerfile", "{projectRoot}/tests/**/*", "{projectRoot}/src/**/*"],
       "options": {
-        "command": "node --test apps/billing-service/tests/container-contract.test.mjs",
+        "command": "node --test apps/billing-worker/tests/container-contract.test.mjs",
         "cwd": "."
       }
     },
@@ -42,7 +42,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "bash scripts/test-billing-service-database.sh",
+        "command": "bash scripts/test-billing-worker-database.sh",
         "cwd": "."
       }
     }

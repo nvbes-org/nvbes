@@ -62,6 +62,8 @@ async fn billing_lifecycle_is_isolated_deduplicated_and_audited(pool: PgPool) {
         metrics_token: None,
         operator_token: Some("test_operator_token".into()),
         app_url: "https://nvbes.test".into(),
+        email_grpc_endpoint: None,
+        email_token: None,
     };
 
     let result = synthetic::run(&pool, &config, workspace_id, owner_id)
@@ -71,10 +73,13 @@ async fn billing_lifecycle_is_isolated_deduplicated_and_audited(pool: PgPool) {
     assert!(result.checkout_idempotent);
     assert!(result.webhook_deduplicated);
     assert!(result.out_of_order_protected);
+    assert!(result.invoice_paid_processed);
+    assert!(result.invoice_failed_processed);
+    assert!(result.outbox_published);
     assert!(result.reconciliation_resolved);
-    assert_eq!(result.subscription_status, "active");
+    assert_eq!(result.subscription_status, "past_due");
     assert!(result.audit_events >= 2);
-    assert!(result.outbox_events >= 1);
+    assert!(result.outbox_events >= 3);
     assert_eq!(result.customer_id, customer_id);
     assert_eq!(calls.load(Ordering::SeqCst), 1);
     server.abort();

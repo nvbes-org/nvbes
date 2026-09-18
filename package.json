@@ -8,6 +8,7 @@
     "dev:hot": "bash scripts/dev-hot.sh",
     "dev:account-service": "bash scripts/dev-account-service.sh",
     "dev:billing-service": "bash scripts/dev-billing-service.sh",
+    "dev:billing-worker": "bash scripts/dev-billing-worker.sh",
     "dev:email-worker": "bash scripts/dev-email-worker.sh",
     "dev:identity-service": "bash scripts/dev-identity-service.sh",
     "dev:trust-risk-service": "bash scripts/dev-trust-risk-service.sh",

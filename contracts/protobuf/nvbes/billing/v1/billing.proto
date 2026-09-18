@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package nvbes.billing.v1;
+
+import "google/protobuf/timestamp.proto";
+import "nvbes/platform/v1/common.proto";
+
+service BillingDeliveryService {
+  rpc GetWorkspaceEntitlements(GetWorkspaceEntitlementsRequest) returns (WorkspaceEntitlementsResponse);
+  rpc GetWorkspaceBillingOverview(GetWorkspaceBillingOverviewRequest) returns (WorkspaceBillingOverviewResponse);
+  rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse);
+  rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse);
+  rpc SubmitBillingEvent(SubmitBillingEventRequest) returns (BillingEventReceipt);
+}
+
+service BillingOperationsService {
+  rpc GetBillingOperationsSnapshot(GetBillingOperationsSnapshotRequest) returns (BillingOperationsSnapshot);
+  rpc ReconcileWorkspace(ReconcileWorkspaceRequest) returns (ReconcileWorkspaceResponse);
+}
+
+message GetWorkspaceEntitlementsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+}
+
+message WorkspaceEntitlementsResponse {
+  string workspace_id = 1;
+  string plan_code = 2;
+  string status = 3;
+  int64 max_seats = 4;
+  int64 storage_bytes_quota = 5;
+  int64 api_rate_limit_per_minute = 6;
+  bool custom_domain_enabled = 7;
+  bool advanced_security_enabled = 8;
+  google.protobuf.Timestamp current_period_end = 9;
+}
+
+message GetWorkspaceBillingOverviewRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+}
+
+message WorkspaceBillingOverviewResponse {
+  string workspace_id = 1;
+  string plan_code = 2;
+  string status = 3;
+  string customer_id = 4;
+  int64 monthly_price_cents = 5;
+  string currency = 6;
+  int64 active_seats = 7;
+  int64 storage_bytes_used = 8;
+  optional string cancel_at_period_end = 9;
+  optional google.protobuf.Timestamp current_period_end = 10;
+}
+
+message CreateCheckoutSessionRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string plan_code = 3;
+  string success_url = 4;
+  string cancel_url = 5;
+  string idempotency_key = 6;
+  optional string customer_email = 7;
+}
+
+message CreateCheckoutSessionResponse {
+  string session_id = 1;
+  string checkout_url = 2;
+  string status = 3;
+}
+
+message CreateBillingPortalSessionRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string return_url = 3;
+}
+
+message CreateBillingPortalSessionResponse {
+  string portal_url = 1;
+}
+
+message SubmitBillingEventRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string event_type = 2;
+  string aggregate_id = 3;
+  string payload_json = 4;
+  string idempotency_key = 5;
+}
+
+message BillingEventReceipt {
+  string event_id = 1;
+  google.protobuf.Timestamp accepted_at = 2;
+  bool duplicate = 3;
+}
+
+message GetBillingOperationsSnapshotRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+}
+
+message BillingOperationsSnapshot {
+  int64 active_subscriptions_count = 1;
+  int64 past_due_subscriptions_count = 2;
+  int64 pending_outbox_count = 3;
+  int64 unresolved_reconciliation_count = 4;
+  int64 monthly_recurring_revenue_cents = 5;
+  google.protobuf.Timestamp snapshot_at = 6;
+}
+
+message ReconcileWorkspaceRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+}
+
+message ReconcileWorkspaceResponse {
+  string workspace_id = 1;
+  bool status_synced = 2;
+  string current_status = 3;
+}

@@ -61,14 +61,14 @@ pub async fn apply_subscription_event_on_connection(
         .and_then(Value::as_str)
         .ok_or(BillingError::Invalid("missing_customer_id"))?;
 
-    let account_info: Option<(Uuid, String)> = sqlx::query_as(
-        "SELECT account_id, account_type FROM billing_customers WHERE stripe_customer_id = $1",
+    let account_info: Option<(Uuid, String, Option<String>)> = sqlx::query_as(
+        "SELECT account_id, account_type, email FROM billing_customers WHERE stripe_customer_id = $1",
     )
     .bind(customer_id)
     .fetch_optional(&mut *db)
     .await?;
 
-    let (account_id, account_type) = match account_info {
+    let (account_id, account_type, customer_email_db) = match account_info {
         Some(info) => info,
         None => {
             // Check metadata in object
@@ -77,7 +77,7 @@ pub async fn apply_subscription_event_on_connection(
                 .and_then(Value::as_str)
                 .and_then(|s| Uuid::parse_str(s).ok());
             match meta_acc {
-                Some(acc) => (acc, "team".to_string()),
+                Some(acc) => (acc, "team".to_string(), None),
                 None => return Ok(()),
             }
         }
@@ -190,6 +190,82 @@ pub async fn apply_subscription_event_on_connection(
         }),
     )
     .await?;
+
+    if event_type == "invoice.paid" {
+        let invoice_id = data.get("id").and_then(Value::as_str).unwrap_or(event_id);
+        let amount_paid = data.get("amount_paid").and_then(Value::as_i64).unwrap_or(0);
+        let currency = data
+            .get("currency")
+            .and_then(Value::as_str)
+            .unwrap_or("eur")
+            .to_uppercase();
+        let hosted_invoice_url = data
+            .get("hosted_invoice_url")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        let email = data
+            .get("customer_email")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .or(customer_email_db.clone());
+        let name = data
+            .get("customer_name")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+
+        record_outbox_event(
+            &mut *db,
+            "billing.invoice.paid.v1",
+            account_id,
+            &json!({
+                "account_id": account_id,
+                "invoice_id": invoice_id,
+                "amount_minor": amount_paid,
+                "currency": currency,
+                "recipient_email": email,
+                "customer_name": name,
+                "invoice_url": hosted_invoice_url,
+            }),
+        )
+        .await?;
+    } else if event_type == "invoice.payment_failed" {
+        let invoice_id = data.get("id").and_then(Value::as_str).unwrap_or(event_id);
+        let amount_due = data.get("amount_due").and_then(Value::as_i64).unwrap_or(0);
+        let currency = data
+            .get("currency")
+            .and_then(Value::as_str)
+            .unwrap_or("eur")
+            .to_uppercase();
+        let hosted_invoice_url = data
+            .get("hosted_invoice_url")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        let email = data
+            .get("customer_email")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .or(customer_email_db);
+        let name = data
+            .get("customer_name")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+
+        record_outbox_event(
+            &mut *db,
+            "billing.invoice.payment_failed.v1",
+            account_id,
+            &json!({
+                "account_id": account_id,
+                "invoice_id": invoice_id,
+                "amount_minor": amount_due,
+                "currency": currency,
+                "recipient_email": email,
+                "customer_name": name,
+                "invoice_url": hosted_invoice_url,
+            }),
+        )
+        .await?;
+    }
 
     Ok(())
 }

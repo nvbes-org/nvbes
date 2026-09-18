@@ -23,7 +23,13 @@ variable "environment" {
 
 variable "billing_image" {
   type        = string
-  description = "Pinned container image reference including registry and digest."
+  description = "Pinned container image reference for Billing Service including registry and digest."
+}
+
+variable "billing_worker_image" {
+  type        = string
+  default     = ""
+  description = "Pinned container image reference for Billing Worker including registry and digest."
 }
 
 variable "private_network_id" {
@@ -80,4 +86,21 @@ variable "billing_sentry_traces_sample_rate" {
   type        = number
   default     = 0.1
   description = "Sentry transaction sample rate."
+}
+
+variable "app_url" {
+  type        = string
+  description = "Public base URL of the nvbes application (e.g. https://app.nvbes.com). Injected into billing redirect URLs."
+}
+
+variable "identity_public_key_pem" {
+  type        = string
+  sensitive   = true
+  description = "RSA public key PEM used to verify Identity-issued JWT access tokens."
+}
+
+variable "billing_grpc_token" {
+  type        = string
+  sensitive   = true
+  description = "Bearer token used by billing-worker to authenticate against billing-service gRPC (operator token)."
 }

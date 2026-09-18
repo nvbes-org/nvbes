@@ -109,6 +109,15 @@ pub async fn stripe_webhook_handler(
                 .execute(&mut *transaction)
                 .await?;
             transaction.commit().await?;
+
+            let _ = crate::outbox::publish_pending_outbox_events(
+                &state.db,
+                state.email_client(),
+                &state.config.app_url,
+                10,
+            )
+            .await;
+
             Ok((StatusCode::OK, Json(json!({ "received": true }))))
         }
         Err(err) => {

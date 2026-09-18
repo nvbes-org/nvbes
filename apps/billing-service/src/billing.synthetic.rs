@@ -19,6 +19,9 @@ pub struct SyntheticBillingResult {
     pub subscription_status: String,
     pub webhook_deduplicated: bool,
     pub out_of_order_protected: bool,
+    pub invoice_paid_processed: bool,
+    pub invoice_failed_processed: bool,
+    pub outbox_published: bool,
     pub reconciliation_resolved: bool,
     pub audit_events: i64,
     pub outbox_events: i64,
@@ -47,19 +50,10 @@ pub async fn run(
     let checkout_url = format!("{}/mock-checkout?sid={session_id}", config.app_url);
 
     sqlx::query(
-        r#"
-        INSERT INTO billing_checkout_sessions
-          (idempotency_key, account_id, account_type, plan_code, stripe_session_id, stripe_customer_id, checkout_url)
-        VALUES ($1, $2, 'team', 'standard_monthly', $3, $4, $5)
-        "#,
+        "INSERT INTO billing_checkout_sessions (idempotency_key, account_id, account_type, plan_code, stripe_session_id, stripe_customer_id, checkout_url) VALUES ($1, $2, 'team', 'standard_monthly', $3, $4, $5)"
     )
-    .bind(&idem_key)
-    .bind(workspace_id)
-    .bind(&session_id)
-    .bind(&customer_id)
-    .bind(&checkout_url)
-    .execute(db)
-    .await?;
+    .bind(&idem_key).bind(workspace_id).bind(&session_id).bind(&customer_id).bind(&checkout_url)
+    .execute(db).await?;
 
     let duplicate_count: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM billing_checkout_sessions WHERE idempotency_key = $1",
@@ -91,22 +85,12 @@ pub async fn run(
 
     // Ingest webhook event
     sqlx::query(
-        r#"
-        INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status)
-        VALUES ($1, 'checkout.session.completed', $2, $3, 'processed')
-        ON CONFLICT (event_id) DO NOTHING
-        "#,
+        "INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status) VALUES ($1, 'checkout.session.completed', $2, $3, 'processed') ON CONFLICT (event_id) DO NOTHING"
     )
-    .bind(&evt_checkout_id)
-    .bind(now)
-    .bind(&checkout_payload)
-    .execute(db)
-    .await?;
+    .bind(&evt_checkout_id).bind(now).bind(&checkout_payload).execute(db).await?;
 
     sqlx::query("UPDATE billing_checkout_sessions SET status = 'completed', completed_at = clock_timestamp() WHERE stripe_session_id = $1")
-        .bind(&session_id)
-        .execute(db)
-        .await?;
+        .bind(&session_id).execute(db).await?;
 
     record_audit_event(
         db,
@@ -120,18 +104,9 @@ pub async fn run(
 
     // 4. Test Webhook deduplication: try inserting same event.id
     let reinserted: Option<String> = sqlx::query_scalar(
-        r#"
-        INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status)
-        VALUES ($1, 'checkout.session.completed', $2, $3, 'processed')
-        ON CONFLICT (event_id) DO NOTHING
-        RETURNING event_id
-        "#,
+        "INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status) VALUES ($1, 'checkout.session.completed', $2, $3, 'processed') ON CONFLICT (event_id) DO NOTHING RETURNING event_id"
     )
-    .bind(&evt_checkout_id)
-    .bind(now)
-    .bind(&checkout_payload)
-    .fetch_optional(db)
-    .await?;
+    .bind(&evt_checkout_id).bind(now).bind(&checkout_payload).fetch_optional(db).await?;
     let webhook_deduplicated = reinserted.is_none();
 
     // 5. Subscription lifecycle: created at T2
@@ -188,7 +163,55 @@ pub async fn run(
     .await?;
     let out_of_order_protected = current_status == "active";
 
-    // 7. Reconciliation dead-letter and manual operator resolution
+    // 7. Simulate invoice.paid webhook
+    let invoice_paid_id = format!("in_test_paid_{}", Uuid::new_v4().simple());
+    let invoice_paid_data = json!({
+        "id": invoice_paid_id,
+        "subscription": sub_id,
+        "customer": customer_id,
+        "amount_paid": 1000,
+        "currency": "eur",
+        "customer_email": "billing-synthetic@nvbes.test",
+        "customer_name": "Synthetic Tester",
+        "hosted_invoice_url": format!("{}/mock-invoice/{}", config.app_url, invoice_paid_id),
+    });
+
+    apply_subscription_event(
+        db,
+        "evt_inv_paid",
+        "invoice.paid",
+        now + Duration::minutes(1),
+        &invoice_paid_data,
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("invoice paid failed: {e}"))?;
+    let invoice_paid_processed = true;
+
+    // 8. Simulate invoice.payment_failed webhook
+    let invoice_failed_id = format!("in_test_failed_{}", Uuid::new_v4().simple());
+    let invoice_failed_data = json!({
+        "id": invoice_failed_id,
+        "subscription": sub_id,
+        "customer": customer_id,
+        "amount_due": 1000,
+        "currency": "eur",
+        "customer_email": "billing-synthetic@nvbes.test",
+        "customer_name": "Synthetic Tester",
+        "hosted_invoice_url": format!("{}/mock-invoice/{}", config.app_url, invoice_failed_id),
+    });
+
+    apply_subscription_event(
+        db,
+        "evt_inv_failed",
+        "invoice.payment_failed",
+        now + Duration::minutes(2),
+        &invoice_failed_data,
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("invoice payment failed update failed: {e}"))?;
+    let invoice_failed_processed = true;
+
+    // 9. Reconciliation dead-letter and manual operator resolution
     let recon_id = record_reconciliation_item(
         db,
         Some("evt_failing_sample"),
@@ -217,7 +240,14 @@ pub async fn run(
             .await?;
     let reconciliation_resolved = recon_status == "resolved";
 
-    // 8. Count audit and outbox
+    // 10. Outbox publication
+    let published_count =
+        crate::outbox::publish_pending_outbox_events(db, None, &config.app_url, 100)
+            .await
+            .map_err(|e| anyhow::anyhow!("outbox publishing failed: {e}"))?;
+    let outbox_published = published_count >= 3;
+
+    // 11. Count audit and outbox
     let audit_events: i64 =
         sqlx::query_scalar("SELECT count(*) FROM billing_audit_events WHERE account_id = $1")
             .bind(workspace_id)
@@ -239,6 +269,9 @@ pub async fn run(
         subscription_status: current_status,
         webhook_deduplicated,
         out_of_order_protected,
+        invoice_paid_processed,
+        invoice_failed_processed,
+        outbox_published,
         reconciliation_resolved,
         audit_events,
         outbox_events,
