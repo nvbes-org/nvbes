@@ -82,16 +82,16 @@ resource "scaleway_container" "billing_worker" {
   max_scale              = 1
 
   environment_variables = merge(local.billing_runtime_environment, {
-    NVBES_BILLING_QUEUE_ENDPOINT    = scaleway_mnq_sqs.billing_dispatch.endpoint
-    NVBES_BILLING_QUEUE_URL         = scaleway_mnq_sqs_queue.billing_dispatch.url
-    NVBES_BILLING_QUEUE_REGION      = var.scaleway_region
-    NVBES_BILLING_QUEUE_ACCESS_KEY  = scaleway_mnq_sqs_credentials.billing_dispatch_publisher.access_key
-    NVBES_BILLING_GRPC_ENDPOINT     = "https://${scaleway_container.billing.domain_name}"
+    NVBES_BILLING_QUEUE_ENDPOINT   = scaleway_mnq_sqs.billing_dispatch.endpoint
+    NVBES_BILLING_QUEUE_URL        = scaleway_mnq_sqs_queue.billing_dispatch.url
+    NVBES_BILLING_QUEUE_REGION     = var.scaleway_region
+    NVBES_BILLING_QUEUE_ACCESS_KEY = scaleway_mnq_sqs_credentials.billing_dispatch_publisher.access_key
+    NVBES_BILLING_GRPC_ENDPOINT    = scaleway_container.billing.public_endpoint
   })
 
   secret_environment_variables = merge(local.billing_runtime_secrets, {
-    NVBES_BILLING_QUEUE_SECRET_KEY  = scaleway_mnq_sqs_credentials.billing_dispatch_publisher.secret_key
-    NVBES_BILLING_GRPC_AUTH_TOKEN   = var.billing_grpc_token
+    NVBES_BILLING_QUEUE_SECRET_KEY = scaleway_mnq_sqs_credentials.billing_dispatch_publisher.secret_key
+    NVBES_BILLING_GRPC_AUTH_TOKEN  = var.billing_grpc_token
   })
 
   liveness_probe {
