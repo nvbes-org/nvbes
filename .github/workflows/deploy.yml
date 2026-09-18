@@ -507,6 +507,9 @@ jobs:
       TF_VAR_billing_metrics_token: ${{ secrets.BILLING_METRICS_TOKEN }}
       TF_VAR_billing_operator_token: ${{ secrets.BILLING_OPERATOR_TOKEN }}
       TF_VAR_billing_sentry_dsn: ${{ secrets.BILLING_SENTRY_DSN }}
+      TF_VAR_app_url: ${{ vars.BILLING_APP_URL }}
+      TF_VAR_identity_public_key_pem: ${{ secrets.IDENTITY_TOKEN_PUBLIC_KEY_PEM }}
+      TF_VAR_billing_grpc_token: ${{ secrets.BILLING_OPERATOR_TOKEN }}
       TERRAFORM_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
       BILLING_TERRAFORM_STATE_KEY: production/billing/terraform.tfstate
       BILLING_REGISTRY_ENDPOINT: rg.fr-par.scw.cloud/nvbes-prod-billing
