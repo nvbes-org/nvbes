@@ -11,12 +11,9 @@ const REFRESH_TOKEN_TTL_DAYS: i64 = 30;
 #[derive(Debug, Clone)]
 pub struct RefreshTokenInfo {
     pub token: String,
-    pub family_id: Uuid,
     pub principal_id: Uuid,
     pub session_id: Uuid,
-    pub client_id: String,
     pub scope: String,
-    pub expires_at: chrono::DateTime<Utc>,
 }
 
 pub async fn create_refresh_token(
@@ -51,12 +48,9 @@ pub async fn create_refresh_token(
 
     Ok(RefreshTokenInfo {
         token,
-        family_id,
         principal_id,
         session_id,
-        client_id: client_id.to_string(),
         scope: scope.to_string(),
-        expires_at,
     })
 }
 
@@ -80,10 +74,12 @@ pub async fn rotate_refresh_token(
     .await?;
 
     // Revoke the old token
-    sqlx::query("UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE token_hash = $1")
-        .bind(&old_token_hash)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(
+        "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE token_hash = $1",
+    )
+    .bind(&old_token_hash)
+    .execute(&mut *tx)
+    .await?;
 
     // Check for reuse attack - if any other token in the family is already revoked, revoke entire family
     let has_other_revoked: bool = sqlx::query_scalar(
@@ -98,10 +94,12 @@ pub async fn rotate_refresh_token(
 
     if has_other_revoked {
         // Revoke entire family
-        sqlx::query("UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE family_id = $1")
-            .bind(family_id)
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE family_id = $1",
+        )
+        .bind(family_id)
+        .execute(&mut *tx)
+        .await?;
         tx.commit().await?;
         anyhow::bail!("Refresh token reuse detected - family revoked");
     }
@@ -129,51 +127,10 @@ pub async fn rotate_refresh_token(
 
     Ok(RefreshTokenInfo {
         token: new_token,
-        family_id,
         principal_id,
         session_id,
-        client_id: client_id.to_string(),
         scope,
-        expires_at,
     })
-}
-
-pub async fn validate_refresh_token(
-    db: &PgPool,
-    token: &str,
-) -> anyhow::Result<(Uuid, String, String)> {
-    let token_hash = hash_token(token);
-
-    let (principal_id, client_id, scope): (Uuid, String, String) = sqlx::query_as(
-        "SELECT principal_id, client_id, scope 
-         FROM identity_refresh_tokens 
-         WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > clock_timestamp()",
-    )
-    .bind(&token_hash)
-    .fetch_one(db)
-    .await?;
-
-    Ok((principal_id, client_id, scope))
-}
-
-pub async fn revoke_refresh_token(db: &PgPool, token: &str) -> anyhow::Result<()> {
-    let token_hash = hash_token(token);
-
-    sqlx::query("UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE token_hash = $1")
-        .bind(&token_hash)
-        .execute(db)
-        .await?;
-
-    Ok(())
-}
-
-pub async fn revoke_refresh_token_family(db: &PgPool, family_id: Uuid) -> anyhow::Result<()> {
-    sqlx::query("UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE family_id = $1")
-        .bind(family_id)
-        .execute(db)
-        .await?;
-
-    Ok(())
 }
 
 fn random_token() -> String {

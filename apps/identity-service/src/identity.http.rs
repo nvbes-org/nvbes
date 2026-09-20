@@ -49,8 +49,9 @@ async fn register(
         .map_err(|_| HttpError::BadRequest("Password hashing failed".to_string()))?;
 
     let principal_id = Uuid::new_v4();
-    let mut tx = state.db.begin().await
-        .map_err(|e| HttpError::InternalServerError(format!("Database transaction failed: {}", e)))?;
+    let mut tx = state.db.begin().await.map_err(|e| {
+        HttpError::InternalServerError(format!("Database transaction failed: {}", e))
+    })?;
 
     sqlx::query(
         "INSERT INTO identity_principals (id, kind, status) VALUES ($1, 'human', 'active')",
@@ -77,13 +78,19 @@ async fn register(
     .bind(password_hash)
     .execute(&mut *tx)
     .await
-    .map_err(|e| HttpError::InternalServerError(format!("Failed to create password credential: {}", e)))?;
+    .map_err(|e| {
+        HttpError::InternalServerError(format!("Failed to create password credential: {}", e))
+    })?;
 
-    audit(&mut tx, principal_id, "identity.registered").await
-        .map_err(|e| HttpError::InternalServerError(format!("Failed to audit registration: {}", e)))?;
+    audit(&mut tx, principal_id, "identity.registered")
+        .await
+        .map_err(|e| {
+            HttpError::InternalServerError(format!("Failed to audit registration: {}", e))
+        })?;
 
-    tx.commit().await
-        .map_err(|e| HttpError::InternalServerError(format!("Failed to commit registration: {}", e)))?;
+    tx.commit().await.map_err(|e| {
+        HttpError::InternalServerError(format!("Failed to commit registration: {}", e))
+    })?;
 
     Ok((
         StatusCode::CREATED,
@@ -154,7 +161,9 @@ fn normalize_email(email: &str) -> Result<String, HttpError> {
 
 fn validate_password(password: &str) -> Result<(), HttpError> {
     if !(12..=1024).contains(&password.len()) {
-        return Err(HttpError::BadRequest("Password must be between 12 and 1024 characters".to_string()));
+        return Err(HttpError::BadRequest(
+            "Password must be between 12 and 1024 characters".to_string(),
+        ));
     }
     Ok(())
 }

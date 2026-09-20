@@ -111,7 +111,7 @@ Réponse :
 TOKEN_ISSUER=https://identity.example.com
 TOKEN_AUDIENCE=account
 TOKEN_KEY_ID=key-id
-TOKEN_PUBLIC_KEY_PEM=-----BEGIN PUBLIC KEY-----...
+TOKEN_PUBLIC_KEY_PEM="<PEM-encoded public key>"
 ```
 
 ### Identity service (config)
@@ -119,8 +119,8 @@ TOKEN_PUBLIC_KEY_PEM=-----BEGIN PUBLIC KEY-----...
 ```env
 NVBES_IDENTITY_TOKEN_ISSUER=https://identity.example.com
 NVBES_IDENTITY_TOKEN_KEY_ID=key-id
-NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM=-----BEGIN PRIVATE KEY-----...
-NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM=-----BEGIN PUBLIC KEY-----...
+NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM="<PEM-encoded private key>"
+NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM="<PEM-encoded public key>"
 NVBES_IDENTITY_TOKEN_AUDIENCES=account,billing,platform
 ```
 

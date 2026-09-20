@@ -1,22 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::oauth::validate_client_id;
-    use crate::oauth::validate_redirect_uri;
-
-    fn validate_scope(scope: &str) -> bool {
-        if scope.is_empty() {
-            return true;
-        }
-        scope
-            .split_whitespace()
-            .all(|token| {
-                !token.is_empty()
-                    && token.len() <= 64
-                    && token
-                        .chars()
-                        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == ':')
-            })
-    }
+    use crate::oauth::types::{validate_client_id, validate_redirect_uri, validate_scope};
 
     #[test]
     fn validate_client_id_accepts_valid_formats() {
@@ -40,7 +24,9 @@ mod tests {
     fn validate_redirect_uri_accepts_valid_urls() {
         assert!(validate_redirect_uri("https://example.com/callback"));
         assert!(validate_redirect_uri("http://localhost:3000/callback"));
-        assert!(validate_redirect_uri("https://app.example.com/auth/callback"));
+        assert!(validate_redirect_uri(
+            "https://app.example.com/auth/callback"
+        ));
     }
 
     #[test]

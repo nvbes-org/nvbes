@@ -66,13 +66,16 @@ async fn introspect(
     // Determine expected audience from token_type_hint or default to account
     let expected_audience = req.token_type_hint.as_deref().unwrap_or("account");
 
-    let token_config = match crate::tokens_config::TokenConfig::from_env(&state.config.environment) {
+    let token_config = match crate::tokens_config::TokenConfig::from_env(&state.config.environment)
+    {
         Ok(config) => config,
         Err(e) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": format!("Failed to create token config: {}", e) })),
-            ))
+                Json(
+                    serde_json::json!({ "error": format!("Failed to create token config: {}", e) }),
+                ),
+            ));
         }
     };
 
@@ -81,12 +84,17 @@ async fn introspect(
         Err(e) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": format!("Failed to create token service: {}", e) })),
-            ))
+                Json(
+                    serde_json::json!({ "error": format!("Failed to create token service: {}", e) }),
+                ),
+            ));
         }
     };
 
-    match token_service.introspect(&state.db, &req.token, expected_audience).await {
+    match token_service
+        .introspect(&state.db, &req.token, expected_audience)
+        .await
+    {
         Ok(Some(claims)) => Ok((
             StatusCode::OK,
             Json(IntrospectResponse {
@@ -129,13 +137,16 @@ async fn authz_decision(
     // Determine expected audience from request or default to account
     let expected_audience = "account";
 
-    let token_config = match crate::tokens_config::TokenConfig::from_env(&state.config.environment) {
+    let token_config = match crate::tokens_config::TokenConfig::from_env(&state.config.environment)
+    {
         Ok(config) => config,
         Err(e) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": format!("Failed to create token config: {}", e) })),
-            ))
+                Json(
+                    serde_json::json!({ "error": format!("Failed to create token config: {}", e) }),
+                ),
+            ));
         }
     };
 
@@ -144,12 +155,17 @@ async fn authz_decision(
         Err(e) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": format!("Failed to create token service: {}", e) })),
-            ))
+                Json(
+                    serde_json::json!({ "error": format!("Failed to create token service: {}", e) }),
+                ),
+            ));
         }
     };
 
-    let claims = match token_service.introspect(&state.db, &req.token, expected_audience).await {
+    let claims = match token_service
+        .introspect(&state.db, &req.token, expected_audience)
+        .await
+    {
         Ok(Some(claims)) => claims,
         Ok(None) => {
             return Ok((
@@ -170,31 +186,40 @@ async fn authz_decision(
                         device_id: None,
                     },
                 }),
-            ))
+            ));
         }
         Err(e) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": format!("Introspection failed: {}", e) })),
-            ))
+            ));
         }
     };
 
     let principal_id = Uuid::parse_str(&claims.sub).unwrap_or(Uuid::nil());
     let session_id = Uuid::parse_str(&claims.sid).unwrap_or(Uuid::nil());
 
+    tracing::debug!(
+        resource = %req.resource,
+        action = %req.action,
+        "Evaluating authorization decision"
+    );
+
     // V1 authorization logic:
     // - Check if token has required scope for the action
     // - If workspace_id is provided, the principal must be a member (deferred to Account service)
     // - Auth level (acr/amr) is informative for V1, not enforced
-    
+
     // For V1, allow access if token is valid and has any scope
     // Workspace membership and RBAC are deferred to Account service
     let allowed = !claims.scope.is_empty();
     let reason = if allowed {
         None
     } else {
-        Some("Token has no authorized scopes".to_string())
+        Some(format!(
+            "Token has no authorized scopes for action '{}' on resource '{}'",
+            req.action, req.resource
+        ))
     };
 
     Ok((

@@ -31,7 +31,10 @@ pub struct OpenIdConfiguration {
 
 pub fn router(state: &IdentityState) -> Router {
     Router::new()
-        .route("/.well-known/oauth-authorization-server", get(oauth_metadata))
+        .route(
+            "/.well-known/oauth-authorization-server",
+            get(oauth_metadata),
+        )
         .route("/.well-known/openid-configuration", get(oidc_metadata))
         .route("/.well-known/jwks.json", get(jwks))
         .with_state(state.clone())
@@ -48,9 +51,16 @@ async fn oauth_metadata(
         token_endpoint: format!("{}/oauth/token", issuer),
         jwks_uri: format!("{}/.well-known/jwks.json", issuer),
         response_types_supported: vec!["code".to_string()],
-        grant_types_supported: vec!["authorization_code".to_string(), "refresh_token".to_string()],
+        grant_types_supported: vec![
+            "authorization_code".to_string(),
+            "refresh_token".to_string(),
+        ],
         token_endpoint_auth_methods_supported: vec!["client_secret_post".to_string()],
-        scopes_supported: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
+        scopes_supported: vec![
+            "openid".to_string(),
+            "profile".to_string(),
+            "email".to_string(),
+        ],
     }))
 }
 
@@ -65,9 +75,16 @@ async fn oidc_metadata(
         token_endpoint: format!("{}/oauth/token", issuer),
         jwks_uri: format!("{}/.well-known/jwks.json", issuer),
         response_types_supported: vec!["code".to_string()],
-        grant_types_supported: vec!["authorization_code".to_string(), "refresh_token".to_string()],
+        grant_types_supported: vec![
+            "authorization_code".to_string(),
+            "refresh_token".to_string(),
+        ],
         token_endpoint_auth_methods_supported: vec!["client_secret_post".to_string()],
-        scopes_supported: vec!["openid".to_string(), "profile".to_string(), "email".to_string()],
+        scopes_supported: vec![
+            "openid".to_string(),
+            "profile".to_string(),
+            "email".to_string(),
+        ],
         subject_types_supported: vec!["public".to_string()],
         id_token_signing_alg_values_supported: vec!["RS256".to_string()],
     }))
@@ -76,13 +93,14 @@ async fn oidc_metadata(
 async fn jwks(
     State(state): State<IdentityState>,
 ) -> Result<Json<crate::tokens::JsonWebKeySet>, (StatusCode, String)> {
-    let token_config = match crate::tokens_config::TokenConfig::from_env(&state.config.environment) {
+    let token_config = match crate::tokens_config::TokenConfig::from_env(&state.config.environment)
+    {
         Ok(config) => config,
         Err(e) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to create token config: {}", e),
-            ))
+            ));
         }
     };
 
@@ -92,7 +110,7 @@ async fn jwks(
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to create token service: {}", e),
-            ))
+            ));
         }
     };
 

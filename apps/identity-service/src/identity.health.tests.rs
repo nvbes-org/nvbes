@@ -77,5 +77,8 @@ async fn public_identity_routes_are_exposed() {
         .await
         .unwrap();
     // Should return 415 Unsupported Media Type due to missing JSON body, not 404
-    assert_eq!(response.status(), axum::http::StatusCode::UNSUPPORTED_MEDIA_TYPE);
+    assert_eq!(
+        response.status(),
+        axum::http::StatusCode::UNSUPPORTED_MEDIA_TYPE
+    );
 }
