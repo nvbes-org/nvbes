@@ -24,10 +24,10 @@ pub fn install() -> Arc<PrometheusHandle> {
         .clone()
 }
 
-pub fn router(state: IdentityState) -> Router {
+pub fn router(state: &IdentityState) -> Router {
     Router::new()
         .route("/metrics", get(render))
-        .with_state(state)
+        .with_state(state.clone())
 }
 
 async fn render(State(state): State<IdentityState>, headers: HeaderMap) -> impl IntoResponse {

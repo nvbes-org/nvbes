@@ -9,11 +9,11 @@ struct HealthResponse {
     service: &'static str,
 }
 
-pub fn router(state: IdentityState) -> Router {
+pub fn router(state: &IdentityState) -> Router {
     Router::new()
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
-        .with_state(state)
+        .with_state(state.clone())
 }
 
 async fn live() -> Json<HealthResponse> {

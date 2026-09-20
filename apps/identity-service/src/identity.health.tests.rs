@@ -4,8 +4,6 @@ use tower::ServiceExt;
 
 use crate::{app::IdentityState, config::IdentityConfig};
 
-use super::router;
-
 pub(crate) fn state() -> IdentityState {
     let database_url = "postgres://identity:identity@127.0.0.1:1/identity_test";
     let db = PgPoolOptions::new()
@@ -27,6 +25,7 @@ pub(crate) fn state() -> IdentityState {
             mfa_key_version: 1,
             mfa_previous_encryption_key: None,
             mfa_previous_key_version: None,
+            token_issuer: "http://127.0.0.1:0".into(),
         },
         db,
     )
@@ -41,7 +40,7 @@ async fn liveness_is_shallow_but_readiness_requires_the_database() {
         state.db.acquire().await,
         Err(sqlx::Error::PoolClosed)
     ));
-    let app = router(state);
+    let app = crate::health::router(&state);
     let live = app
         .clone()
         .oneshot(
@@ -66,16 +65,20 @@ async fn liveness_is_shallow_but_readiness_requires_the_database() {
 }
 
 #[tokio::test]
-async fn no_public_identity_route_is_exposed() {
-    let response = router(state())
+async fn public_identity_routes_are_exposed() {
+    let response = crate::http::router(&state())
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/auth/register")
+                .uri("/api/v1/auth/register")
                 .body(Body::empty())
                 .unwrap(),
         )
         .await
         .unwrap();
-    assert_eq!(response.status(), axum::http::StatusCode::NOT_FOUND);
+    // Should return 415 Unsupported Media Type due to missing JSON body, not 404
+    assert_eq!(
+        response.status(),
+        axum::http::StatusCode::UNSUPPORTED_MEDIA_TYPE
+    );
 }

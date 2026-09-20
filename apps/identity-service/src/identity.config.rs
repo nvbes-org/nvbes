@@ -18,6 +18,7 @@ pub struct IdentityConfig {
     pub mfa_key_version: i16,
     pub mfa_previous_encryption_key: Option<[u8; 32]>,
     pub mfa_previous_key_version: Option<i16>,
+    pub token_issuer: String,
 }
 
 impl IdentityConfig {
@@ -78,6 +79,8 @@ impl IdentityConfig {
         let metrics_token = optional("NVBES_IDENTITY_METRICS_TOKEN")
             .or_else(|| development.then(|| "development-identity-metrics-token-value".into()))
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_METRICS_TOKEN"))?;
+        let token_issuer = optional("NVBES_IDENTITY_TOKEN_ISSUER")
+            .unwrap_or_else(|| format!("http://{}", bind_addr));
         validate_observability(
             development,
             sentry_dsn.as_deref(),
@@ -100,6 +103,7 @@ impl IdentityConfig {
             mfa_key_version,
             mfa_previous_encryption_key,
             mfa_previous_key_version,
+            token_issuer,
         })
     }
 }

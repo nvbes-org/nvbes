@@ -13,7 +13,12 @@ impl TokenConfig {
     pub fn from_env(environment: &str) -> anyhow::Result<Self> {
         Self::from_values(
             environment,
-            required("NVBES_IDENTITY_TOKEN_ISSUER")?,
+            optional("NVBES_IDENTITY_TOKEN_ISSUER").unwrap_or_else(|| {
+                // Fallback to bind_addr if not specified
+                let bind_addr = std::env::var("NVBES_IDENTITY_BIND_ADDR")
+                    .unwrap_or_else(|_| "127.0.0.1:3060".into());
+                format!("http://{}", bind_addr)
+            }),
             required("NVBES_IDENTITY_TOKEN_KEY_ID")?,
             required("NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM")?,
             required("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM")?,
@@ -64,6 +69,12 @@ fn required(name: &str) -> anyhow::Result<String> {
         .ok()
         .filter(|value| !value.trim().is_empty())
         .ok_or_else(|| anyhow::anyhow!("{name} is required"))
+}
+
+fn optional(name: &str) -> Option<String> {
+    std::env::var(name)
+        .ok()
+        .filter(|value| !value.trim().is_empty())
 }
 
 fn validate_identifier(label: &str, value: &str) -> anyhow::Result<()> {

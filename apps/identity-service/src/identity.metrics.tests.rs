@@ -7,7 +7,7 @@ use super::router;
 
 #[tokio::test]
 async fn metrics_require_the_exact_bearer_token() {
-    let app = router(state());
+    let app = router(&state());
     let unauthorized = app
         .clone()
         .oneshot(
