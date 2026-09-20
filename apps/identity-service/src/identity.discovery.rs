@@ -116,3 +116,7 @@ async fn jwks(
 
     Ok(Json(token_service.jwks().clone()))
 }
+
+#[cfg(test)]
+#[path = "identity.discovery.tests.rs"]
+mod tests;

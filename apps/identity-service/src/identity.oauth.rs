@@ -174,4 +174,4 @@ async fn authorize(
 
 #[cfg(test)]
 #[path = "identity.oauth.tests.rs"]
-mod oauth_tests;
+mod tests;

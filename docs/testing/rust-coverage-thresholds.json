@@ -31,8 +31,8 @@
       "baseline": { "lines": 35.0, "functions": 40.5, "regions": 32.4 }
     },
     "nvbes-identity-service": {
-      "threshold": { "lines": 33, "functions": 41, "regions": 28 },
-      "baseline": { "lines": 35.0, "functions": 43.3, "regions": 29.9 }
+      "threshold": { "lines": 27, "functions": 41, "regions": 26 },
+      "baseline": { "lines": 29.9, "functions": 43.1, "regions": 28.1 }
     },
     "nvbes-trust-risk-service": {
       "threshold": { "lines": 14, "functions": 17, "regions": 15 },

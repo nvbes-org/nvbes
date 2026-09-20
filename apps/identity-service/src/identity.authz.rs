@@ -242,3 +242,7 @@ async fn authz_decision(
         }),
     ))
 }
+
+#[cfg(test)]
+#[path = "identity.authz.tests.rs"]
+mod tests;
