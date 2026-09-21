@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/test-env.sh"
 
 DRY_RUN=false
-if [ "${1:-}" = "--dry-run" ]; then
+if [[ "${1:-}" = "--dry-run" ]]; then
   DRY_RUN=true
   log_step "Mode simulation Staging (dry-run) active"
 fi
@@ -25,9 +25,9 @@ require_cmd node
 require_cmd gh
 
 log_step "Verification de l'existence de la configuration Staging"
-if [ ! -f "$ROOT_DIR/.env.staging" ]; then
+if [[ ! -f "$ROOT_DIR/.env.staging" ]]; then
   printf 'Info: .env.staging absent. Copie depuis .env.staging.example...\n'
-  if [ "$DRY_RUN" = false ]; then
+  if [[ "$DRY_RUN" = false ]]; then
     cp "$ROOT_DIR/.env.staging.example" "$ROOT_DIR/.env.staging"
   fi
 fi

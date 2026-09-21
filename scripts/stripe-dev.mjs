@@ -108,7 +108,8 @@ async function main() {
       throw error;
     }
     // Listener output is consumed privately: neither secrets nor webhook payloads are logged.
-    console.log(`Billing: sandbox ${account}, fixture ${price}, webhook ready.`);
+    const safePrice = String(price).replace(/[\r\n]/g, '');
+    console.log(`Billing: sandbox fixture ${safePrice}, webhook ready.`);
   } else {
     throw new Error('NVBES_STRIPE_DEV_MODE must be sandbox or mock.');
   }

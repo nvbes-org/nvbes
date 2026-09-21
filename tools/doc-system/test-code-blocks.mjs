@@ -38,7 +38,7 @@ export function testCodeBlocks() {
   for (const file of docFiles) {
     const relPath = relative(REPO_ROOT, file);
     const content = readFileSync(file, 'utf8');
-    const codeBlockRegex = /```([a-zA-Z0-9_-]+)?\s*([\s\S]*?)```/g;
+    const codeBlockRegex = /```([a-zA-Z0-9_-]+)?[ \t]*\r?\n([\s\S]*?)```/g;
 
     let match;
     let index = 0;
@@ -54,7 +54,7 @@ export function testCodeBlocks() {
       if (lang === 'json') {
         jsonBlocks++;
         // Ignore json blocks with placeholders like ... or <placeholder>
-        const hasPlaceholders = /<[^>]+>|\.\.\./.test(code);
+        const hasPlaceholders = code.includes('...') || /<[^>\r\n]+>/.test(code);
         if (!hasPlaceholders) {
           try {
             JSON.parse(code);

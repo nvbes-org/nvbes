@@ -7,12 +7,11 @@ load_dev_identity_keys() {
   local private_key="$key_dir/identity-token-private.pem"
   local public_key="$key_dir/identity-token-public.pem"
 
-  if [ -z "${NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM:-}" ] \
-    || [ -z "${NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM:-}" ]; then
+  if [[ -z "${NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM:-}" || -z "${NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM:-}" ]]; then
     require_cmd openssl
     mkdir -p "$key_dir"
     chmod 700 "$key_dir"
-    if [ ! -s "$private_key" ] || [ ! -s "$public_key" ]; then
+    if [[ ! -s "$private_key" || ! -s "$public_key" ]]; then
       openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
         -out "$private_key" 2>/dev/null
       openssl pkey -in "$private_key" -pubout -out "$public_key" 2>/dev/null

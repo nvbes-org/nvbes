@@ -34,7 +34,9 @@ function readEnvBoolean(name) {
 
 function normalizeUrl(value, name) {
   if (!value) fail(`missing required environment variable: ${name}`);
-  return value.replace(/\/+$/u, '');
+  let res = String(value);
+  while (res.endsWith('/')) res = res.slice(0, -1);
+  return res;
 }
 
 function loadOpenApiSpec() {

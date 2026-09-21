@@ -90,5 +90,7 @@ function json(response) {
 }
 
 function normalizedTarget(value) {
-  return value.replace(/\/+$/u, '');
+  let res = String(value);
+  while (res.endsWith('/')) res = res.slice(0, -1);
+  return res;
 }

@@ -2,7 +2,7 @@ export function scopeMetric(plan, startedAt) {
   const lanes = Object.entries(plan.candidate)
     .filter(([name, required]) => name !== 'contracts' && required)
     .map(([name]) => name)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   const category = plan.fallbackFull
     ? 'fallback-full'
     : plan.docsOnly

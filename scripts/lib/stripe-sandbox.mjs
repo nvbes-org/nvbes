@@ -52,7 +52,15 @@ export async function verifySandbox(env) {
   return env.NVBES_STRIPE_ACCOUNT_ID;
 }
 
+const ALLOWED_COMMANDS = new Set(['cargo', 'stripe', 'node']);
+
 export function runPrivate(command, args, env, timeout = 30000) {
+  if (!ALLOWED_COMMANDS.has(command)) {
+    throw new Error(`Command ${command} is not allowed`);
+  }
+  if (!Array.isArray(args) || args.some((arg) => typeof arg !== 'string' || /[\r\n\0]/.test(arg))) {
+    throw new Error('Invalid command arguments');
+  }
   const result = spawnSync(command, args, { env, encoding: 'utf8', timeout });
   if (result.error) throw new Error(`${command} failed to start: ${result.error.code}.`);
   if (result.status !== 0) {

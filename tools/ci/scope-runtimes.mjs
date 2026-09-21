@@ -31,7 +31,7 @@ export function databaseProjects(paths, nodes, read = () => '') {
       );
     })
     .map(([name]) => name)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
 }
 
 export function containerProjects(paths, nodes, read) {
@@ -51,7 +51,7 @@ export function containerProjects(paths, nodes, read) {
       );
       const local = copies.filter((copy) => !copy.includes('--from='));
       // JSON form, globbing or interpolation is ambiguous: keep every source.
-      const ambiguous = local.some((copy) => /[\[\]$*?\\]/u.test(copy));
+      const ambiguous = local.some((copy) => /[[\]$*?\\]/u.test(copy));
       const roots = local.flatMap((copy) =>
         copy
           .split(/\s+/u)
@@ -71,7 +71,7 @@ export function containerProjects(paths, nodes, read) {
       );
     })
     .map(([name]) => name)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
 }
 
 export { isRustWorkspaceAffected };

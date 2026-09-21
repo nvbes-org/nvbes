@@ -9,7 +9,7 @@ CONDITION_DIR=".temp/rust"
 CONDITION_REPORT="$CONDITION_DIR/coverage-condition-workspace.json"
 THRESHOLDS="docs/testing/rust-condition-thresholds.json"
 TOOLCHAIN="nightly-2026-09-09"
-if [ "${NVBES_CONDITION_TOOLCHAIN:-$TOOLCHAIN}" != "$TOOLCHAIN" ]; then
+if [[ "${NVBES_CONDITION_TOOLCHAIN:-$TOOLCHAIN}" != "$TOOLCHAIN" ]]; then
   printf 'error: branch evidence requires pinned toolchain %s\n' "$TOOLCHAIN" >&2
   exit 1
 fi

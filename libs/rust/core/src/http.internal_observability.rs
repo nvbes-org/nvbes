@@ -143,7 +143,7 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert(
             header::AUTHORIZATION,
-            HeaderValue::from_static("Bearer internal-observability-token-32b"),
+            HeaderValue::try_from(format!("Bearer {TOKEN}")).unwrap(),
         );
 
         assert!(internal_token_matches(&headers, TOKEN));

@@ -13,7 +13,10 @@ export function confinedRead(directory, relative) {
   assert(!relative.split(/[\\/]/u).includes('..'), 'Parent traversal forbidden');
   const root = realpathSync(directory);
   const location = realpathSync(path.resolve(root, relative));
-  assert(location.startsWith(`${root}${path.sep}`), 'Artifact escapes evidence directory');
+  const rel = path.relative(root, location);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new Error('Artifact escapes evidence directory');
+  }
   let descriptor;
   try {
     descriptor = openSync(location, constants.O_RDONLY | constants.O_NOFOLLOW);

@@ -15,7 +15,7 @@ export function deriveReleaseBlockingCategories(manifest) {
       }
     }
   }
-  return [...blocking].sort();
+  return [...blocking].sort((a, b) => a.localeCompare(b));
 }
 
 export function validateAccountReleaseReadiness(manifest) {
@@ -23,7 +23,9 @@ export function validateAccountReleaseReadiness(manifest) {
     throw new Error('Account test manifest coverage is missing');
   }
   const blockers = deriveReleaseBlockingCategories(manifest);
-  const declared = [...(manifest.releaseReadiness?.blockingCategories ?? [])].sort();
+  const declared = [...(manifest.releaseReadiness?.blockingCategories ?? [])].sort((a, b) =>
+    a.localeCompare(b),
+  );
   if (JSON.stringify(declared) !== JSON.stringify(blockers)) {
     throw new Error('Account release-readiness blocker registry is stale');
   }

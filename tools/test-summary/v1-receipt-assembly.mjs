@@ -208,6 +208,12 @@ export function assembleReceiptDraft({
 }
 
 function api(endpoint) {
+  assert(
+    /^repos\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/actions\/runs\/\d+(?:\/artifacts\?per_page=100)?$/.test(
+      endpoint,
+    ),
+    'Invalid endpoint',
+  );
   try {
     return JSON.parse(
       execFileSync('gh', ['api', '--hostname', 'github.com', endpoint], {
@@ -240,12 +246,20 @@ function main() {
     manifestDigest,
     readArtifact: githubArtifactReader(REPOSITORY),
   });
-  const parent = path.join(cwd, '.temp/v1-drafts');
-  const output = path.join(parent, runId);
+  const parent = path.resolve(cwd, '.temp/v1-drafts');
+  const output = path.resolve(parent, runId);
+  const rel = path.relative(parent, output);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new Error('Invalid runId traversal');
+  }
   mkdirSync(parent, { recursive: true });
   mkdirSync(output);
   for (const [relative, bytes] of assembled.files) {
-    const destination = path.join(output, relative);
+    const destination = path.resolve(output, relative);
+    const destRel = path.relative(output, destination);
+    if (destRel.startsWith('..') || path.isAbsolute(destRel)) {
+      throw new Error('Invalid destination traversal');
+    }
     mkdirSync(path.dirname(destination), { recursive: true });
     writeFileSync(destination, bytes, { mode: 0o600, flag: 'wx' });
   }

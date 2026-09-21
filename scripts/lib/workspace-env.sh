@@ -9,7 +9,7 @@ load_workspace_env() {
 
   export NVBES_WORKSPACE_ROOT="$ROOT_DIR"
 
-  if [ ! -f "$env_file" ]; then
+  if [[ ! -f "$env_file" ]]; then
     return 0
   fi
 
@@ -18,7 +18,7 @@ load_workspace_env() {
   dotenv_exports="$(node --title="$node_process_title" "$ROOT_DIR/scripts/env.mjs" export)" || return 1
   eval "$dotenv_exports"
 
-  if [ "${NVBES_DEVCONTAINER:-}" = "true" ] || [ -f "/.dockerenv" ]; then
+  if [[ "${NVBES_DEVCONTAINER:-}" = "true" || -f "/.dockerenv" ]]; then
     export NVBES_DATABASE_URL="${NVBES_DEVCONTAINER_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes}"
     export NVBES_IDENTITY_DATABASE_URL="${NVBES_DEVCONTAINER_IDENTITY_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_identity}"
     export NVBES_IDENTITY_TEST_DATABASE_URL="${NVBES_DEVCONTAINER_IDENTITY_TEST_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_identity_test}"
@@ -36,7 +36,7 @@ load_workspace_env() {
   fi
 
   export NVBES_ACCOUNT_AVATAR_STORAGE_MODE="${NVBES_ACCOUNT_AVATAR_STORAGE_MODE:-mock}"
-  if [ "$NVBES_ACCOUNT_AVATAR_STORAGE_MODE" = "s3" ]; then
+  if [[ "$NVBES_ACCOUNT_AVATAR_STORAGE_MODE" = "s3" ]]; then
     export NVBES_ACCOUNT_AVATAR_STORAGE_BUCKET="${NVBES_ACCOUNT_AVATAR_STORAGE_BUCKET:-${STORAGE_BUCKET:-nvbes-drive}}"
     export NVBES_ACCOUNT_AVATAR_STORAGE_ENDPOINT="${NVBES_ACCOUNT_AVATAR_STORAGE_ENDPOINT:-${STORAGE_ENDPOINT:-http://localhost:8333}}"
     export NVBES_ACCOUNT_AVATAR_STORAGE_PUBLIC_ENDPOINT="${NVBES_ACCOUNT_AVATAR_STORAGE_PUBLIC_ENDPOINT:-${STORAGE_PUBLIC_ENDPOINT:-${NVBES_ACCOUNT_AVATAR_STORAGE_ENDPOINT}}}"

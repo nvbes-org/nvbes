@@ -27,8 +27,8 @@ const forbiddenWritePermissions = [
 ];
 const dangerousRunPatterns = [
   /\|\|\s*true/u,
-  /curl\s+[^|\n]*\|\s*(?:bash|sh)\b/u,
-  /wget\s+[^|\n]*\|\s*(?:bash|sh)\b/u,
+  /curl\b[^|\r\n]*?\|\s*(?:bash|sh)\b/u,
+  /wget\b[^|\r\n]*?\|\s*(?:bash|sh)\b/u,
   /\bnpm\s+install\b/u,
   /\bcargo\s+install\b(?![^\n]*--locked)/u,
   /docker\s+run\b[^\n]*--privileged/u,
@@ -125,7 +125,15 @@ function workflowFiles() {
 }
 
 function extractUses(text) {
-  return [...text.matchAll(/^\s*uses:\s*["']?([^"'\s#]+)["']?/gmu)].map((match) => match[1]);
+  const uses = [];
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('uses:')) {
+      const match = trimmed.match(/^uses:\s*["']?([^"'\s#]+)/);
+      if (match) uses.push(match[1]);
+    }
+  }
+  return uses;
 }
 
 function extractSecrets(text) {

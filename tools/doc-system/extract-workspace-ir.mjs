@@ -23,7 +23,12 @@ function walkDir(dir, filterFn, results = []) {
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name !== 'node_modules' && entry.name !== 'dist' && entry.name !== 'target' && !entry.name.startsWith('.')) {
+      if (
+        entry.name !== 'node_modules' &&
+        entry.name !== 'dist' &&
+        entry.name !== 'target' &&
+        !entry.name.startsWith('.')
+      ) {
         walkDir(fullPath, filterFn, results);
       }
     } else if (filterFn(fullPath)) {
@@ -119,7 +124,10 @@ export function extractWorkspaceIR() {
   }
 
   // 4. OpenAPI Specs
-  const openapiFiles = walkDir(REPO_ROOT, (file) => file.endsWith('openapi.json') || file.endsWith('.openapi.json'));
+  const openapiFiles = walkDir(
+    REPO_ROOT,
+    (file) => file.endsWith('openapi.json') || file.endsWith('.openapi.json'),
+  );
   const openapiServices = [];
 
   for (const oFile of openapiFiles) {
@@ -160,13 +168,17 @@ export function extractWorkspaceIR() {
   for (const adrFile of adrFiles) {
     const rel = relative(REPO_ROOT, adrFile);
     const content = readFileSync(adrFile, 'utf8');
-    const titleMatch = content.match(/^#\s+(.+)$/m);
-    const statusMatch = content.match(/status:\s*(\w+)/i) || content.match(/\*\*Status:\*\*\s*(\w+)/i) || content.match(/##\s+Status\s*\n+([A-Za-z]+)/i);
+    const titleLine = content.split('\n').find((l) => l.startsWith('# '));
+    const title = titleLine ? titleLine.replace(/^#[ \t]+/, '').trim() : adrFile.split('/').pop();
+    const statusMatch =
+      content.match(/status:[ \t]*(\w+)/i) ||
+      content.match(/\*\*Status:\*\*[ \t]*(\w+)/i) ||
+      content.match(/##[ \t]+Status[ \t]*\n+([A-Za-z]+)/i);
 
     adrs.push({
       filePath: rel,
       filename: adrFile.split('/').pop(),
-      title: titleMatch ? titleMatch[1].trim() : adrFile.split('/').pop(),
+      title,
       status: statusMatch ? statusMatch[1].toLowerCase() : 'accepted',
     });
   }

@@ -98,7 +98,13 @@ function toolVersions() {
 
 function outputPath(cwd, suiteId) {
   assert(/^[a-z0-9-]+\.[a-z0-9-]+$/u.test(suiteId), 'Invalid suite ID');
-  return path.join(cwd, '.temp/v1-receipts', `${suiteId}.json`);
+  const baseDir = path.resolve(cwd, '.temp/v1-receipts');
+  const target = path.resolve(baseDir, `${suiteId}.json`);
+  const rel = path.relative(baseDir, target);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new Error('Path traversal detected');
+  }
+  return target;
 }
 
 function main() {

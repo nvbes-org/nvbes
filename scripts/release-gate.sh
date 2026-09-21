@@ -6,7 +6,7 @@ cd "$ROOT_DIR"
 case "${1:-}" in
   staging) ;;
   production)
-    if [ "${RELEASE_APPROVED:-}" != production ]; then
+    if [[ "${RELEASE_APPROVED:-}" != production ]]; then
       printf 'production gate requires RELEASE_APPROVED=production\n' >&2
       exit 1
     fi

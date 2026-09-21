@@ -49,7 +49,106 @@ function decodeValue(rawValue, path, lineNumber) {
     return decoded;
   }
 
-  return value.replace(/\s+#.*$/, '').trimEnd();
+  const hashIndex = value.indexOf(' #');
+  const withoutComment = hashIndex >= 0 ? value.slice(0, hashIndex) : value;
+  return withoutComment.trimEnd();
+}
+
+function isHorizontalSpace(character) {
+  return character === ' ' || character === '\t';
+}
+
+function isAsciiLetter(character) {
+  return (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z');
+}
+
+function isIdentifierPart(character) {
+  return isAsciiLetter(character) || (character >= '0' && character <= '9') || character === '_';
+}
+
+function readIdentifier(line, start, limit) {
+  const first = line[start];
+  if (start >= limit || first === undefined || !(first === '_' || isAsciiLetter(first))) {
+    return -1;
+  }
+  let index = start + 1;
+  while (index < limit && isIdentifierPart(line[index])) index += 1;
+  return index;
+}
+
+/**
+ * Candidate offsets where the key of an assignment can start. The optional
+ * `export` prefix is preferred, but a key literally named `export` stays
+ * reachable, mirroring the greedy-with-backtracking behaviour it replaces.
+ */
+function keyStartCandidates(line, indentationEnd) {
+  const candidates = [indentationEnd];
+  if (!line.startsWith('export', indentationEnd)) return candidates;
+
+  let afterExport = indentationEnd + 'export'.length;
+  if (!isHorizontalSpace(line[afterExport])) return candidates;
+  while (isHorizontalSpace(line[afterExport])) afterExport += 1;
+  candidates.unshift(afterExport);
+  return candidates;
+}
+
+/**
+ * Parse a `KEY=value` line, tolerating an optional `export` prefix and spaces
+ * around the assignment operator. Returns null when the line is not an
+ * assignment so the caller can fail with a precise diagnostic.
+ */
+function splitAssignment(line) {
+  const equalsIndex = line.indexOf('=');
+  if (equalsIndex === -1) return null;
+
+  for (const keyStart of keyStartCandidates(line, 0)) {
+    const keyEnd = readIdentifier(line, keyStart, equalsIndex);
+    if (keyEnd === -1) continue;
+
+    let operatorIndex = keyEnd;
+    while (operatorIndex < equalsIndex && isHorizontalSpace(line[operatorIndex]))
+      operatorIndex += 1;
+    if (operatorIndex !== equalsIndex) continue;
+
+    let valueStart = equalsIndex + 1;
+    while (valueStart < line.length && isHorizontalSpace(line[valueStart])) valueStart += 1;
+
+    return { key: line.slice(keyStart, keyEnd), rawValue: line.slice(valueStart) };
+  }
+
+  return null;
+}
+
+/**
+ * Split a template line into its indentation (with an optional `export`), its
+ * key and the operator/whitespace separator so the value can be replaced while
+ * the original formatting is preserved.
+ */
+export function splitTemplateAssignment(line) {
+  let indentationEnd = 0;
+  while (indentationEnd < line.length && isHorizontalSpace(line[indentationEnd])) {
+    indentationEnd += 1;
+  }
+
+  for (const prefixEnd of keyStartCandidates(line, indentationEnd)) {
+    const keyEnd = readIdentifier(line, prefixEnd, line.length);
+    if (keyEnd === -1) continue;
+
+    let equalsIndex = keyEnd;
+    while (isHorizontalSpace(line[equalsIndex])) equalsIndex += 1;
+    if (line[equalsIndex] !== '=') continue;
+
+    let valueStart = equalsIndex + 1;
+    while (isHorizontalSpace(line[valueStart])) valueStart += 1;
+
+    return {
+      key: line.slice(prefixEnd, keyEnd),
+      prefix: line.slice(0, prefixEnd),
+      separator: line.slice(keyEnd, valueStart),
+    };
+  }
+
+  return null;
 }
 
 export function parseEnv(content, path = '<env>', { allowDuplicates = false } = {}) {
@@ -61,10 +160,10 @@ export function parseEnv(content, path = '<env>', { allowDuplicates = false } = 
     const trimmed = line.trim();
     if (trimmed === '' || trimmed.startsWith('#')) continue;
 
-    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    if (!match) fail(`${path}:${index + 1}: expected KEY=value`);
+    const assignment = splitAssignment(trimmed);
+    if (!assignment) fail(`${path}:${index + 1}: expected KEY=value`);
 
-    const [, key, rawValue] = match;
+    const { key, rawValue } = assignment;
     if (assignments.has(key)) duplicates.add(key);
     assignments.set(key, {
       key,
@@ -89,10 +188,12 @@ function shellQuote(value) {
 
 function renderSynchronizedEnv(template, local, prune) {
   const rendered = template.lines.map((line) => {
-    const match = line.match(/^(\s*(?:export\s+)?)([A-Za-z_][A-Za-z0-9_]*)(\s*=\s*)(.*)$/);
-    if (!match) return line;
-    const localAssignment = local.assignments.get(match[2]);
-    return localAssignment ? `${match[1]}${match[2]}${match[3]}${localAssignment.rawValue}` : line;
+    const parts = splitTemplateAssignment(line);
+    if (!parts) return line;
+    const localAssignment = local.assignments.get(parts.key);
+    return localAssignment
+      ? `${parts.prefix}${parts.key}${parts.separator}${localAssignment.rawValue}`
+      : line;
   });
 
   const unknown = [...local.assignments.keys()]
@@ -103,7 +204,9 @@ function renderSynchronizedEnv(template, local, prune) {
     for (const key of unknown) rendered.push(`${key}=${local.assignments.get(key).rawValue}`);
   }
 
-  return { content: `${rendered.join('\n').replace(/\n+$/, '')}\n`, unknown };
+  let text = rendered.join('\n');
+  while (text.endsWith('\n')) text = text.slice(0, -1);
+  return { content: `${text}\n`, unknown };
 }
 
 function load(path, options) {

@@ -17,7 +17,7 @@ export function createPlan(
   } = {},
 ) {
   const { paths, docsOnly, ciOnly } = preflight;
-  const names = Object.keys(nodes).sort();
+  const names = Object.keys(nodes).sort((a, b) => a.localeCompare(b));
   const fallback =
     preflight.fallback || graphFallback || (!docsOnly && !ciOnly && hasUnknownPath(paths, nodes));
   const allWith = (target) => names.filter((name) => nodes[name].data.targets?.[target]);
