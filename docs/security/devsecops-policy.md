@@ -12,6 +12,7 @@ Every pull request is expected to pass:
 - CodeQL for JavaScript, TypeScript and GitHub Actions;
 - Gitleaks over the complete Git history;
 - Trivy filesystem, secret and infrastructure-as-code scanning;
+- SonarCloud strict quality gate (Clean as You Code, 0 bugs, 0 vulnerabilities, 0 unreviewed hotspots, >= 80% coverage, <= 3% duplications, archive excluded);
 - property-based tests for critical HTTP headers, token validation and security parsers; bounded fuzz smoke tests for content-digest and stripe-signature;
 - the existing repository security-control registries.
 

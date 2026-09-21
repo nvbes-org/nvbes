@@ -117,6 +117,8 @@
     "check:stripe-mappings": "bash scripts/check-stripe-mappings.sh",
     "release:gate:staging": "bash scripts/release-gate.sh staging",
     "release:gate:production": "bash scripts/release-gate.sh production",
+    "sonar:prepare": "bash scripts/prepare-sonar-reports.sh",
+    "check:sonar": "bash scripts/prepare-sonar-reports.sh",
     "verify": "pnpm format:check && pnpm lint && pnpm check && pnpm test"
   },
   "devDependencies": {

@@ -333,7 +333,8 @@
     "nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1",
     "opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4",
     "scaleway/action-scw@2e34a1eb35cf3cac627f24643a101fea269cbd83",
-    "sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6"
+    "sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6",
+    "SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4"
   ],
   "allowedSecrets": [
     "ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_PEM",
@@ -385,6 +386,7 @@
     "SCW_CI_CACHE_SECRET_KEY",
     "SCW_SECRET_KEY",
     "SENTRY_AUTH_TOKEN",
+    "SONAR_TOKEN",
     "STRIPE_SECRET_KEY",
     "STRIPE_CI_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",

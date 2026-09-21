@@ -6,6 +6,7 @@ export function assertSecrets(
 ) {
   const referencedSecrets = extractSecrets(text);
   const protectedSecretWorkflows = new Map([
+    ['SONAR_TOKEN', new Set(['.github/workflows/sonarcloud.yml'])],
     ['STRIPE_CI_SECRET_KEY', new Set(['.github/workflows/stripe-sandbox.yml'])],
     [
       'ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_PEM',
@@ -232,6 +233,12 @@ export function assertSecrets(
       text.includes(
         `AWS_SECRET_ACCESS_KEY: ${githubExpression('secrets.SCW_CI_CACHE_SECRET_KEY')}`,
       );
+    const isValidatedSonarWorkflow =
+      path === '.github/workflows/sonarcloud.yml' &&
+      text.includes('name: sonarcloud') &&
+      text.includes('node tools/security/check-ci-cd-security.mjs') &&
+      text.includes('SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4') &&
+      text.includes(`SONAR_TOKEN: ${githubExpression('secrets.SONAR_TOKEN')}`);
     if (
       !preceding.includes("if: github.event_name == 'push' && github.ref == 'refs/heads/main'") &&
       !isValidatedDastWorkflow &&
@@ -241,7 +248,8 @@ export function assertSecrets(
       !isValidatedDeploymentWorkflow &&
       !isValidatedRestoreWorkflow &&
       !isValidatedCiCacheRotationWorkflow &&
-      !isValidatedBranchCacheWorkflow
+      !isValidatedBranchCacheWorkflow &&
+      !isValidatedSonarWorkflow
     ) {
       errors.push(
         `${path}: secret-bearing step must be restricted to trusted push on main or a validated protected-Environment workflow`,
