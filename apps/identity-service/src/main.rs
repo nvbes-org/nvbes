@@ -2,16 +2,22 @@
 mod app;
 #[path = "identity.auth.rs"]
 mod auth;
+#[path = "identity.authz.rs"]
+mod authz;
 #[path = "identity.config.rs"]
 mod config;
 #[path = "identity.database.rs"]
 mod database;
+#[path = "identity.discovery.rs"]
+mod discovery;
 #[path = "identity.email.rs"]
 mod email;
 #[path = "identity.error_reporting.rs"]
 mod error_reporting;
 #[path = "identity.health.rs"]
 mod health;
+#[path = "identity.http.rs"]
+mod http;
 #[path = "identity.metrics.rs"]
 mod metrics;
 #[path = "identity.mfa.rs"]
@@ -20,6 +26,12 @@ mod mfa;
 mod mfa_crypto;
 #[path = "identity.mfa.rotation.rs"]
 mod mfa_rotation;
+#[path = "identity.oauth.rs"]
+mod oauth;
+#[path = "identity.oauth_clients.rs"]
+mod oauth_clients;
+#[path = "identity.refresh.rs"]
+mod refresh;
 #[path = "identity.synthetic.rs"]
 mod synthetic;
 #[path = "identity.tokens.rs"]
@@ -165,8 +177,12 @@ async fn main() -> anyhow::Result<()> {
     let http_metrics = nvbes_observability::metrics::HttpMetrics {
         handle: state.metrics.clone(),
     };
-    let router = health::router(state.clone())
-        .merge(metrics::router(state))
+    let router = health::router(&state)
+        .merge(metrics::router(&state))
+        .merge(http::router(&state))
+        .merge(oauth::router(&state))
+        .merge(authz::router(&state))
+        .merge(discovery::router(&state))
         .layer(axum::middleware::from_fn_with_state(
             http_metrics,
             nvbes_observability::middleware::observe_request,
