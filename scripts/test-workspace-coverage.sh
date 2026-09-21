@@ -26,4 +26,9 @@ cargo llvm-cov \
   --summary-only \
   --output-path "$COVERAGE_REPORT"
 
+cargo llvm-cov report \
+  --lcov \
+  --ignore-filename-regex '(\.tests\.rs|\.test_support\.rs)$' \
+  --output-path "$COVERAGE_DIR/lcov.info"
+
 node tools/rust-workspace/check-coverage.mjs "$COVERAGE_REPORT" "$THRESHOLDS"
