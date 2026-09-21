@@ -62,40 +62,41 @@ pub async fn rotate_refresh_token(
     let old_token_hash = hash_token(old_token);
     let mut tx = db.begin().await?;
 
-    // Get the old token info
-    let (family_id, principal_id, session_id, scope): (Uuid, Uuid, Uuid, String) = sqlx::query_as(
-        "SELECT family_id, principal_id, session_id, scope 
+    let row = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            Uuid,
+            Uuid,
+            Uuid,
+            String,
+            Option<chrono::DateTime<Utc>>,
+            chrono::DateTime<Utc>,
+            String,
+        ),
+    >(
+        "SELECT id, family_id, principal_id, session_id, scope, revoked_at, expires_at, client_id 
          FROM identity_refresh_tokens 
-         WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > clock_timestamp()
+         WHERE token_hash = $1 
          FOR UPDATE",
     )
     .bind(&old_token_hash)
-    .fetch_one(&mut *tx)
+    .fetch_optional(&mut *tx)
     .await?;
 
-    // Revoke the old token
-    sqlx::query(
-        "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE token_hash = $1",
-    )
-    .bind(&old_token_hash)
-    .execute(&mut *tx)
-    .await?;
+    let (id, family_id, principal_id, session_id, scope, revoked_at, expires_at, stored_client_id) =
+        match row {
+            Some(r) => r,
+            None => anyhow::bail!("Invalid refresh token"),
+        };
 
-    // Check for reuse attack - if any other token in the family is already revoked, revoke entire family
-    let has_other_revoked: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM identity_refresh_tokens 
-         WHERE family_id = $1 AND id != (SELECT id FROM identity_refresh_tokens WHERE token_hash = $2) 
-         AND revoked_at IS NOT NULL)",
-    )
-    .bind(family_id)
-    .bind(&old_token_hash)
-    .fetch_one(&mut *tx)
-    .await?;
+    if stored_client_id != client_id {
+        anyhow::bail!("Client mismatch for refresh token");
+    }
 
-    if has_other_revoked {
-        // Revoke entire family
+    if revoked_at.is_some() {
         sqlx::query(
-            "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE family_id = $1",
+            "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE family_id = $1 AND revoked_at IS NULL",
         )
         .bind(family_id)
         .execute(&mut *tx)
@@ -104,9 +105,19 @@ pub async fn rotate_refresh_token(
         anyhow::bail!("Refresh token reuse detected - family revoked");
     }
 
-    // Create new refresh token
+    if expires_at <= Utc::now() {
+        anyhow::bail!("Refresh token expired");
+    }
+
+    sqlx::query(
+        "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp(), last_used_at = clock_timestamp() WHERE id = $1",
+    )
+    .bind(id)
+    .execute(&mut *tx)
+    .await?;
+
     let new_token = random_token();
-    let expires_at = Utc::now() + Duration::days(REFRESH_TOKEN_TTL_DAYS);
+    let new_expires_at = Utc::now() + Duration::days(REFRESH_TOKEN_TTL_DAYS);
 
     sqlx::query(
         "INSERT INTO identity_refresh_tokens (id, family_id, principal_id, session_id, token_hash, client_id, scope, expires_at) 
@@ -119,7 +130,7 @@ pub async fn rotate_refresh_token(
     .bind(hash_token(&new_token))
     .bind(client_id)
     .bind(&scope)
-    .bind(expires_at)
+    .bind(new_expires_at)
     .execute(&mut *tx)
     .await?;
 
