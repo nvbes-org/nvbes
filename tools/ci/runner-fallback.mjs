@@ -6,6 +6,12 @@ if (!/^[\w.-]+\/[\w.-]+$/u.test(repository ?? '') || !/^\d+$/u.test(runId ?? '')
   throw new Error('Invalid workflow context');
 const token = process.env.GITHUB_TOKEN;
 if (!token) throw new Error('Missing GitHub token');
+// Only these workflows may be dispatched, and their API names are trusted
+// constants: the name never comes from the GitHub API response.
+const DISPATCHABLE_WORKFLOWS = new Map([
+  ['.github/workflows/ci.yml', 'ci.yml'],
+  ['.github/workflows/v1-testing.yml', 'v1-testing.yml'],
+]);
 async function api(resource, body) {
   const cleanResource = String(resource).replace(/[\r\n]/g, '');
   const target = new URL(`https://api.github.com/repos/${repository}/${cleanResource}`);
@@ -31,9 +37,8 @@ async function api(resource, body) {
 }
 
 const run = await api(`actions/runs/${runId}`);
-if (!['.github/workflows/ci.yml', '.github/workflows/v1-testing.yml'].includes(run.path))
-  throw new Error('Unexpected workflow');
-const workflow = run.path.split('/').at(-1);
+const workflow = DISPATCHABLE_WORKFLOWS.get(run.path);
+if (!workflow) throw new Error('Unexpected workflow');
 let response;
 // Independent bootstrap observer: billing failures can skip all dependent jobs,
 // even those using always(). Do not wait for the hosted dependency chain.
