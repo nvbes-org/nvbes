@@ -31,7 +31,7 @@ async fn create_test_principal_and_session(pool: &PgPool) -> (Uuid, Uuid) {
     .expect("principal created");
 
     sqlx::query(
-        "INSERT INTO identity_sessions (id, principal_id, session_token_hash, expires_at) 
+        "INSERT INTO identity_sessions (id, principal_id, token_hash, expires_at) 
          VALUES ($1, $2, $3, $4)",
     )
     .bind(session_id)
