@@ -58,7 +58,7 @@ function updateIntegrity(
   return html.replace(
     new RegExp(`(<${tag}[^>]*${attribute}="[^"]*${escapedName}"[^>]*)(>)`, 'g'),
     (match) => {
-      const updated = match.replace(/\s+integrity="[^"]*"/g, '');
+      const updated = match.replace(/[ \t]+integrity="[^"]*"/g, '');
       return updated.includes('crossorigin')
         ? updated.replace('>', ` integrity="${integrity}">`)
         : updated.replace('>', ` integrity="${integrity}" crossorigin="anonymous">`);

@@ -51,12 +51,9 @@ mod tests {
     #[test]
     fn bearer_authentication_requires_an_exact_match() {
         let mut request = Request::new(());
-        request.metadata_mut().insert(
-            "authorization",
-            "Bearer email-worker-internal-token-32-value"
-                .parse()
-                .unwrap(),
-        );
+        request
+            .metadata_mut()
+            .insert("authorization", format!("Bearer {TOKEN}").parse().unwrap());
 
         let tokens = HashMap::from([
             ("identity-service".to_string(), TOKEN.to_string()),

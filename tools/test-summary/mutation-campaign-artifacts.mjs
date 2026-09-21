@@ -47,7 +47,7 @@ export function mutationCheckout(root) {
     .toString()
     .split('\0')
     .filter(Boolean)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   const hash = createHash('sha256').update(diff);
   for (const file of untracked) {
     hash

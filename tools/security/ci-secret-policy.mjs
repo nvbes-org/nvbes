@@ -71,10 +71,14 @@ export function assertSecrets(
 
   const secretIndex = text.indexOf('secrets.');
   if (secretIndex >= 0) {
+    const textLines = text.split('\n');
+    const hasLine = (target) => textLines.some((l) => l.trim() === target);
+    const hasTrigger = (pattern) => textLines.some((l) => pattern.test(l.trim()));
+
     const isValidatedStripeSandboxWorkflow =
       path === '.github/workflows/stripe-sandbox.yml' &&
-      /^  workflow_dispatch:\s*$/mu.test(text) &&
-      !/^\s+(?:inputs|pull_request|push|schedule):/mu.test(text) &&
+      hasLine('workflow_dispatch:') &&
+      !hasTrigger(/^(?:inputs|pull_request|push|schedule):/) &&
       text.includes('name: stripe-ci') &&
       text.includes("if: github.ref == 'refs/heads/main'") &&
       text.includes('[[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]') &&
@@ -85,8 +89,8 @@ export function assertSecrets(
     const preceding = text.slice(Math.max(0, secretIndex - 500), secretIndex);
     const isValidatedDastWorkflow =
       path === '.github/workflows/dast.yml' &&
-      /^\s+schedule:\s*$/mu.test(text) &&
-      /^\s+workflow_dispatch:\s*$/mu.test(text) &&
+      hasLine('schedule:') &&
+      hasLine('workflow_dispatch:') &&
       text.includes('name: account-dast-staging') &&
       text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
       text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
@@ -95,7 +99,7 @@ export function assertSecrets(
       text.includes('DAST_ALLOWED_ORIGINS');
     const isValidatedAccountReleaseWorkflow =
       path === '.github/workflows/account-release.yml' &&
-      /^\s+workflow_dispatch:\s*$/mu.test(text) &&
+      hasLine('workflow_dispatch:') &&
       !text.includes('inputs.') &&
       text.includes('name: production-account') &&
       text.includes('verify-account-release-ref.mjs') &&
@@ -105,7 +109,7 @@ export function assertSecrets(
       text.includes('scripts/release-gate.sh production');
     const isValidatedAcceptanceIngestWorkflow =
       path === '.github/workflows/account-acceptance-ingest.yml' &&
-      /^\s+workflow_dispatch:\s*$/mu.test(text) &&
+      hasLine('workflow_dispatch:') &&
       !text.includes('inputs.') &&
       text.includes('name: account-acceptance') &&
       text.includes('verify-account-release-ref.mjs') &&
@@ -117,7 +121,7 @@ export function assertSecrets(
       text.includes(`name: account-acceptance-${githubExpression('github.sha')}`);
     const isValidatedDeploymentWorkflow =
       path === '.github/workflows/deploy.yml' &&
-      /^\s+workflow_dispatch:\s*$/mu.test(text) &&
+      hasLine('workflow_dispatch:') &&
       text.includes('name: deploy') &&
       text.includes('ci-provenance:') &&
       text.includes('node tools/ci/verify-ci-provenance.mjs') &&
@@ -170,7 +174,7 @@ export function assertSecrets(
       text.includes('cosign verify');
     const isValidatedRestoreWorkflow =
       path === '.github/workflows/validate-restore.yml' &&
-      /^\s+workflow_dispatch:\s*$/mu.test(text) &&
+      hasLine('workflow_dispatch:') &&
       text.includes('name: validate restore') &&
       text.includes('name: production-account') &&
       text.includes('name: production-billing') &&
@@ -198,8 +202,8 @@ export function assertSecrets(
       text.includes('DELETE_RESTORE_DATABASE=true');
     const isValidatedCiCacheRotationWorkflow =
       path === '.github/workflows/rotate-ci-cache-credentials.yml' &&
-      /^\s+schedule:\s*$/mu.test(text) &&
-      /^\s+workflow_dispatch:\s*$/mu.test(text) &&
+      hasLine('schedule:') &&
+      hasLine('workflow_dispatch:') &&
       text.includes('name: production-bootstrap') &&
       text.includes("if: github.ref == 'refs/heads/main'") &&
       text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&

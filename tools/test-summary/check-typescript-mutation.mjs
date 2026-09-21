@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export function mutationScore(report) {
@@ -37,7 +38,12 @@ export function mutationScore(report) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    const result = mutationScore(JSON.parse(readFileSync(process.argv[2], 'utf8')));
+    const resolvedPath = path.resolve(process.cwd(), process.argv[2]);
+    const rel = path.relative(process.cwd(), resolvedPath);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      throw new Error(`Invalid path: ${process.argv[2]}`);
+    }
+    const result = mutationScore(JSON.parse(readFileSync(resolvedPath, 'utf8')));
     console.log(JSON.stringify(result));
     if (result.score < 90) process.exitCode = 1;
   } catch (error) {

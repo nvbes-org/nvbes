@@ -164,7 +164,7 @@ function leadingZeroBits(buffer) {
 function extractSetCookies(headers) {
   if (typeof headers.getSetCookie === 'function') return headers.getSetCookie();
   const raw = headers.get('set-cookie');
-  return raw ? raw.split(/,(?=[^;]+=)/u) : [];
+  return raw ? raw.split(/,(?=[ \t]*[a-zA-Z0-9_.-]+=)/u) : [];
 }
 
 function extractSessionTokenFromSetCookies(setCookies) {

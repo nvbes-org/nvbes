@@ -50,12 +50,13 @@ mod tests {
 
     #[test]
     fn bearer_authentication_is_exact() {
+        let token = "internal-service-token-value-32";
         let mut headers = HeaderMap::new();
         headers.insert(
             header::AUTHORIZATION,
-            HeaderValue::from_static("Bearer internal-service-token-value-32"),
+            HeaderValue::try_from(format!("Bearer {token}")).unwrap(),
         );
-        assert!(bearer_matches(&headers, "internal-service-token-value-32"));
+        assert!(bearer_matches(&headers, token));
         assert!(!bearer_matches(
             &headers,
             "internal-service-token-value-32-extra"

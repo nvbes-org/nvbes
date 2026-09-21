@@ -31,7 +31,7 @@ EMAIL_E2E_DIR="$(mktemp -d)"
 EMAIL_WORKER_PID=""
 
 cleanup() {
-  if [ -n "$EMAIL_WORKER_PID" ]; then
+  if [[ -n "$EMAIL_WORKER_PID" ]]; then
     kill -TERM "$EMAIL_WORKER_PID" 2>/dev/null || true
     wait "$EMAIL_WORKER_PID" 2>/dev/null || true
   fi
@@ -79,10 +79,10 @@ assert_http_status "$EMAIL_BASE_URL/metrics" 200
 WEBHOOK_URL="$EMAIL_BASE_URL/webhooks/scaleway/topics-and-events"
 WEBHOOK_STATUS="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
   --request POST --data '{}' "$WEBHOOK_URL")"
-[ "$WEBHOOK_STATUS" = "415" ] || fail "expected webhook HTTP 415, got $WEBHOOK_STATUS"
+[[ "$WEBHOOK_STATUS" = "415" ]] || fail "expected webhook HTTP 415, got $WEBHOOK_STATUS"
 WEBHOOK_STATUS="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
   --request POST --header 'content-type: application/json' --data '{}' "$WEBHOOK_URL")"
-[ "$WEBHOOK_STATUS" = "503" ] || fail "expected disabled webhook HTTP 503, got $WEBHOOK_STATUS"
+[[ "$WEBHOOK_STATUS" = "503" ]] || fail "expected disabled webhook HTTP 503, got $WEBHOOK_STATUS"
 
 kill -TERM "$EMAIL_WORKER_PID"
 wait "$EMAIL_WORKER_PID"

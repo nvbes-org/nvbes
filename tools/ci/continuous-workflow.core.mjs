@@ -8,8 +8,10 @@ export function validateContinuousWorkflow(text, setupText) {
   const jobs = workflow.jobs;
   const shell = 'bash --noprofile --norc -euo pipefail {0}';
   assert.deepEqual(
-    Object.keys(jobs).sort(),
-    ['authorize-cache', 'scope', ...lanes, 'security', 'ci-gate', 'local-fallback'].sort(),
+    Object.keys(jobs).sort((a, b) => a.localeCompare(b)),
+    ['authorize-cache', 'scope', ...lanes, 'security', 'ci-gate', 'local-fallback'].sort((a, b) =>
+      a.localeCompare(b),
+    ),
   );
   assert.deepEqual(workflow.defaults, { run: { shell } });
   assert.deepEqual(workflow.permissions, {

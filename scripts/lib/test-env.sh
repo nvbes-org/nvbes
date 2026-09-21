@@ -17,7 +17,7 @@ load_workspace_env "$nvbes_node_process_title"
 unset nvbes_env_caller_script nvbes_node_process_title
 
 
-if [ -z "${LIBCLANG_PATH:-}" ]; then
+if [[ -z "${LIBCLANG_PATH:-}" ]]; then
   if command -v apt-get >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
     if ! find /usr/lib /usr/local /opt -name "libclang.so*" 2>/dev/null | grep -q .; then
       sudo apt-get update -qq && sudo apt-get install -y -qq libclang-dev clang libxmlsec1-dev libxmlsec1-openssl xmlsec1 || true
@@ -46,7 +46,7 @@ require_cmd() {
 
 require_env() {
   local name="$1"
-  if [ -z "${!name:-}" ]; then
+  if [[ -z "${!name:-}" ]]; then
     fail "missing required environment variable: $name"
   fi
 }
@@ -84,7 +84,7 @@ normalize_url() {
 http_body() {
   local url="$1"
   local -a redirect_args=(--location)
-  if [ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]; then
+  if [[ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]]; then
     redirect_args=()
   fi
   curl --fail --silent --show-error "${redirect_args[@]}" --max-time 15 "$url"
@@ -93,7 +93,7 @@ http_body() {
 http_status() {
   local url="$1"
   local -a redirect_args=(--location)
-  if [ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]; then
+  if [[ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]]; then
     redirect_args=()
   fi
   curl --silent --show-error "${redirect_args[@]}" --max-time 15 --output /dev/null --write-out '%{http_code}' "$url"
@@ -105,7 +105,7 @@ assert_http_status() {
   local status
 
   status="$(http_status "$url")"
-  if [ "$status" != "$expected" ]; then
+  if [[ "$status" != "$expected" ]]; then
     fail "expected HTTP $expected for $url, got $status"
   fi
 }
@@ -117,7 +117,7 @@ assert_http_not_5xx() {
   status="$(http_status "$url")"
   case "$status" in
     3*)
-      if [ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]; then
+      if [[ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]]; then
         fail "expected non-redirect for $url, got $status"
       fi
       ;;
@@ -138,7 +138,7 @@ assert_header_contains() {
   local headers
 
   local -a redirect_args=(--location)
-  if [ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]; then
+  if [[ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]]; then
     redirect_args=()
   fi
   headers="$(curl --silent --show-error "${redirect_args[@]}" --max-time 15 --head "$url")"

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractWorkspaceIR } from './extract-workspace-ir.mjs';
 import { validateDocumentation } from './validate-docs.mjs';
@@ -63,7 +63,11 @@ export function updateServiceDoc(serviceName) {
   console.log(`   - OpenAPI Endpoints: ${endpoints.length} routes detected\n`);
 
   ensureDir(OUT_DIR);
-  const targetFile = join(OUT_DIR, `${serviceName}.md`);
+  const targetFile = resolve(OUT_DIR, `${serviceName}.md`);
+  const rel = relative(OUT_DIR, targetFile);
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    throw new Error('Path traversal detected');
+  }
 
   // Build clean, well-formed markdown with verified Mermaid syntax
   const docContent = `---

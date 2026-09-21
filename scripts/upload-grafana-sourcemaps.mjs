@@ -4,11 +4,18 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const appName = process.argv[2];
-const outputDirectory = path.resolve(process.argv[3] ?? 'dist');
-
-if (!appName) {
+const rawAppName = process.argv[2];
+if (!rawAppName || !/^[a-zA-Z0-9_-]+$/u.test(rawAppName)) {
   throw new Error('Usage: upload-grafana-sourcemaps.mjs <app-name> [output-directory]');
+}
+const appName = rawAppName;
+
+const cwd = process.cwd();
+const rawOut = process.argv[3] ?? 'dist';
+const outputDirectory = path.resolve(cwd, rawOut);
+const relOut = path.relative(cwd, outputDirectory);
+if (relOut.startsWith('..') || path.isAbsolute(relOut)) {
+  throw new Error('outputDirectory must stay within current directory');
 }
 
 const uploadEnabled = envValue('GRAFANA_FARO_SOURCEMAP_UPLOAD_ENABLED') === 'true';

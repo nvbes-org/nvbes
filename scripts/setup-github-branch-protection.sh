@@ -11,7 +11,7 @@ set -euo pipefail
 REPO="nvbes-org/nvbes"
 
 DRY_RUN=false
-if [ "${1:-}" = "--dry-run" ]; then
+if [[ "${1:-}" = "--dry-run" ]]; then
   DRY_RUN=true
   echo "==> Mode simulation (dry-run) active. Aucune regle ne sera modifiee."
 fi
@@ -26,7 +26,7 @@ echo "==> Verification de l'authentification GitHub CLI..."
 gh auth status >/dev/null 2>&1 || { echo "error: gh n'est pas authentifie." >&2; exit 1; }
 
 echo "==> 1. Configuration des options generales du depot ($REPO)..."
-if [ "$DRY_RUN" = true ]; then
+if [[ "$DRY_RUN" = true ]]; then
   echo "[DRY-RUN] gh api -X PATCH repos/$REPO -f delete_branch_on_merge=true -f allow_auto_merge=true"
 else
   gh api -X PATCH "repos/$REPO" \
@@ -79,7 +79,7 @@ DEV_PROTECTION_PAYLOAD='{
 }'
 
 echo "==> 2. Application des regles de protection de branches..."
-if [ "$DRY_RUN" = true ]; then
+if [[ "$DRY_RUN" = true ]]; then
   echo "[DRY-RUN] gh api -X PUT repos/$REPO/branches/main/protection --input -"
   echo "[DRY-RUN] gh api -X PUT repos/$REPO/branches/staging/protection --input -"
   echo "[DRY-RUN] gh api -X PUT repos/$REPO/branches/dev/protection --input -"

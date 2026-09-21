@@ -5,13 +5,26 @@ const MAX_JS_CHUNK_KB = 500;
 const MAX_CSS_CHUNK_KB = 100;
 const MAX_TOTAL_KB = 2000;
 
-const distDir = process.argv[2];
-if (!distDir) {
+const rawDistDir = process.argv[2];
+if (!rawDistDir) {
   console.error('Usage: tsx scripts/check-bundle-size.ts <dist-dir>');
   process.exit(1);
 }
 
-const manifestPath = path.join(distDir, '.vite', 'manifest.json');
+const cwd = process.cwd();
+const distDir = path.resolve(cwd, rawDistDir);
+const rel = path.relative(cwd, distDir);
+if (rel.startsWith('..') || path.isAbsolute(rel)) {
+  console.error('Invalid path: dist directory must stay within current directory');
+  process.exit(1);
+}
+
+const manifestPath = path.resolve(distDir, '.vite', 'manifest.json');
+const relManifest = path.relative(distDir, manifestPath);
+if (relManifest.startsWith('..') || path.isAbsolute(relManifest)) {
+  console.error('Invalid path: manifest must stay within dist directory');
+  process.exit(1);
+}
 if (!fs.existsSync(manifestPath)) {
   console.warn(`No manifest at ${manifestPath}, skipping size check (build first).`);
   process.exit(0);
@@ -26,7 +39,9 @@ for (const [name, entry] of Object.entries(manifest) as [
   string,
   { file: string; src?: string; size?: number },
 ][]) {
-  const filePath = path.join(distDir, entry.file);
+  const filePath = path.resolve(distDir, entry.file);
+  const relFile = path.relative(distDir, filePath);
+  if (relFile.startsWith('..') || path.isAbsolute(relFile)) continue;
   if (!fs.existsSync(filePath)) continue;
 
   const rawBytes = fs.statSync(filePath).size;

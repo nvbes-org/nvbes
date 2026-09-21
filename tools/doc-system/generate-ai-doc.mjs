@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildServiceDocPrompt } from './llm-contracts.mjs';
 
@@ -222,7 +222,11 @@ ${knowledge.sequenceMermaid}
     doc += `| \`${err.errorType}\` | \`${err.httpCode}\` | ${err.recoveryStrategy} |\n`;
   }
 
-  const outFilePath = join(OUT_DIR, `${serviceKey}.md`);
+  const outFilePath = resolve(OUT_DIR, `${serviceKey}.md`);
+  const rel = relative(OUT_DIR, outFilePath);
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    throw new Error('Path traversal detected');
+  }
   writeFileSync(outFilePath, doc, 'utf8');
   console.log(
     `✅ Generated rich domain architecture doc: docs/generated/architecture/${serviceKey}.md`,
@@ -239,6 +243,10 @@ export function generateAllDomainDocs() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const target = process.argv[2];
   if (target) {
+    if (!Object.prototype.hasOwnProperty.call(SERVICE_DOMAIN_KNOWLEDGE, target)) {
+      console.error(`Invalid or unknown target: ${target}`);
+      process.exit(1);
+    }
     generateDomainDoc(target);
   } else {
     generateAllDomainDocs();

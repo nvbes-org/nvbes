@@ -36,7 +36,7 @@ export function terraformProjects(paths, nodes, sources) {
   const stacks = Object.entries(nodes).filter(
     ([, { data }]) => data.targets?.['terraform:validate'],
   );
-  const all = stacks.map(([name]) => name).sort();
+  const all = stacks.map(([name]) => name).sort((a, b) => a.localeCompare(b));
   const changed = paths.filter(
     (path) => path.startsWith('infrastructure/') && !/\.(md|txt)$/u.test(path),
   );
@@ -61,5 +61,5 @@ export function terraformProjects(paths, nodes, sources) {
     }
     if (affected) selected.push(name);
   }
-  return owned.size === changed.length ? selected.sort() : all;
+  return owned.size === changed.length ? selected.sort((a, b) => a.localeCompare(b)) : all;
 }

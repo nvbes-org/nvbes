@@ -120,7 +120,8 @@ async function main() {
     process.exit(0);
   }
 
-  const baseUrl = values.base_url.replace(/\/+$/u, '');
+  let baseUrl = values.base_url;
+  while (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
   if (!baseUrl) {
     console.warn(
       '⚠️  No NVBES_CANARY_BASE_URL provided. Run with --base_url=https://api.nvbes.com or --dry-run.',

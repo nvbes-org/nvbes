@@ -49,7 +49,9 @@ function decodeValue(rawValue, path, lineNumber) {
     return decoded;
   }
 
-  return value.replace(/\s+#.*$/, '').trimEnd();
+  const hashIndex = value.indexOf(' #');
+  const withoutComment = hashIndex >= 0 ? value.slice(0, hashIndex) : value;
+  return withoutComment.trimEnd();
 }
 
 export function parseEnv(content, path = '<env>', { allowDuplicates = false } = {}) {
@@ -61,7 +63,7 @@ export function parseEnv(content, path = '<env>', { allowDuplicates = false } = 
     const trimmed = line.trim();
     if (trimmed === '' || trimmed.startsWith('#')) continue;
 
-    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+    const match = trimmed.match(/^(?:export[ \t]+)?([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*)$/);
     if (!match) fail(`${path}:${index + 1}: expected KEY=value`);
 
     const [, key, rawValue] = match;
@@ -89,7 +91,9 @@ function shellQuote(value) {
 
 function renderSynchronizedEnv(template, local, prune) {
   const rendered = template.lines.map((line) => {
-    const match = line.match(/^(\s*(?:export\s+)?)([A-Za-z_][A-Za-z0-9_]*)(\s*=\s*)(.*)$/);
+    const match = line.match(
+      /^([ \t]*(?:export[ \t]+)?)([A-Za-z_][A-Za-z0-9_]*)([ \t]*=[ \t]*)(.*)$/,
+    );
     if (!match) return line;
     const localAssignment = local.assignments.get(match[2]);
     return localAssignment ? `${match[1]}${match[2]}${match[3]}${localAssignment.rawValue}` : line;
@@ -103,7 +107,9 @@ function renderSynchronizedEnv(template, local, prune) {
     for (const key of unknown) rendered.push(`${key}=${local.assignments.get(key).rawValue}`);
   }
 
-  return { content: `${rendered.join('\n').replace(/\n+$/, '')}\n`, unknown };
+  let text = rendered.join('\n');
+  while (text.endsWith('\n')) text = text.slice(0, -1);
+  return { content: `${text}\n`, unknown };
 }
 
 function load(path, options) {

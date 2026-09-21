@@ -11,7 +11,7 @@ source "$ROOT_DIR/scripts/lib/test-env.sh"
 require_cmd cargo
 require_cmd node
 
-if [ -n "${NVBES_IDENTITY_TEST_DATABASE_URL:-}" ]; then
+if [[ -n "${NVBES_IDENTITY_TEST_DATABASE_URL:-}" ]]; then
   export NVBES_DATABASE_URL="$NVBES_IDENTITY_TEST_DATABASE_URL"
 fi
 

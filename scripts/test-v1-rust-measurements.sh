@@ -18,7 +18,7 @@ for command in cargo rustup node; do
   fi
 done
 rustup run "$toolchain" -- cargo llvm-cov --version >/dev/null
-if [ "$(cargo mutants --version)" != "cargo-mutants 27.1.0" ]; then
+if [[ "$(cargo mutants --version)" != "cargo-mutants 27.1.0" ]]; then
   printf 'error: cargo-mutants 27.1.0 is required\n' >&2
   exit 1
 fi
@@ -31,7 +31,7 @@ mapfile -t packages < <(node --input-type=module -e '
     if (unit.language === "rust") console.log(unit.name);
   }
 ')
-if [ "${#packages[@]}" -eq 0 ]; then
+if [[ "${#packages[@]}" -eq 0 ]]; then
   printf 'error: V1 Rust catalogue is empty\n' >&2
   exit 1
 fi
@@ -60,11 +60,11 @@ cargo mutants \
   -o "$output_root"
 mutation_status=$?
 set -e
-if [ "$mutation_status" -ne 0 ] && [ "$mutation_status" -ne 2 ] && [ "$mutation_status" -ne 3 ]; then
+if [[ "$mutation_status" -ne 0 && "$mutation_status" -ne 2 && "$mutation_status" -ne 3 ]]; then
   printf 'error: cargo-mutants failed with exit code %s\n' "$mutation_status" >&2
   exit "$mutation_status"
 fi
-if [ ! -s "$mutation_report" ]; then
+if [[ ! -s "$mutation_report" ]]; then
   printf 'error: cargo-mutants did not produce %s\n' "$mutation_report" >&2
   exit 1
 fi

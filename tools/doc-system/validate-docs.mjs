@@ -34,7 +34,7 @@ function walk(dir, predicate, results = []) {
 function validateMermaidInFile(filePath) {
   const content = readFileSync(filePath, 'utf8');
   const relPath = relative(REPO_ROOT, filePath);
-  const mermaidRegex = /```mermaid\s*([\s\S]*?)```/g;
+  const mermaidRegex = /```mermaid[ \t]*\r?\n([\s\S]*?)```/g;
 
   let match;
   let blockIndex = 0;
@@ -93,7 +93,9 @@ function validateMermaidInFile(filePath) {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         // Check for unquoted participant/actor alias with spaces or special characters
-        const aliasMatch = line.match(/^(?:participant|actor)\s+([A-Za-z0-9_-]+)\s+as\s+(.+)$/);
+        const aliasMatch = line.match(
+          /^(?:participant|actor)[ \t]+([A-Za-z0-9_-]+)[ \t]+as[ \t]+(.+)$/,
+        );
         if (aliasMatch) {
           const label = aliasMatch[2].trim();
           if (
@@ -143,7 +145,7 @@ function validateLinksInFile(filePath) {
   const dir = dirname(filePath);
   const docsRoot = join(REPO_ROOT, 'docs/generated');
 
-  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const linkRegex = /\[([^\]\r\n]+)\]\(([^)\r\n]+)\)/g;
   let match;
   while ((match = linkRegex.exec(content)) !== null) {
     const rawTarget = match[2].trim();

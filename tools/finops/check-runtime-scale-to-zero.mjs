@@ -10,7 +10,11 @@ import path from 'node:path';
  */
 
 export async function verifyRuntimeScaleToZero(configPath) {
-  const resolved = path.resolve(configPath);
+  const resolved = path.resolve(process.cwd(), configPath);
+  const rel = path.relative(process.cwd(), resolved);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new Error(`Invalid path: ${configPath}`);
+  }
   const content = await readFile(resolved, 'utf8');
 
   const violations = [];
