@@ -90,6 +90,25 @@ function nx(target, projects, parallel = 4) {
   );
 }
 const started = Date.now();
+
+function retry(runFn, { attempts = 3, delayMs = 5000 } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return runFn();
+    } catch (error) {
+      lastError = error;
+      console.warn(`[${lane}] attempt ${attempt}/${attempts} failed, retrying in ${delayMs}ms`);
+      if (attempt < attempts) sleep(delayMs);
+    }
+  }
+  throw lastError;
+}
+
+function sleep(ms) {
+  spawnSync('sleep', [String(Math.ceil(ms / 1000))]);
+}
+
 function selected(target, projects, baseline, parallel = 4) {
   if (projects.some((project) => !baseline.includes(project)))
     throw new Error('Candidate exceeds baseline');
@@ -155,8 +174,12 @@ switch (lane) {
     if (process.env.TF_PLUGIN_CACHE_DIR)
       mkdirSync(process.env.TF_PLUGIN_CACHE_DIR, { recursive: true });
     // Terraform's shared provider cache does not support concurrent installers.
-    selected('terraform:validate', plan.terraform, plan.baseline.terraform, 1);
-    selected('terraform:test', plan.terraform, plan.baseline.terraform, 1);
+    // Provider/toolchain downloads from GitHub are flaky; bounded retries below
+    // absorb transient 5xx responses while nx local cache keeps re-runs cheap.
+    retry(() => {
+      selected('terraform:validate', plan.terraform, plan.baseline.terraform, 1);
+      selected('terraform:test', plan.terraform, plan.baseline.terraform, 1);
+    });
     if (
       (plan.shadow ? plan.baseline.terraform : plan.terraform).some((name) =>
         name.includes('email'),

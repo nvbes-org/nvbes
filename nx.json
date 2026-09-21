@@ -77,5 +77,6 @@
       "projectsAffectedByDependencyUpdates": "auto"
     }
   },
-  "neverConnectToCloud": true
+  "neverConnectToCloud": false,
+  "nxCloudId": "6a3bfc09a9d6ced97d0c39c1"
 }
