@@ -43,6 +43,14 @@ jobs:
           pnpm install --frozen-lockfile --prefer-offline
       - name: Prepare SonarCloud analysis reports
         run: bash scripts/prepare-sonar-reports.sh
+      - name: Verify SonarCloud credentials
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [[ -z "${SONAR_TOKEN:-}" ]]; then
+            echo "::error title=Missing SONAR_TOKEN::The SONAR_TOKEN secret is not configured in GitHub repository secrets. Please create a token on https://sonarcloud.io (My Account > Security) and add it to GitHub Settings > Secrets and variables > Actions > Repository secrets."
+            exit 1
+          fi
       - name: Execute SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4 # v7.1.0
         env:
