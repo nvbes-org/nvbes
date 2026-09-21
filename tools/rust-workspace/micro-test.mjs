@@ -57,7 +57,7 @@ for (const manifest of manifests) {
     ...build.stdout
       .trim()
       .split('\n')
-      .map(JSON.parse)
+      .map((line) => JSON.parse(line))
       .filter(
         (entry) => entry.reason === 'compiler-artifact' && entry.profile.test && entry.executable,
       ),

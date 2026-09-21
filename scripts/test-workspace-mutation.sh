@@ -26,7 +26,7 @@ EXPECTED_MUTANTS_VERSION="$(node -e '
   const config = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
   process.stdout.write(config.baseline.tool);
 ' "$THRESHOLDS")"
-if [ "$MUTANTS_VERSION" != "$EXPECTED_MUTANTS_VERSION" ]; then
+if [[ "$MUTANTS_VERSION" != "$EXPECTED_MUTANTS_VERSION" ]]; then
   printf 'error: cargo-mutants version mismatch: expected %s, got %s\n' \
     "$EXPECTED_MUTANTS_VERSION" "$MUTANTS_VERSION" >&2
   exit 1
@@ -43,7 +43,7 @@ done < <(node -e '
   process.stdout.write(`${Object.keys(config.crates).join("\n")}\n`);
 ' "$THRESHOLDS")
 
-if [ "${#CARGO_PACKAGE_ARGS[@]}" -eq 0 ]; then
+if [[ "${#CARGO_PACKAGE_ARGS[@]}" -eq 0 ]]; then
   printf 'error: no mutation-gated crate configured in %s\n' "$THRESHOLDS" >&2
   exit 1
 fi
@@ -55,12 +55,12 @@ CARGO_MUTANTS_ARGS=(
   --no-times
   -o "$OUT_ROOT"
 )
-if [ -n "$JOBS" ]; then
+if [[ -n "$JOBS" ]]; then
   if [[ ! "$JOBS" =~ ^[1-9][0-9]*$ ]]; then
     printf 'error: NVBES_MUTATION_JOBS must be a positive integer\n' >&2
     exit 1
   fi
-  if [ "$JOBS" -gt 8 ]; then
+  if [[ "$JOBS" -gt 8 ]]; then
     printf 'error: NVBES_MUTATION_JOBS must not exceed 8\n' >&2
     exit 1
   fi
@@ -80,12 +80,12 @@ set -e
 # cargo-mutants uses 2 for missed mutants and 3 for timeouts. Both outcomes
 # must reach the nvbes threshold checker; all other non-zero statuses are
 # execution failures rather than mutation-score results.
-if [ "$MUTANTS_STATUS" -ne 0 ] && [ "$MUTANTS_STATUS" -ne 2 ] && [ "$MUTANTS_STATUS" -ne 3 ]; then
+if [[ "$MUTANTS_STATUS" -ne 0 && "$MUTANTS_STATUS" -ne 2 && "$MUTANTS_STATUS" -ne 3 ]]; then
   printf 'error: cargo-mutants failed with exit code %s\n' "$MUTANTS_STATUS" >&2
   exit "$MUTANTS_STATUS"
 fi
 
-if [ ! -f "$OUTCOMES" ]; then
+if [[ ! -f "$OUTCOMES" ]]; then
   printf 'error: cargo-mutants did not produce %s\n' "$OUTCOMES" >&2
   exit 1
 fi

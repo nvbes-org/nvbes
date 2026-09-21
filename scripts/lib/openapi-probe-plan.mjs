@@ -52,7 +52,7 @@ export function buildPath(pathPattern, parameters, authContext, spec) {
       .filter((parameter) => parameter.in === 'path')
       .map((parameter) => [parameter.name, parameter]),
   );
-  const concretePath = pathPattern.replace(/\{([^}]+)\}/gu, (_match, rawName) => {
+  const concretePath = pathPattern.replace(/\{([^{}\r\n]+)\}/gu, (_match, rawName) => {
     const parameter = pathParams.get(rawName);
     return encodeURIComponent(samplePathParam(parameter ?? { name: rawName }, authContext, spec));
   });

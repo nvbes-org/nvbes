@@ -141,9 +141,11 @@ function walk(dir, files = []) {
 }
 
 function cargoBuildScriptPath(manifestPath, text) {
-  const match = text.match(/^\s*build\s*=\s*"([^"]+)"/mu);
-  if (!match) return undefined;
-  return normalize(join(dirname(manifestPath), match[1]));
+  for (const line of text.split('\n')) {
+    const match = line.trim().match(/^build[ \t]*=[ \t]*"([^"]+)"/u);
+    if (match) return normalize(join(dirname(manifestPath), match[1]));
+  }
+  return undefined;
 }
 
 function nativeSurfaceKey(path, kind) {

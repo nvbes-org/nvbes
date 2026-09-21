@@ -30,7 +30,7 @@ node tools/account-quality/validate-load-target.mjs cloud
 
 NVBES_ENV="$NVBES_TARGET_ENV" require_destructive_account_test_database
 
-if [ -n "${DATABASE_URL:-}" ] && [ "$DATABASE_URL" != "$NVBES_DATABASE_URL" ]; then
+if [[ -n "${DATABASE_URL:-}" && "$DATABASE_URL" != "$NVBES_DATABASE_URL" ]]; then
   echo "DATABASE_URL and NVBES_DATABASE_URL must identify the same isolated database." >&2
   exit 2
 fi

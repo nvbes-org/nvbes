@@ -9,7 +9,7 @@
 set -euo pipefail
 
 DRY_RUN=false
-if [ "${1:-}" = "--dry-run" ]; then
+if [[ "${1:-}" = "--dry-run" ]]; then
   DRY_RUN=true
   echo "==> Mode simulation (dry-run) active. Aucune modification ne sera envoyee a GitHub."
 fi
@@ -26,7 +26,7 @@ gh auth status >/dev/null 2>&1 || { echo "error: gh n'est pas authentifie. Veuil
 set_secret() {
   local name="$1"
   local value="$2"
-  if [ "$DRY_RUN" = true ]; then
+  if [[ "$DRY_RUN" = true ]]; then
     echo "[DRY-RUN] gh secret set $name --body '***'"
   else
     echo "$value" | gh secret set "$name"
@@ -37,7 +37,7 @@ set_secret() {
 set_variable() {
   local name="$1"
   local value="$2"
-  if [ "$DRY_RUN" = true ]; then
+  if [[ "$DRY_RUN" = true ]]; then
     echo "[DRY-RUN] gh variable set $name --body '$value'"
   else
     gh variable set "$name" --body "$value"

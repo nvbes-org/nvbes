@@ -34,7 +34,7 @@ function walk(dir, predicate, results = []) {
 function validateMermaidInFile(filePath) {
   const content = readFileSync(filePath, 'utf8');
   const relPath = relative(REPO_ROOT, filePath);
-  const mermaidRegex = /```mermaid\s*([\s\S]*?)```/g;
+  const mermaidRegex = /```mermaid[ \t]*\r?\n([\s\S]*?)```/g;
 
   let match;
   let blockIndex = 0;
@@ -93,9 +93,9 @@ function validateMermaidInFile(filePath) {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         // Check for unquoted participant/actor alias with spaces or special characters
-        const aliasMatch = line.match(/^(?:participant|actor)\s+([A-Za-z0-9_-]+)\s+as\s+(.+)$/);
-        if (aliasMatch) {
-          const label = aliasMatch[2].trim();
+        const aliasLabel = readSequenceAliasLabel(line);
+        if (aliasLabel !== null) {
+          const label = aliasLabel.trim();
           if (
             (label.includes(' ') || label.includes('(') || label.includes('/')) &&
             !label.startsWith('"')
@@ -143,10 +143,8 @@ function validateLinksInFile(filePath) {
   const dir = dirname(filePath);
   const docsRoot = join(REPO_ROOT, 'docs/generated');
 
-  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-  let match;
-  while ((match = linkRegex.exec(content)) !== null) {
-    const rawTarget = match[2].trim();
+  for (const linkTarget of findMarkdownLinkTargets(content)) {
+    const rawTarget = linkTarget.trim();
     if (
       rawTarget.startsWith('http://') ||
       rawTarget.startsWith('https://') ||
@@ -179,6 +177,93 @@ function validateLinksInFile(filePath) {
       }
     }
   }
+}
+
+function isHorizontalSpace(character) {
+  return character === ' ' || character === '\t';
+}
+
+function isAliasNameCharacter(character) {
+  if (character === '_' || character === '-') return true;
+  if (character >= 'a' && character <= 'z') return true;
+  if (character >= 'A' && character <= 'Z') return true;
+  return character >= '0' && character <= '9';
+}
+
+function isAliasName(name) {
+  if (name.length === 0) return false;
+  for (const character of name) {
+    if (!isAliasNameCharacter(character)) return false;
+  }
+  return true;
+}
+
+function splitAliasTokens(line, limit) {
+  const tokens = [];
+  let index = 0;
+  while (tokens.length < limit) {
+    while (index < line.length && isHorizontalSpace(line[index])) index += 1;
+    if (index >= line.length) break;
+    if (tokens.length === limit - 1) {
+      tokens.push(line.slice(index).trim());
+      break;
+    }
+    const start = index;
+    while (index < line.length && !isHorizontalSpace(line[index])) index += 1;
+    tokens.push(line.slice(start, index));
+  }
+  return tokens.length === limit ? tokens : null;
+}
+
+/**
+ * Read the `participant|actor <name> as <label>` alias declaration of a
+ * sequence diagram line. Returns the label, or null when the line is not an
+ * alias declaration.
+ */
+function readSequenceAliasLabel(line) {
+  const tokens = splitAliasTokens(line, 4);
+  if (!tokens) return null;
+  const [keyword, name, separator, label] = tokens;
+  if ((keyword !== 'participant' && keyword !== 'actor') || separator !== 'as') return null;
+  if (label === '' || !isAliasName(name)) return null;
+  return label;
+}
+
+function isLinkLabelCharacter(character) {
+  return character !== undefined && character !== ']' && character !== '\r' && character !== '\n';
+}
+
+function isLinkTargetCharacter(character) {
+  return character !== undefined && character !== ')' && character !== '\r' && character !== '\n';
+}
+
+/**
+ * Collect the targets of `[label](target)` markdown links without a
+ * backtracking-prone regular expression.
+ */
+function findMarkdownLinkTargets(content) {
+  const targets = [];
+  let searchFrom = 0;
+  while (searchFrom < content.length) {
+    const labelStart = content.indexOf('[', searchFrom);
+    if (labelStart === -1) break;
+
+    let labelEnd = labelStart + 1;
+    while (isLinkLabelCharacter(content[labelEnd])) labelEnd += 1;
+
+    if (labelEnd > labelStart + 1 && content[labelEnd] === ']' && content[labelEnd + 1] === '(') {
+      let targetEnd = labelEnd + 2;
+      while (isLinkTargetCharacter(content[targetEnd])) targetEnd += 1;
+      if (targetEnd > labelEnd + 2 && content[targetEnd] === ')') {
+        targets.push(content.slice(labelEnd + 2, targetEnd));
+        searchFrom = targetEnd + 1;
+        continue;
+      }
+    }
+
+    searchFrom = labelStart + 1;
+  }
+  return targets;
 }
 
 export function validateDocumentation() {

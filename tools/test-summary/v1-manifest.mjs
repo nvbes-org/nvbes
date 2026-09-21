@@ -8,7 +8,11 @@ export const unique = (values) => new Set(values).size === values.length;
 
 export function validateManifest(root, domains) {
   assert.equal(root.schemaVersion, 1, 'Unsupported V1 manifest');
-  assert.deepEqual(Object.keys(root.domains).sort(), [...DOMAINS].sort(), 'Six domains required');
+  assert.deepEqual(
+    Object.keys(root.domains).sort((a, b) => a.localeCompare(b)),
+    [...DOMAINS].sort((a, b) => a.localeCompare(b)),
+    'Six domains required',
+  );
   assert.equal(domains.length, DOMAINS.length, 'Six domain manifests required');
   assert(unique(domains.map((domain) => domain.domain)), 'Duplicate domain');
   assert.equal(root.policy.silentSkipsAllowed, false);

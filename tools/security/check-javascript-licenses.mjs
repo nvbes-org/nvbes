@@ -33,7 +33,7 @@ try {
   process.exit(1);
 }
 
-const observed = Object.keys(report).sort();
+const observed = Object.keys(report).sort((a, b) => a.localeCompare(b));
 const denied = observed.filter((license) => !allowedLicenses.has(license));
 if (denied.length > 0) {
   console.error(`JavaScript license check failed: unreviewed licenses: ${denied.join(', ')}`);

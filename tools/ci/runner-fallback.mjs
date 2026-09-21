@@ -6,9 +6,23 @@ if (!/^[\w.-]+\/[\w.-]+$/u.test(repository ?? '') || !/^\d+$/u.test(runId ?? '')
   throw new Error('Invalid workflow context');
 const token = process.env.GITHUB_TOKEN;
 if (!token) throw new Error('Missing GitHub token');
-const base = `https://api.github.com/repos/${repository}`;
+// Only these workflows may be dispatched, and their API names are trusted
+// constants: the name never comes from the GitHub API response.
+const DISPATCHABLE_WORKFLOWS = new Map([
+  ['.github/workflows/ci.yml', 'ci.yml'],
+  ['.github/workflows/v1-testing.yml', 'v1-testing.yml'],
+]);
 async function api(resource, body) {
-  const response = await fetch(`${base}/${resource}`, {
+  const cleanResource = String(resource).replace(/[\r\n]/g, '');
+  const target = new URL(`https://api.github.com/repos/${repository}/${cleanResource}`);
+  if (
+    target.origin !== 'https://api.github.com' ||
+    !target.pathname.startsWith(`/repos/${repository}/`) ||
+    target.pathname.includes('..')
+  ) {
+    throw new Error('Invalid API URL target');
+  }
+  const response = await fetch(target.href, {
     method: body ? 'POST' : 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -23,9 +37,8 @@ async function api(resource, body) {
 }
 
 const run = await api(`actions/runs/${runId}`);
-if (!['.github/workflows/ci.yml', '.github/workflows/v1-testing.yml'].includes(run.path))
-  throw new Error('Unexpected workflow');
-const workflow = run.path.split('/').at(-1);
+const workflow = DISPATCHABLE_WORKFLOWS.get(run.path);
+if (!workflow) throw new Error('Unexpected workflow');
 let response;
 // Independent bootstrap observer: billing failures can skip all dependent jobs,
 // even those using always(). Do not wait for the hosted dependency chain.
@@ -77,4 +90,6 @@ const plan = fallbackPlan({
 });
 // The workflow checks this SHA again before allocating any local execution lane.
 await api(`actions/workflows/${workflow}/dispatches`, plan);
-console.log(`Dispatched local fallback for run ${runId} at ${run.head_sha}`);
+const safeRunId = String(runId).replace(/[\r\n]/g, '');
+const safeSha = String(run.head_sha).replace(/[\r\n]/g, '');
+console.log(`Dispatched local fallback for run ${safeRunId} at ${safeSha}`);

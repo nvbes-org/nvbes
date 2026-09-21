@@ -2,7 +2,14 @@ import { readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
-const outputDirectory = path.resolve(process.argv[2] ?? 'dist');
+const cwd = process.cwd();
+const rawDir = process.argv[2] ?? 'dist';
+const outputDirectory = path.resolve(cwd, rawDir);
+const rel = path.relative(cwd, outputDirectory);
+if (rel.startsWith('..') || path.isAbsolute(rel)) {
+  console.error('Invalid path: output directory must stay within current directory');
+  process.exit(1);
+}
 const sourceMaps = await findSourceMaps(outputDirectory);
 
 await Promise.all(sourceMaps.map((sourceMap) => rm(sourceMap)));

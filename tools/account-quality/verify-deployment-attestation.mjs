@@ -116,7 +116,9 @@ function validateComponents(components, expectedUids, expectedRelease, now) {
 function validateExpectedComponentUids(expectedUids) {
   assert(isRecord(expectedUids), 'trusted deployment component UIDs are required');
   assert(
-    Object.keys(expectedUids).sort().join(',') === REQUIRED_COMPONENTS.join(','),
+    Object.keys(expectedUids)
+      .sort((a, b) => a.localeCompare(b))
+      .join(',') === REQUIRED_COMPONENTS.join(','),
     'trusted deployment component UID set is invalid',
   );
   for (const name of REQUIRED_COMPONENTS) {

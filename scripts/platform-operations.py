@@ -39,7 +39,12 @@ def main():
         query["month"] = args.value
     elif args.operation == "command":
         path = "/api/v1/commands"
-        with open(args.value, encoding="utf-8") as command_file:
+        cwd = os.path.abspath(os.getcwd())
+        safe_path = os.path.abspath(os.path.join(cwd, args.value))
+        rel = os.path.relpath(safe_path, cwd)
+        if rel.startswith("..") or os.path.isabs(rel):
+            parser.error("command file path must stay inside the current directory")
+        with open(safe_path, encoding="utf-8") as command_file:
             data = json.dumps(json.load(command_file)).encode()
     if args.after:
         query["after"] = args.after

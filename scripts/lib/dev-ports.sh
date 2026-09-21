@@ -52,12 +52,12 @@ free_dev_port() {
   local pids
   local kill_pids=""
 
-  if [ "${NVBES_DEV_PORT_KILL:-1}" = "0" ]; then
+  if [[ "${NVBES_DEV_PORT_KILL:-1}" = "0" ]]; then
     return 0
   fi
 
   pids="$(dev_port_pids "$port" | tr '\n' ' ')"
-  if [ -z "${pids// }" ]; then
+  if [[ -z "${pids// }" ]]; then
     return 0
   fi
 
@@ -69,7 +69,7 @@ free_dev_port() {
     fi
   done
 
-  if [ -z "${kill_pids// }" ]; then
+  if [[ -z "${kill_pids// }" ]]; then
     return 0
   fi
 
@@ -91,7 +91,7 @@ terminate_child_jobs() {
   local pids
 
   pids="$(jobs -pr | tr '\n' ' ')"
-  if [ -z "${pids// }" ]; then
+  if [[ -z "${pids// }" ]]; then
     return 0
   fi
 

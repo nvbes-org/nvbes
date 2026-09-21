@@ -1,10 +1,10 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 
 export const root = process.cwd();
 
 export function readText(path) {
-  return readFileSync(join(root, path), "utf8");
+  return readFileSync(join(root, path), 'utf8');
 }
 
 export function writeText(path, text) {
@@ -42,28 +42,28 @@ export function walk(dir, predicate = () => true) {
     visit(absolute);
   }
 
-  return found.sort();
+  return found.sort((a, b) => a.localeCompare(b));
 }
 
 export function parseFrontmatter(text) {
-  if (!text.startsWith("---\n")) {
+  if (!text.startsWith('---\n')) {
     return {};
   }
 
-  const end = text.indexOf("\n---\n", 4);
+  const end = text.indexOf('\n---\n', 4);
   if (end === -1) {
     return {};
   }
 
-  const lines = text.slice(4, end).split("\n");
+  const lines = text.slice(4, end).split('\n');
   const data = {};
-  let currentKey = "";
+  let currentKey = '';
 
   for (const line of lines) {
-    const match = /^([a-zA-Z0-9_-]+):\s*(.*)$/.exec(line);
+    const match = /^([a-zA-Z0-9_-]+):[ \t]*(.*)$/.exec(line);
     if (match) {
       currentKey = match[1];
-      data[currentKey] = match[2].replace(/^["']|["']$/g, "");
+      data[currentKey] = match[2].replace(/^["']|["']$/g, '');
       continue;
     }
 
@@ -77,7 +77,7 @@ export function parseFrontmatter(text) {
 
 export function lineCount(path) {
   const text = readText(path);
-  return text.length === 0 ? 0 : text.split("\n").length;
+  return text.length === 0 ? 0 : text.split('\n').length;
 }
 
 export function report(title, rows) {

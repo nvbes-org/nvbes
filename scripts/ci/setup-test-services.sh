@@ -5,7 +5,7 @@ OS="$(uname -s)"
 echo "==> Setting up test services (OS: $OS)..."
 
 # Ensure Homebrew and PostgreSQL binaries are in PATH if on macOS
-if [ "$OS" = "Darwin" ]; then
+if [[ "$OS" = "Darwin" ]]; then
   export PATH="/opt/homebrew/bin:/usr/local/bin:/opt/homebrew/opt/postgresql@17/bin:/usr/local/opt/postgresql@17/bin:$PATH"
 fi
 
@@ -37,14 +37,14 @@ for i in $(seq 1 15); do
   sleep 1
 done
 
-if [ "$pg_ready" -ne 1 ]; then
-  if [ "$OS" = "Darwin" ]; then
+if [[ "$pg_ready" -ne 1 ]]; then
+  if [[ "$OS" = "Darwin" ]]; then
     echo "==> Starting native PostgreSQL via Homebrew..."
     if ! command -v psql >/dev/null 2>&1; then
       brew install postgresql@17 || true
     fi
     brew services start postgresql@17 || true
-  elif [ "$OS" = "Linux" ]; then
+  elif [[ "$OS" = "Linux" ]]; then
     echo "==> Starting native PostgreSQL via system service..."
     sudo service postgresql start 2>/dev/null || sudo systemctl start postgresql 2>/dev/null || true
   fi
@@ -57,7 +57,7 @@ if [ "$pg_ready" -ne 1 ]; then
   done
 fi
 
-if [ "$pg_ready" -eq 1 ]; then
+if [[ "$pg_ready" -eq 1 ]]; then
   echo "==> PostgreSQL is ready on port 5432."
   
   # Ensure superuser postgres and test databases exist if psql is present

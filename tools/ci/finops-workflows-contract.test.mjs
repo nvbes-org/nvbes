@@ -218,8 +218,10 @@ for (const [scenario, downstream, error] of downstreamFailures) {
 }
 
 test('continuous CI enforces FinOps before infrastructure lanes', () => {
-  validateContinuousWorkflow(
-    readFileSync('.github/workflows/ci.yml', 'utf8'),
-    readFileSync('.github/actions/ci-setup/action.yml', 'utf8'),
-  );
+  assert.doesNotThrow(() => {
+    validateContinuousWorkflow(
+      readFileSync('.github/workflows/ci.yml', 'utf8'),
+      readFileSync('.github/actions/ci-setup/action.yml', 'utf8'),
+    );
+  });
 });

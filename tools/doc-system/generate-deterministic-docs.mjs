@@ -307,14 +307,14 @@ function syncAdrs() {
   const entries = readdirSync(adrSourceDir).filter((f) => f.endsWith('.md'));
   for (const file of entries) {
     const rawContent = readFileSync(join(adrSourceDir, file), 'utf8');
-    const titleMatch = rawContent.match(/^#\s+(.+)$/m);
-    const title = titleMatch ? titleMatch[1].trim() : file.replace(/\.md$/, '');
+    const titleLine = rawContent.split('\n').find((l) => l.startsWith('# '));
+    const title = titleLine ? titleLine.replace(/^#[ \t]+/, '').trim() : file.replace(/\.md$/, '');
 
     // Format content with valid frontmatter for Starlight
     let cleanedBody = rawContent;
     if (rawContent.startsWith('# ')) {
       // Remove first # header since Starlight renders title from frontmatter
-      cleanedBody = rawContent.replace(/^#\s+[^\n]+\n+/, '');
+      cleanedBody = rawContent.replace(/^#[ \t]+[^\n]*\n+/, '');
     }
 
     // Fix relative links like [ADR 0003](0003-internal-billing-platform.md) -> (/adr/0003-internal-billing-platform/)
@@ -400,12 +400,12 @@ function syncCanonicalDirection() {
   const roadmapSource = join(REPO_ROOT, 'docs/roadmap.md');
 
   const strategyBody = readFileSync(strategySource, 'utf8')
-    .replace(/^#\s+[^\n]+\n+/, '')
+    .replace(/^#[ \t]+[^\n]*\n+/, '')
     .replace(
       /\]\(\.\.\/([^)]+)\)/g,
       '](' + 'https://github.com/nvbes-org/nvbes/blob/main/docs/$1)',
     );
-  const roadmapBody = readFileSync(roadmapSource, 'utf8').replace(/^#\s+[^\n]+\n+/, '');
+  const roadmapBody = readFileSync(roadmapSource, 'utf8').replace(/^#[ \t]+[^\n]*\n+/, '');
 
   writeMarkdown(
     join(OUT_PRODUCT_DIR, 'nvbes-product-strategy.md'),

@@ -65,7 +65,7 @@ if (preflight.graphRequired) {
   let globalConfigurationChanged = false;
   if (preflight.paths.includes('package.json')) {
     try {
-      const manifests = readVersions('package.json').map(JSON.parse);
+      const manifests = readVersions('package.json').map((content) => JSON.parse(content));
       const execution = (manifest) =>
         JSON.stringify([manifest.scripts, manifest.engines, manifest.packageManager]);
       globalConfigurationChanged =

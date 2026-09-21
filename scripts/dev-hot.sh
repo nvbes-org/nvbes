@@ -36,7 +36,7 @@ node "$SCRIPT_DIR/env.mjs" sync
 node "$SCRIPT_DIR/stripe-dev.mjs" --check
 
 # Ensure pnpm dependencies are installed
-if [ ! -d "node_modules" ] || [ ! -f "pnpm-lock.yaml" ]; then
+if [[ ! -d "node_modules" || ! -f "pnpm-lock.yaml" ]]; then
   echo "Installing pnpm dependencies..."
   pnpm install --frozen-lockfile --prefer-offline
 fi
@@ -49,7 +49,7 @@ for database in nvbes_dev_email nvbes_dev_trust_risk nvbes_dev_identity nvbes_de
   database_exists="$(docker compose --profile infra -f infrastructure/local/docker-compose.yml exec -T postgres \
     psql --username postgres --dbname postgres --tuples-only --no-align \
     --command "SELECT 1 FROM pg_database WHERE datname = '$database'")"
-  if [ "$database_exists" != "1" ]; then
+  if [[ "$database_exists" != "1" ]]; then
     docker compose --profile infra -f infrastructure/local/docker-compose.yml exec -T postgres \
       createdb --username postgres "$database"
   fi

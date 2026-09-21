@@ -1,9 +1,14 @@
 import path from 'node:path';
 import { loadBudgetContract } from './production-budget.mjs';
 
-const contractPath = path.resolve(
-  process.argv[2] ?? 'infrastructure/finops/production-budget.json',
-);
+const cwd = process.cwd();
+const rawPath = process.argv[2] ?? 'infrastructure/finops/production-budget.json';
+const contractPath = path.resolve(cwd, rawPath);
+const rel = path.relative(cwd, contractPath);
+if (rel.startsWith('..') || path.isAbsolute(rel)) {
+  console.error('Invalid path: contract must be within the workspace');
+  process.exit(1);
+}
 
 try {
   const contract = await loadBudgetContract(contractPath);

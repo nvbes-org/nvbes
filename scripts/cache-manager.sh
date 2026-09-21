@@ -31,12 +31,12 @@ FREE_GB=$(get_free_disk_gb)
 log "Available host disk space: ${FREE_GB} GB (minimum threshold: ${DISK_MIN_FREE_GB} GB)"
 
 # --- 2. Rust target/ Directory Management ---
-if [ -d "target" ]; then
+if [[ -d "target" ]]; then
   TARGET_SIZE_MB=$(du -sm target | awk '{print $1}')
   TARGET_SIZE_GB=$((TARGET_SIZE_MB / 1024))
   log "Current target/ directory size: ${TARGET_SIZE_GB} GB (${TARGET_SIZE_MB} MB)"
 
-  if [ "$TARGET_SIZE_GB" -gt "$TARGET_MAX_GB" ] || [ "$FREE_GB" -lt "$DISK_MIN_FREE_GB" ]; then
+  if [[ "$TARGET_SIZE_GB" -gt "$TARGET_MAX_GB" || "$FREE_GB" -lt "$DISK_MIN_FREE_GB" ]]; then
     warn "target/ size (${TARGET_SIZE_GB} GB) exceeds limit or disk low (${FREE_GB} GB free). Auto-cleaning release debug artifacts..."
     find target -name "*.d" -type f -delete 2>/dev/null || true
     find target -name "*.rlib" -mtime +3 -type f -delete 2>/dev/null || true
@@ -53,9 +53,9 @@ if command -v docker >/dev/null 2>&1; then
 fi
 
 # --- 4. Nx Cache Pruning ---
-if [ -d ".nx/cache" ]; then
+if [[ -d ".nx/cache" ]]; then
   NX_SIZE_MB=$(du -sm .nx/cache 2>/dev/null | awk '{print $1}' || echo "0")
-  if [ "$NX_SIZE_MB" -gt 3000 ]; then
+  if [[ "$NX_SIZE_MB" -gt 3000 ]]; then
     log "Nx cache is ${NX_SIZE_MB} MB (> 3GB), pruning old task outputs..."
     find .nx/cache -type f -mtime +3 -delete 2>/dev/null || true
   fi
@@ -65,7 +65,7 @@ fi
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
   log "Inspecting remote GitHub Actions cache..."
   CACHE_COUNT=$(gh cache list --limit 100 2>/dev/null | wc -l | tr -d ' ')
-  if [ "$CACHE_COUNT" -gt 0 ]; then
+  if [[ "$CACHE_COUNT" -gt 0 ]]; then
     log "Found ${CACHE_COUNT} remote cache entries. Deleting obsolete caches..."
     gh cache delete --all 2>/dev/null || true
     log "Remote GitHub Actions cache cleaned."

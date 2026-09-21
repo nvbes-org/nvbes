@@ -38,7 +38,7 @@ assert_http_not_5xx "$API_BASE_URL/public/shares/smoke-invalid-token"
 # Run seeded auth FIRST when enabled, so it gets a clean server state
 # (the public-only probe exhausts per-IP counters or rate-limit entries,
 # which causes UND_ERR_SOCKET on seeded auth's PoW endpoint).
-if [ "${NVBES_SMOKE_INCLUDE_SEEDED_AUTH:-}" = "1" ] || [ "${NVBES_SMOKE_INCLUDE_SEEDED_AUTH:-}" = "true" ]; then
+if [[ "${NVBES_SMOKE_INCLUDE_SEEDED_AUTH:-}" = "1" || "${NVBES_SMOKE_INCLUDE_SEEDED_AUTH:-}" = "true" ]]; then
   log_step "openapi contract smoke (seeded auth)"
   bash "$SCRIPT_DIR/test-openapi-contract-seeded-auth.sh"
 fi

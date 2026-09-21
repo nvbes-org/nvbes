@@ -15,7 +15,7 @@ rm -rf coverage/ test-results/ playwright-report/ .temp/
 find apps libs -name "dist" -type d -prune -exec rm -rf {} + 2>/dev/null || true
 
 echo "==> [4/5] Checking Cargo target directory size..."
-if [ -d "target" ]; then
+if [[ -d "target" ]]; then
   target_size=$(du -sh target | cut -f1)
   echo "    Current target/ size: $target_size"
 fi

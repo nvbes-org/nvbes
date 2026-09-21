@@ -10,7 +10,9 @@ pre-commit:
 commit-msg:
   commands:
     commitlint:
-      run: pnpm exec commitlint --edit "{1}"
+      # --strict matches .github/workflows/commitlint.yml, which promotes
+      # warnings (e.g. footer-leading-blank) to failures.
+      run: pnpm exec commitlint --strict --edit "{1}"
 
 pre-push:
   commands:

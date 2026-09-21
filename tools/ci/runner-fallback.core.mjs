@@ -35,7 +35,10 @@ export function permitsFallbackDispatch(path, text) {
     return false;
   const block = fallbackJob(path);
   if (!text.endsWith(block)) return false;
-  return !/^\s*actions:\s*write\s*$/mu.test(text.slice(0, -block.length));
+  return !text
+    .slice(0, -block.length)
+    .split('\n')
+    .some((line) => line.trim() === 'actions: write');
 }
 
 export function fallbackPlan({

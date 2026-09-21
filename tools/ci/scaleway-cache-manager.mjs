@@ -89,7 +89,7 @@ function terraformLockfiles() {
   return readdirSync(join(workspace, 'infrastructure'), { recursive: true })
     .filter((file) => typeof file === 'string' && file.endsWith('.terraform.lock.hcl'))
     .map((file) => join('infrastructure', file))
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function cacheDefinitions() {
