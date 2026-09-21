@@ -62,45 +62,55 @@ pub async fn rotate_refresh_token(
     let old_token_hash = hash_token(old_token);
     let mut tx = db.begin().await?;
 
-    let row = sqlx::query_as::<
+    let row = sqlx::query_as::<_, (Uuid, Uuid, String)>(
+        "SELECT id, family_id, client_id 
+         FROM identity_refresh_tokens 
+         WHERE token_hash = $1",
+    )
+    .bind(&old_token_hash)
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    let (id, family_id, stored_client_id) = match row {
+        Some(r) => r,
+        None => anyhow::bail!("Invalid refresh token"),
+    };
+
+    if stored_client_id != client_id {
+        anyhow::bail!("Client mismatch for refresh token");
+    }
+
+    // Lock all tokens in the family in a consistent order to prevent deadlocks
+    let family_tokens = sqlx::query_as::<
         _,
         (
-            Uuid,
             Uuid,
             Uuid,
             Uuid,
             String,
             Option<chrono::DateTime<Utc>>,
             chrono::DateTime<Utc>,
-            String,
         ),
     >(
-        "SELECT id, family_id, principal_id, session_id, scope, revoked_at, expires_at, client_id 
+        "SELECT id, principal_id, session_id, scope, revoked_at, expires_at 
          FROM identity_refresh_tokens 
-         WHERE token_hash = $1 
+         WHERE family_id = $1 
+         ORDER BY id 
          FOR UPDATE",
     )
-    .bind(&old_token_hash)
-    .fetch_optional(&mut *tx)
+    .bind(family_id)
+    .fetch_all(&mut *tx)
     .await?;
 
-    let (id, family_id, principal_id, session_id, scope, revoked_at, expires_at, stored_client_id) =
-        match row {
-            Some(r) => r,
-            None => anyhow::bail!("Invalid refresh token"),
-        };
+    let target = family_tokens
+        .into_iter()
+        .find(|t| t.0 == id)
+        .ok_or_else(|| anyhow::anyhow!("Invalid refresh token"))?;
 
-    if stored_client_id != client_id {
-        anyhow::bail!("Client mismatch for refresh token");
-    }
+    let (_, principal_id, session_id, scope, revoked_at, expires_at) = target;
 
     if revoked_at.is_some() {
-        sqlx::query(
-            "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE family_id = $1 AND revoked_at IS NULL",
-        )
-        .bind(family_id)
-        .execute(&mut *tx)
-        .await?;
+        revoke_token_family(&mut tx, family_id).await?;
         tx.commit().await?;
         anyhow::bail!("Refresh token reuse detected - family revoked");
     }
@@ -142,6 +152,19 @@ pub async fn rotate_refresh_token(
         session_id,
         scope,
     })
+}
+
+async fn revoke_token_family(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    family_id: Uuid,
+) -> anyhow::Result<()> {
+    sqlx::query(
+        "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE family_id = $1 AND revoked_at IS NULL",
+    )
+    .bind(family_id)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
 }
 
 fn random_token() -> String {

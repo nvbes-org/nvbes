@@ -1,5 +1,8 @@
+use base64::Engine;
 use chrono::{Duration, Utc};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 use openssl::{pkey::PKey, rsa::Rsa};
+use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -149,8 +152,6 @@ async fn oauth_client_and_pkce_authorization_code_invariants(pool: PgPool) {
     );
 
     // 3. Create Authorization Code with PKCE (S256)
-    use base64::Engine;
-    use sha2::{Digest, Sha256};
     let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
     let hash = Sha256::digest(verifier.as_bytes());
     let challenge = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(hash);
@@ -242,7 +243,6 @@ async fn identity_account_token_contract_integration(pool: PgPool) {
         .expect("issue token");
 
     // 2. Validate using exact RS256 decoding parameters expected by Account service
-    use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
     let header = decode_header(&token).unwrap();
     assert_eq!(header.alg, Algorithm::RS256);
     assert_eq!(header.kid.as_deref(), Some("identity-key-2026"));
