@@ -107,6 +107,55 @@ Avant chaque mise en production et au minimum mensuellement :
 Les alertes fournisseur sont informatives. Le contrôle manuel TTC reste
 l'autorité jusqu'à livraison d'un rapprochement automatique fiable et gratuit.
 
+## Procédures opérateur Identity V1
+
+### Rotation de la clé de chiffrement MFA (AES-256-GCM)
+
+1. Générer une nouvelle clé de 32 octets encodée en base64.
+2. Déployer avec `NVBES_IDENTITY_MFA_KEY_VERSION` incrémenté, la nouvelle clé
+   active, et conserver l'ancienne clé dans la variable
+   `NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY` avec
+   `NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION`.
+3. Exécuter la commande de maintenance `rotate-mfa-key`.
+4. Vérifier que le nombre de facteurs migrés correspond aux facteurs actifs de
+   l'ancienne version.
+5. Retirer la clé précédente lors du déploiement suivant.
+
+### Rotation des clés de signature JWT (RS256)
+
+1. Générer une nouvelle paire de clés RSA 2048+ bits PKCS#8.
+2. Définir le nouveau `NVBES_IDENTITY_TOKEN_KEY_ID` (ex: `identity-2026-q4`).
+3. Mettre à jour `NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM` et
+   `NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM`.
+4. Mettre à jour la clé publique et le `TOKEN_KEY_ID` sur les Resource Servers
+   (`account-service`, etc.).
+5. Vérifier que `GET /.well-known/jwks.json` expose la nouvelle clé et que les
+   nouveaux access tokens sont acceptés.
+
+### Révocation d'urgence en cas de compromission de compte
+
+1. Ouvrir un dossier dans Platform Operations
+   (`catégorie: compromission de compte`).
+2. Révoquer immédiatement toutes les sessions actives du principal concerné :
+
+   ```sql
+   UPDATE identity_sessions
+   SET revoked_at = clock_timestamp()
+   WHERE principal_id = $1 AND revoked_at IS NULL;
+   ```
+
+3. Révoquer l'ensemble des familles de refresh tokens associées :
+
+   ```sql
+   UPDATE identity_refresh_tokens
+   SET revoked_at = clock_timestamp()
+   WHERE principal_id = $1 AND revoked_at IS NULL;
+   ```
+
+4. Déclencher l'envoi d'un email de récupération de mot de passe à
+   l'utilisateur.
+5. Consigner la commande et le motif dans l'audit Platform Operations.
+
 ## Ajout futur d'opérateurs
 
 Le modèle prépare des permissions distinctes `support_agent`, `risk_reviewer`,
