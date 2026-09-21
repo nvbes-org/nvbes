@@ -46,6 +46,28 @@ Dans [`sonar-project.properties`](../../sonar-project.properties) :
 - Fichiers minifiés et bundles : `**/*.min.js`, `**/*.bundle.js`, `**/*.map`
 - Logs et données locales : `infrastructure/local/observability/app-logs/**`
 
+### Exclusions multicriteria documentées (`sonar.issue.ignore.multicriteria`)
+
+Quelques règles d'analyse **sécurité/js-security** émettent des findings sur du
+tooling CI/opérateur mono-répo dont le modèle de menace ne s'applique pas
+(entrées CLI/environnement qui _sont_ l'interface du script, binaires épinglés,
+exécution uniquement dans les jobs CI ou terminaux opérateur de ce dépôt, jamais
+dans un service déployé). Ces exclusions sont **documentées avec leur
+justification** dans [`sonar-project.properties`](../../sonar-project.properties)
+(blocs `e1..e10`) plutôt que remontées comme issues :
+
+- `e1/e2` — `javascript:S4036` (`tools/**`, `scripts/**`) : résolution binaire via `PATH` (portabilité macOS/CI).
+- `e3/e4` — `jssecurity:S8707` (`tools/**`, `scripts/**`) : chemins fournis par CLI/env = interface du tooling, confinement au workspace racine.
+- `e5` — `jssecurity:S8476` (`tools/ci/runner-fallback.mjs`) : réutilisation de champs GitHub API derrière une origine épinglée.
+- `e6/e7` — `tssecurity:S8707` (`tools/**`, `scripts/**`) : équivalent TypeScript de `e3/e4` (ex. `check-bundle-size.ts`, `vite-sri.ts`).
+- `e8/e9` — `jssecurity:S8705` (`v1-receipt-assembly.mjs`, `upload-grafana-sourcemaps.mjs`) : 'gh api' / 'faro-cli' avec validateurs de forme d'argument.
+- `e10` — `jssecurity:S6350` (`scripts/lib/stripe-sandbox.mjs`) : sandbox opérateur local, whitelist de binaires, métadonnées validées (`^price_[A-Za-z0-9]+$`).
+
+> [!IMPORTANT]
+> Toute nouvelle exclusion multicriteria exige une justification écrite du
+> modèle de menace dans `sonar-project.properties` ; une exclusion sans motif ne
+> sera pas acceptée.
+
 ---
 
 ## 3. Critères du Quality Gate Strict ("nvbes Strict Quality Gate")

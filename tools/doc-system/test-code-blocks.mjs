@@ -25,6 +25,22 @@ function walk(dir, predicate, results = []) {
   return results;
 }
 
+function hasAngleTag(text) {
+  let searchFrom = 0;
+  let open = text.indexOf('<', searchFrom);
+  while (open !== -1) {
+    const close = text.indexOf('>', open + 1);
+    if (close === -1) return false;
+    const inner = text.slice(open + 1, close);
+    if (inner.length > 0 && !/[\r\n\u2028\u2029]/.test(inner)) {
+      return true;
+    }
+    searchFrom = open + 1;
+    open = text.indexOf('<', searchFrom);
+  }
+  return false;
+}
+
 export function testCodeBlocks() {
   console.log('🧪 Running doc-testing on markdown code blocks...');
 
@@ -54,7 +70,7 @@ export function testCodeBlocks() {
       if (lang === 'json') {
         jsonBlocks++;
         // Ignore json blocks with placeholders like ... or <placeholder>
-        const hasPlaceholders = code.includes('...') || /<[^>\r\n]+>/.test(code);
+        const hasPlaceholders = code.includes('...') || hasAngleTag(code);
         if (!hasPlaceholders) {
           try {
             JSON.parse(code);
