@@ -21,7 +21,7 @@ catalog:
 
 allowBuilds:
   '@bufbuild/buf': false
-  '@posthog/cli': true
+  '@posthog/cli': false
   '@sentry/cli': false
   core-js: true
   esbuild: true
