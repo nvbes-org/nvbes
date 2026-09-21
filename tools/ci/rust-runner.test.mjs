@@ -79,8 +79,8 @@ for (const [failBaseline, failMicro, failClippy] of [
       assert.deepEqual(
         calls.filter((args) => args[0] === 'nextest'),
         [
-          ['nextest', 'run', '--locked', '--package', 'a'],
-          ['nextest', 'run', '--workspace', '--locked'],
+          ['nextest', 'run', '--locked', '--no-fail-fast', '--package', 'a'],
+          ['nextest', 'run', '--workspace', '--locked', '--no-fail-fast'],
         ],
       );
       const evidence = JSON.parse(result.stdout.match(/CI_RUST_EVIDENCE (.+)/u)[1]);

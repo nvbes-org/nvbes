@@ -7,6 +7,8 @@ les runtimes. Les jobs sont `authorize-cache`, `scope`, `contracts`, `typescript
 ## Sélection et repli
 
 - PR : base explicite de la PR, head testé = commit de merge GitHub.
+- Merge queue (`merge_group`) : `merge_group.base_sha` comme base explicite,
+  cache autorisé en lecture (`trusted=true`, ref créée par GitHub).
 - Push : dernier ancêtre ayant une CI `push` réussie sur la même branche.
 - Dispatch : `base_sha` explicite ou dernier succès de la branche.
 - Base absente, API indisponible, fichier racine inconnu ou échec Nx affected :

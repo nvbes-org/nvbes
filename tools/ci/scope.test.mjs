@@ -191,6 +191,14 @@ test('PR uses its explicit base even without API access', async () => {
   );
   assert.equal(base.base, sha('b'));
 });
+test('merge queue uses the group base even without API access', async () => {
+  const base = await resolveScopeBase(
+    { ...environment, event: { merge_group: { base_sha: sha('b') } } },
+    io,
+  );
+  assert.equal(base.base, sha('b'));
+  assert.equal(base.fallback, false);
+});
 test('missing base, inaccessible history, and missing ancestor use full fallback', async () => {
   assert.equal(
     (await resolveScopeBase({ ...environment, explicitBase: 'bad' }, io)).fallback,

@@ -20,3 +20,5 @@ pre-push:
       run: pnpm doc:validate
     check:
       run: pnpm check:web
+    affected:
+      run: pnpm nx affected -t lint,typecheck,test,build --base=origin/main --head=HEAD --parallel=4
