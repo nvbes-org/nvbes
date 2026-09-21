@@ -171,6 +171,27 @@ pub async fn check_rate_limit_rules(
 }
 
 #[cfg(test)]
+mod unit_tests {
+    use super::*;
+    use axum::http::HeaderMap;
+
+    #[test]
+    fn rate_limit_info_appends_standard_headers() {
+        let info = RateLimitInfo {
+            limit: 100,
+            remaining: 99,
+            reset: 60,
+        };
+        let mut headers = HeaderMap::new();
+        info.append_headers(&mut headers);
+
+        assert_eq!(headers.get("ratelimit-limit").unwrap(), "100");
+        assert_eq!(headers.get("ratelimit-remaining").unwrap(), "99");
+        assert_eq!(headers.get("ratelimit-reset").unwrap(), "60");
+    }
+}
+
+#[cfg(test)]
 #[path = "limiter.postgres.tests.rs"]
 mod postgres_tests;
 

@@ -65,6 +65,13 @@ test('runtime stays closed to public authentication', () => {
   assert.ok(errorReportingSource.includes('capture_error_reporting_smoke'));
 });
 
+test('container wires OAuth 2.1, discovery, and authorization routes', () => {
+  assert.ok(mainSource.includes('oauth::router(&state)'));
+  assert.ok(mainSource.includes('discovery::router(&state)'));
+  assert.ok(mainSource.includes('authz::router(&state)'));
+  assert.ok(mainSource.includes('http::router(&state)'));
+});
+
 test('deployment is main-only, approved, immutable and scale-to-zero', () => {
   assert.ok(deploymentWorkflow.includes("github.ref == 'refs/heads/main'"));
   assert.ok(deploymentWorkflow.includes('[[ "$IDENTITY_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]'));
