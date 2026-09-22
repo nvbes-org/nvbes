@@ -1,8 +1,4 @@
-use axum::{
-    Form, Json,
-    extract::State,
-    http::StatusCode,
-};
+use axum::{Form, Json, extract::State, http::StatusCode};
 use uuid::Uuid;
 
 use crate::app::IdentityState;

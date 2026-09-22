@@ -41,7 +41,9 @@ fn return_to_must_target_authorize_under_issuer() {
         ),
         Some("https://id.example/oauth/authorize?client_id=a".into())
     );
-    assert!(validate_return_to("https://evil.example/oauth/authorize", "https://id.example").is_none());
+    assert!(
+        validate_return_to("https://evil.example/oauth/authorize", "https://id.example").is_none()
+    );
     assert!(validate_return_to("/api/v1/auth/login", "https://id.example").is_none());
 }
 

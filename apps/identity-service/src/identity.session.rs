@@ -43,8 +43,7 @@ pub fn set_session_cookie(token: &str, secure: bool) -> HeaderValue {
 }
 
 pub fn clear_session_cookie(secure: bool) -> HeaderValue {
-    let mut cookie =
-        format!("{SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
+    let mut cookie = format!("{SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
     if secure {
         cookie.push_str("; Secure");
     }

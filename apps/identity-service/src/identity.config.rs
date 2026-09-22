@@ -197,8 +197,8 @@ fn optional(name: &str) -> Option<String> {
 
 fn parse_bool(name: &'static str, value: &str) -> Result<bool, ConfigError> {
     match value.trim().to_ascii_lowercase().as_str() {
-        "1" | "true" | "yes" | "on" => Ok(true),
-        "0" | "false" | "no" | "off" => Ok(false),
+        "1" | "true" | "yes" => Ok(true),
+        "0" | "false" | "no" => Ok(false),
         _ => Err(ConfigError::Invalid(name)),
     }
 }

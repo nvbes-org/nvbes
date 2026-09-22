@@ -146,7 +146,10 @@ async fn authorize(
     .into_response())
 }
 
-fn unauthenticated_authorize_response(state: &IdentityState, uri: &Uri) -> axum::response::Response {
+fn unauthenticated_authorize_response(
+    state: &IdentityState,
+    uri: &Uri,
+) -> axum::response::Response {
     let return_to = authorize_return_to(uri);
     if state.config.login_url.is_empty() {
         return (

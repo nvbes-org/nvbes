@@ -61,14 +61,10 @@ async fn register(
         ));
     }
 
-    let principal_id = register_password_identity(
-        &state.db,
-        &req.email,
-        &req.password,
-        "identity.registered",
-    )
-    .await
-    .map_err(|error| map_register_error(error))?;
+    let principal_id =
+        register_password_identity(&state.db, &req.email, &req.password, "identity.registered")
+            .await
+            .map_err(|error| map_register_error(error))?;
 
     Ok((
         StatusCode::CREATED,
@@ -109,10 +105,7 @@ async fn login(
     Ok((StatusCode::OK, headers, Json(body)))
 }
 
-async fn logout(
-    State(state): State<IdentityState>,
-    headers: HeaderMap,
-) -> impl IntoResponse {
+async fn logout(State(state): State<IdentityState>, headers: HeaderMap) -> impl IntoResponse {
     if let Some(token) = session_token_from_headers(&headers) {
         let _ = revoke_session_token(&state.db, &token).await;
     }

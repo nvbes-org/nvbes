@@ -138,10 +138,7 @@ fn public_signup_defaults_to_environment() {
         );
         std::env::set_var("SENTRY_DSN", "https://key@sentry.example/1");
         std::env::set_var("NVBES_OTLP_ENDPOINT", "https://otlp.example/v1/traces");
-        std::env::set_var(
-            "NVBES_OTLP_AUTHORIZATION_HEADER",
-            "Basic dXNlcjpwYXNz",
-        );
+        std::env::set_var("NVBES_OTLP_AUTHORIZATION_HEADER", "Basic dXNlcjpwYXNz");
         std::env::remove_var("NVBES_IDENTITY_PUBLIC_SIGNUP");
     }
     let production = IdentityConfig::from_env().expect("production config");
