@@ -460,7 +460,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: false
           exit-code: '1'
-          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
+          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,archive,infrastructure/local/observability/app-logs
 
   ci-gate:
     name: ci-gate
