@@ -144,8 +144,8 @@ mécanisme unique avant d'écrire les tests, pas après.
 
 ## Limite d'environnement connue
 
-Sur macOS arm64, `llvm-cov export` segfaute quand `cargo llvm-cov` lui passe
-les objets de build scripts. La mesure locale se contourne en collectant avec
-`cargo llvm-cov --no-report` puis en appelant `llvm-cov export` avec les seuls
-binaires de `target/llvm-cov-target/debug/deps`. La CI Linux n'est pas
-affectée.
+Sur macOS arm64 (et certains agents Linux), `llvm-cov export` segfaute quand
+`cargo llvm-cov` lui passe les objets de build scripts. Les scripts
+`scripts/test-workspace-coverage.sh` et `scripts/test-workspace-condition.sh`
+collectent avec `--no-report` puis exportent uniquement les binaires de
+`debug/deps`.

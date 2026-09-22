@@ -51,9 +51,15 @@ impl Drop for EnvGuard {
     }
 }
 
+fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+    ENV_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 #[test]
 fn loads_development_defaults() {
-    let _lock = ENV_LOCK.lock().unwrap();
+    let _lock = env_lock();
     let _guard = EnvGuard::isolated();
     let cfg = BillingConfig::from_env().expect("defaults must load");
     assert_eq!(cfg.bind_addr.to_string(), "0.0.0.0:8080");
@@ -64,7 +70,7 @@ fn loads_development_defaults() {
 
 #[test]
 fn loads_explicit_env_overrides() {
-    let _lock = ENV_LOCK.lock().unwrap();
+    let _lock = env_lock();
     let guard = EnvGuard::isolated();
     guard.set("NVBES_BILLING_BIND_ADDR", "127.0.0.1:9090");
     guard.set(
@@ -98,7 +104,7 @@ fn loads_explicit_env_overrides() {
 
 #[test]
 fn prefers_billing_email_token_over_internal() {
-    let _lock = ENV_LOCK.lock().unwrap();
+    let _lock = env_lock();
     let guard = EnvGuard::isolated();
     guard.set("NVBES_BILLING_EMAIL_TOKEN", "billing-specific");
     guard.set("NVBES_EMAIL_INTERNAL_TOKEN", "shared-internal");
@@ -108,7 +114,7 @@ fn prefers_billing_email_token_over_internal() {
 
 #[test]
 fn rejects_live_stripe_secret_keys() {
-    let _lock = ENV_LOCK.lock().unwrap();
+    let _lock = env_lock();
     let guard = EnvGuard::isolated();
     let live = format!("{}_{}", "sk_live", "forbidden");
     guard.set("NVBES_STRIPE_SECRET_KEY", &live);
@@ -118,7 +124,7 @@ fn rejects_live_stripe_secret_keys() {
 
 #[test]
 fn rejects_live_stripe_restricted_keys() {
-    let _lock = ENV_LOCK.lock().unwrap();
+    let _lock = env_lock();
     let guard = EnvGuard::isolated();
     let live = format!("{}_{}", "rk_live", "forbidden");
     guard.set("NVBES_STRIPE_SECRET_KEY", &live);
@@ -127,7 +133,7 @@ fn rejects_live_stripe_restricted_keys() {
 
 #[test]
 fn rejects_invalid_bind_addr() {
-    let _lock = ENV_LOCK.lock().unwrap();
+    let _lock = env_lock();
     let guard = EnvGuard::isolated();
     guard.set("NVBES_BILLING_BIND_ADDR", "not-an-addr");
     assert!(BillingConfig::from_env().is_err());
