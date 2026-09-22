@@ -25,28 +25,26 @@ for variable in NVBES_SECURITY_TEST_DATABASE_URL DATABASE_URL; do
   fi
 done
 
-# Avoid leaking a developer shell / .env into config.from_env unit tests.
 for polluted in NVBES_APP_URL NVBES_WEB_BASE_URL NVBES_API_BASE_URL NVBES_TARGET_ENV; do
   unset "$polluted" || true
 done
 
 mkdir -p "$COVERAGE_DIR"
-export CARGO_TARGET_DIR="$TARGET_DIR"
-rm -rf "$TARGET_DIR"
-cargo llvm-cov clean --workspace
+cargo llvm-cov clean --workspace || true
+# Best-effort wipe; concurrent scanners can leave non-empty dirs momentarily.
+chmod -R u+w "$TARGET_DIR" 2>/dev/null || true
+rm -rf "$TARGET_DIR" 2>/dev/null || true
+mkdir -p "$TARGET_DIR"
 
-# Collect coverage without exporting. On some hosts, `llvm-cov export` SIGSEGVs
-# when cargo-llvm-cov also passes build-script objects. Collect first, drop
-# those objects, then let cargo-llvm-cov report from the merged profile.
 cargo llvm-cov \
   --workspace \
   --all-targets \
   --all-features \
   --locked \
-  --ignore-filename-regex "$IGNORE_REGEX" \
   --no-report
 
-rm -rf "$TARGET_DIR/debug/build" "$TARGET_DIR/release/build"
+# Drop build-script artifacts that make llvm-cov export SIGSEGV on some hosts.
+rm -rf "$TARGET_DIR/debug/build" "$TARGET_DIR/release/build" 2>/dev/null || true
 
 cargo llvm-cov report \
   --ignore-filename-regex "$IGNORE_REGEX" \
