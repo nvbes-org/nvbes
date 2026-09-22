@@ -60,10 +60,13 @@ export function parseFrontmatter(text) {
   let currentKey = '';
 
   for (const line of lines) {
-    const match = /^([a-zA-Z0-9_-]+):[ \t]*(.*)$/.exec(line);
-    if (match) {
-      currentKey = match[1];
-      data[currentKey] = match[2].replace(/^["']|["']$/g, '');
+    const colon = line.indexOf(':');
+    if (colon > 0 && /^[a-zA-Z0-9_-]+$/.test(line.slice(0, colon))) {
+      currentKey = line.slice(0, colon);
+      data[currentKey] = line
+        .slice(colon + 1)
+        .replace(/^[ \t]+/, '')
+        .replace(/^["']|["']$/g, '');
       continue;
     }
 

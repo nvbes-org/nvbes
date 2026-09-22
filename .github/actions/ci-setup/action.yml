@@ -104,7 +104,19 @@ runs:
           esac
           URL="https://github.com/taiki-e/cargo-llvm-cov/releases/download/v${VERSION}/cargo-llvm-cov-${ARCH}-${OS}.tar.gz"
           mkdir -p "$HOME/.cargo/bin"
-          curl -fsSL "$URL" | tar -xz -C "$HOME/.cargo/bin"
+          ARCHIVE="$RUNNER_TEMP/cargo-llvm-cov.tar.gz"
+          for attempt in 1 2 3; do
+            if curl -fsSL --retry 2 --retry-all-errors --connect-timeout 15 "$URL" -o "$ARCHIVE" \
+              && tar -xz -C "$HOME/.cargo/bin" -f "$ARCHIVE"; then
+              rm -f "$ARCHIVE"
+              break
+            fi
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "cargo-llvm-cov download failed after 3 attempts"
+              exit 1
+            fi
+            sleep 5
+          done
         fi
         cargo llvm-cov --version
     - name: Install cargo-nextest
