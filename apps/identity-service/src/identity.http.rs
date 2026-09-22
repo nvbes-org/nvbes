@@ -1,11 +1,19 @@
-use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
-use nvbes_core::auth::hash_password;
+use axum::{
+    Json, Router,
+    extract::State,
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
+    routing::post,
+};
 use serde::{Deserialize, Serialize};
-use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::app::IdentityState;
-use crate::auth::authenticate;
+use crate::auth::{authenticate, register_password_identity, revoke_session_token};
+use crate::session::{
+    append_cleared_session_cookie, append_session_cookie, session_token_from_headers,
+    validate_return_to,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterRequest {
@@ -23,6 +31,7 @@ pub struct RegisterResponse {
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
+    pub return_to: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -30,12 +39,15 @@ pub struct LoginResponse {
     pub session_token: String,
     pub principal_id: Uuid,
     pub expires_in_hours: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub continue_url: Option<String>,
 }
 
 pub fn router(state: &IdentityState) -> Router {
     Router::new()
         .route("/api/v1/auth/register", post(register))
         .route("/api/v1/auth/login", post(login))
+        .route("/api/v1/auth/logout", post(logout))
         .with_state(state.clone())
 }
 
@@ -43,54 +55,20 @@ async fn register(
     State(state): State<IdentityState>,
     Json(req): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<RegisterResponse>), HttpError> {
-    let email = normalize_email(&req.email)?;
-    validate_password(&req.password)?;
-    let password_hash = hash_password(&req.password)
-        .map_err(|_| HttpError::BadRequest("Password hashing failed".to_string()))?;
+    if !state.config.public_signup_enabled {
+        return Err(HttpError::Forbidden(
+            "Public signup is closed until an explicit GO".to_string(),
+        ));
+    }
 
-    let principal_id = Uuid::new_v4();
-    let mut tx = state.db.begin().await.map_err(|e| {
-        HttpError::InternalServerError(format!("Database transaction failed: {}", e))
-    })?;
-
-    sqlx::query(
-        "INSERT INTO identity_principals (id, kind, status) VALUES ($1, 'human', 'active')",
+    let principal_id = register_password_identity(
+        &state.db,
+        &req.email,
+        &req.password,
+        "identity.registered",
     )
-    .bind(principal_id)
-    .execute(&mut *tx)
     .await
-    .map_err(|e| HttpError::InternalServerError(format!("Failed to create principal: {}", e)))?;
-
-    sqlx::query(
-        "INSERT INTO identity_login_identifiers (id, principal_id, kind, normalized_value, verified_at) VALUES ($1, $2, 'email', $3, clock_timestamp())",
-    )
-    .bind(Uuid::new_v4())
-    .bind(principal_id)
-    .bind(&email)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| HttpError::InternalServerError(format!("Failed to create login identifier: {}", e)))?;
-
-    sqlx::query(
-        "INSERT INTO identity_password_credentials (principal_id, password_hash) VALUES ($1, $2)",
-    )
-    .bind(principal_id)
-    .bind(password_hash)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| {
-        HttpError::InternalServerError(format!("Failed to create password credential: {}", e))
-    })?;
-
-    audit(&mut tx, principal_id, "identity.registered")
-        .await
-        .map_err(|e| {
-            HttpError::InternalServerError(format!("Failed to audit registration: {}", e))
-        })?;
-
-    tx.commit().await.map_err(|e| {
-        HttpError::InternalServerError(format!("Failed to commit registration: {}", e))
-    })?;
+    .map_err(|error| map_register_error(error))?;
 
     Ok((
         StatusCode::CREATED,
@@ -104,43 +82,78 @@ async fn register(
 async fn login(
     State(state): State<IdentityState>,
     Json(req): Json<LoginRequest>,
-) -> Result<(StatusCode, Json<LoginResponse>), HttpError> {
-    let session_token = authenticate(&state.db, &req.email, &req.password)
+) -> Result<impl IntoResponse, HttpError> {
+    let session = authenticate(&state.db, &req.email, &req.password)
         .await
-        .map_err(|e| HttpError::Unauthorized(e.to_string()))?;
+        .map_err(|_| HttpError::Unauthorized("authentication failed".to_string()))?;
 
-    let principal_id: Uuid = sqlx::query_scalar(
-        "SELECT p.id FROM identity_principals p 
-         JOIN identity_login_identifiers i ON i.principal_id = p.id 
-         WHERE i.kind = 'email' AND i.normalized_value = $1",
+    let continue_url = req
+        .return_to
+        .as_deref()
+        .and_then(|value| validate_return_to(value, &state.config.token_issuer));
+
+    let body = LoginResponse {
+        session_token: session.session_token.clone(),
+        principal_id: session.principal_id,
+        expires_in_hours: crate::session::SESSION_TTL_HOURS,
+        continue_url,
+    };
+
+    let mut headers = HeaderMap::new();
+    append_session_cookie(
+        &mut headers,
+        &session.session_token,
+        state.config.session_cookie_secure,
+    );
+
+    Ok((StatusCode::OK, headers, Json(body)))
+}
+
+async fn logout(
+    State(state): State<IdentityState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if let Some(token) = session_token_from_headers(&headers) {
+        let _ = revoke_session_token(&state.db, &token).await;
+    }
+
+    let mut response_headers = HeaderMap::new();
+    append_cleared_session_cookie(&mut response_headers, state.config.session_cookie_secure);
+    (
+        StatusCode::NO_CONTENT,
+        response_headers,
+        // Explicit empty body keeps axum from inventing content.
+        (),
     )
-    .bind(req.email.to_ascii_lowercase().trim())
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| HttpError::InternalServerError(e.to_string()))?;
+}
 
-    Ok((
-        StatusCode::OK,
-        Json(LoginResponse {
-            session_token,
-            principal_id,
-            expires_in_hours: 1,
-        }),
-    ))
+fn map_register_error(error: anyhow::Error) -> HttpError {
+    let message = error.to_string();
+    if message.contains("password") || message.contains("email") {
+        HttpError::BadRequest(message)
+    } else if message.contains("duplicate") || message.contains("unique") {
+        HttpError::Conflict("Email is already registered".to_string())
+    } else {
+        HttpError::InternalServerError(message)
+    }
 }
 
 #[derive(Debug)]
 enum HttpError {
     BadRequest(String),
     Unauthorized(String),
+    Forbidden(String),
+    Conflict(String),
     InternalServerError(String),
 }
 
-impl axum::response::IntoResponse for HttpError {
+impl IntoResponse for HttpError {
     fn into_response(self) -> axum::response::Response {
         let (status, message) = match self {
             HttpError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             HttpError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
+            HttpError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
+            HttpError::Conflict(msg) => (StatusCode::CONFLICT, msg),
             HttpError::InternalServerError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
 
@@ -148,37 +161,6 @@ impl axum::response::IntoResponse for HttpError {
     }
 }
 
-fn normalize_email(email: &str) -> Result<String, HttpError> {
-    let email = email.trim().to_ascii_lowercase();
-    let valid = email.len() <= 320
-        && email
-            .split_once('@')
-            .is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.'));
-    valid
-        .then_some(email)
-        .ok_or_else(|| HttpError::BadRequest("Invalid email address".to_string()))
-}
-
-fn validate_password(password: &str) -> Result<(), HttpError> {
-    if !(12..=1024).contains(&password.len()) {
-        return Err(HttpError::BadRequest(
-            "Password must be between 12 and 1024 characters".to_string(),
-        ));
-    }
-    Ok(())
-}
-
-async fn audit(
-    tx: &mut Transaction<'_, Postgres>,
-    principal_id: Uuid,
-    event_type: &str,
-) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO identity_audit_events (id, principal_id, actor_principal_id, event_type, correlation_id) VALUES ($1, $2, $2, $3, $4)")
-        .bind(Uuid::new_v4())
-        .bind(principal_id)
-        .bind(event_type)
-        .bind(Uuid::new_v4())
-        .execute(&mut **tx)
-        .await?;
-    Ok(())
-}
+#[cfg(test)]
+#[path = "identity.http.tests.rs"]
+mod tests;

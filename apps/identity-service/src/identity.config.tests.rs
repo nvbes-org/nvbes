@@ -110,3 +110,55 @@ fn production_requires_authenticated_observability() {
         }
     }
 }
+
+#[test]
+fn public_signup_defaults_to_environment() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "test");
+        std::env::remove_var("NVBES_IDENTITY_PUBLIC_SIGNUP");
+        std::env::remove_var("NVBES_IDENTITY_LOGIN_URL");
+        std::env::remove_var("NVBES_IDENTITY_SESSION_COOKIE_SECURE");
+    }
+    let config = IdentityConfig::from_env().expect("test config");
+    assert!(config.public_signup_enabled);
+    assert!(!config.session_cookie_secure);
+    assert!(config.login_url.is_empty());
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var("NVBES_IDENTITY_DATABASE_URL", "postgres://identity.test/db");
+        std::env::set_var(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        );
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+        std::env::set_var(
+            "NVBES_IDENTITY_METRICS_TOKEN",
+            "production-identity-metrics-token-value",
+        );
+        std::env::set_var("SENTRY_DSN", "https://key@sentry.example/1");
+        std::env::set_var("NVBES_OTLP_ENDPOINT", "https://otlp.example/v1/traces");
+        std::env::set_var(
+            "NVBES_OTLP_AUTHORIZATION_HEADER",
+            "Basic dXNlcjpwYXNz",
+        );
+        std::env::remove_var("NVBES_IDENTITY_PUBLIC_SIGNUP");
+    }
+    let production = IdentityConfig::from_env().expect("production config");
+    assert!(!production.public_signup_enabled);
+    assert!(production.session_cookie_secure);
+    unsafe {
+        for name in [
+            "NVBES_ENVIRONMENT",
+            "NVBES_IDENTITY_DATABASE_URL",
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "NVBES_IDENTITY_MFA_KEY_VERSION",
+            "NVBES_IDENTITY_METRICS_TOKEN",
+            "SENTRY_DSN",
+            "NVBES_OTLP_ENDPOINT",
+            "NVBES_OTLP_AUTHORIZATION_HEADER",
+        ] {
+            std::env::remove_var(name);
+        }
+    }
+}

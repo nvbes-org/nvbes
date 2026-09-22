@@ -19,6 +19,9 @@ pub struct IdentityConfig {
     pub mfa_previous_encryption_key: Option<[u8; 32]>,
     pub mfa_previous_key_version: Option<i16>,
     pub token_issuer: String,
+    pub public_signup_enabled: bool,
+    pub login_url: String,
+    pub session_cookie_secure: bool,
 }
 
 impl IdentityConfig {
@@ -81,6 +84,15 @@ impl IdentityConfig {
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_METRICS_TOKEN"))?;
         let token_issuer = optional("NVBES_IDENTITY_TOKEN_ISSUER")
             .unwrap_or_else(|| format!("http://{}", bind_addr));
+        let public_signup_enabled = match optional("NVBES_IDENTITY_PUBLIC_SIGNUP") {
+            Some(value) => parse_bool("NVBES_IDENTITY_PUBLIC_SIGNUP", &value)?,
+            None => development,
+        };
+        let login_url = optional("NVBES_IDENTITY_LOGIN_URL").unwrap_or_default();
+        let session_cookie_secure = match optional("NVBES_IDENTITY_SESSION_COOKIE_SECURE") {
+            Some(value) => parse_bool("NVBES_IDENTITY_SESSION_COOKIE_SECURE", &value)?,
+            None => !development,
+        };
         validate_observability(
             development,
             sentry_dsn.as_deref(),
@@ -104,6 +116,9 @@ impl IdentityConfig {
             mfa_previous_encryption_key,
             mfa_previous_key_version,
             token_issuer,
+            public_signup_enabled,
+            login_url,
+            session_cookie_secure,
         })
     }
 }
@@ -178,6 +193,14 @@ fn optional(name: &str) -> Option<String> {
     std::env::var(name)
         .ok()
         .filter(|value| !value.trim().is_empty())
+}
+
+fn parse_bool(name: &'static str, value: &str) -> Result<bool, ConfigError> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Ok(true),
+        "0" | "false" | "no" | "off" => Ok(false),
+        _ => Err(ConfigError::Invalid(name)),
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

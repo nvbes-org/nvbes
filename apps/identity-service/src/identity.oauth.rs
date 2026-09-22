@@ -1,7 +1,8 @@
 use axum::{
     Router,
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, Uri},
+    response::{IntoResponse, Redirect},
     routing::{get, post},
 };
 use uuid::Uuid;
@@ -11,6 +12,7 @@ use crate::auth::hash_token;
 use crate::oauth_clients::{
     CreateAuthorizationCodeParams, create_authorization_code, is_redirect_uri_allowed,
 };
+use crate::session::{authorize_return_to, session_token_from_headers};
 
 #[path = "identity.oauth.token.rs"]
 pub mod token;
@@ -29,10 +31,10 @@ pub fn router(state: &IdentityState) -> Router {
 
 async fn authorize(
     State(state): State<IdentityState>,
+    uri: Uri,
     req: axum::extract::Query<AuthorizeRequest>,
-    headers: axum::http::HeaderMap,
-) -> Result<axum::response::Redirect, (StatusCode, String)> {
-    // Validate response_type
+    headers: HeaderMap,
+) -> Result<axum::response::Response, (StatusCode, String)> {
     if req.response_type != "code" {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -40,7 +42,6 @@ async fn authorize(
         ));
     }
 
-    // Validate client_id format
     if !validate_client_id(&req.client_id) {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -48,7 +49,6 @@ async fn authorize(
         ));
     }
 
-    // Validate redirect_uri format
     if !validate_redirect_uri(&req.redirect_uri) {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -56,12 +56,10 @@ async fn authorize(
         ));
     }
 
-    // Validate scope if provided
     if req.scope.as_deref().is_some_and(|s| !validate_scope(s)) {
         return Err((StatusCode::BAD_REQUEST, "Invalid scope format".to_string()));
     }
 
-    // Validate PKCE parameters if provided
     if let (Some(challenge), Some(method)) = (&req.code_challenge, &req.code_challenge_method) {
         if method != "plain" && method != "S256" {
             return Err((
@@ -77,7 +75,10 @@ async fn authorize(
         }
     }
 
-    // Check if client exists and redirect_uri is allowed
+    let Some(session_token) = session_token_from_headers(&headers) else {
+        return Ok(unauthenticated_authorize_response(&state, &uri));
+    };
+
     match is_redirect_uri_allowed(&state.db, &req.client_id, &req.redirect_uri).await {
         Ok(true) => {}
         Ok(false) => {
@@ -94,52 +95,25 @@ async fn authorize(
         }
     }
 
-    // Authenticate user - check for session token in cookie or Authorization header
-    let session_token = headers
-        .get("cookie")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|c| c.split('=').nth(1))
-        .or_else(|| {
-            headers
-                .get("authorization")
-                .and_then(|h| h.to_str().ok())
-                .and_then(|a| a.strip_prefix("Bearer "))
-        });
-
-    let (principal_id, session_id) = if let Some(token) = session_token {
-        // Validate session token and get principal_id and session_id
-        let token_hash = hash_token(token);
-        match sqlx::query_as::<_, (Uuid, Uuid)>(
-            "SELECT principal_id, id FROM identity_sessions 
+    let token_hash = hash_token(&session_token);
+    let (principal_id, session_id) = match sqlx::query_as::<_, (Uuid, Uuid)>(
+        "SELECT principal_id, id FROM identity_sessions 
              WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > clock_timestamp()",
-        )
-        .bind(&token_hash)
-        .fetch_optional(&state.db)
-        .await
-        {
-            Ok(Some((pid, sid))) => (pid, sid),
-            Ok(None) => {
-                return Err((
-                    StatusCode::UNAUTHORIZED,
-                    "Invalid or expired session".to_string(),
-                ));
-            }
-            Err(e) => {
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Database error: {}", e),
-                ));
-            }
+    )
+    .bind(&token_hash)
+    .fetch_optional(&state.db)
+    .await
+    {
+        Ok(Some(row)) => row,
+        Ok(None) => return Ok(unauthenticated_authorize_response(&state, &uri)),
+        Err(e) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Database error: {}", e),
+            ));
         }
-    } else {
-        // No session token found - user must authenticate first
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            "Authentication required - no session found".to_string(),
-        ));
     };
 
-    // Create authorization code
     let scope = req.scope.clone().unwrap_or_else(|| "openid".to_string());
     let code = match create_authorization_code(
         &state.db,
@@ -164,12 +138,38 @@ async fn authorize(
         }
     };
 
-    // Redirect with authorization code
     let state_param = req.state.as_deref().unwrap_or("");
-    Ok(axum::response::Redirect::to(&format!(
+    Ok(Redirect::to(&format!(
         "{}?code={}&state={}",
         req.redirect_uri, code, state_param
-    )))
+    ))
+    .into_response())
+}
+
+fn unauthenticated_authorize_response(state: &IdentityState, uri: &Uri) -> axum::response::Response {
+    let return_to = authorize_return_to(uri);
+    if state.config.login_url.is_empty() {
+        return (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(serde_json::json!({
+                "error": "authentication_required",
+                "return_to": return_to,
+            })),
+        )
+            .into_response();
+    }
+
+    let separator = if state.config.login_url.contains('?') {
+        '&'
+    } else {
+        '?'
+    };
+    Redirect::temporary(&format!(
+        "{}{separator}return_to={}",
+        state.config.login_url,
+        urlencoding::encode(&return_to)
+    ))
+    .into_response()
 }
 
 #[cfg(test)]
