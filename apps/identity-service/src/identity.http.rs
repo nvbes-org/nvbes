@@ -64,7 +64,7 @@ async fn register(
     let principal_id =
         register_password_identity(&state.db, &req.email, &req.password, "identity.registered")
             .await
-            .map_err(|error| map_register_error(error))?;
+            .map_err(map_register_error)?;
 
     Ok((
         StatusCode::CREATED,

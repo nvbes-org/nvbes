@@ -2,9 +2,18 @@ use std::sync::{Mutex, OnceLock};
 
 use super::IdentityConfig;
 
+const TEST_MFA_KEY: &str = "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=";
+
 fn env_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+}
+
+fn set_test_mfa_env() {
+    unsafe {
+        std::env::set_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY", TEST_MFA_KEY);
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+    }
 }
 
 #[test]
@@ -49,6 +58,7 @@ fn previous_mfa_key_requires_a_distinct_complete_pair() {
     let _guard = env_lock();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "test");
+        set_test_mfa_env();
         std::env::set_var(
             "NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY",
             "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
@@ -58,6 +68,8 @@ fn previous_mfa_key_requires_a_distinct_complete_pair() {
     assert!(IdentityConfig::from_env().is_err());
     unsafe {
         std::env::remove_var("NVBES_ENVIRONMENT");
+        std::env::remove_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_KEY_VERSION");
         std::env::remove_var("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
     }
 }
@@ -67,6 +79,7 @@ fn database_pool_is_bounded() {
     let _guard = env_lock();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "test");
+        set_test_mfa_env();
         std::env::set_var("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS", "21");
     }
     let error = IdentityConfig::from_env().expect_err("oversized pool must fail");
@@ -77,6 +90,8 @@ fn database_pool_is_bounded() {
     );
     unsafe {
         std::env::remove_var("NVBES_ENVIRONMENT");
+        std::env::remove_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_KEY_VERSION");
         std::env::remove_var("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS");
     }
 }
@@ -90,11 +105,7 @@ fn production_requires_authenticated_observability() {
             "NVBES_IDENTITY_DATABASE_URL",
             "postgres://identity.test/identity",
         );
-        std::env::set_var(
-            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
-            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
-        );
-        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+        set_test_mfa_env();
         std::env::remove_var("NVBES_IDENTITY_METRICS_TOKEN");
     }
     let error = IdentityConfig::from_env().expect_err("production metrics must fail closed");
@@ -112,10 +123,29 @@ fn production_requires_authenticated_observability() {
 }
 
 #[test]
+fn test_environment_requires_mfa_encryption_key() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "test");
+        std::env::remove_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_KEY_VERSION");
+        std::env::remove_var("NVBES_IDENTITY_PUBLIC_SIGNUP");
+    }
+    let error = IdentityConfig::from_env().expect_err("test must require MFA key");
+    assert!(
+        error
+            .to_string()
+            .contains("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
+    );
+    unsafe { std::env::remove_var("NVBES_ENVIRONMENT") };
+}
+
+#[test]
 fn public_signup_defaults_to_environment() {
     let _guard = env_lock();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "test");
+        set_test_mfa_env();
         std::env::remove_var("NVBES_IDENTITY_PUBLIC_SIGNUP");
         std::env::remove_var("NVBES_IDENTITY_LOGIN_URL");
         std::env::remove_var("NVBES_IDENTITY_SESSION_COOKIE_SECURE");
@@ -127,11 +157,7 @@ fn public_signup_defaults_to_environment() {
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "production");
         std::env::set_var("NVBES_IDENTITY_DATABASE_URL", "postgres://identity.test/db");
-        std::env::set_var(
-            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
-            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
-        );
-        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+        set_test_mfa_env();
         std::env::set_var(
             "NVBES_IDENTITY_METRICS_TOKEN",
             "production-identity-metrics-token-value",

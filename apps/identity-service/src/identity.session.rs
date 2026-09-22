@@ -68,11 +68,10 @@ pub fn validate_return_to(return_to: &str, issuer: &str) -> Option<String> {
         return Some(return_to.to_string());
     }
     let issuer = issuer.trim_end_matches('/');
-    if return_to.starts_with(issuer) {
-        let path = &return_to[issuer.len()..];
-        if path.starts_with("/oauth/authorize?") || path == "/oauth/authorize" {
-            return Some(return_to.to_string());
-        }
+    if let Some(path) = return_to.strip_prefix(issuer)
+        && (path.starts_with("/oauth/authorize?") || path == "/oauth/authorize")
+    {
+        return Some(return_to.to_string());
     }
     None
 }

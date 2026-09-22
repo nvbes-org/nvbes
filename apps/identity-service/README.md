@@ -39,8 +39,8 @@ Le smoke exige en plus `NVBES_IDENTITY_SYNTHETIC_EMAIL`,
 secrets ni les tokens éphémères.
 
 `synthetic-mfa-smoke` exige aussi `NVBES_IDENTITY_MFA_ENCRYPTION_KEY`, clé de
-32 octets encodée en base64. Hors développement, le runtime refuse de démarrer
-sans cette clé. Le smoke ne restitue jamais le secret TOTP.
+32 octets encodée en base64. Le runtime exige toujours cette clé, y compris en
+développement. Le smoke ne restitue jamais le secret TOTP.
 
 La rotation utilise `NVBES_IDENTITY_MFA_KEY_VERSION` pour la clé active et la
 paire optionnelle `NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY` /

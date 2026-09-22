@@ -1,8 +1,6 @@
 use base64::{Engine, engine::general_purpose::STANDARD};
 use std::net::SocketAddr;
 
-const DEVELOPMENT_MFA_KEY: &str = "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=";
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentityConfig {
     pub environment: String,
@@ -45,16 +43,9 @@ impl IdentityConfig {
             .parse()
             .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_BIND_ADDR"))?;
         let mfa_encryption_key = optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
-            .or_else(|| {
-                matches!(environment.as_str(), "development" | "test")
-                    .then(|| DEVELOPMENT_MFA_KEY.into())
-            })
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
             .and_then(|value| decode_key(&value))?;
-        let mfa_key_version = version(
-            "NVBES_IDENTITY_MFA_KEY_VERSION",
-            matches!(environment.as_str(), "development" | "test").then_some(1),
-        )?;
+        let mfa_key_version = version("NVBES_IDENTITY_MFA_KEY_VERSION", development.then_some(1))?;
         let previous_key = optional("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
         let previous_version = optional("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");
         let (mfa_previous_encryption_key, mfa_previous_key_version) =
