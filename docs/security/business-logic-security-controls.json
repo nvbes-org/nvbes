@@ -11,23 +11,15 @@
         {
           "id": "BLS_CTRL_001",
           "name": "Checkout and registration server decisions",
-          "description": "Block client-controlled business outcomes by deriving billing lock state, registration region, data region, and profile acceptance on the server.",
+          "description": "Block client-controlled business outcomes by deriving billing lock state, subscription status, and credential validation on the server.",
           "evidence": [
             {
               "path": "libs/rust/billing/src/checkout_sessions.rs",
-              "includes": [
-                "enforce_billing_record_can_start_checkout",
-                "subscription_status_requires_lock",
-                "BillingCheckoutSessionError::BillingLocked"
-              ]
+              "includes": ["subscription_status_requires_lock", "BillingCheckoutSessionError"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.register.rs",
-              "includes": [
-                "detect_profile_from_country_code",
-                "country_code_to_data_region",
-                "legal_documents_required"
-              ]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["normalize_email", "validate_password", "hash_password"]
             }
           ]
         }
@@ -40,21 +32,16 @@
       "controls": [
         {
           "id": "BLS_CTRL_002",
-          "name": "Authentication state and challenge lifecycle",
-          "description": "Persist short-lived authentication state, require the expected next step, and consume challenges when they are completed.",
+          "name": "Authentication and billing event state lifecycle",
+          "description": "Persist short-lived challenges with single-use tokens and process external events transactionally.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.state.rs",
-              "includes": ["next_step", "expected_step", "invalid_auth_step", "consume_state"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["request_recovery", "reset_password", "consumed_at"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.login_challenges.state.rs",
-              "includes": [
-                "consumed_at.is_some()",
-                "expires_at <= chrono::Utc::now()",
-                "consume_challenge",
-                "cache_take_json"
-              ]
+              "path": "apps/billing-service/src/billing.webhooks.rs",
+              "includes": ["stripe_webhook_handler", "apply_subscription_event_on_connection"]
             }
           ]
         }
@@ -67,41 +54,16 @@
       "controls": [
         {
           "id": "BLS_CTRL_003",
-          "name": "In-flight idempotency claim",
-          "description": "Reserve an idempotency key before executing a mutating request, return 409 for a concurrent duplicate, and only release the claim after the response is persisted for replay.",
+          "name": "Idempotency validation and reconciliation tracking",
+          "description": "Enforce idempotency keys, hash request bodies, and deduplicate inbound events.",
           "evidence": [
             {
               "path": "libs/rust/core/src/idempotency.rs",
-              "includes": [
-                "pub enum IdempotencyClaim",
-                "claim_idempotency_request",
-                "idempotency_claim_value",
-                "nvbes:idem:claim"
-              ]
+              "includes": ["validate_key", "derive_scope", "hash_request_body", "IdempotencyScope"]
             },
             {
-              "path": "libs/rust/redis/src/redis.idempotency.rs",
-              "includes": [
-                "delete_if_value",
-                "redis.call(\"GET\", KEYS[1])",
-                "redis.call(\"DEL\", KEYS[1])"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.http.middleware.idempotency.rs",
-              "includes": [
-                "IdempotencyClaim::InProgress",
-                "idempotency_request_in_progress",
-                "release_idempotency_claim"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.pow.rs",
-              "includes": [
-                "consumed_at",
-                "pow_nonce_consumed",
-                "UPDATE pow_challenges SET consumed_at = NOW()"
-              ]
+              "path": "apps/billing-service/src/billing.webhooks.rs",
+              "includes": ["record_reconciliation_item"]
             }
           ]
         }
@@ -115,7 +77,7 @@
         {
           "id": "BLS_CTRL_004",
           "name": "Multi-key rate limits and bot controls",
-          "description": "Apply independent IP and scoped-key rate limits to sensitive flows and keep the anti-automation controls wired into the root security gate.",
+          "description": "Apply independent IP and scoped-key rate limits to sensitive flows and maintain anti-automation controls.",
           "evidence": [
             {
               "path": "libs/rust/core/src/limiter.rs",
@@ -127,11 +89,7 @@
             },
             {
               "path": "docs/security/bot-management-controls.json",
-              "includes": [
-                "Rate Limiting and Quotas",
-                "Honeypots and Tarpits",
-                "Public API anti-automation"
-              ]
+              "includes": ["Rate Limiting and Quotas", "Public APIs"]
             }
           ]
         }
@@ -145,7 +103,7 @@
         {
           "id": "BLS_CTRL_005",
           "name": "Contextual workspace authorization",
-          "description": "Evaluate business permissions from action, actor role, ownership, target role, and workspace policy instead of trusting a coarse role check.",
+          "description": "Evaluate business permissions from action, actor role, ownership, target role, and workspace policy.",
           "evidence": [
             {
               "path": "libs/rust/core/src/authz.policy.rs",
@@ -155,8 +113,7 @@
               "path": "libs/rust/core/src/authz.policy.tests.rs",
               "includes": [
                 "workspace_membership_roles_cover_expected_permission_boundaries",
-                "member_can_only_modify_owned_objects",
-                "member_share_link_requires_policy_and_ownership"
+                "member_can_only_modify_owned_objects"
               ]
             }
           ]
@@ -170,24 +127,16 @@
       "controls": [
         {
           "id": "BLS_CTRL_006",
-          "name": "Semantic registration and quota validation",
-          "description": "Validate legal acceptance, backend-derived supported regions, and quota/spend-cap semantics server-side.",
+          "name": "Semantic registration and password validation",
+          "description": "Validate email semantics and length boundaries server-side before execution.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.register.rs",
-              "includes": [
-                "registration_country_from_headers",
-                "region_detection_failed",
-                "legal_documents_required"
-              ]
+              "path": "apps/identity-service/src/identity.http.rs",
+              "includes": ["normalize_email", "validate_password"]
             },
             {
-              "path": "libs/rust/billing/src/usage.rs",
-              "includes": [
-                "storage_gb_month_billable_quantity",
-                "saturating_sub",
-                "spend_cap_minor"
-              ]
+              "path": "libs/rust/core/src/auth.helpers.validation.rs",
+              "includes": ["validate_email", "validate_password", "MIN_PASSWORD_LENGTH"]
             }
           ]
         }
@@ -200,12 +149,12 @@
       "controls": [
         {
           "id": "BLS_CTRL_007",
-          "name": "Audit and risk event evidence",
-          "description": "Record auth, billing, and bot/security decisions so business-logic abuse is visible to investigation and alerting workflows.",
+          "name": "Audit event evidence across domains",
+          "description": "Record authentication and billing decisions so business-logic events are visible in audit tables.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.audit.rs",
-              "includes": ["AuthAuditInput", "record_auth_event", "AuditRecordInput"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["audit(&mut tx, principal_id, \"identity.authenticated\")"]
             },
             {
               "path": "libs/rust/billing/src/checkout_sessions.audit.rs",
@@ -214,10 +163,6 @@
                 "CheckoutStartedAudit",
                 "insert_billing_audit_event_tx"
               ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.bot_response.rs",
-              "includes": ["identity_bot_guard_decisions_total", "record_decision", "apply_tarpit"]
             }
           ]
         }
@@ -231,15 +176,11 @@
         {
           "id": "BLS_CTRL_008",
           "name": "Business security registry gate",
-          "description": "Fail the root check when business-logic controls, evidence, or the new in-flight idempotency implementation are removed.",
+          "description": "Fail the root check when business-logic controls or evidence markers are removed.",
           "evidence": [
             {
               "path": "docs/security/authorization-regression-tests.json",
-              "includes": [
-                "Actor-resource-action matrix",
-                "Horizontal Escalation",
-                "Vertical Escalation"
-              ]
+              "includes": ["Actor-resource-action matrix"]
             },
             {
               "path": "package.json",

@@ -233,3 +233,7 @@ pub async fn sweep_pending(state: &BillingWorkerState) -> anyhow::Result<usize> 
     }
     Ok(count)
 }
+
+#[cfg(test)]
+#[path = "billing.worker.dispatcher.tests.rs"]
+mod tests;

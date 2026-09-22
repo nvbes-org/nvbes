@@ -73,7 +73,7 @@ proptest! {
 
     #[test]
     fn validate_https_url_accepts_valid_https(
-        host in "[a-z0-9\\-]{3,16}\\.[a-z]{2,6}",
+        host in "[a-z0-9]([a-z0-9\\-]{1,14}[a-z0-9])?\\.[a-z]{2,6}",
         path in "/[a-z0-9/_\\-]{0,32}"
     ) {
         let url = format!("https://{host}{path}");
@@ -82,7 +82,7 @@ proptest! {
 
     #[test]
     fn validate_https_url_rejects_plain_http_remote(
-        host in "[a-z0-9\\-]{3,16}\\.[a-z]{2,6}",
+        host in "[a-z0-9]([a-z0-9\\-]{1,14}[a-z0-9])?\\.[a-z]{2,6}",
         path in "/[a-z0-9/_\\-]{0,32}"
     ) {
         let url = format!("http://{host}{path}");

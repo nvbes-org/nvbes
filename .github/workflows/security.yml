@@ -5,13 +5,14 @@ on:
     branches: [main]
   push:
     branches: [main]
+  merge_group:
   schedule:
     - cron: '23 3 * * 1'
   workflow_dispatch:
 
 concurrency:
   group: security-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
 
 permissions:
   actions: read
@@ -135,7 +136,7 @@ jobs:
           format: sarif
           limit-severities-for-sarif: true
           output: trivy-results.sarif
-          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
+          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,archive,infrastructure/local/observability/app-logs
       - name: Generate CycloneDX SBOM
         if: always()
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -144,7 +145,7 @@ jobs:
           scan-ref: .
           format: cyclonedx
           output: nvbes.cdx.json
-          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
+          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,archive,infrastructure/local/observability/app-logs
       - name: Upload CycloneDX SBOM
         if: always() && hashFiles('nvbes.cdx.json') != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
@@ -171,6 +172,7 @@ jobs:
         language:
           - javascript-typescript
           - actions
+          - rust
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -183,6 +185,7 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: none
           queries: security-extended
+          config-file: .github/codeql/codeql-config.yml
       - name: Analyze
         uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
         with:
