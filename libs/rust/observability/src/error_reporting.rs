@@ -9,6 +9,13 @@ use sentry::protocol::{Level, Value};
 
 static ERROR_REPORTING_CONFIGURED: AtomicBool = AtomicBool::new(false);
 
+#[cfg(test)]
+pub(crate) fn error_reporting_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    use std::sync::{Mutex, OnceLock};
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+}
+
 pub struct ErrorReportingGuard {
     _guard: Option<sentry::ClientInitGuard>,
 }

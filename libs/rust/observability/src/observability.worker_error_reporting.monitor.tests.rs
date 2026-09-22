@@ -2,7 +2,9 @@ use super::{
     ErrorReportingSmokeResult, WorkerMonitorSchedule, capture_error_reporting_smoke,
     capture_worker_heartbeat, monitor_config, start_worker_monitor_check_in, worker_monitor_slug,
 };
-use crate::error_reporting::{ErrorReportingConfig, init_error_reporting_with_config};
+use crate::error_reporting::{
+    ErrorReportingConfig, error_reporting_test_lock, init_error_reporting_with_config,
+};
 use sentry::protocol::{MonitorIntervalUnit, MonitorSchedule};
 
 #[test]
@@ -88,6 +90,16 @@ fn worker_monitor_config_clamps_zero_interval_to_one_minute() {
 
 #[test]
 fn smoke_and_heartbeat_are_safe_when_error_reporting_is_disabled() {
+    let _lock = error_reporting_test_lock();
+    // Explicitly clear any process-wide Sentry state left by parallel suites.
+    let _disabled = init_error_reporting_with_config(ErrorReportingConfig {
+        app_name: "nvbes-observability-tests",
+        service_name: "nvbes-observability-tests",
+        environment: "test",
+        dsn: None,
+        traces_sample_rate: 0.0,
+    });
+
     let result = capture_error_reporting_smoke("nvbes-observability", "test", "unit", false);
     assert_eq!(result.status, "skipped");
     assert!(!result.configured);
@@ -112,6 +124,7 @@ fn smoke_and_heartbeat_are_safe_when_error_reporting_is_disabled() {
 
 #[test]
 fn smoke_and_heartbeat_send_when_error_reporting_is_configured() {
+    let _lock = error_reporting_test_lock();
     let _guard = init_error_reporting_with_config(ErrorReportingConfig {
         app_name: "nvbes-observability-tests",
         service_name: "nvbes-observability-tests",

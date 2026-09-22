@@ -4,9 +4,10 @@ use std::time::Duration;
 use nvbes_core::config::AppConfig;
 
 use super::{
-    ErrorReportingConfig, HttpServerErrorContext, capture_http_server_error, flush_error_reporting,
-    init_error_reporting, init_error_reporting_for_service, init_error_reporting_with_config,
-    install_safe_panic_hook, is_error_reporting_configured, release_name,
+    ErrorReportingConfig, HttpServerErrorContext, capture_http_server_error, error_reporting_test_lock,
+    flush_error_reporting, init_error_reporting, init_error_reporting_for_service,
+    init_error_reporting_with_config, install_safe_panic_hook, is_error_reporting_configured,
+    release_name,
 };
 
 fn env_lock() -> std::sync::MutexGuard<'static, ()> {
@@ -16,6 +17,7 @@ fn env_lock() -> std::sync::MutexGuard<'static, ()> {
 
 #[test]
 fn init_without_dsn_disables_error_reporting() {
+    let _lock = error_reporting_test_lock();
     let _guard = init_error_reporting_with_config(ErrorReportingConfig {
         app_name: "nvbes-observability-tests",
         service_name: "nvbes-observability-tests",
@@ -55,6 +57,7 @@ fn error_reporting_config_fields_are_accessible() {
 
 #[test]
 fn init_from_app_config_without_dsn_stays_disabled() {
+    let _lock = error_reporting_test_lock();
     let config = AppConfig {
         app_name: "nvbes-observability".into(),
         environment: "test".into(),
@@ -94,6 +97,7 @@ fn release_name_prefers_sentry_then_nvbes_env() {
 
 #[test]
 fn init_with_dsn_enables_capture_path() {
+    let _lock = error_reporting_test_lock();
     let _guard = init_error_reporting_with_config(ErrorReportingConfig {
         app_name: "nvbes-observability-tests",
         service_name: "nvbes-observability-tests",

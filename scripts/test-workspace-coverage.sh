@@ -5,13 +5,20 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Serialize across concurrent agent pre-push / local runs on the same workspace.
+mkdir -p "$ROOT_DIR/target"
+exec 9>"$ROOT_DIR/target/coverage.lock"
+if ! flock -w 3600 9; then
+  printf 'error: timed out waiting for %s\n' "coverage.lock" >&2
+  exit 1
+fi
+
 COVERAGE_DIR=".temp/rust"
 COVERAGE_REPORT="$COVERAGE_DIR/coverage-workspace.json"
 THRESHOLDS="docs/testing/rust-coverage-thresholds.json"
 IGNORE_REGEX='(\.tests\.rs|\.test_support\.rs)$'
-# Keep stable coverage away from nightly condition profdata (format mismatch).
-export CARGO_TARGET_DIR="${ROOT_DIR}/target/coverage-cov"
-TARGET_DIR="${CARGO_TARGET_DIR}/llvm-cov-target"
+# Isolate from nightly condition (cargo-llvm-cov nests llvm-cov-target under this).
+export CARGO_TARGET_DIR="${ROOT_DIR}/target/coverage"
 
 if ! command -v cargo >/dev/null 2>&1; then
   printf 'error: missing required command: cargo\n' >&2
@@ -33,28 +40,14 @@ done
 
 mkdir -p "$COVERAGE_DIR" "$CARGO_TARGET_DIR"
 cargo llvm-cov clean --workspace || true
-# Best-effort wipe; concurrent scanners can leave non-empty dirs momentarily.
-chmod -R u+w "$TARGET_DIR" 2>/dev/null || true
-rm -rf "$TARGET_DIR" 2>/dev/null || true
-mkdir -p "$TARGET_DIR"
 
+# One-shot line coverage on stable. Avoid wiping CARGO_TARGET_DIR between clean
+# and collect: an empty tree without CACHEDIR.TAG races rustc out-dirs.
 cargo llvm-cov \
   --workspace \
   --all-targets \
   --all-features \
   --locked \
-  --no-report
-
-# Drop build-script artifacts that make llvm-cov export SIGSEGV on some hosts.
-# Only remove known compiler/build-script crate outputs under debug/build — never
-# wipe the whole tree (nightly branch mode stores test bins there).
-if [[ -d "$TARGET_DIR/debug/build" ]]; then
-  find "$TARGET_DIR/debug/build" -mindepth 1 -maxdepth 1 -type d ! -name 'nvbes-*' \
-    -exec rm -rf {} + 2>/dev/null || true
-fi
-rm -rf "$TARGET_DIR/release/build" 2>/dev/null || true
-
-cargo llvm-cov report \
   --ignore-filename-regex "$IGNORE_REGEX" \
   --json \
   --summary-only \

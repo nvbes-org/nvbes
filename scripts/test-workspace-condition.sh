@@ -5,15 +5,21 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Serialize across concurrent agent pre-push / local runs on the same workspace.
+mkdir -p "$ROOT_DIR/target"
+exec 9>"$ROOT_DIR/target/condition.lock"
+if ! flock -w 3600 9; then
+  printf 'error: timed out waiting for %s\n' "condition.lock" >&2
+  exit 1
+fi
+
 CONDITION_DIR=".temp/rust"
 CONDITION_REPORT="$CONDITION_DIR/coverage-condition-workspace.json"
 THRESHOLDS="docs/testing/rust-condition-thresholds.json"
 TOOLCHAIN="nightly-2026-09-09"
 IGNORE_REGEX='(\.tests\.rs|\.test_support\.rs)$'
-# Isolate from stable coverage: cargo-llvm-cov nests llvm-cov-target under CARGO_TARGET_DIR,
-# and stable/nightly profdata formats are incompatible.
-export CARGO_TARGET_DIR="${ROOT_DIR}/target/condition-cov"
-TARGET_DIR="${CARGO_TARGET_DIR}/llvm-cov-target"
+# Isolate from stable coverage (cargo-llvm-cov nests llvm-cov-target under this).
+export CARGO_TARGET_DIR="${ROOT_DIR}/target/condition"
 
 if [[ "${NVBES_CONDITION_TOOLCHAIN:-$TOOLCHAIN}" != "$TOOLCHAIN" ]]; then
   printf 'error: branch evidence requires pinned toolchain %s\n' "$TOOLCHAIN" >&2
@@ -40,8 +46,6 @@ done
 
 mkdir -p "$CONDITION_DIR" "$CARGO_TARGET_DIR"
 rustup run "$TOOLCHAIN" -- cargo llvm-cov clean --workspace || true
-chmod -R u+w "$TARGET_DIR" 2>/dev/null || true
-rm -rf "$TARGET_DIR" 2>/dev/null || true
 
 # One-shot report: nightly --branch places instrumented test binaries under
 # debug/build/<crate>/out; do not delete that tree before export.
