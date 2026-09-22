@@ -205,7 +205,7 @@ pub async fn start_metrics_server(
     config: &AppConfig,
     metrics: HttpMetrics,
     bind_addr: &str,
-) -> std::io::Result<JoinHandle<()>> {
+) -> std::io::Result<(std::net::SocketAddr, JoinHandle<()>)> {
     let listener = TcpListener::bind(bind_addr).await?;
     let addr = listener.local_addr()?;
     let router = Router::new()
@@ -218,11 +218,14 @@ pub async fn start_metrics_server(
 
     tracing::info!(addr = %addr, "Starting worker metrics listener");
 
-    Ok(tokio::spawn(async move {
-        if let Err(error) = axum::serve(listener, router).await {
-            tracing::error!(error = %error, "Worker metrics listener stopped");
-        }
-    }))
+    Ok((
+        addr,
+        tokio::spawn(async move {
+            if let Err(error) = axum::serve(listener, router).await {
+                tracing::error!(error = %error, "Worker metrics listener stopped");
+            }
+        }),
+    ))
 }
 
 impl Default for HttpMetrics {
@@ -230,3 +233,7 @@ impl Default for HttpMetrics {
         Self::new()
     }
 }
+
+#[cfg(test)]
+#[path = "observability.metrics.tests.rs"]
+mod tests;

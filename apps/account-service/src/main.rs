@@ -27,6 +27,10 @@ mod synthetic;
 #[path = "account.teams.rs"]
 mod teams;
 
+#[cfg(test)]
+#[path = "account.test_support.rs"]
+mod test_support;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let command: Vec<String> = std::env::args().skip(1).collect();

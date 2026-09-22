@@ -255,29 +255,5 @@ fn server_timing_value(duration_ms: u64) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{request_path_template, server_timing_value};
-    use axum::{body::Body, http::Request};
-
-    #[test]
-    fn request_path_template_uses_matched_path_when_present() {
-        let template = request_path_template(Some("/files/{file_id}"));
-
-        assert_eq!(template, "/files/{file_id}");
-    }
-
-    #[test]
-    fn request_path_template_falls_back_when_unmatched() {
-        let _req = Request::builder()
-            .uri("/files/123")
-            .body(Body::empty())
-            .expect("request");
-
-        assert_eq!(request_path_template(None), "unmatched");
-    }
-
-    #[test]
-    fn server_timing_reports_total_app_duration() {
-        assert_eq!(server_timing_value(42), "app;dur=42");
-    }
-}
+#[path = "observability.middleware.tests.rs"]
+mod tests;

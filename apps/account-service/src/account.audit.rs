@@ -58,3 +58,7 @@ pub async fn enqueue(
     .await?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "account.audit.tests.rs"]
+mod tests;

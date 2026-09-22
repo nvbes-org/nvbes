@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{privacy_jobs, synthetic};
+use crate::{privacy_jobs, profile, synthetic, teams};
 
 #[sqlx::test(migrations = "./migrations")]
 async fn account_lifecycle_is_isolated_audited_and_privacy_safe(pool: PgPool) {
@@ -70,4 +70,114 @@ async fn account_lifecycle_is_isolated_audited_and_privacy_safe(pool: PgPool) {
         mutation.is_err(),
         "append-only audit events reject deletion"
     );
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn profile_preferences_teams_and_export_jobs(pool: PgPool) {
+    let owner = Uuid::new_v4();
+    let member = Uuid::new_v4();
+
+    let created = profile::ensure_profile(&pool, owner).await.unwrap();
+    assert_eq!(created.principal_id, owner);
+    let again = profile::ensure_profile(&pool, owner).await.unwrap();
+    assert_eq!(again.principal_id, owner);
+
+    sqlx::query(
+        "UPDATE account_preferences SET theme='dark', language='en', email_notifications=false WHERE principal_id=$1",
+    )
+    .bind(owner)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let theme: String =
+        sqlx::query_scalar("SELECT theme FROM account_preferences WHERE principal_id=$1")
+            .bind(owner)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(theme, "dark");
+
+    let (team_id, role) = teams::create_and_join_for_synthetic(&pool, owner, member)
+        .await
+        .unwrap();
+    assert_eq!(role, "member");
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>(
+            "SELECT count(*) FROM account_team_memberships WHERE team_id=$1",
+        )
+        .bind(team_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap(),
+        2
+    );
+
+    let export_id = Uuid::new_v4();
+    sqlx::query("INSERT INTO account_exports(id,principal_id,status) VALUES($1,$2,'pending')")
+        .bind(export_id)
+        .bind(owner)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let jobs = privacy_jobs::process_pending(&pool).await.unwrap();
+    assert_eq!(jobs.exports_completed, 1);
+    let status: String = sqlx::query_scalar("SELECT status FROM account_exports WHERE id=$1")
+        .bind(export_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(status, "completed");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn join_team_rejects_malformed_codes_and_is_idempotent(pool: PgPool) {
+    use sha2::{Digest, Sha256};
+
+    let owner = Uuid::new_v4();
+    let member = Uuid::new_v4();
+    profile::ensure_profile(&pool, owner).await.unwrap();
+    profile::ensure_profile(&pool, member).await.unwrap();
+
+    let join_code = format!("team_{}", Uuid::new_v4().simple());
+    assert_eq!(join_code.len(), 37);
+    let team_id = Uuid::new_v4();
+    let hash = Sha256::digest(join_code.as_bytes());
+    sqlx::query(
+        "INSERT INTO account_teams(id, owner_principal_id, name, join_code_hash) VALUES($1,$2,'Join suite',$3)",
+    )
+    .bind(team_id)
+    .bind(owner)
+    .bind(hash.as_slice())
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO account_team_memberships(team_id,principal_id,role) VALUES($1,$2,'owner')",
+    )
+    .bind(team_id)
+    .bind(owner)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let first = teams::join_team(&pool, member, &join_code, Uuid::new_v4())
+        .await
+        .unwrap();
+    assert_eq!(first.id, team_id);
+    assert_eq!(first.role, "member");
+
+    let second = teams::join_team(&pool, member, &join_code, Uuid::new_v4())
+        .await
+        .unwrap();
+    assert_eq!(second.id, team_id);
+    assert_eq!(second.role, "member");
+
+    assert!(matches!(
+        teams::join_team(&pool, member, "bad", Uuid::new_v4()).await,
+        Err(crate::error::AccountError::NotFound)
+    ));
+    assert!(matches!(
+        teams::join_team(&pool, member, "team_short", Uuid::new_v4()).await,
+        Err(crate::error::AccountError::NotFound)
+    ));
 }

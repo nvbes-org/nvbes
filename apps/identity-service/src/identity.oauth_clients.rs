@@ -223,3 +223,7 @@ fn random_token() -> String {
     rand::rng().fill_bytes(&mut bytes);
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
 }
+
+#[cfg(test)]
+#[path = "identity.oauth_clients.tests.rs"]
+mod tests;

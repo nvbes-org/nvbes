@@ -68,12 +68,8 @@ async fn update_preferences(
     Json(input): Json<UpdatePreferences>,
 ) -> AccountResult<Json<Preferences>> {
     principal.require("account:write")?;
-    if !matches!(input.theme.as_str(), "system" | "light" | "dark") {
-        return Err(AccountError::Invalid("unsupported theme"));
-    }
-    if !matches!(input.language.as_str(), "fr" | "en") {
-        return Err(AccountError::Invalid("unsupported language"));
-    }
+    validate_theme(&input.theme)?;
+    validate_language(&input.language)?;
     ensure_profile(&state.db, principal.id).await?;
     let mut tx = state.db.begin().await?;
     let value = sqlx::query_as("UPDATE account_preferences SET theme=$2,language=$3,updated_at=clock_timestamp() WHERE principal_id=$1 RETURNING theme,language")
@@ -149,3 +145,19 @@ async fn record_change(
     .await?;
     Ok(())
 }
+
+fn validate_theme(theme: &str) -> AccountResult<()> {
+    matches!(theme, "system" | "light" | "dark")
+        .then_some(())
+        .ok_or(AccountError::Invalid("unsupported theme"))
+}
+
+fn validate_language(language: &str) -> AccountResult<()> {
+    matches!(language, "fr" | "en")
+        .then_some(())
+        .ok_or(AccountError::Invalid("unsupported language"))
+}
+
+#[cfg(test)]
+#[path = "account.preferences.tests.rs"]
+mod tests;

@@ -5,6 +5,7 @@ use nvbes_observability::{
 
 pub const APP_NAME: &str = "nvbes-identity-service";
 
+#[derive(Debug)]
 pub struct ErrorReportingRuntimeConfig {
     environment: String,
     dsn: String,
@@ -51,3 +52,7 @@ fn required(name: &str) -> anyhow::Result<String> {
         .filter(|value| !value.trim().is_empty())
         .ok_or_else(|| anyhow::anyhow!("{name} is required"))
 }
+
+#[cfg(test)]
+#[path = "identity.error_reporting.tests.rs"]
+mod tests;

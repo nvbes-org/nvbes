@@ -166,14 +166,5 @@ fn otlp_metadata(config: TracingConfig<'_>) -> Option<tonic::metadata::MetadataM
 }
 
 #[cfg(test)]
-mod tests {
-    use super::otlp_http_signal_endpoint;
-
-    #[test]
-    fn http_signal_endpoint_is_canonical() {
-        assert_eq!(
-            otlp_http_signal_endpoint("https://example.grafana.net/otlp/", "/v1/traces"),
-            "https://example.grafana.net/otlp/v1/traces"
-        );
-    }
-}
+#[path = "observability.tracing.tests.rs"]
+mod tests;

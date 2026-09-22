@@ -113,24 +113,5 @@ impl FromRequestParts<AccountState> for Principal {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::Principal;
-    use uuid::Uuid;
-
-    #[test]
-    fn destructive_actions_require_a_step_up_method() {
-        let password_only = Principal {
-            id: Uuid::new_v4(),
-            scopes: vec!["account:close".into()],
-            authentication_methods: vec!["pwd".into()],
-        };
-        assert!(password_only.require("account:close").is_ok());
-        assert!(password_only.require_step_up().is_err());
-
-        let stepped_up = Principal {
-            authentication_methods: vec!["pwd".into(), "webauthn".into()],
-            ..password_only
-        };
-        assert!(stepped_up.require_step_up().is_ok());
-    }
-}
+#[path = "account.auth.tests.rs"]
+mod tests;

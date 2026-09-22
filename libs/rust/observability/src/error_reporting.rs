@@ -114,10 +114,14 @@ pub fn flush_error_reporting(timeout: Duration) -> bool {
 
 pub fn install_safe_panic_hook() {}
 
-fn release_name() -> Option<Cow<'static, str>> {
+pub(crate) fn release_name() -> Option<Cow<'static, str>> {
     std::env::var("SENTRY_RELEASE")
         .or_else(|_| std::env::var("NVBES_RELEASE"))
         .ok()
         .map(Cow::Owned)
         .or_else(|| sentry::release_name!())
 }
+
+#[cfg(test)]
+#[path = "observability.error_reporting.tests.rs"]
+mod tests;

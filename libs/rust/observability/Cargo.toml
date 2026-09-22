@@ -26,3 +26,6 @@ tracing-opentelemetry = { workspace = true, optional = true }
 [features]
 otlp = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]
 profiling = ["dep:pyroscope"]
+
+[dev-dependencies]
+tower = "0.5"

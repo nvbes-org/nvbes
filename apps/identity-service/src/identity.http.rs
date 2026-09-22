@@ -182,3 +182,7 @@ async fn audit(
         .await?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "identity.http.tests.rs"]
+mod tests;

@@ -20,11 +20,11 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, FromRow)]
-struct Team {
-    id: Uuid,
-    name: String,
-    role: String,
-    created_at: DateTime<Utc>,
+pub(crate) struct Team {
+    pub(crate) id: Uuid,
+    pub(crate) name: String,
+    pub(crate) role: String,
+    pub(crate) created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize)]
@@ -155,7 +155,7 @@ async fn join(
     Ok(Json(team))
 }
 
-async fn join_team(
+pub(crate) async fn join_team(
     db: &PgPool,
     principal_id: Uuid,
     join_code: &str,
@@ -268,3 +268,7 @@ pub async fn create_and_join_for_synthetic(
     let joined = join_team(db, member, &join_code, Uuid::new_v4()).await?;
     Ok((id, joined.role))
 }
+
+#[cfg(test)]
+#[path = "account.teams.tests.rs"]
+mod tests;

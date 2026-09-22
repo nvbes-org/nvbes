@@ -69,3 +69,7 @@ pub fn start_continuous_profiling(
 
     Ok(Some(ContinuousProfilingGuard { agent: Some(agent) }))
 }
+
+#[cfg(test)]
+#[path = "observability.profiling.tests.rs"]
+mod tests;
