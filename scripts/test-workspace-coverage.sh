@@ -37,7 +37,6 @@ cargo llvm-cov \
 
 cargo llvm-cov report \
   --lcov \
-  --all-features \
   --ignore-filename-regex '(\.tests\.rs|\.test_support\.rs)$' \
   --output-path "$COVERAGE_DIR/lcov.info"
 
