@@ -1,0 +1,46 @@
+# Nx Cloud CI configuration (new model, Nx 23).
+#
+# Read by every `nx-cloud` command; agents are provisioned with
+# `npx nx-cloud start-nx-agents` (takes no flags) from the `typescript` job in
+# `.github/workflows/ci.yml`. Do NOT combine with `start-ci-run` flags:
+# `start-ci-run` exits with an error when this file is present.
+#
+# Scope (conservative): only the TypeScript quality gates distribute. Rust
+# (cargo/nextest + Postgres service), database (`test:database` is explicitly
+# non-cacheable + Docker Postgres), terraform (shared plugin cache,
+# `parallel=1`, retry semantics), containers non-Nx checks, contracts non-Nx
+# checks, security scans, deploy and measurement workflows stay local.
+# Docs: https://nx.dev/docs/reference/nx-cloud/ci-config
+
+dte:
+  # 3 medium agents ~= old single ubuntu-latest runner at --parallel=4, with
+  # headroom from Continuous Assignment. Total capacity = agents * per-agent
+  # parallelism; tune agent count separately from `--parallel`.
+  distribute-on: 3 nvbes-medium-js
+
+lifecycle:
+  # Final distributed target set = `qualityTargets` in tools/ci/scope-paths.mjs
+  # (`build` is conditional on metadata.ci.buildRequired; zero-task targets are
+  # vacuously satisfied). Every name verified via `nx show project`.
+  stop-after:
+    - check
+    - format:check
+    - lint
+    - typecheck
+    - test
+    - build
+  # Single distributing job with a 30 min timeout: heartbeat stall detection is
+  # sufficient. No `--require-explicit-completion` / `complete-ci-run`: there is
+  # no multi-stage agent handoff to guard.
+  heartbeat: true
+  # Fail fast, matching `run-lane.mjs` (first failing target throws) and the
+  # `ci-gate` job (every planned lane must succeed).
+  fail-after: 1
+
+nx-agents:
+  with-env-vars:
+    # Minimal forwarding. `run-lane.mjs typescript` reads only the scope plan;
+    # `NX_*` vars auto-forward. Deliberately NOT forwarded: CI identifiers
+    # (CI, GITHUB_*), Scaleway cache creds (agents use Nx Cloud cache), TF_*
+    # (terraform lane stays local), production/deploy secrets.
+    - NVBES_CI_PLAN

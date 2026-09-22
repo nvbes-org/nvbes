@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { evaluatePullRequestCacheTrust, isVerifiedGpgCommit } from './authorize-pr-cache.core.mjs';
+import {
+  evaluatePullRequestCacheTrust,
+  isVerifiedCryptographicCommit,
+} from './authorize-pr-cache.core.mjs';
 
-function fixture() {
+function fixture(signature = '-----BEGIN SSH SIGNATURE-----\nvalid\n-----END SSH SIGNATURE-----') {
   const event = {
     repository: { full_name: 'nvbes-org/nvbes' },
     sender: { login: 'internal' },
@@ -23,7 +26,7 @@ function fixture() {
         verification: {
           verified: true,
           reason: 'valid',
-          signature: '-----BEGIN PGP SIGNATURE-----\nvalid',
+          signature,
         },
       },
     },
@@ -31,12 +34,15 @@ function fixture() {
   return { event, commits, files: [{ filename: 'libs/rust/core/src/lib.rs' }] };
 }
 
-test('recognizes only valid GitHub-verified GPG commits', () => {
-  const { commits } = fixture();
-  assert.equal(isVerifiedGpgCommit(commits[0]), true);
+test('recognizes valid GitHub-verified SSH and OpenPGP commits', () => {
+  assert.equal(isVerifiedCryptographicCommit(fixture().commits[0]), true);
   assert.equal(
-    isVerifiedGpgCommit({
-      ...commits[0],
+    isVerifiedCryptographicCommit(fixture('-----BEGIN PGP SIGNATURE-----\nvalid').commits[0]),
+    true,
+  );
+  assert.equal(
+    isVerifiedCryptographicCommit({
+      ...fixture().commits[0],
       commit: {
         verification: { verified: true, reason: 'valid', signature: 'SSH' },
       },
@@ -96,31 +102,14 @@ test('composite actions and compilation-cache setup are trust boundaries', () =>
   }
 });
 
-test('recognizes valid GitHub-verified SSH commit signatures', () => {
-  const { commits } = fixture();
-  const sshCommit = {
-    ...commits[0],
-    commit: {
-      verification: {
-        verified: true,
-        reason: 'valid',
-        signature: '-----BEGIN SSH SIGNATURE-----\nvalid\n-----END SSH SIGNATURE-----',
-      },
-    },
-  };
-  assert.equal(isVerifiedGpgCommit(sshCommit), true);
-});
-
 test('authorizes an external contributor when explicitly present in CI_CACHE_ALLOWED_USERS', () => {
   const { event, commits, files } = fixture();
   event.pull_request.author_association = 'CONTRIBUTOR';
   event.pull_request.user.login = 'trusted-bot';
   event.sender.login = 'trusted-bot';
 
-  // Initially rejected because not a member and not in allowlist
   assert.equal(evaluatePullRequestCacheTrust(event, commits, files).trusted, false);
 
-  // When added to CI_CACHE_ALLOWED_USERS
   const previousAllowed = process.env.CI_CACHE_ALLOWED_USERS;
   process.env.CI_CACHE_ALLOWED_USERS = 'trusted-bot, external-partner';
   try {

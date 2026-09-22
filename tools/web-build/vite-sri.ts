@@ -23,19 +23,41 @@ export function sriPlugin(): Plugin {
 
 export function injectSriFromFiles(outDir: string): void {
   const htmlPath = path.resolve(outDir, 'index.html');
-  if (!fs.existsSync(htmlPath)) return;
-  let html = fs.readFileSync(htmlPath, 'utf-8');
+  let html: string;
+  try {
+    html = fs.readFileSync(htmlPath, 'utf-8');
+  } catch {
+    return;
+  }
 
   for (const name of outputFileNames(outDir)) {
     if (!/\.(?:css|js)$/u.test(name)) continue;
     const filePath = path.resolve(outDir, name);
-    const hash = crypto.createHash('sha384').update(fs.readFileSync(filePath)).digest('base64');
+    if (!isWithinDirectory(outDir, filePath)) continue;
+    let content: Buffer;
+    try {
+      content = fs.readFileSync(filePath);
+    } catch {
+      continue;
+    }
+    const hash = crypto.createHash('sha384').update(content).digest('base64');
     const integrity = `sha384-${hash}`;
     html = updateIntegrity(html, 'script', 'src', name, integrity);
     html = updateIntegrity(html, 'link', 'href', name, integrity);
   }
 
-  fs.writeFileSync(htmlPath, html);
+  writeFileAtomically(htmlPath, html);
+}
+
+function isWithinDirectory(directory: string, candidate: string): boolean {
+  const root = path.resolve(directory) + path.sep;
+  return path.resolve(candidate).startsWith(root);
+}
+
+function writeFileAtomically(targetPath: string, content: string): void {
+  const tmpPath = `${targetPath}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpPath, content);
+  fs.renameSync(tmpPath, targetPath);
 }
 
 function outputFileNames(directory: string, prefix = ''): string[] {

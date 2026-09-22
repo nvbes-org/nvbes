@@ -84,11 +84,7 @@ test('refuses a raw score below the applicable threshold', () => {
 test('manual trusted CI publishes bounded TypeScript measurement artifacts', () => {
   const workflow = parse(readFileSync('.github/workflows/v1-testing.yml', 'utf8'));
   assert.deepEqual(Object.keys(workflow.on), ['workflow_dispatch']);
-  assert.deepEqual(
-    Object.keys(workflow.on.workflow_dispatch.inputs).sort((a, b) => a.localeCompare(b)),
-    ['expected_sha', 'fallback_of', 'runner'],
-  );
-  assert.equal(workflow.on.workflow_dispatch.inputs.runner.default, 'github-hosted');
+  assert.deepEqual(workflow.on.workflow_dispatch, {});
   assert.equal(workflow.concurrency['cancel-in-progress'], true);
   assert.deepEqual(workflow.permissions, { actions: 'read', contents: 'read' });
   const job = workflow.jobs['typescript-measurement'];

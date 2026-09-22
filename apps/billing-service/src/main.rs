@@ -52,6 +52,20 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    if matches!(command.as_slice(), [action] if action == "check-stripe-mappings") {
+        let config = config::BillingConfig::from_env()?;
+        let pool = database::connect(&config.database_url, 2).await?;
+        let report = plans::check_stripe_mappings(&pool).await?;
+        println!("{}", serde_json::to_string(&report)?);
+        if !report.failures.is_empty() {
+            for failure in &report.failures {
+                eprintln!("stripe mapping error: {failure}");
+            }
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
     if matches!(command.as_slice(), [action] if action == "synthetic-billing-smoke") {
         let config = config::BillingConfig::from_env()?;
         let workspace_id = required_uuid("NVBES_BILLING_SYNTHETIC_WORKSPACE_ID")
@@ -101,7 +115,7 @@ async fn main() -> anyhow::Result<()> {
 
     if !command.is_empty() && command[0] != "serve" {
         anyhow::bail!(
-            "usage: nvbes-billing-service [serve|migrate|validate-runtime|publish-outbox|synthetic-billing-smoke]"
+            "usage: nvbes-billing-service [serve|migrate|validate-runtime|publish-outbox|synthetic-billing-smoke|check-stripe-mappings]"
         );
     }
 

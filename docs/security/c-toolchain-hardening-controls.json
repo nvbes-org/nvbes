@@ -14,6 +14,12 @@
       "kind": "cargo_native_build_script",
       "owner": "account-service",
       "reason": "Uses bindgen and pkg-config for xmlsec1 native headers and libraries."
+    },
+    {
+      "path": "tools/rust-workspace/network-deny.c",
+      "kind": "c_family_file",
+      "owner": "rust-workspace",
+      "reason": "Linux seccomp network sandbox wrapper for isolated micro-tests."
     }
   ],
   "profiles": {

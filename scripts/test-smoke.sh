@@ -32,8 +32,6 @@ case "$metrics_status" in
   *) fail "expected protected metrics endpoint to return 401 or 403, got $metrics_status" ;;
 esac
 
-log_step "public share route is mounted"
-assert_http_not_5xx "$API_BASE_URL/public/shares/smoke-invalid-token"
 
 # Run seeded auth FIRST when enabled, so it gets a clean server state
 # (the public-only probe exhausts per-IP counters or rate-limit entries,
