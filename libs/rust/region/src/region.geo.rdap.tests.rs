@@ -1,6 +1,6 @@
 use super::{
-    DEFAULT_RDAP_REGISTRIES, RdapRegistry, first_entity_name, first_notice_country, parse_asn,
-    string_field,
+    DEFAULT_RDAP_REGISTRIES, RdapClient, RdapRegistry, first_entity_name, first_notice_country,
+    parse_asn, string_field,
 };
 use crate::geo::types::GeoLocation;
 
@@ -46,4 +46,109 @@ fn rdap_country_fields_map_to_supported_locations() {
     let body = serde_json::json!({"country": "de"});
     let country = string_field(&body, "country").expect("country");
     assert!(GeoLocation::from_country_code(&country).is_some());
+}
+
+#[tokio::test]
+async fn lookup_with_base_parses_successful_rdap_payload() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/registry/ip/93.184.216.34"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "country": "US",
+            "startAddress": "93.184.216.0",
+            "endAddress": "93.184.216.255",
+            "handle": "AS15133",
+            "name": "Example ISP"
+        })))
+        .mount(&server)
+        .await;
+
+    let client = RdapClient::new(reqwest::Client::new());
+    let base = format!("{}/registry/ip", server.uri());
+    let lookup = client
+        .lookup_with_base("ripe", &base, "93.184.216.34".parse().unwrap())
+        .await
+        .expect("lookup")
+        .expect("hit");
+    assert_eq!(lookup.location.country_code, "US");
+    assert_eq!(lookup.relation.asn, Some(15133));
+}
+
+#[tokio::test]
+async fn lookup_with_base_treats_http_miss_as_none() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/registry/ip/93.184.216.34"))
+        .respond_with(ResponseTemplate::new(404))
+        .mount(&server)
+        .await;
+
+    let client = RdapClient::new(reqwest::Client::new());
+    let base = format!("{}/registry/ip", server.uri());
+    let lookup = client
+        .lookup_with_base("ripe", &base, "93.184.216.34".parse().unwrap())
+        .await
+        .expect("lookup");
+    assert!(lookup.is_none());
+}
+
+#[tokio::test]
+async fn lookup_with_base_skips_responses_without_country() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/registry/ip/93.184.216.34"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "startAddress": "93.184.216.0",
+            "endAddress": "93.184.216.255"
+        })))
+        .mount(&server)
+        .await;
+
+    let client = RdapClient::new(reqwest::Client::new());
+    let base = format!("{}/registry/ip", server.uri());
+    let lookup = client
+        .lookup_with_base("ripe", &base, "93.184.216.34".parse().unwrap())
+        .await
+        .expect("lookup");
+    assert!(lookup.is_none());
+}
+
+#[tokio::test]
+async fn lookup_with_base_surfaces_json_decode_errors() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/registry/ip/93.184.216.34"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("not-json"))
+        .mount(&server)
+        .await;
+
+    let client = RdapClient::new(reqwest::Client::new());
+    let base = format!("{}/registry/ip", server.uri());
+    let error = client
+        .lookup_with_base("ripe", &base, "93.184.216.34".parse().unwrap())
+        .await
+        .expect_err("decode error");
+    assert!(matches!(error, super::RdapLookupError::Request(_)));
+}
+
+#[tokio::test]
+async fn lookup_returns_none_when_no_registry_matches() {
+    let client = RdapClient::with_registries(reqwest::Client::new(), vec![]);
+    let lookup = client
+        .lookup("93.184.216.34".parse().unwrap())
+        .await
+        .expect("lookup");
+    assert!(lookup.is_none());
 }

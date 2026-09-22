@@ -2,7 +2,16 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{privacy_jobs, profile, synthetic, teams};
+use crate::{database, privacy_jobs, profile, synthetic, teams};
+
+#[cfg(feature = "database-tests")]
+#[sqlx::test(migrations = "./migrations")]
+async fn connect_lazy_and_migrate_succeed_on_test_database(pool: PgPool) {
+    let url = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+    let lazy = database::connect_lazy(&url, 1).expect("lazy pool");
+    assert!(lazy.acquire().await.is_ok());
+    database::migrate(&pool).await.expect("migrations");
+}
 
 #[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]

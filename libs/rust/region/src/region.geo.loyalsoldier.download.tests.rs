@@ -31,3 +31,41 @@ fn verify_sha256_accepts_matching_digest() {
         LoyalsoldierGeoIpDownloadError::ChecksumMismatch
     ));
 }
+
+#[tokio::test]
+async fn download_verified_geoip_reads_local_fixtures_from_mock_server() {
+    use reqwest::Client;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    use crate::geo::v2fly_dat::test_encode_country_dat;
+
+    let dat = test_encode_country_dat("us", "93.184.216.0/24".parse().unwrap());
+    let digest = Sha256::digest(&dat);
+    let hex = digest
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    let checksum = format!("{hex}  geoip.dat");
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/geoip.dat.sha256sum"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(checksum))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/geoip.dat"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(dat.clone()))
+        .mount(&server)
+        .await;
+
+    let downloaded = super::download_verified_loyalsoldier_geoip_with_urls(
+        &Client::new(),
+        &format!("{}/geoip.dat.sha256sum", server.uri()),
+        &format!("{}/geoip.dat", server.uri()),
+    )
+    .await
+    .expect("download");
+    assert_eq!(downloaded, dat);
+}

@@ -139,3 +139,7 @@ fn stripe_session_from_response(
         url: url.to_owned(),
     })
 }
+
+#[cfg(test)]
+#[path = "stripe.sessions.tests.rs"]
+mod tests;

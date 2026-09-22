@@ -330,6 +330,43 @@ async fn token_refresh_rejects_unknown_token_without_database() {
     );
 }
 
+#[cfg(feature = "database-tests")]
+#[sqlx::test(migrations = "./migrations")]
+async fn authorize_redirects_with_code_when_session_is_valid(pool: sqlx::PgPool) {
+    use crate::database::database_test_support::{
+        TokenEnvGuard, identity_state, seed_confidential_oauth_client, seed_principal_and_session,
+    };
+
+    let _env = TokenEnvGuard::install_test_keys();
+    let state = identity_state(pool);
+    let client_id = "db-test-authorize-client";
+    let redirect_uri = "https://app.example.com/oauth/callback";
+    seed_confidential_oauth_client(&state.db, client_id, "unused-secret", redirect_uri).await;
+    let (_, _, session_secret) = seed_principal_and_session(&state.db).await;
+
+    let response = router(&state)
+        .oneshot(
+            Request::builder()
+                .uri(format!(
+                    "/oauth/authorize?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=account:read&state=xyz"
+                ))
+                .header("authorization", format!("Bearer {session_secret}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), axum::http::StatusCode::SEE_OTHER);
+    let location = response
+        .headers()
+        .get("location")
+        .and_then(|value| value.to_str().ok())
+        .expect("redirect location");
+    assert!(location.starts_with(redirect_uri));
+    assert!(location.contains("code="));
+    assert!(location.contains("state=xyz"));
+}
+
 #[test]
 fn validate_helpers_reject_oversized_inputs() {
     assert!(!validate_client_id(&"a".repeat(129)));

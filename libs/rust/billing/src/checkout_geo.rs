@@ -174,3 +174,7 @@ async fn fetch_and_cache_ip_intelligence(
     }
     Ok(lookup)
 }
+
+#[cfg(test)]
+#[path = "checkout_geo.tests.rs"]
+mod tests;

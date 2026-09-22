@@ -244,45 +244,5 @@ fn mollie_status_to_provider_status(status: &str) -> &'static str {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::provider::ProviderCheckoutInput;
-
-    #[test]
-    fn mollie_payment_payload_uses_amount_redirect_and_webhook() {
-        let payload = build_mollie_payment_payload(&ProviderCheckoutInput {
-            tenant_id: "tenant_1".to_string(),
-            provider_customer_id: "cst_1".to_string(),
-            plan_code: Some("team".to_string()),
-            amount_minor: 1234,
-            currency: "EUR".to_string(),
-            success_url: "https://app.example/success".to_string(),
-            cancel_url: "https://app.example/cancel".to_string(),
-            webhook_url: Some("https://api.example/webhook".to_string()),
-            fraud_metadata: vec![("fraud_score".to_string(), "42".to_string())],
-        })
-        .expect("payload should build");
-
-        assert_eq!(payload["amount"]["value"], "12.34");
-        assert_eq!(payload["metadata"]["plan_code"], "team");
-        assert_eq!(payload["metadata"]["fraud_score"], "42");
-    }
-
-    #[test]
-    fn mollie_payment_status_maps_to_provider_payment() {
-        let payment = payment_from_mollie_response(serde_json::json!({
-            "id": "tr_123",
-            "status": "paid",
-            "customerId": "cst_123",
-            "subscriptionId": "sub_123",
-            "metadata": { "plan_code": "team" },
-            "amount": { "currency": "EUR", "value": "12.34" }
-        }))
-        .expect("payment should parse");
-
-        assert_eq!(payment.status, "captured");
-        assert_eq!(payment.provider_customer_id.as_deref(), Some("cst_123"));
-        assert_eq!(payment.provider_subscription_id.as_deref(), Some("sub_123"));
-        assert_eq!(payment.amount_minor, 1234);
-    }
-}
+#[path = "mollie.payments.tests.rs"]
+mod tests;

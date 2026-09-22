@@ -22,11 +22,13 @@ pub use sessions::{
     create_stripe_portal_session,
 };
 
+#[derive(Debug)]
 pub struct StripeSession {
     pub id: String,
     pub url: String,
 }
 
+#[derive(Debug)]
 pub struct StripeCustomer {
     pub id: String,
 }

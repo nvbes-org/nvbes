@@ -11,6 +11,10 @@ database-tests = []
 name = "nvbes-identity-service"
 path = "src/main.rs"
 
+[[test]]
+name = "maintenance-cli"
+path = "src/identity.maintenance.tests.rs"
+
 [dependencies]
 anyhow.workspace = true
 aes-gcm.workspace = true

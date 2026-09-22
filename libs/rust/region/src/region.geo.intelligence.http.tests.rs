@@ -60,3 +60,103 @@ fn normalizes_common_privacy_payload() {
             .contains(&"commercial_vpn".to_string())
     );
 }
+
+#[tokio::test]
+async fn http_client_fetches_provider_payload() {
+    use super::IpIntelligenceHttpClient;
+    use reqwest::Client;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/ip/8.8.8.8"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "country": "US",
+            "privacy": {"hosting": true}
+        })))
+        .mount(&server)
+        .await;
+
+    let client = IpIntelligenceHttpClient::new(
+        Client::new(),
+        vec![super::IpIntelligenceHttpProvider {
+            source_code: "fixture".to_string(),
+            url_template: format!("{}/ip/{{ip}}", server.uri()),
+            authorization_header: None,
+        }],
+    );
+
+    let lookup = client
+        .lookup("8.8.8.8".parse().unwrap())
+        .await
+        .expect("lookup")
+        .expect("payload");
+    assert_eq!(lookup.country_code.as_deref(), Some("US"));
+    assert_eq!(
+        lookup.relation.network_kind,
+        Some(GeoNetworkKind::Datacenter)
+    );
+}
+
+#[test]
+fn normalize_http_body_rejects_empty_payload() {
+    let body = serde_json::json!({"note": "no signals"});
+    assert!(super::normalize_http_body("fixture", "1.1.1.1".parse().unwrap(), &body).is_err());
+}
+
+#[tokio::test]
+async fn http_client_skips_http_misses() {
+    use reqwest::Client;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/ip/1.1.1.1"))
+        .respond_with(ResponseTemplate::new(404))
+        .mount(&server)
+        .await;
+
+    let client = super::IpIntelligenceHttpClient::new(
+        Client::new(),
+        vec![super::IpIntelligenceHttpProvider {
+            source_code: "miss".to_string(),
+            url_template: format!("{}/ip/{{ip}}", server.uri()),
+            authorization_header: None,
+        }],
+    );
+
+    assert!(
+        client
+            .lookup("1.1.1.1".parse().unwrap())
+            .await
+            .expect("lookup")
+            .is_none()
+    );
+}
+
+#[tokio::test]
+async fn http_client_surfaces_json_decode_errors() {
+    use reqwest::Client;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/ip/8.8.8.8"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("not-json"))
+        .mount(&server)
+        .await;
+
+    let client = super::IpIntelligenceHttpClient::new(
+        Client::new(),
+        vec![super::IpIntelligenceHttpProvider {
+            source_code: "bad_json".to_string(),
+            url_template: format!("{}/ip/{{ip}}", server.uri()),
+            authorization_header: None,
+        }],
+    );
+
+    assert!(client.lookup("8.8.8.8".parse().unwrap()).await.is_err());
+}

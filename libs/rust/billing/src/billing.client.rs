@@ -28,7 +28,7 @@ pub enum BillingClientError {
     Configuration(String),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BillingClientConfig {
     pub(crate) endpoint: Endpoint,
     pub(crate) authorization: MetadataValue<Ascii>,
@@ -97,7 +97,7 @@ impl BillingClientConfig {
 }
 
 /// Typed gRPC client for internal callers of BillingDeliveryService.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BillingClient {
     delivery: BillingDeliveryServiceClient<Channel>,
     _operations: BillingOperationsServiceClient<Channel>,
@@ -152,3 +152,7 @@ fn map_status(status: tonic::Status) -> BillingClientError {
         _ => BillingClientError::Protocol,
     }
 }
+
+#[cfg(test)]
+#[path = "billing.client.tests.rs"]
+mod tests;

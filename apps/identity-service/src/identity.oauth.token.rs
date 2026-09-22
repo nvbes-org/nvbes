@@ -293,3 +293,7 @@ async fn handle_refresh_token(
         }),
     ))
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "identity.oauth.token.tests.rs"]
+mod database_tests;

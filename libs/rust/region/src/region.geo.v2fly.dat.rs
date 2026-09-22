@@ -118,5 +118,23 @@ fn cidr_to_ipnet(cidr: Cidr) -> Result<IpNet, V2flyGeoIpDatError> {
 }
 
 #[cfg(test)]
+pub fn test_encode_country_dat(country_code: &str, network: IpNet) -> Vec<u8> {
+    let (ip, prefix) = match network {
+        IpNet::V4(net) => (net.addr().octets().to_vec(), net.prefix_len()),
+        IpNet::V6(net) => (net.addr().octets().to_vec(), net.prefix_len()),
+    };
+    GeoIpList {
+        entry: vec![GeoIp {
+            country_code: country_code.to_string(),
+            cidr: vec![Cidr {
+                ip,
+                prefix: u32::from(prefix),
+            }],
+        }],
+    }
+    .encode_to_vec()
+}
+
+#[cfg(test)]
 #[path = "region.geo.v2fly.dat.tests.rs"]
 mod tests;

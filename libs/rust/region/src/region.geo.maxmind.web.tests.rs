@@ -1,7 +1,10 @@
+use chrono::{Duration, Utc};
 use serde_json::json;
+use sqlx::PgPool;
 
 use super::{
-    MaxMindGeoLiteWebLookup, maxmind_ip_relation, maxmind_web_evidence_source, relation_key,
+    MaxMindGeoLiteWebLookup, cache_maxmind_geolite_web_tx, maxmind_ip_relation,
+    maxmind_web_evidence_source, relation_key,
 };
 use crate::geo::types::{GeoEvidenceSource, GeoNetworkRelation};
 
@@ -65,4 +68,93 @@ fn web_lookup_converts_to_rdap_lookup_and_evidence_source() {
         maxmind_web_evidence_source(),
         GeoEvidenceSource::RemoteLookup
     );
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn caches_maxmind_web_lookup(pool: PgPool) {
+    let body = json!({"country": {"iso_code": "FR"}});
+    let (relation, location) = maxmind_ip_relation("203.0.113.7".parse().unwrap(), &body).unwrap();
+    let lookup = MaxMindGeoLiteWebLookup { location, relation };
+
+    let mut tx = pool.begin().await.expect("begin");
+    cache_maxmind_geolite_web_tx(&mut tx, &lookup, Utc::now() + Duration::days(7))
+        .await
+        .expect("cache");
+    tx.commit().await.expect("commit");
+
+    let cached_country: Option<String> = sqlx::query_scalar(
+        "SELECT country_code FROM geo_ip_network_relations WHERE source_code = 'maxmind_geolite_city_web'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("country");
+    assert_eq!(cached_country.as_deref(), Some("FR"));
+}
+
+#[tokio::test]
+async fn web_client_lookup_uses_local_endpoint_fixture() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    use super::MaxMindGeoLiteWebClient;
+    use crate::geo::maxmind_types::MaxMindGeoLiteConfig;
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/geoip/v2.1/city/93.184.216.34"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "country": {"iso_code": "US"}
+        })))
+        .mount(&server)
+        .await;
+
+    let client = MaxMindGeoLiteWebClient::new(
+        reqwest::Client::new(),
+        MaxMindGeoLiteConfig {
+            account_id: "account".to_string(),
+            license_key: "license".to_string(),
+            eula_accepted: true,
+        },
+    )
+    .expect("config");
+
+    let endpoint = format!("{}/geoip/v2.1/city", server.uri());
+    let lookup = client
+        .lookup_at("93.184.216.34".parse().unwrap(), &endpoint)
+        .await
+        .expect("lookup")
+        .expect("payload");
+    assert_eq!(lookup.location.country_code, "US");
+}
+
+#[tokio::test]
+async fn web_client_lookup_returns_none_for_not_found() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    use super::MaxMindGeoLiteWebClient;
+    use crate::geo::maxmind_types::MaxMindGeoLiteConfig;
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/geoip/v2.1/city/93.184.216.34"))
+        .respond_with(ResponseTemplate::new(404))
+        .mount(&server)
+        .await;
+
+    let client = MaxMindGeoLiteWebClient::new(
+        reqwest::Client::new(),
+        MaxMindGeoLiteConfig {
+            account_id: "account".to_string(),
+            license_key: "license".to_string(),
+            eula_accepted: true,
+        },
+    )
+    .expect("config");
+    let endpoint = format!("{}/geoip/v2.1/city", server.uri());
+    let lookup = client
+        .lookup_at("93.184.216.34".parse().unwrap(), &endpoint)
+        .await
+        .expect("lookup");
+    assert!(lookup.is_none());
 }

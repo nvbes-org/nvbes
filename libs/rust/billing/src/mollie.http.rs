@@ -79,3 +79,7 @@ fn mollie_error(status: StatusCode, body: &str) -> MollieProviderError {
         message,
     }
 }
+
+#[cfg(test)]
+#[path = "mollie.http.tests.rs"]
+mod tests;

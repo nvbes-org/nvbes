@@ -58,3 +58,49 @@ fn unzip_archive_reads_local_zip_fixture() {
 fn unzip_archive_rejects_invalid_bytes() {
     assert!(unzip_archive(b"not-a-zip").is_err());
 }
+
+#[tokio::test]
+async fn download_csv_archive_reads_zip_bytes_from_mock_server() {
+    use reqwest::Client;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    use super::download_csv_archive_from_url;
+    use crate::geo::maxmind_types::MaxMindGeoLiteConfig;
+
+    let mut buffer = Cursor::new(Vec::new());
+    {
+        let mut zip = zip::ZipWriter::new(&mut buffer);
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        zip.start_file("GeoLite2-Country-Locations-en.csv", options)
+            .unwrap();
+        zip.write_all(b"geoname_id,country_iso_code\n1,FR\n")
+            .unwrap();
+        zip.finish().unwrap();
+    }
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/app/geoip_download"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(buffer.get_ref().clone()))
+        .mount(&server)
+        .await;
+
+    let config = MaxMindGeoLiteConfig {
+        account_id: "account".to_string(),
+        license_key: "license".to_string(),
+        eula_accepted: true,
+    };
+
+    let archive = download_csv_archive_from_url(
+        &Client::new(),
+        &format!("{}/app/geoip_download", server.uri()),
+        &config,
+        "GeoLite2-Country-CSV",
+    )
+    .await
+    .expect("download");
+    let files = super::unzip_archive(&archive).expect("zip");
+    assert!(!files.is_empty());
+}

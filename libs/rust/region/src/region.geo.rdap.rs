@@ -93,17 +93,22 @@ impl RdapClient {
         registry: RdapRegistry,
         ip: IpAddr,
     ) -> Result<Option<RdapLookup>, RdapLookupError> {
-        let started_at = Instant::now();
-        let response = match self
-            .client
-            .get(format!("{}/{}", registry.base_url(), ip))
-            .send()
+        self.lookup_with_base(registry.code(), registry.base_url(), ip)
             .await
-        {
+    }
+
+    async fn lookup_with_base(
+        &self,
+        registry_code: &str,
+        base_url: &str,
+        ip: IpAddr,
+    ) -> Result<Option<RdapLookup>, RdapLookupError> {
+        let started_at = Instant::now();
+        let response = match self.client.get(format!("{base_url}/{ip}")).send().await {
             Ok(response) => response,
             Err(error) => {
                 crate::geo::metrics::record_rdap_lookup(
-                    registry.code(),
+                    registry_code,
                     "request_error",
                     started_at.elapsed(),
                 );
@@ -112,7 +117,7 @@ impl RdapClient {
         };
         if !response.status().is_success() {
             crate::geo::metrics::record_rdap_lookup(
-                registry.code(),
+                registry_code,
                 "http_miss",
                 started_at.elapsed(),
             );
@@ -123,7 +128,7 @@ impl RdapClient {
             Ok(body) => body,
             Err(error) => {
                 crate::geo::metrics::record_rdap_lookup(
-                    registry.code(),
+                    registry_code,
                     "decode_error",
                     started_at.elapsed(),
                 );
@@ -135,7 +140,7 @@ impl RdapClient {
             .and_then(|value| GeoLocation::from_country_code(&value));
         let Some(location) = country_code else {
             crate::geo::metrics::record_rdap_lookup(
-                registry.code(),
+                registry_code,
                 "country_miss",
                 started_at.elapsed(),
             );
@@ -143,8 +148,8 @@ impl RdapClient {
         };
 
         let mut relation = GeoNetworkRelation {
-            source_code: registry.code().to_string(),
-            registry: Some(registry.code().to_string()),
+            source_code: registry_code.to_string(),
+            registry: Some(registry_code.to_string()),
             network: None,
             start_ip: string_field(&body, "startAddress").and_then(|value| value.parse().ok()),
             end_ip: string_field(&body, "endAddress").and_then(|value| value.parse().ok()),
@@ -160,7 +165,7 @@ impl RdapClient {
         relation.risk_score = Some(reputation.risk_score);
         relation.risk_labels = reputation.risk_labels;
 
-        crate::geo::metrics::record_rdap_lookup(registry.code(), "hit", started_at.elapsed());
+        crate::geo::metrics::record_rdap_lookup(registry_code, "hit", started_at.elapsed());
         Ok(Some(RdapLookup { location, relation }))
     }
 }

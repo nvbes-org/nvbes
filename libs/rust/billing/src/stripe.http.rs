@@ -65,3 +65,7 @@ fn stripe_error(status: StatusCode, body: &str) -> StripeProviderError {
         message,
     }
 }
+
+#[cfg(test)]
+#[path = "stripe.http.tests.rs"]
+mod tests;

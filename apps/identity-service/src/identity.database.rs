@@ -26,3 +26,7 @@ mod tests;
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.database.oauth.tests.rs"]
 mod oauth_tests;
+
+#[cfg(test)]
+#[path = "identity.database.test_support.rs"]
+pub(crate) mod database_test_support;

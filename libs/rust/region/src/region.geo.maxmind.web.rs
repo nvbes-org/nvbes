@@ -63,9 +63,17 @@ impl MaxMindGeoLiteWebClient {
         &self,
         ip: IpAddr,
     ) -> Result<Option<MaxMindGeoLiteWebLookup>, MaxMindGeoLiteWebError> {
+        self.lookup_at(ip, GEOLITE_CITY_ENDPOINT).await
+    }
+
+    async fn lookup_at(
+        &self,
+        ip: IpAddr,
+        endpoint_base: &str,
+    ) -> Result<Option<MaxMindGeoLiteWebLookup>, MaxMindGeoLiteWebError> {
         let response = self
             .client
-            .get(format!("{GEOLITE_CITY_ENDPOINT}/{ip}"))
+            .get(format!("{endpoint_base}/{ip}"))
             .basic_auth(&self.config.account_id, Some(&self.config.license_key))
             .send()
             .await?;

@@ -24,7 +24,31 @@
   },
   "nvbes-billing": {
     "action_rate_limits::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
-    "schema_v1_tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)"
+    "schema_v1_tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "checkout_geo::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "stripe::http::tests::": "HTTP mock / connection failure paths require network syscalls",
+    "mollie::http::tests::": "HTTP mock / connection failure paths require network syscalls",
+    "mollie::payments::tests::": "HTTP mock payment flows require network syscalls",
+    "client::tests::": "gRPC/HTTP client paths require network syscalls"
+  },
+  "nvbes-region": {
+    "geo::cache::tests::cached_remote_lookup_returns_rdap_lookup": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::cache::tests::resolve_cached_geo_uses_personal_and_cached_relations": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::intelligence::tests::caches_ip_intelligence_lookup": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::intelligence_http::tests::": "HTTP provider fetches require network syscalls blocked in micro-test sandbox",
+    "geo::loyalsoldier_download::tests::download_verified_geoip_reads_local_fixtures_from_mock_server": "wiremock HTTP requires network syscalls blocked in micro-test sandbox",
+    "geo::loyalsoldier_import::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::maxmind_download::tests::download_csv_archive_reads_zip_bytes_from_mock_server": "wiremock HTTP requires network syscalls blocked in micro-test sandbox",
+    "geo::maxmind_import::tests::": "PostgreSQL sqlx::test / HTTP fixtures require coverage lane",
+    "geo::maxmind_web::tests::": "HTTP MaxMind client requires network syscalls blocked in micro-test sandbox",
+    "geo::maintenance::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::persistence::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::personal::tests::upserts_lists_and_disables_personal_ranges": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::personal::tests::upsert_updates_existing_network": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::rdap::tests::lookup_": "RDAP HTTP client requires network syscalls blocked in micro-test sandbox",
+    "geo::v2fly_import::tests::upserts_v2fly_geoip_ranges": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::v2fly_import::tests::scheduled_v2fly_import_skips_when_fresh": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::v2fly_import::tests::import_latest_downloads_fixture_from_mock_server": "wiremock HTTP requires network syscalls blocked in micro-test sandbox"
   },
   "nvbes-identity-service": {
     "oauth::tests::authorize_requires_session_before_issuing_code": "Authorize path resolves clients via PostgreSQL",

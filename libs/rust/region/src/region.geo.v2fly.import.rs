@@ -53,17 +53,54 @@ pub async fn run_scheduled_v2fly_geoip_import(
 pub async fn import_latest_v2fly_geoip(
     pool: &PgPool,
 ) -> Result<V2flyGeoIpImportReport, V2flyGeoIpImportError> {
-    let client = Client::new();
-    let checksum = download_text(&client, V2FLY_GEOIP_SHA256_URL).await?;
+    import_latest_v2fly_geoip_with_client(pool, Client::new()).await
+}
+
+pub(crate) async fn import_latest_v2fly_geoip_with_client(
+    pool: &PgPool,
+    client: Client,
+) -> Result<V2flyGeoIpImportReport, V2flyGeoIpImportError> {
+    import_latest_v2fly_geoip_with_client_urls(
+        pool,
+        client,
+        V2FLY_GEOIP_SHA256_URL,
+        V2FLY_GEOIP_DAT_URL,
+    )
+    .await
+}
+
+#[cfg(test)]
+pub(crate) async fn import_latest_v2fly_geoip_with_urls(
+    pool: &PgPool,
+    sha256_url: &str,
+    dat_url: &str,
+) -> Result<V2flyGeoIpImportReport, V2flyGeoIpImportError> {
+    import_latest_v2fly_geoip_with_client_urls(pool, Client::new(), sha256_url, dat_url).await
+}
+
+async fn import_latest_v2fly_geoip_with_client_urls(
+    pool: &PgPool,
+    client: Client,
+    sha256_url: &str,
+    dat_url: &str,
+) -> Result<V2flyGeoIpImportReport, V2flyGeoIpImportError> {
+    let checksum = download_text(&client, sha256_url).await?;
     let expected_checksum = parse_sha256sum(&checksum)?;
-    let dat = download_bytes(&client, V2FLY_GEOIP_DAT_URL).await?;
+    let dat = download_bytes(&client, dat_url).await?;
     verify_sha256(&dat, expected_checksum)?;
     let ranges = parse_v2fly_geoip_dat(&dat)?;
 
+    persist_v2fly_geoip_ranges(pool, &ranges).await
+}
+
+async fn persist_v2fly_geoip_ranges(
+    pool: &PgPool,
+    ranges: &[V2flyGeoIpRange],
+) -> Result<V2flyGeoIpImportReport, V2flyGeoIpImportError> {
     let mut tx = pool.begin().await?;
     ensure_v2fly_geoip_source_tx(&mut tx).await?;
     create_import_table_tx(&mut tx).await?;
-    insert_import_rows_tx(&mut tx, &ranges).await?;
+    insert_import_rows_tx(&mut tx, ranges).await?;
     let imported_ranges = upsert_imported_ranges_tx(&mut tx).await?;
     let expired_ranges = expire_missing_ranges_tx(&mut tx).await?;
     tx.commit().await?;
