@@ -45,6 +45,7 @@ env:
   NVBES_ENV: ci
   NX_NO_CLOUD: 'true'
   NX_DAEMON: 'false'
+  NX_CLOUD_CONTINUOUS_ASSIGNMENT: 'true'
   NX_WORKSPACE_DATA_DIRECTORY: .nx/cache/workspace-data
   TF_PLUGIN_CACHE_DIR: /tmp/nvbes-terraform-plugin-cache
 jobs:
@@ -184,6 +185,12 @@ jobs:
       SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
       NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
+      # Opt this lane into Nx Cloud distribution (global default is
+      # NX_NO_CLOUD=true for the custom Scaleway cache path). The Start Nx
+      # Agents step below flips back to local execution when the token is
+      # unavailable (fork PRs), preserving current behavior there.
+      NX_NO_CLOUD: 'false'
+      NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -199,6 +206,19 @@ jobs:
           caches: pnpm nx
           cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Start Nx Agents
+        # After ci-setup on purpose: uses the locked nx 23.2.1 binary directly
+        # (repo convention, see v1-testing.yml) instead of an unpinned fetch,
+        # trading agent boot parallelism during install for version pinning.
+        # Reads `.nx/ci-config.yaml`; provisions `3 nvbes-medium-js` (see
+        # `.nx/workflows/agents.yaml`).
+        run: |
+          if [[ -z "${NX_CLOUD_ACCESS_TOKEN:-}" ]]; then
+            printf '%s\n' 'NX_NO_CLOUD=true' >> "$GITHUB_ENV"
+            printf '%s\n' 'Nx Cloud token unavailable; falling back to local execution.'
+          else
+            ./node_modules/.bin/nx-cloud start-nx-agents
+          fi
       - name: Validate typescript
         run: node tools/ci/run-lane.mjs typescript
       - name: Publish successful protected lane caches
