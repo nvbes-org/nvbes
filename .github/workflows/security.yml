@@ -5,13 +5,14 @@ on:
     branches: [main]
   push:
     branches: [main]
+  merge_group:
   schedule:
     - cron: '23 3 * * 1'
   workflow_dispatch:
 
 concurrency:
   group: security-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
 
 permissions:
   actions: read

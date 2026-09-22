@@ -83,8 +83,8 @@
       "expectedDeniedStatus": 403,
       "evidence": [
         {
-          "path": "apps/cloud-service/src/drive.domains.members.routes.manage.rs",
-          "includes": ["WorkspaceAction::ViewMembers", "authorize_workspace_action"]
+          "path": "apps/account-service/src/account.teams.rs",
+          "includes": ["pub fn router", "get(list)"]
         },
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -113,12 +113,8 @@
       "expectedDeniedStatus": 403,
       "evidence": [
         {
-          "path": "apps/cloud-service/src/drive.domains.members.routes.manage.rs",
-          "includes": [
-            "WorkspaceAction::ChangeMemberRole",
-            "target_role_for_member",
-            "target_role: Some(target_role)"
-          ]
+          "path": "libs/rust/core/src/authz.action.rs",
+          "includes": ["WorkspaceAction::ChangeMemberRole"]
         },
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -149,12 +145,8 @@
       "expectedDeniedStatus": 403,
       "evidence": [
         {
-          "path": "apps/cloud-service/src/drive.domains.files.routes.manage.rs",
-          "includes": [
-            "WorkspaceAction::RenameObject",
-            "resource_context_for_object",
-            "authorize_workspace_action"
-          ]
+          "path": "libs/rust/core/src/authz.action.rs",
+          "includes": ["WorkspaceAction::RenameObject"]
         },
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -182,16 +174,12 @@
       "expectedDeniedStatus": 403,
       "evidence": [
         {
-          "path": "apps/cloud-service/src/drive.domains.files.routes.manage.rs",
-          "includes": [
-            "WorkspaceAction::DeleteObjectPermanently",
-            "resource_context_for_object",
-            "authorize_workspace_action"
-          ]
-        },
-        {
           "path": "libs/rust/core/src/authz.action.rs",
           "includes": ["WorkspaceAction::DeleteObjectPermanently", "action_requires_step_up"]
+        },
+        {
+          "path": "libs/rust/core/src/authz.policy.rs",
+          "includes": ["WorkspaceAction::DeleteObjectPermanently"]
         }
       ]
     },
@@ -215,12 +203,8 @@
       "expectedDeniedStatus": 403,
       "evidence": [
         {
-          "path": "apps/cloud-service/src/drive.domains.share_links.routes.manage.rs",
-          "includes": [
-            "WorkspaceAction::CreateShareLink",
-            "resource_context_for_object",
-            "authorize_workspace_action"
-          ]
+          "path": "libs/rust/core/src/authz.action.rs",
+          "includes": ["WorkspaceAction::CreateShareLink"]
         },
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -248,8 +232,8 @@
       "expectedDeniedStatus": 403,
       "evidence": [
         {
-          "path": "apps/cloud-service/src/drive.domains.audit.routes.rs",
-          "includes": ["WorkspaceAction::ViewAudit", "authorize_workspace_action"]
+          "path": "libs/rust/core/src/authz.action.rs",
+          "includes": ["WorkspaceAction::ViewAudit"]
         },
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",

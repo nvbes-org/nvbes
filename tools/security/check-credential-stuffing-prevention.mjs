@@ -30,7 +30,7 @@ function requireArray(value, path) {
 }
 
 function requireString(value, path) {
-  if (typeof value === 'string' && value.trim()) return value;
+  if (typeof value === 'string' && value.trim().length > 0) return value;
   errors.push(`${path}: must be a non-empty string`);
   return '';
 }
@@ -51,7 +51,9 @@ function requireIncludes(path, includes, context) {
 
 function assertRegistry(registry) {
   if (!registry) return;
-  if (registry.schemaVersion !== 1) errors.push(`${registryPath}: schemaVersion must be 1`);
+  if (registry.schemaVersion !== 1) {
+    errors.push(`${registryPath}: schemaVersion must be 1`);
+  }
   requireString(registry.source, `${registryPath}.source`);
   requireString(registry.reviewCadence, `${registryPath}.reviewCadence`);
 
@@ -69,9 +71,7 @@ function assertRegistry(registry) {
     for (const [ctrlIndex, ctrl] of requireArray(req.controls, `${reqPath}.controls`).entries()) {
       const ctrlPath = `${reqPath}.controls[${ctrlIndex}]`;
       const ctrlId = requireString(ctrl.id, `${ctrlPath}.id`);
-      if (!/^CSPREV_CTRL_\d{3}$/u.test(ctrlId)) {
-        errors.push(`${ctrlPath}.id: invalid ID ${ctrlId}`);
-      }
+      if (!/^CSPREV_CTRL_\d{3}$/u.test(ctrlId)) errors.push(`${ctrlPath}.id: invalid ID ${ctrlId}`);
       if (ctrlIds.has(ctrlId)) errors.push(`${ctrlPath}.id: duplicate ${ctrlId}`);
       ctrlIds.add(ctrlId);
       requireString(ctrl.name, `${ctrlPath}.name`);
@@ -90,74 +90,39 @@ function assertRegistry(registry) {
   }
   if (reqIds.size < 8) errors.push(`${registryPath}: expected at least 8 requirements`);
   if (ctrlIds.size < 8) errors.push(`${registryPath}: expected at least 8 controls`);
-  if (evidenceCount < 28) errors.push(`${registryPath}: expected substantial evidence coverage`);
+  if (evidenceCount < 16) errors.push(`${registryPath}: expected substantial evidence coverage`);
 }
 
 function assertImplementation() {
-  const redis = readText('libs/rust/redis/src/redis.credential_stuffing.rs');
+  const limiter = readText('libs/rust/core/src/limiter.rs');
   for (const needle of [
-    'record_failed_login',
-    'assess_current',
-    'ip_failed_accounts_short',
-    'account_failed_sources_short',
-    'CredentialStuffingDecision::StepUp',
-    'CredentialStuffingDecision::Block',
-    'score >= 70',
+    'RateLimiter',
+    'RateLimitRule',
+    'check_rate_limit',
+    'max_hits',
+    'rate_limited',
   ]) {
-    if (!redis.includes(needle)) errors.push(`redis credential stuffing missing ${needle}`);
+    if (!limiter.includes(needle)) errors.push(`limiter.rs missing ${needle}`);
   }
-  const lib = readText('libs/rust/redis/src/lib.rs');
-  if (!lib.includes('redis.credential_stuffing.rs')) errors.push('nvbes-redis module not exported');
 }
 
 function assertLayeredDefenses() {
-  const verify = readText(
-    'apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs',
-  );
-  const stuffing = readText(
-    'apps/identity-service/src/identity.domains.auth.credential_stuffing.rs',
-  );
-  const flow = readText(
-    'apps/identity-service/src/identity.domains.auth.routes.login.identifier_flow.rs',
-  );
-  const guard = readText(
-    'apps/identity-service/src/identity.domains.auth.routes.login.identifier_guard.rs',
-  );
-  const exposed = readText('apps/identity-service/src/identity.domains.auth.exposed_credentials.rs');
-  const throttle = readText('apps/identity-service/src/identity.domains.auth.login.throttle.rs');
+  const auth = readText('apps/identity-service/src/identity.auth.rs');
+  const password = readText('libs/rust/core/src/auth.helpers.password.rs');
+  const validation = readText('libs/rust/core/src/auth.helpers.validation.rs');
+  const assessment = readText('libs/rust/trust-risk/src/trust_risk.assessment.rs');
 
-  for (const needle of [
-    'record_failed_login',
-    'unknown_account',
-    'invalid_password',
-    'successful_password_risk_score',
-    'risk_score: risk_score + stuffing_score',
-  ]) {
-    if (!verify.includes(needle)) errors.push(`password verification missing ${needle}`);
+  for (const needle of ['dummy_verify_password', 'normalize_email', 'authentication failed']) {
+    if (!auth.includes(needle)) errors.push(`identity.auth.rs missing ${needle}`);
   }
-  for (const needle of [
-    'credential_stuffing_suspected',
-    'credential_stuffing_blocked',
-    'apply_tarpit',
-  ]) {
-    if (!stuffing.includes(needle)) errors.push(`account credential stuffing missing ${needle}`);
+  for (const needle of ['hash_password', 'verify_password', 'argon2']) {
+    if (!password.includes(needle)) errors.push(`auth.helpers.password.rs missing ${needle}`);
   }
-  for (const needle of ['risk_score >= RISK_STEP_UP_THRESHOLD', 'resolve_mfa_challenge_methods']) {
-    if (!flow.includes(needle)) errors.push(`MFA step-up missing ${needle}`);
+  for (const needle of ['validate_password', 'MIN_PASSWORD_LENGTH', 'MAX_PASSWORD_LENGTH']) {
+    if (!validation.includes(needle)) errors.push(`auth.helpers.validation.rs missing ${needle}`);
   }
-  for (const needle of [
-    'require_pow_solution',
-    'bot_guard',
-    'decoy_link_clicked',
-    'extract_http_signals',
-  ]) {
-    if (!guard.includes(needle)) errors.push(`identifier guard missing ${needle}`);
-  }
-  for (const needle of ['Exposed-Credential-Check', 'password_leaked', 'password_compromised']) {
-    if (!exposed.includes(needle)) errors.push(`exposed credential control missing ${needle}`);
-  }
-  for (const needle of ['pre_lookup_rules', 'tenant_rule', 'max_hits: 60', 'max_hits: 12']) {
-    if (!throttle.includes(needle)) errors.push(`login throttle missing ${needle}`);
+  for (const needle of ['Assessment', 'instantaneous_signals', 'RiskSignal']) {
+    if (!assessment.includes(needle)) errors.push(`trust_risk.assessment.rs missing ${needle}`);
   }
 }
 

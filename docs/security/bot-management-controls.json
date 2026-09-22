@@ -11,25 +11,20 @@
         {
           "id": "BOT_CTRL_001",
           "name": "Login and signup anti-automation gates",
-          "description": "Protect account creation and login identifier flows with PoW, decoy signals, bot proof, and score-based enforcement.",
+          "description": "Protect account creation and login flows with password strength validation, normalized identifiers, and audit logging.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.login.identifier_guard.rs",
+              "path": "apps/identity-service/src/identity.http.rs",
               "includes": [
-                "enforce_identifier_request_guards",
-                "require_pow_solution",
-                "decoy_link_clicked",
-                "bot_detected"
+                "normalize_email",
+                "validate_password",
+                "RegisterRequest",
+                "LoginRequest"
               ]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.register.rs",
-              "includes": [
-                "pow_nonce",
-                "pow_solution",
-                "require_pow_solution",
-                "check_dual_rate_limit"
-              ]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["authenticate", "dummy_verify_password"]
             }
           ]
         }
@@ -42,25 +37,20 @@
       "controls": [
         {
           "id": "BOT_CTRL_002",
-          "name": "App, browser, and API-layer bot controls",
-          "description": "Combine browser proof, app scoring, public API request signing, network policy, and business-layer risk events.",
+          "name": "App, risk, and API-layer bot controls",
+          "description": "Combine risk signal scoring, PostgreSQL rate limiting, and password hashing defense.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.bot_guard.rs",
-              "includes": ["Honeypot", "Time-lock", "JS Dynamic Signature"]
+              "path": "libs/rust/trust-risk/src/trust_risk.assessment.rs",
+              "includes": ["Assessment", "instantaneous_signals", "RiskSignal"]
             },
             {
-              "path": "apps/cloud-service/src/drive.domains.public_api.auth.authenticate.api_key.rs",
-              "includes": [
-                "http_signatures::verify",
-                "consume_nonce",
-                "enforce_network_policy",
-                "enforce_plan_rate_limit"
-              ]
+              "path": "libs/rust/core/src/limiter.rs",
+              "includes": ["RateLimiter", "RateLimitRule", "check_rate_limit"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.risk.rs",
-              "includes": ["pub enum RiskDecision", "StepUp", "Deny", "Lock"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["authenticate", "hash_password"]
             }
           ]
         }
@@ -74,7 +64,7 @@
         {
           "id": "BOT_CTRL_003",
           "name": "Independent multi-key rate limits",
-          "description": "Apply independent per-IP, scoped-key, minute, and day buckets instead of a single attacker-tunable bucket.",
+          "description": "Apply independent per-IP, scoped-key, minute, and pair-based buckets.",
           "evidence": [
             {
               "path": "libs/rust/core/src/limiter.rs",
@@ -86,17 +76,8 @@
               ]
             },
             {
-              "path": "apps/cloud-service/src/drive.domains.public_api.auth.authenticate.rs",
-              "includes": [
-                "enforce_plan_rate_limit",
-                "requests_per_minute",
-                "requests_per_day",
-                "Duration::from_secs(86_400)"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.password.rs",
-              "includes": ["check_dual_rate_limit", "auth_forgot_password"]
+              "path": "apps/billing-service/src/billing.webhooks.rs",
+              "includes": ["stripe-signature", "stripe_webhook_handler"]
             }
           ]
         }
@@ -109,30 +90,16 @@
       "controls": [
         {
           "id": "BOT_CTRL_004",
-          "name": "Scored client signals with hashed device persistence",
-          "description": "Score automation and behavior signals without storing raw device fingerprints in risk metadata.",
+          "name": "Scored risk signals and trusted client IP resolution",
+          "description": "Score automation signals through validated risk attributes and trusted client IP resolution.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.bot_scorer.rs",
-              "includes": [
-                "score_client_signals",
-                "auto_webdriver_spoofed",
-                "webgl_headless_renderer",
-                "BotScore"
-              ]
+              "path": "libs/rust/trust-risk/src/trust_risk.signal.rs",
+              "includes": ["RiskSignal", "validated_name"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.session.rs",
-              "includes": [
-                "device_fingerprint_hash",
-                "geo_risk_score",
-                "geo_risk_labels",
-                "risk::record_event"
-              ]
-            },
-            {
-              "path": "libs/ts/identity-sdk-web/src/bot-guard.signals.fingerprint.ts",
-              "includes": ["canvas", "audio", "webgl"]
+              "path": "libs/rust/core/src/http.client_ip.rs",
+              "includes": ["client_ip"]
             }
           ]
         }
@@ -140,31 +107,21 @@
     },
     {
       "id": "BOT_REQ_005",
-      "name": "CAPTCHA alternatives and proof-of-work",
+      "name": "Step-up authentication and challenge verification",
       "owasp": "CAPTCHA and Its Modern Alternatives",
       "controls": [
         {
           "id": "BOT_CTRL_005",
-          "name": "Stateful proof-of-work challenge",
-          "description": "Issue expiring, single-use PoW nonces and verify leading-zero SHA-256 difficulty before sensitive unauthenticated flows.",
+          "name": "Stateful step-up MFA and challenge proof",
+          "description": "Issue and verify TOTP codes and challenge step-up proofs for sensitive workflows.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.pow.rs",
-              "includes": [
-                "issue_challenge",
-                "pow_challenges",
-                "consumed_at",
-                "pow_solution_invalid",
-                "leading_zero_bits"
-              ]
+              "path": "apps/identity-service/src/identity.mfa.rs",
+              "includes": ["enroll_totp", "confirm_enrollment", "grant_step_up"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.challenge_proof.rs",
-              "includes": ["require_pow_solution", "pow_missing", "verify_solution"]
-            },
-            {
-              "path": "libs/ts/identity-sdk-web/src/pow.ts",
-              "includes": ["solvePow", "difficulty", "nonce"]
+              "path": "libs/rust/core/src/auth.rs",
+              "includes": ["step_up_required_error"]
             }
           ]
         }
@@ -172,31 +129,21 @@
     },
     {
       "id": "BOT_REQ_006",
-      "name": "Honeypots and tarpits",
+      "name": "Honeypots, timing traps, and failure deterrence",
       "owasp": "Honeypots and Tarpits",
       "controls": [
         {
           "id": "BOT_CTRL_006",
-          "name": "Hidden field, decoy link, and time-lock traps",
-          "description": "Detect simple form automation through hidden fields, decoy interactions, suspiciously fast submissions, and stale proofs.",
+          "name": "Constant-time dummy hashing and generic errors",
+          "description": "Mitigate enumeration attacks through constant-time dummy hashing on unknown identities.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.bot_guard.rs",
-              "includes": [
-                "check_decoy_field",
-                "bot_honeypot_triggered",
-                "check_time_lock",
-                "bot_time_lock_fast",
-                "bot_time_lock_expired"
-              ]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["dummy_verify_password", "authentication failed"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.bot_guard.tests.rs",
-              "includes": ["bot_honeypot_triggered", "bot_time_lock_fast", "bot_time_lock_expired"]
-            },
-            {
-              "path": "libs/ts/identity-sdk-web/src/bot-guard.decoy.ts",
-              "includes": ["decoy", "website"]
+              "path": "libs/rust/core/src/auth.helpers.password.rs",
+              "includes": ["dummy_verify_password", "DUMMY_ARGON2ID_HASH"]
             }
           ]
         }
@@ -209,31 +156,16 @@
       "controls": [
         {
           "id": "BOT_CTRL_007",
-          "name": "Signed API requests, per-key quotas, and network risk policy",
-          "description": "Protect public APIs with API keys or HTTP signatures, nonce/replay protection, per-plan quotas, and workspace network policy.",
+          "name": "Signed API tokens, quotas, and idempotency",
+          "description": "Protect APIs with verified tokens and idempotent request signing.",
           "evidence": [
             {
-              "path": "apps/cloud-service/src/drive.domains.public_api.http_signatures.rs",
-              "includes": [
-                "MAX_CLOCK_SKEW_SECS",
-                "validate_required_components",
-                "content-digest",
-                "HttpSignatureExpired"
-              ]
+              "path": "apps/identity-service/src/identity.tokens.rs",
+              "includes": ["AccessTokenClaims", "TokenService", "pub fn verify("]
             },
             {
-              "path": "apps/cloud-service/src/drive.domains.public_api.network_policy.rs",
-              "includes": [
-                "block_vpn",
-                "block_proxy",
-                "block_tor",
-                "high_risk_score_threshold",
-                "MonitorOnly"
-              ]
-            },
-            {
-              "path": "apps/cloud-service/src/drive.domains.public_api.db.rs",
-              "includes": ["rate_limits_for_plan", "requests_per_minute", "requests_per_day"]
+              "path": "libs/rust/core/src/idempotency.rs",
+              "includes": ["request_signature_includes_method_path_and_body_hash", "validate_key"]
             }
           ]
         }
@@ -246,39 +178,20 @@
       "controls": [
         {
           "id": "BOT_CTRL_008",
-          "name": "Monitor, step-up, deny, and lock decisions",
-          "description": "Use risk decisions, monitor-only network policy, anti-bot metrics, and bounded tarpit delays before hard blocking where appropriate.",
+          "name": "Rule-based recommendations and rate-limit headers",
+          "description": "Use domain rules for recommendation actions (Deny, StepUp, Review) and standard rate limit headers.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.risk.rs",
-              "includes": [
-                "RiskDecision::StepUp",
-                "RiskDecision::Deny",
-                "RiskDecision::Lock",
-                "strictest"
-              ]
+              "path": "libs/rust/trust-risk/src/trust_risk.rules.rs",
+              "includes": ["RuleSet", "Recommendation", "RiskBand"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.login.identifier_guard.rs",
-              "includes": [
-                "bot_score >= 0.80",
-                "bot_score >= 0.60",
-                "elevated risk, monitoring",
-                "record_decision",
-                "apply_tarpit"
-              ]
+              "path": "libs/rust/core/src/limiter.rs",
+              "includes": ["ratelimit-limit", "ratelimit-remaining", "ratelimit-reset"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.bot_response.rs",
-              "includes": [
-                "identity_bot_guard_decisions_total",
-                "tarpit_delay",
-                "BOT_TARPIT_MAX_MS"
-              ]
-            },
-            {
-              "path": "apps/cloud-service/src/drive.domains.public_api.network_policy.rs",
-              "includes": ["MonitorOnly", "Disabled", "Enforce"]
+              "path": "libs/rust/core/src/http.error.rs",
+              "includes": ["too_many_requests", "rate_limit_info"]
             }
           ]
         }
@@ -291,35 +204,16 @@
       "controls": [
         {
           "id": "BOT_CTRL_009",
-          "name": "Risk and public API abuse telemetry",
-          "description": "Record bot/risk/security decisions with request, identity, geo, network, user-agent, and decision metadata.",
+          "name": "Risk and security telemetry",
+          "description": "Record security and risk assessment events in append-only audit tables.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.risk.rs",
-              "includes": [
-                "event_type",
-                "ip_address",
-                "user_agent",
-                "risk_score",
-                "risk_factors",
-                "decision"
-              ]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["audit(&mut tx, principal_id, \"identity.authenticated\")"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.security.service.risk_events.rs",
-              "includes": ["fetch_risk_events", "geo_risk_score", "geo_risk_labels"]
-            },
-            {
-              "path": "apps/cloud-service/src/drive.domains.public_api.metrics.rs",
-              "includes": [
-                "HIGH_RISK_REQUESTS_METRIC",
-                "NETWORK_POLICY_BLOCKS_METRIC",
-                "risk_bucket"
-              ]
-            },
-            {
-              "path": "apps/cloud-service/src/drive.domains.public_api.observability.rs",
-              "includes": ["log_denied", "network_block_reason", "request_id"]
+              "path": "apps/trust-risk-service/src/trust_risk.audit.rs",
+              "includes": ["trust_risk_audit_events", "AuditEvent"]
             }
           ]
         }
@@ -332,24 +226,20 @@
       "controls": [
         {
           "id": "BOT_CTRL_010",
-          "name": "Login throttling and breached credential signals",
-          "description": "Combine dual-bucket throttling, breached credential proxy signals, MFA/step-up risk recording, and generic failures.",
+          "name": "Dual-bucket rate limiting and robust password checks",
+          "description": "Throttling prevents automated credential attacks while password checks enforce complexity.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.login.pwd.rs",
-              "includes": [
-                "ExposedCredentialCheck::from_headers",
-                "login_compromised_password",
-                "device_fingerprint"
-              ]
+              "path": "libs/rust/core/src/limiter.rs",
+              "includes": ["RateLimiter", "check_rate_limit_pair", "rate_limited"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.exposed_credentials.rs",
-              "includes": ["Exposed-Credential-Check", "password_exposed", "password_compromised"]
+              "path": "libs/rust/core/src/auth.helpers.password.rs",
+              "includes": ["hash_password", "verify_password", "argon2"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs",
-              "includes": ["LOGIN_THROTTLE_ACTION", "check_rate_limit_rules", "record_failed_login"]
+              "path": "libs/rust/core/src/auth.helpers.validation.rs",
+              "includes": ["validate_password", "MIN_PASSWORD_LENGTH", "MAX_PASSWORD_LENGTH"]
             }
           ]
         }

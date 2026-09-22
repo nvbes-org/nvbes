@@ -111,6 +111,13 @@
       "parallelism": false,
       "cache": false
     },
+    "coverage:gap": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "node tools/rust-workspace/coverage-gap.mjs .temp/rust/coverage-workspace.json 90"
+      }
+    },
     "condition": {
       "executor": "nx:run-commands",
       "inputs": [
