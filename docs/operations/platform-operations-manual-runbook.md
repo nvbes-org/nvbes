@@ -156,6 +156,41 @@ l'autorité jusqu'à livraison d'un rapprochement automatique fiable et gratuit.
    l'utilisateur.
 5. Consigner la commande et le motif dans l'audit Platform Operations.
 
+## Procédures opérateur Email V1
+
+Autorité opérationnelle : le
+[runbook de livraison](email-delivery-runbook.md), le
+[runbook retard / dead-letter](runbook-email-delayed.md) et le
+[GO synthétique borné du 2 septembre 2026](email-production-readiness-2026-09-02.md).
+Les producteurs produit, comptes invités et trafic public restent fermés.
+
+### Fenêtre de validation synthétique
+
+1. Confirmer que `EMAIL_SYNTHETIC_SMOKE_ENABLED` vaut `false` hors fenêtre.
+2. Ouvrir une fenêtre unique, opérateur-contrôlée, avec un destinataire
+   contrôlé et un `run_id` diagnostic.
+3. Exiger un message ID non vide, un état final `delivered` et au moins un
+   événement fournisseur traité.
+4. Fermer la fenêtre sans condition (triggers temporaires détruits, ingress
+   privé, smoke désactivé), même si une étape antérieure a échoué.
+
+### Suppressions et rejeu
+
+1. Ouvrir un dossier Platform Operations (`catégorie: délivrabilité`).
+2. Consulter le snapshot opérations Email (file, échecs, suppressions).
+3. Exécuter le rejeu ou la levée de suppression via le service opérations
+   authentifié, avec motif et acteur audités.
+4. Ne jamais contourner le worker ni appeler TEM depuis un produit.
+
+### Retard de livraison
+
+1. Suivre le [runbook retard](runbook-email-delayed.md) : profondeur de file,
+   âge du plus ancien message, erreurs provider, DLQ.
+2. Après épuisement des retries, laisser le message en `dead_letter` sans
+   bloquer le reste de la file.
+3. Pause des producteurs non critiques si les taux de hard-bounce ou de
+   plainte dépassent les alertes Grafana Email.
+
 ## Ajout futur d'opérateurs
 
 Le modèle prépare des permissions distinctes `support_agent`, `risk_reviewer`,
