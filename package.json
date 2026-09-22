@@ -92,7 +92,7 @@
     "format:check": "pnpm exec nx run-many -t format:check --projects=email-ui,identity-sdk-core && vp fmt --check package.json pnpm-workspace.yaml vite.config.ts tsconfig.base.json nx.json && cargo fmt --all --check",
     "lint": "pnpm lint:web && pnpm exec nx run rust-workspace:lint",
     "lint:web": "pnpm exec nx run-many -t lint --projects=email-ui,identity-sdk-core",
-    "test": "pnpm exec nx run-many -t test",
+    "test": "bash scripts/with-security-test-db.sh pnpm exec nx run-many -t test",
     "test:pre-build": "pnpm format:check && pnpm check:structure && pnpm check:nx-boundaries && pnpm check:product-boundaries && pnpm check:contracts && pnpm lint && pnpm test:unit",
     "test:post-build": "node --test apps/email-worker/tests/container-contract.test.mjs",
     "test:pre-deploy": "node --test tools/ci/email-deployment-contract.test.mjs && terraform fmt -check -recursive infrastructure/environments/email-production infrastructure/stacks/email/production",
