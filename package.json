@@ -67,7 +67,7 @@
     "check:credential-stuffing-prevention": "node tools/security/check-credential-stuffing-prevention.mjs",
     "check:structure": "bash scripts/check-llm-structure.sh",
     "check:nx-boundaries": "node scripts/check-nx-boundaries.mjs",
-    "check:contracts": "node tools/contracts/checks.mjs && buf lint contracts/protobuf",
+    "check:contracts": "node tools/contracts/checks.mjs && pnpm exec buf lint contracts/protobuf",
     "check:codegen": "node tools/codegen/checks.mjs",
     "check:product-boundaries": "node tools/boundary-checks/check-product-boundaries.mjs",
     "check:secrets": "node tools/security/scan-secrets.mjs",
