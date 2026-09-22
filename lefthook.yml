@@ -1,22 +1,167 @@
+min_version: 2.1.12
+output:
+  - execution_out
+  - failure
+
+# Rigueur maximale, zero tolerance.
+# Aucun auto-fix (pas de --fix, pas de stage_fixed) : un check sale = commit refuse.
+# pre-commit = tout ce qui peut passer sur un commit (bloque le commit).
+# pre-push = infra lourde + filet anti --no-verify (bloque le push).
+# Release gates (acceptance evidence signee, production live, readiness 40 categories)
+# ne vivent NI ici NI en pre-push : ils exigent staging/prod + preuves signees et
+# tournent via pnpm release:gate:staging / production (voir scripts/release-gate.sh,
+# impose par tools/account-quality/acceptance-evidence.test.mjs).
+# Prerequis locaux : postgres isole sur 15432 avec bases migrees pour les checks DB
+# (46-stripe-mappings), docker + `pnpm dev:infra` pour le pre-push.
+# Contournement interdit : pas de --no-verify, pas de LEFTHOOK=0.
+
 pre-commit:
+  parallel: false
   commands:
-    check:
-      glob: '*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,css,scss,md,html}'
+    00-ssh-signing:
+      run: node tools/ci/check-commit-ssh-signing.mjs --config
+      fail_text: 'BLOCKED commit signing KO - commits non signes refuses. Activer commit.gpgsign + signingkey.'
+    00-secrets:
+      run: node tools/security/scan-secrets.mjs
+      fail_text: 'BLOCKED secrets - scan-secrets KO. Corriger avant commit.'
+    01-env:
+      run: pnpm env:check
+      fail_text: 'BLOCKED env-check KO. Variables environnement invalides.'
+    02-format:
+      run: pnpm format:check
+      fail_text: 'BLOCKED format-check KO. Lancer pnpm format puis recommiter.'
+    03-vp-staged:
+      glob: '*.{js,ts,cjs,mjs,jsx,tsx}'
       exclude:
         - 'archive/**'
-      run: pnpm exec vp check --fix {staged_files}
-      stage_fixed: true
+      run: pnpm exec vp check {staged_files}
+      fail_text: 'BLOCKED vp check sur fichiers stages KO.'
+    10-structure:
+      run: pnpm check:structure
+      fail_text: 'BLOCKED check-structure KO. Arborescence non conforme.'
+    11-nx-boundaries:
+      run: pnpm check:nx-boundaries
+      fail_text: 'BLOCKED check-nx-boundaries KO.'
+    12-product-boundaries:
+      run: pnpm check:product-boundaries
+      fail_text: 'BLOCKED check-product-boundaries KO.'
+    13-contracts:
+      run: pnpm check:contracts && pnpm exec buf lint contracts/protobuf
+      fail_text: 'BLOCKED check-contracts ou buf lint KO.'
+    14-codegen:
+      run: pnpm check:codegen
+      fail_text: 'BLOCKED check-codegen KO. Code genere obsolete.'
+    15-workflows:
+      run: pnpm check:workflows
+      fail_text: 'BLOCKED check-workflows KO.'
+    16-doc-drift:
+      run: pnpm doc:check-drift
+      fail_text: 'BLOCKED doc-check-drift KO.'
+    17-doc-validate:
+      run: pnpm doc:validate
+      fail_text: 'BLOCKED doc-validate KO.'
+    20-check-web:
+      run: pnpm check:web
+      fail_text: 'BLOCKED check-web KO.'
+    21-check-api:
+      run: pnpm check:api
+      fail_text: 'BLOCKED check-api KO. Lancer cargo check --workspace.'
+    22-lint:
+      run: pnpm lint
+      fail_text: 'BLOCKED lint KO - web ou clippy -D warnings. Zero warning tolere.'
+    30-finops:
+      run: pnpm check:finops
+      fail_text: 'BLOCKED check-finops KO - budget 30 EUR, scale-to-zero, workflows.'
+    40-security:
+      run: pnpm check:security
+      fail_text: 'BLOCKED check-security KO - 13 controles.'
+    41-supply-chain:
+      run: pnpm check:supply-chain
+      fail_text: 'BLOCKED check-supply-chain KO.'
+    42-cargo-deny:
+      run: pnpm security:cargo-deny
+      fail_text: 'BLOCKED cargo-deny KO - advisories, licences, bans, sources.'
+    43-js-licenses:
+      run: pnpm security:licenses
+      fail_text: 'BLOCKED javascript-licenses KO.'
+    44-fapi-conformance:
+      run: pnpm check:fapi-conformance
+      fail_text: 'BLOCKED fapi-conformance KO.'
+    46-stripe-mappings:
+      run: pnpm check:stripe-mappings
+      fail_text: 'BLOCKED stripe-mappings KO.'
+    50-micro-test:
+      run: pnpm test:unit
+      fail_text: 'BLOCKED test-unit KO - micro-tests isoles Rust.'
+    51-nx-test:
+      run: pnpm test
+      fail_text: 'BLOCKED nx test KO. Zero test rouge tolere.'
+    52-ci-contract:
+      run: pnpm exec nx run ci-contracts:test:ci-contract
+      fail_text: 'BLOCKED test-ci-contract KO.'
+    53-lockfile-integration:
+      run: pnpm exec nx run ci-contracts:test:lockfile-integration
+      fail_text: 'BLOCKED test-lockfile-integration KO.'
+    54-v1-catalogue:
+      run: pnpm check:v1-catalogue
+      fail_text: 'BLOCKED v1-catalogue KO.'
+    55-test-summary:
+      run: pnpm test:test-summary
+      fail_text: 'BLOCKED test-summary KO.'
 
 commit-msg:
   commands:
     commitlint:
-      # --strict matches .github/workflows/commitlint.yml, which promotes
-      # warnings (e.g. footer-leading-blank) to failures.
+      # --strict matches .github/workflows/commitlint.yml (warnings promus en erreurs).
       run: pnpm exec commitlint --strict --edit "{1}"
+      fail_text: 'BLOCKED commitlint strict KO. Message non conventionnel.'
 
+# Tout ce qui exige Docker / Postgres / services en cours / reseau lourd.
+# Requiert : docker running, `pnpm dev:infra` si tests DB/e2e/contract.
 pre-push:
+  parallel: false
   commands:
-    doc-validate:
-      run: pnpm doc:validate
-    check:
-      run: pnpm check:web
+    00-commitlint-range:
+      # Filet anti --no-verify sur commit-msg: same range check as CI commitlint.
+      run: node tools/ci/commitlint-range.mjs --base origin/main --head HEAD
+      fail_text: 'BLOCKED commitlint range KO - message(s) hors conventional (ex. body > 100 chars).'
+    01-ssh-signing-range:
+      # Filet anti --no-gpg-sign: chaque commit de la plage doit etre signe (SSH ou OpenPGP).
+      run: node tools/ci/check-commit-ssh-signing.mjs --base origin/main --head HEAD
+      fail_text: 'BLOCKED commit signatures KO - commits non signes refuses.'
+    70-verify-filet:
+      run: pnpm verify
+      fail_text: 'BLOCKED verify KO - pre-commit contourne detecte.'
+    71-affected:
+      run: pnpm exec nx affected -t lint,typecheck,test,build --base=origin/main --head=HEAD --parallel=4
+      fail_text: 'BLOCKED nx affected KO - PR #289 pre-push affected gate.'
+    72-integration:
+      run: pnpm test:integration
+      fail_text: 'BLOCKED test-integration KO - nextest et tofu validate.'
+    72-coverage:
+      run: pnpm test:rust:coverage
+      fail_text: 'BLOCKED test-rust-coverage KO.'
+    73-condition:
+      run: pnpm test:rust:condition
+      fail_text: 'BLOCKED test-rust-condition KO.'
+    74-openapi-contract:
+      run: pnpm test:smoke:contract
+      fail_text: 'BLOCKED openapi-contract KO - services requis.'
+    75-e2e-critical:
+      run: pnpm test:e2e:critical
+      fail_text: 'BLOCKED e2e-critical KO - stack requise.'
+    76-pre-deploy:
+      run: pnpm test:pre-deploy
+      fail_text: 'BLOCKED test-pre-deploy KO.'
+    77-osv:
+      run: pnpm security:osv
+      fail_text: 'BLOCKED osv-scanner KO - vulnerabilite connue.'
+    78-gitleaks-history:
+      run: pnpm security:gitleaks-history
+      fail_text: 'BLOCKED gitleaks-history KO - secret dans historique.'
+    79-trivy:
+      run: pnpm security:trivy
+      fail_text: 'BLOCKED trivy KO - vuln, secret ou misconfig HIGH ou CRITICAL.'
+    80-sonar-prepare:
+      run: pnpm sonar:prepare
+      fail_text: 'BLOCKED sonar-prepare KO.'

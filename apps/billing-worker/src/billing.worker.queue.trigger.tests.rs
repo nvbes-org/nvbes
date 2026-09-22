@@ -6,8 +6,7 @@ use tower::ServiceExt;
 
 use crate::{config::BillingWorkerConfig, state::BillingWorkerState};
 
-#[tokio::test]
-async fn trigger_dispatch_handles_empty_payload() {
+async fn test_state() -> BillingWorkerState {
     let config = BillingWorkerConfig {
         environment: "development".into(),
         database_url: "postgres://localhost/unused".into(),
@@ -29,8 +28,13 @@ async fn trigger_dispatch_handles_empty_payload() {
         .connect_lazy("postgres://localhost/unused")
         .unwrap();
 
-    let state = BillingWorkerState::new(config, db).await.unwrap();
-    let app = super::router(state);
+    // Lazy pool: safe for branches that never open a connection.
+    BillingWorkerState::new(config, db).await.unwrap()
+}
+
+#[tokio::test]
+async fn trigger_dispatch_handles_empty_payload() {
+    let app = super::router(test_state().await);
 
     let res = app
         .oneshot(
@@ -38,6 +42,42 @@ async fn trigger_dispatch_handles_empty_payload() {
                 .uri("/internal/queue/billing-dispatch")
                 .method("POST")
                 .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn trigger_dispatch_rejects_invalid_utf8_payload() {
+    let app = super::router(test_state().await);
+
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/internal/queue/billing-dispatch")
+                .method("POST")
+                .body(Body::from(vec![0xff, 0xfe, 0xfd]))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+#[tokio::test]
+async fn trigger_dispatch_treats_whitespace_as_empty() {
+    let app = super::router(test_state().await);
+
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/internal/queue/billing-dispatch")
+                .method("POST")
+                .body(Body::from("   \n\t  "))
                 .unwrap(),
         )
         .await

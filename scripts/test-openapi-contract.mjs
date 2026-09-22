@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,18 +34,58 @@ function readEnvBoolean(name) {
 
 function normalizeUrl(value, name) {
   if (!value) fail(`missing required environment variable: ${name}`);
-  let res = String(value);
+  let parsed;
+  try {
+    parsed = new URL(String(value));
+  } catch {
+    fail(`invalid URL in environment variable: ${name}`);
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    fail(`unsupported protocol in environment variable: ${name}`);
+  }
+  if (parsed.username || parsed.password)
+    fail(`credentials are forbidden in environment variable: ${name}`);
+  let res = parsed.toString();
   while (res.endsWith('/')) res = res.slice(0, -1);
   return res;
+}
+
+function buildProbeUrl(baseUrl, pathName) {
+  if (typeof pathName !== 'string' || !pathName.startsWith('/')) {
+    fail(`refusing to probe non-absolute OpenAPI path: ${String(pathName).slice(0, 80)}`);
+  }
+  if (/[\s\\<>"'`]/.test(pathName)) {
+    fail(`refusing to probe OpenAPI path with unsafe characters: ${pathName.slice(0, 80)}`);
+  }
+  let parsed;
+  try {
+    parsed = new URL(pathName, `${baseUrl}/`);
+  } catch {
+    fail(`unable to resolve OpenAPI probe URL for path: ${pathName.slice(0, 80)}`);
+  }
+  const expectedOrigin = new URL(baseUrl).origin;
+  if (parsed.origin !== expectedOrigin)
+    fail(`OpenAPI probe path escapes its base URL: ${pathName.slice(0, 80)}`);
+  return parsed.toString();
 }
 
 function loadOpenApiSpec() {
   if (process.env.NVBES_OPENAPI_SPEC_PATH) {
     const customPath = path.resolve(ROOT_DIR, process.env.NVBES_OPENAPI_SPEC_PATH);
-    if (!existsSync(customPath)) {
+    if (!customPath.startsWith(`${ROOT_DIR}${path.sep}`)) {
+      fail(`NVBES_OPENAPI_SPEC_PATH must point inside the repository: ${customPath}`);
+    }
+    let raw;
+    try {
+      raw = readFileSync(customPath, 'utf8');
+    } catch {
       fail(`specified NVBES_OPENAPI_SPEC_PATH not found: ${customPath}`);
     }
-    return JSON.parse(readFileSync(customPath, 'utf8'));
+    try {
+      return JSON.parse(raw);
+    } catch {
+      fail(`specified NVBES_OPENAPI_SPEC_PATH is not valid JSON: ${customPath}`);
+    }
   }
 
   if (process.env.NVBES_OPENAPI_EXPORT_FROM_CARGO) {
@@ -63,15 +103,22 @@ function loadOpenApiSpec() {
   }
 
   const defaultSpecPath = path.resolve(ROOT_DIR, 'libs/ts/identity-sdk-core/openapi.json');
-  if (existsSync(defaultSpecPath)) {
-    return JSON.parse(readFileSync(defaultSpecPath, 'utf8'));
+  let defaultRaw;
+  try {
+    defaultRaw = readFileSync(defaultSpecPath, 'utf8');
+  } catch {
+    fail(`OpenAPI specification not found at default path: ${defaultSpecPath}`);
   }
 
-  fail(`OpenAPI specification not found at default path: ${defaultSpecPath}`);
+  try {
+    return JSON.parse(defaultRaw);
+  } catch {
+    fail(`OpenAPI specification is not valid JSON: ${defaultSpecPath}`);
+  }
 }
 
 async function probe(baseUrl, pathName, method, operation, spec, authContext, protectedOperation) {
-  const url = `${baseUrl}${pathName}`;
+  const url = buildProbeUrl(baseUrl, pathName);
   const { headers, body } = buildRequestInit(
     method,
     operation,

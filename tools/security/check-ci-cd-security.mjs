@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { assertSecrets as validateSecrets } from './ci-secret-policy.mjs';
-import { permitsFallbackDispatch } from '../ci/runner-fallback.core.mjs';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -181,7 +180,6 @@ function assertPermissions(path, text, allowedWritePermissions) {
   for (const permission of forbiddenWritePermissions) {
     const pattern = new RegExp(`^\\s*${permission}:\\s*write\\s*$`, 'mu');
     if (pattern.test(text) && !allowedWritePermissions.includes(permission)) {
-      if (permission === 'actions' && permitsFallbackDispatch(path, text)) continue;
       errors.push(`${path}: write permission ${permission}: write is not allowlisted`);
     }
   }
