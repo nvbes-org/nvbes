@@ -18,6 +18,9 @@ output:
 pre-commit:
   parallel: false
   commands:
+    00-ssh-signing:
+      run: node tools/ci/check-commit-ssh-signing.mjs --config
+      fail_text: 'BLOCKED commit signing KO - commits non signes refuses. Activer commit.gpgsign + signingkey.'
     00-secrets:
       run: node tools/security/scan-secrets.mjs
       fail_text: 'BLOCKED secrets - scan-secrets KO. Corriger avant commit.'
@@ -122,6 +125,10 @@ pre-push:
       # Filet anti --no-verify sur commit-msg: same range check as CI commitlint.
       run: node tools/ci/commitlint-range.mjs --base origin/main --head HEAD
       fail_text: 'BLOCKED commitlint range KO - message(s) hors conventional (ex. body > 100 chars).'
+    01-ssh-signing-range:
+      # Filet anti --no-gpg-sign: chaque commit de la plage doit etre signe (SSH ou OpenPGP).
+      run: node tools/ci/check-commit-ssh-signing.mjs --base origin/main --head HEAD
+      fail_text: 'BLOCKED commit signatures KO - commits non signes refuses.'
     70-verify-filet:
       run: pnpm verify
       fail_text: 'BLOCKED verify KO - pre-commit contourne detecte.'
