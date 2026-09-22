@@ -101,6 +101,7 @@
     "test:integration": "bash scripts/test-integration.sh",
     "test:rust:nextest": "bash scripts/test-nextest.sh",
     "test:rust:coverage": "bash scripts/test-workspace-coverage.sh",
+    "test:rust:coverage:gap": "pnpm exec nx run rust-workspace:coverage:gap",
     "test:rust:mutation": "pnpm exec nx run rust-workspace:mutation",
     "test:rust:mutation:baseline": "pnpm exec nx run rust-workspace:mutation:baseline",
     "test:rust:condition": "bash scripts/test-workspace-condition.sh",

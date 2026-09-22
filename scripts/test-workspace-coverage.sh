@@ -15,11 +15,20 @@ if ! command -v cargo >/dev/null 2>&1; then
 fi
 cargo llvm-cov --version >/dev/null
 
+for variable in NVBES_SECURITY_TEST_DATABASE_URL DATABASE_URL; do
+  if [[ -z "${!variable:-}" ]]; then
+    printf 'error: missing required environment variable: %s\n' "$variable" >&2
+    printf 'hint: provision the test PostgreSQL with tools/ci/test-security-database.mjs\n' >&2
+    exit 1
+  fi
+done
+
 mkdir -p "$COVERAGE_DIR"
 cargo llvm-cov clean --profraw-only
 cargo llvm-cov \
   --workspace \
   --all-targets \
+  --all-features \
   --locked \
   --ignore-filename-regex '(\.tests\.rs|\.test_support\.rs)$' \
   --json \
@@ -28,6 +37,7 @@ cargo llvm-cov \
 
 cargo llvm-cov report \
   --lcov \
+  --all-features \
   --ignore-filename-regex '(\.tests\.rs|\.test_support\.rs)$' \
   --output-path "$COVERAGE_DIR/lcov.info"
 
