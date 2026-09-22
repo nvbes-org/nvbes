@@ -47,8 +47,13 @@ test('CI preserves runtime isolation, FinOps, and the required gate', () => {
   const parsed = parse(workflow);
   assert.deepEqual(parsed.on.push.branches, ['main']);
   assert.deepEqual(parsed.on.pull_request.branches, ['main']);
+  assert.ok(parsed.on.merge_group !== undefined);
+  assert.deepEqual(Object.keys(parsed.on.workflow_dispatch.inputs).sort(), ['base_sha', 'mode']);
   assert.equal(parsed.on.pull_request_target, undefined);
-  assert.equal(parsed.concurrency['cancel-in-progress'], true);
+  assert.equal(
+    parsed.concurrency['cancel-in-progress'],
+    "${{ github.event_name != 'merge_group' }}",
+  );
   assert.equal(parsed.env.NX_DAEMON, 'false');
   assert.equal(parsed.env.NX_WORKSPACE_DATA_DIRECTORY, '.nx/cache/workspace-data');
 });

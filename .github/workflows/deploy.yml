@@ -21,7 +21,7 @@ on:
         default: false
         type: boolean
       runner:
-        description: "GitHub-hosted first; local for a confirmed hosted outage"
+        description: "GitHub-hosted by default; optional local self-hosted runner"
         required: false
         default: github-hosted
         type: choice
