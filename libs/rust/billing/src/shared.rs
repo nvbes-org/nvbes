@@ -125,7 +125,8 @@ fn url_matches_allowed_origin(candidate: &Url, allowed: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        BillingRedirectUrlError, resolve_billing_redirect_url, subscription_status_requires_lock,
+        BillingRedirectUrlError, api_key_limit, div_ceil, hex_encode, parse_uuid,
+        resolve_billing_redirect_url, subscription_status_requires_lock, validate_plan_code,
     };
 
     #[test]
@@ -162,5 +163,17 @@ mod tests {
         assert!(subscription_status_requires_lock("incomplete"));
         assert!(!subscription_status_requires_lock("active"));
         assert!(!subscription_status_requires_lock("trialing"));
+    }
+
+    #[test]
+    fn plan_helpers_and_encoding() {
+        assert_eq!(api_key_limit("team"), 5);
+        assert_eq!(api_key_limit("unknown"), 0);
+        assert_eq!(validate_plan_code(" team "), Some("team".into()));
+        assert_eq!(validate_plan_code("cloud"), None);
+        assert_eq!(div_ceil(10, 3), 4);
+        assert_eq!(div_ceil(0, 3), 0);
+        assert_eq!(hex_encode(&[0x0a, 0xff]), "0aff");
+        assert!(parse_uuid("not-a-uuid").is_none());
     }
 }
