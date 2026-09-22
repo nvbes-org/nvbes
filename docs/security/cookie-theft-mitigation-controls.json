@@ -10,25 +10,20 @@
       "controls": [
         {
           "id": "CTM_CTRL_001",
-          "name": "Server-side session request profile",
-          "description": "Login creates a server-side request profile for the authenticated session and stores it in Redis with the session record.",
+          "name": "Server-side session request profile and client hints",
+          "description": "Request context negotiates Client Hints and verifies client IP and origin headers during authentication.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.cookie_theft.rs",
-              "includes": [
-                "SessionRequestProfile",
-                "Accept-Language",
-                "Sec-Fetch-Site",
-                "UserAgentClientHints::from_headers"
-              ]
+              "path": "libs/rust/core/src/security.headers.rs",
+              "includes": ["ACCEPT_CH_VALUE", "CRITICAL_CH_VALUE", "Sec-CH-UA"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.login.rs",
-              "includes": ["SessionRequestProfile::from_headers", "request_profile"]
+              "path": "apps/identity-service/src/identity.http.rs",
+              "includes": ["LoginRequest", "LoginResponse", "session_token"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.session.rs",
-              "includes": ["request_profile", "apply_profile"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["authenticate", "hash_token"]
             }
           ]
         }
@@ -41,17 +36,16 @@
       "controls": [
         {
           "id": "CTM_CTRL_002",
-          "name": "Redis-backed detection baseline",
-          "description": "Redis session JSON stores the cookie theft profile with serde defaults so old sessions remain readable while new sessions get the full baseline.",
+          "name": "PostgreSQL-backed session storage",
+          "description": "PostgreSQL stores hashed session tokens with strict expiration and principal mapping.",
           "evidence": [
             {
-              "path": "libs/rust/redis/src/redis.session.rs",
+              "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
-                "accept_language",
-                "sec_fetch_site",
-                "sec_ch_ua_platform",
-                "cookie_theft_risk_score",
-                "serde(default)"
+                "identity_sessions",
+                "hash_token(&token)",
+                "expires_at",
+                "SESSION_TTL_HOURS"
               ]
             }
           ]
@@ -65,18 +59,16 @@
       "controls": [
         {
           "id": "CTM_CTRL_003",
-          "name": "Weighted cookie theft assessment",
-          "description": "Session validation scores significant network, user-agent family, language, client hints, accept headers, and cross-site fetch changes.",
+          "name": "Trust and risk assessment",
+          "description": "Trust-Risk domain evaluates anomalies, network changes, and suspicious patterns.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.cookie_theft.rs",
-              "includes": [
-                "ip_network_changed",
-                "user_agent_family_changed",
-                "accept_language_changed",
-                "cross_site_session_use",
-                "CookieTheftDecision"
-              ]
+              "path": "libs/rust/trust-risk/src/trust_risk.assessment.rs",
+              "includes": ["Assessment", "RiskSignal"]
+            },
+            {
+              "path": "libs/rust/core/src/http.client_ip.rs",
+              "includes": ["client_ip"]
             }
           ]
         }
@@ -89,25 +81,16 @@
       "controls": [
         {
           "id": "CTM_CTRL_004",
-          "name": "JWT and cookie session validation hook",
-          "description": "The session middleware routes bearer JWTs and opaque browser sessions through request-aware validation before protected handlers run.",
+          "name": "JWT session and claims validation",
+          "description": "Token service decodes and validates claims including subject, issuer, audience, and expiration.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs",
-              "includes": [
-                "authenticate_with_request",
-                "enforce_cookie_theft_mitigation",
-                "SessionRequestProfile::from_headers"
-              ]
+              "path": "apps/identity-service/src/identity.tokens.rs",
+              "includes": ["AccessTokenClaims", "TokenService", "pub fn verify("]
             },
             {
-              "path": "apps/identity-service/src/identity.http.middleware.jwt.session_refresh.rs",
-              "includes": [
-                "authenticate_session_request",
-                "authenticate_with_request",
-                "authenticate_browser_session",
-                "headers: &HeaderMap"
-              ]
+              "path": "libs/rust/core/src/auth.rs",
+              "includes": ["step_up_required_error"]
             }
           ]
         }
@@ -120,17 +103,20 @@
       "controls": [
         {
           "id": "CTM_CTRL_005",
-          "name": "Suspicious-session revocation",
-          "description": "High-scoring cookie theft detections revoke the session and refresh tokens, then return a reauthentication-required error.",
+          "name": "Suspicious-session reauthentication error",
+          "description": "High suspicion returns an explicit reauthentication-required application error requiring step-up or re-auth.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs",
+              "path": "libs/rust/core/src/http.error.rs",
               "includes": [
-                "session_reauthentication_required",
-                "revoke_suspicious_session",
-                "revoke_session_refresh_tokens",
-                "delete_session"
+                "reauthentication_error_explicitly_requests_reauthentication",
+                "requiring_reauthentication",
+                "ErrorRecovery::Reauthenticate"
               ]
+            },
+            {
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["reset_password", "consumed_at"]
             }
           ]
         }
@@ -144,16 +130,19 @@
         {
           "id": "CTM_CTRL_006",
           "name": "Risk and audit event trail",
-          "description": "Suspicious session reuse records risk and auth audit events with factors, score, baseline context, and current request context.",
+          "description": "Suspicious events and authentication decisions are recorded in transactional audit logs.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs",
+              "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
-                "cookie_theft_suspected",
-                "cookie_theft_risk_score",
-                "record_auth_event",
-                "risk::record_event"
+                "identity.authenticated",
+                "audit(&mut tx, principal_id, \"identity.authenticated\")",
+                "identity.recovery_requested"
               ]
+            },
+            {
+              "path": "libs/rust/audit/src/lib.rs",
+              "includes": ["AuditEvent"]
             }
           ]
         }
@@ -161,17 +150,22 @@
     },
     {
       "id": "CTM_REQ_007",
-      "name": "Harden bearer cookies",
+      "name": "Harden bearer cookies and browser isolation",
       "owasp": "Cookie theft mitigation complements secure cookie attributes; stolen bearer cookies should be harder to obtain and replay.",
       "controls": [
         {
           "id": "CTM_CTRL_007",
-          "name": "Host-scoped strict session cookies",
-          "description": "Session cookies are HttpOnly, SameSite Strict, Secure outside development, and use __Host- names when secure.",
+          "name": "Clear-Site-Data and browser isolation headers",
+          "description": "Security headers enforce Clear-Site-Data on logout, frame-ancestors none CSP, and Strict-Transport-Security.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.http.cookies.rs",
-              "includes": ["HttpOnly", "SameSite=Strict", "__Host-", "Secure"]
+              "path": "libs/rust/core/src/security.headers.rs",
+              "includes": [
+                "CLEAR_SITE_DATA_VALUE",
+                "insert_clear_site_data_header",
+                "CSP_VALUE",
+                "frame-ancestors 'none'"
+              ]
             }
           ]
         }
@@ -185,7 +179,7 @@
         {
           "id": "CTM_CTRL_008",
           "name": "Cookie theft mitigation gate",
-          "description": "The repository check path validates OWASP evidence, request-profile persistence, request-aware auth, suspicious-session revocation, cookie attributes, and targeted tests.",
+          "description": "The repository check path validates OWASP evidence, session persistence, security headers, reauthentication contracts, and verification scripts.",
           "evidence": [
             {
               "path": "tools/security/check-cookie-theft-mitigation.mjs",

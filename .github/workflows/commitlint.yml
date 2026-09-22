@@ -41,6 +41,11 @@ jobs:
             [[ -n "$commit" ]] || continue
             git show -s --format=%B "$commit" | pnpm exec commitlint --strict --verbose
           done <<< "$commits"
+      - name: Require signed commits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node tools/ci/check-commit-ssh-signing.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
       - name: Validate PR title for squash merge
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
