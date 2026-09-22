@@ -10,7 +10,10 @@ CONDITION_REPORT="$CONDITION_DIR/coverage-condition-workspace.json"
 THRESHOLDS="docs/testing/rust-condition-thresholds.json"
 TOOLCHAIN="nightly-2026-09-09"
 IGNORE_REGEX='(\.tests\.rs|\.test_support\.rs)$'
-TARGET_DIR="target/llvm-cov-target"
+# Isolate from stable coverage: cargo-llvm-cov nests llvm-cov-target under CARGO_TARGET_DIR,
+# and stable/nightly profdata formats are incompatible.
+export CARGO_TARGET_DIR="${ROOT_DIR}/target/condition-cov"
+TARGET_DIR="${CARGO_TARGET_DIR}/llvm-cov-target"
 
 if [[ "${NVBES_CONDITION_TOOLCHAIN:-$TOOLCHAIN}" != "$TOOLCHAIN" ]]; then
   printf 'error: branch evidence requires pinned toolchain %s\n' "$TOOLCHAIN" >&2
@@ -35,22 +38,18 @@ for polluted in NVBES_APP_URL NVBES_WEB_BASE_URL NVBES_API_BASE_URL NVBES_TARGET
   unset "$polluted" || true
 done
 
-mkdir -p "$CONDITION_DIR"
+mkdir -p "$CONDITION_DIR" "$CARGO_TARGET_DIR"
 rustup run "$TOOLCHAIN" -- cargo llvm-cov clean --workspace || true
 chmod -R u+w "$TARGET_DIR" 2>/dev/null || true
 rm -rf "$TARGET_DIR" 2>/dev/null || true
-mkdir -p "$TARGET_DIR"
 
+# One-shot report: nightly --branch places instrumented test binaries under
+# debug/build/<crate>/out; do not delete that tree before export.
 rustup run "$TOOLCHAIN" -- cargo llvm-cov \
   --workspace \
   --all-targets \
   --locked \
   --branch \
-  --no-report
-
-rm -rf "$TARGET_DIR/debug/build" "$TARGET_DIR/release/build" 2>/dev/null || true
-
-rustup run "$TOOLCHAIN" -- cargo llvm-cov report \
   --ignore-filename-regex "$IGNORE_REGEX" \
   --json \
   --summary-only \
