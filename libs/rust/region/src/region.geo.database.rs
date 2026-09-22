@@ -90,22 +90,5 @@ impl PersonalGeoDatabase {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{PersonalGeoDatabase, PersonalGeoRange};
-
-    #[test]
-    fn matches_cidr_range() {
-        let range = PersonalGeoRange::new("203.0.113.0/24".parse().unwrap(), "FR").unwrap();
-        let db = PersonalGeoDatabase::new(vec![range]);
-
-        let location = db.lookup("203.0.113.42".parse().unwrap()).unwrap();
-        assert_eq!(location.country_code, "FR");
-        assert!(db.lookup("198.51.100.1".parse().unwrap()).is_none());
-    }
-
-    #[test]
-    fn rejects_unsupported_country_code() {
-        let result = PersonalGeoRange::new("203.0.113.0/24".parse().unwrap(), "XX");
-        assert!(result.is_err());
-    }
-}
+#[path = "region.geo.database.tests.rs"]
+mod tests;

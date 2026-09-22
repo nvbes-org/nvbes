@@ -296,3 +296,7 @@ async fn expire_missing_ranges_tx(tx: &mut Transaction<'_, Postgres>) -> Result<
 fn relation_key(range: &MaxMindGeoLiteRange) -> String {
     format!("{}:{}", range.source_code, range.network)
 }
+
+#[cfg(test)]
+#[path = "region.geo.maxmind.import.tests.rs"]
+mod tests;

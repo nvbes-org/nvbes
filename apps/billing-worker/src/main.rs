@@ -152,3 +152,7 @@ async fn process_shutdown_signal() {
     #[cfg(not(unix))]
     let _ = tokio::signal::ctrl_c().await;
 }
+
+#[cfg(test)]
+#[path = "billing.worker.main.tests.rs"]
+mod tests;

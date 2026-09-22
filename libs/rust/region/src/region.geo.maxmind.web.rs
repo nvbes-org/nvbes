@@ -151,18 +151,5 @@ pub fn maxmind_web_evidence_source() -> GeoEvidenceSource {
 }
 
 #[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::maxmind_ip_relation;
-
-    #[test]
-    fn maps_country_response_to_relation() {
-        let body = json!({"country": {"iso_code": "FR"}});
-        let (relation, location) = maxmind_ip_relation("203.0.113.7".parse().unwrap(), &body)
-            .expect("relation should parse");
-
-        assert_eq!(location.country_code, "FR");
-        assert_eq!(relation.network.as_deref(), Some("203.0.113.7/32"));
-    }
-}
+#[path = "region.geo.maxmind.web.tests.rs"]
+mod tests;

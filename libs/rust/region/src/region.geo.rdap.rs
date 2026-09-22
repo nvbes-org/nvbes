@@ -165,7 +165,7 @@ impl RdapClient {
     }
 }
 
-fn string_field(body: &Value, field: &str) -> Option<String> {
+pub(crate) fn string_field(body: &Value, field: &str) -> Option<String> {
     body.get(field)?
         .as_str()
         .map(|value| value.trim().to_string())
@@ -196,18 +196,5 @@ fn first_entity_name(body: &Value) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{first_entity_name, parse_asn};
-
-    #[test]
-    fn parses_asn_handle() {
-        assert_eq!(parse_asn("AS13335".to_string()), Some(13335));
-        assert_eq!(parse_asn("NET-8-8-8-0-1".to_string()), None);
-    }
-
-    #[test]
-    fn extracts_first_entity_handle() {
-        let body = serde_json::json!({"entities": [{"handle": "ORG-EXAMPLE"}]});
-        assert_eq!(first_entity_name(&body).as_deref(), Some("ORG-EXAMPLE"));
-    }
-}
+#[path = "region.geo.rdap.tests.rs"]
+mod tests;

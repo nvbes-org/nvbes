@@ -108,3 +108,36 @@ fn required_env_reports_missing_variable() {
     let err = required_env(name).unwrap_err();
     assert!(err.contains(name));
 }
+
+#[tokio::test]
+async fn resolve_rejects_invalid_secret_manager_region_without_network() {
+    let name_region = "NVBES_SECRET_MANAGER_REGION";
+    let name_secret = "NVBES_SECRET_MANAGER_SECRET_ID";
+    let saved_region = std::env::var_os(name_region);
+    let saved_secret = std::env::var_os(name_secret);
+    unsafe {
+        std::env::set_var(name_secret, "test-secret-id");
+        std::env::set_var(name_region, "invalid-region");
+    }
+
+    let mut config = AppConfig {
+        secret_manager_enabled: true,
+        ..AppConfig::default()
+    };
+    let err = config
+        .resolve_from_secret_manager()
+        .await
+        .expect_err("invalid region");
+    assert!(err.contains("NVBES_SECRET_MANAGER_REGION"));
+
+    unsafe {
+        match saved_region {
+            Some(value) => std::env::set_var(name_region, value),
+            None => std::env::remove_var(name_region),
+        }
+        match saved_secret {
+            Some(value) => std::env::set_var(name_secret, value),
+            None => std::env::remove_var(name_secret),
+        }
+    }
+}

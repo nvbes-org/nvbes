@@ -351,3 +351,27 @@ fn mtls_defaults_port_to_api_port_plus_one() {
     let cfg = AppConfig::from_env().expect("defaults");
     assert_eq!(cfg.mtls_port, 5001);
 }
+
+#[test]
+fn case_table_parses_staging_urls_and_webauthn_origins() {
+    let _lock = ENV_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let guard = EnvGuard::isolated();
+    guard.apply(&[
+        ("NVBES_STAGING_WEB_BASE_URL", "https://staging-app.test"),
+        ("NVBES_STAGING_API_BASE_URL", "https://staging-api.test"),
+        ("NVBES_WEBAUTHN_RP_ID", "localhost"),
+        ("NVBES_WEBAUTHN_RP_ORIGIN", "http://localhost:5173"),
+    ]);
+    let cfg = AppConfig::from_env().expect("staging urls");
+    assert_eq!(
+        cfg.staging_web_base_url.as_deref(),
+        Some("https://staging-app.test")
+    );
+    assert_eq!(
+        cfg.staging_api_base_url.as_deref(),
+        Some("https://staging-api.test")
+    );
+    assert_eq!(cfg.webauthn_rp_id, "localhost");
+}

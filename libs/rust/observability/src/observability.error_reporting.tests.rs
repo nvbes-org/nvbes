@@ -4,10 +4,10 @@ use std::time::Duration;
 use nvbes_core::config::AppConfig;
 
 use super::{
-    ErrorReportingConfig, HttpServerErrorContext, capture_http_server_error, error_reporting_test_lock,
-    flush_error_reporting, init_error_reporting, init_error_reporting_for_service,
-    init_error_reporting_with_config, install_safe_panic_hook, is_error_reporting_configured,
-    release_name,
+    ErrorReportingConfig, HttpServerErrorContext, capture_http_server_error,
+    error_reporting_test_lock, flush_error_reporting, init_error_reporting,
+    init_error_reporting_for_service, init_error_reporting_with_config, install_safe_panic_hook,
+    is_error_reporting_configured, release_name,
 };
 
 fn env_lock() -> std::sync::MutexGuard<'static, ()> {
