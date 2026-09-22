@@ -36,6 +36,17 @@ function validatedResource(resource) {
   return resource;
 }
 
+const PULL_REQUEST_REF_PATTERN = /^refs\/pull\/(\d+)\/(?:merge|head)$/u;
+
+function pullRequestNumberFromRef(rawRef) {
+  const match = PULL_REQUEST_REF_PATTERN.exec(rawRef ?? '');
+  if (!match) throw new Error('GITHUB_REF is not a pull request ref');
+  const number = Number(match[1]);
+  if (!Number.isSafeInteger(number) || number <= 0)
+    throw new Error('Pull request number is invalid');
+  return number;
+}
+
 async function listPullRequestResource(apiUrl, repository, number, resource) {
   const token = requiredEnvironment('GITHUB_TOKEN');
   const safeBase = validatedApiBaseUrl(apiUrl);
@@ -72,8 +83,11 @@ const output = requiredEnvironment('GITHUB_OUTPUT');
 let result = { trusted: false, reasons: ['authorization failed closed'] };
 
 try {
-  const number = event.pull_request?.number;
-  if (!Number.isInteger(number)) throw new Error('Pull request number is missing');
+  // The pull request number comes from GITHUB_REF (environment), never from
+  // the event payload file: no file data may flow into the outbound GitHub
+  // API request below (CodeQL js/file-access-to-http). Anything unexpected
+  // fails closed to { trusted: false }.
+  const number = pullRequestNumberFromRef(process.env.GITHUB_REF);
   const [commits, files] = await Promise.all([
     listPullRequestResource(apiUrl, repository, number, 'commits'),
     listPullRequestResource(apiUrl, repository, number, 'files'),
