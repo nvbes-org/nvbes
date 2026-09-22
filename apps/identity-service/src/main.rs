@@ -30,6 +30,8 @@ mod mfa_rotation;
 mod oauth;
 #[path = "identity.oauth_clients.rs"]
 mod oauth_clients;
+#[path = "identity.operator.rs"]
+mod operator;
 #[path = "identity.refresh.rs"]
 mod refresh;
 #[path = "identity.synthetic.rs"]
@@ -181,6 +183,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(metrics::router(&state))
         .merge(http::router(&state))
         .merge(oauth::router(&state))
+        .merge(operator::router(&state))
         .merge(authz::router(&state))
         .merge(discovery::router(&state))
         .layer(axum::middleware::from_fn_with_state(

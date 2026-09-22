@@ -129,28 +129,28 @@ Master Test Plan (MTP)
 
 ### 3.2 Mapping nvbes — Suites existantes
 
-| Suite ID                | Catégorie manifeste | Commande                                                              |
-| ----------------------- | ------------------- | --------------------------------------------------------------------- |
-| TS-IDENTITY-AUTH        | `auth`              | `cargo test --package nvbes-identity-service identity.auth`           |
-| TS-IDENTITY-MFA         | `security`          | `cargo test --package nvbes-identity-service identity.mfa`            |
-| TS-IDENTITY-TOKENS      | `tokens`            | `cargo test --package nvbes-identity-service identity.tokens`         |
-| TS-EMAIL-WEBHOOKS       | `webhook`           | `cargo test --package nvbes-email-worker email.worker.webhook`        |
-| TS-EMAIL-DISPATCH       | `dispatch`          | `cargo test --package nvbes-email-worker email.worker.dispatcher`     |
-| TS-BILLING-WEBHOOKS     | `webhook`           | `cargo test --package nvbes-billing-service billing.webhooks`         |
-| TS-TRUST-RISK-ASSESS    | `assessment`        | `cargo test --package nvbes-trust-risk-service trust_risk.assessment` |
-| TS-TRUST-RISK-INGESTION | `trust`             | `cargo test --package nvbes-trust-risk-service trust_risk.ingress`    |
-| TS-TRUST-RISK-RULES     | `trust`             | `cargo test --package nvbes-trust-risk-service trust_risk.rules`      |
-| TS-EMAIL-RETENTION      | `retention`         | `cargo test --package nvbes-email-worker email.worker.retention`      |
-| TS-EMAIL-GRPC           | `grpc`              | `cargo test --package nvbes-email-worker email.worker.grpc`           |
-| TS-IDENTITY-HEALTH      | `health`            | `cargo test --package nvbes-identity-service identity.health`         |
-| TS-PLATFORM-COCKPIT     | `existence`         | `cargo test --package nvbes-platform platform.cockpit`                |
-| TS-PLATFORM-FINOPS      | `existence`         | `cargo test --package nvbes-platform platform.finops`                 |
-| TS-PLATFORM-AUDIT       | `existence`         | `cargo test --package nvbes-platform platform.audit`                  |
-| TS-PLATFORM-OPS         | `security`          | `cargo test --package nvbes-platform platform.operations`             |
-| TS-ACCOUNT-DB           | `database`          | `cargo test --package nvbes-account-service account.database`         |
-| TS-CONTAINER-CONTRACT   | `containers`        | `node --test apps/*/tests/container-contract.test.mjs`                |
-| TS-K6-LOAD              | `load`              | k6 `load` profile                                                     |
-| TS-PLAYWRIGHT-E2E       | `end-to-end`        | `pnpm test:e2e:critical`                                              |
+| Suite ID                | Catégorie manifeste | Commande                                                                                                 |
+| ----------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
+| TS-IDENTITY-AUTH        | `auth`              | `cargo test --package nvbes-identity-service identity.auth`                                              |
+| TS-IDENTITY-MFA         | `security`          | `cargo test --package nvbes-identity-service identity.mfa`                                               |
+| TS-IDENTITY-TOKENS      | `tokens`            | `cargo test --package nvbes-identity-service identity.tokens`                                            |
+| TS-EMAIL-WEBHOOKS       | `webhook`           | `cargo test --package nvbes-email-worker email.worker.webhook`                                           |
+| TS-EMAIL-DISPATCH       | `dispatch`          | `cargo test --package nvbes-email-worker email.worker.dispatcher`                                        |
+| TS-BILLING-WEBHOOKS     | `webhook`           | `cargo test --package nvbes-billing-service billing.webhooks`                                            |
+| TS-TRUST-RISK-ASSESS    | `assessment`        | `cargo test --package nvbes-trust-risk-service trust_risk.assessment`                                    |
+| TS-TRUST-RISK-INGESTION | `trust`             | `cargo test --package nvbes-trust-risk-service trust_risk.ingress`                                       |
+| TS-TRUST-RISK-RULES     | `trust`             | `cargo test --package nvbes-trust-risk-service trust_risk.rules`                                         |
+| TS-EMAIL-RETENTION      | `retention`         | `cargo test --package nvbes-email-worker email.worker.retention`                                         |
+| TS-EMAIL-GRPC           | `grpc`              | `cargo test --package nvbes-email-worker email.worker.grpc`                                              |
+| TS-IDENTITY-HEALTH      | `health`            | `cargo test --package nvbes-identity-service identity.health`                                            |
+| TS-PLATFORM-COCKPIT     | `existence`         | `cargo test --package nvbes-platform platform.cockpit` (auth/server/ServiceId; simulated panels removed) |
+| TS-PLATFORM-FINOPS      | `existence`         | `cargo test --package nvbes-platform platform.finops`                                                    |
+| TS-PLATFORM-AUDIT       | `existence`         | `cargo test --package nvbes-platform platform.audit`                                                     |
+| TS-PLATFORM-OPS         | `security`          | `cargo test --package nvbes-platform platform.operations`                                                |
+| TS-ACCOUNT-DB           | `database`          | `cargo test --package nvbes-account-service account.database`                                            |
+| TS-CONTAINER-CONTRACT   | `containers`        | `node --test apps/*/tests/container-contract.test.mjs`                                                   |
+| TS-K6-LOAD              | `load`              | k6 `load` profile                                                                                        |
+| TS-PLAYWRIGHT-E2E       | `end-to-end`        | `pnpm test:e2e:critical`                                                                                 |
 
 ## 4. Test Case Specification
 

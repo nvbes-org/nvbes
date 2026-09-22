@@ -28,6 +28,13 @@ fn authorize(
     if !actor.permits(permission) {
         return Err(OperationsError::Forbidden);
     }
+    let write = matches!(
+        permission,
+        Permission::WriteCases | Permission::WriteCosts
+    );
+    if write && !actor.has_mfa_step_up {
+        return Err(OperationsError::Forbidden);
+    }
     Ok(actor)
 }
 

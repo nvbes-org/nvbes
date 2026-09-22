@@ -26,6 +26,7 @@ pub(crate) fn state() -> IdentityState {
             mfa_previous_encryption_key: None,
             mfa_previous_key_version: None,
             token_issuer: "http://127.0.0.1:0".into(),
+            platform_operator_principals: Default::default(),
         },
         db,
     )

@@ -253,7 +253,7 @@ fn environment_configuration_covers_supported_providers_and_guardrails() {
     );
     environment.set(
         "NVBES_EMAIL_PRODUCER_TOKENS",
-        "identity-service=01234567890123456789012345678901,backoffice-service=abcdefghijklmnopqrstuvwxyzABCDEF",
+        "identity-service=01234567890123456789012345678901,platform-operations-service=abcdefghijklmnopqrstuvwxyzABCDEF",
     );
     environment.set("NVBES_EMAIL_DATA_ENCRYPTION_KEY", DEVELOPMENT_DATA_KEY);
     environment.set("NVBES_EMAIL_RECIPIENT_HMAC_KEY", DEVELOPMENT_HMAC_KEY);
