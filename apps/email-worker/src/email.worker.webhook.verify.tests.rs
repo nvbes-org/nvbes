@@ -4,11 +4,25 @@ use openssl::{
     hash::MessageDigest,
     pkey::{PKey, Private},
     rsa::Rsa,
+    sign::Signer,
     x509::{X509, X509NameBuilder, extension::BasicConstraints},
 };
 
 use super::{SnsMessage, WebhookVerifier, canonical_message, validated_url};
 use crate::config::WebhookTrustConfig;
+
+#[test]
+fn webhook_verifier_rejects_an_empty_ca_bundle() {
+    assert!(
+        WebhookVerifier::new(&WebhookTrustConfig {
+            topic_arn: "arn:scw:sns:fr-par:test:topic".to_string(),
+            ca_bundle_pem: Vec::new(),
+            signing_certificate_host: "messaging.s3.fr-par.scw.cloud".to_string(),
+            confirmation_host: "sns.mnq.fr-par.scaleway.com".to_string(),
+        })
+        .is_err()
+    );
+}
 
 #[test]
 fn signing_certificate_url_is_strictly_allowlisted() {
@@ -112,6 +126,58 @@ fn subscription_envelope_and_confirmation_url_are_strictly_validated() {
 }
 
 #[tokio::test]
+async fn verification_rejects_a_valid_signature_when_certificate_fetch_fails() {
+    let (authority, authority_key) = certificate_authority("nvbes-test-ca");
+    let (_leaf, leaf_key) = leaf_certificate("sns.scaleway.test", &authority, &authority_key);
+    let topic = "arn:scw:sns:fr-par:test:topic";
+    let payload = r#"{"id":"provider-event-1","email_id":"unknown","type":"delivery"}"#;
+    let mut message = SnsMessage {
+        message_type: "Notification".into(),
+        message_id: "message-id".into(),
+        topic_arn: topic.into(),
+        message: payload.into(),
+        timestamp: chrono::Utc::now().to_rfc3339(),
+        signature_version: "1".into(),
+        signature: String::new(),
+        signing_cert_url: "https://messaging.s3.fr-par.scw.cloud/fr-par/sns/cert.pem".into(),
+        subject: None,
+        token: None,
+        subscribe_url: None,
+    };
+    let canonical = canonical_message(&message).unwrap();
+    let mut signer = Signer::new(MessageDigest::sha1(), &leaf_key).unwrap();
+    signer.update(canonical.as_bytes()).unwrap();
+    message.signature = base64::Engine::encode(
+        &base64::engine::general_purpose::STANDARD,
+        signer.sign_to_vec().unwrap(),
+    );
+
+    let verifier = WebhookVerifier::new(&WebhookTrustConfig {
+        topic_arn: topic.to_string(),
+        ca_bundle_pem: authority.to_pem().unwrap(),
+        signing_certificate_host: "messaging.s3.fr-par.scw.cloud".to_string(),
+        confirmation_host: "sns.mnq.fr-par.scaleway.com".to_string(),
+    })
+    .unwrap();
+    let body = serde_json::to_vec(&serde_json::json!({
+        "Type": message.message_type,
+        "MessageId": message.message_id,
+        "TopicArn": message.topic_arn,
+        "Message": message.message,
+        "Timestamp": message.timestamp,
+        "SignatureVersion": message.signature_version,
+        "Signature": message.signature,
+        "SigningCertURL": message.signing_cert_url,
+    }))
+    .unwrap();
+    let error = verifier
+        .verify(&body)
+        .await
+        .expect_err("certificate fetch fails");
+    assert_eq!(error.outcome(), "invalid_certificate");
+}
+
+#[tokio::test]
 async fn verification_rejects_malformed_and_untrusted_envelopes_before_network_io() {
     let (authority, _) = certificate_authority("nvbes-test-ca");
     let verifier = WebhookVerifier::new(&WebhookTrustConfig {
@@ -158,9 +224,9 @@ fn url_allowlists_reject_credentials_ports_paths_and_queries() {
 #[test]
 fn signing_certificate_must_chain_to_the_pinned_authority() {
     let (authority, authority_key) = certificate_authority("nvbes-test-ca");
-    let trusted_leaf = leaf_certificate("sns.scaleway.test", &authority, &authority_key);
+    let (trusted_leaf, _) = leaf_certificate("sns.scaleway.test", &authority, &authority_key);
     let (other_authority, other_key) = certificate_authority("untrusted-ca");
-    let untrusted_leaf = leaf_certificate("sns.scaleway.test", &other_authority, &other_key);
+    let (untrusted_leaf, _) = leaf_certificate("sns.scaleway.test", &other_authority, &other_key);
     let verifier = WebhookVerifier::new(&WebhookTrustConfig {
         topic_arn: "arn:scw:sns:fr-par:test:topic".to_string(),
         ca_bundle_pem: authority.to_pem().unwrap(),
@@ -184,12 +250,16 @@ fn certificate_authority(common_name: &str) -> (X509, PKey<Private>) {
     (builder.build(), key)
 }
 
-fn leaf_certificate(common_name: &str, issuer: &X509, issuer_key: &PKey<Private>) -> X509 {
+fn leaf_certificate(
+    common_name: &str,
+    issuer: &X509,
+    issuer_key: &PKey<Private>,
+) -> (X509, PKey<Private>) {
     let key = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
     let subject = name(common_name);
     let mut builder = base_certificate(&subject, issuer.subject_name(), &key);
     builder.sign(issuer_key, MessageDigest::sha256()).unwrap();
-    builder.build()
+    (builder.build(), key)
 }
 
 fn base_certificate(

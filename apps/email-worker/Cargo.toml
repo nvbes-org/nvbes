@@ -11,6 +11,10 @@ database-tests = []
 name = "nvbes-email-worker"
 path = "src/main.rs"
 
+[[test]]
+name = "cli-coverage"
+path = "src/email.worker.cli.coverage.tests.rs"
+
 [dependencies]
 aes-gcm.workspace = true
 rand.workspace = true
@@ -48,5 +52,6 @@ uuid.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
+serde_json.workspace = true
 tower = "0.5"
 

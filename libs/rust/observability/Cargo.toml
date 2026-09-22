@@ -36,4 +36,5 @@ otlp = [
 profiling = ["dep:pyroscope"]
 
 [dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
 tower = "0.5"

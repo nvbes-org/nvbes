@@ -37,28 +37,32 @@ seuil = baseline mesurée − 2 points (bruit run-to-run de llvm-cov), plancher 
 Chaque vague relève les seuils des crates qu'elle traite. Un seuil ne redescend
 jamais. `nvbes-email` conserve son seuil produit explicite 95/90/90.
 
-## État au commit `1f0d660f`
+## État au commit `11c85640`
 
-Workspace : **51,0 %** de lignes (16 851 couvertes / 33 033 instrumentées),
-soit **12 878 lignes** à couvrir pour atteindre 90 % partout.
+Workspace : mesure llvm-cov post-isolation (`target/coverage` vs
+`target/condition`). Crates déjà ≥ 90 % lignes : `nvbes-audit`,
+`nvbes-email`, `nvbes-email-scaleway`, `nvbes-trust-risk`, `nvbes-platform`.
 
 | Crate                      | Lignes | Restant pour 90 % | Vague |
 | :------------------------- | -----: | ----------------: | :---- |
-| `nvbes-email`              | 97,1 % |           atteint | —     |
+| `nvbes-email`              | 98,3 % |           atteint | —     |
 | `nvbes-email-scaleway`     | 96,3 % |           atteint | —     |
-| `nvbes-email-worker`       | 84,1 % |               180 | 1     |
-| `nvbes-platform`           | 73,8 % |               211 | 1     |
-| `nvbes-trust-risk`         | 73,9 % |               115 | 1     |
-| `nvbes-billing-worker`     | 53,5 % |               259 | 1     |
-| `nvbes-audit`              | 36,4 % |                58 | 1     |
-| `nvbes-identity-service`   | 62,8 % |               631 | 2     |
-| `nvbes-observability`      | 15,7 % |               661 | 2     |
-| `nvbes-account-service`    | 27,9 % |               786 | 2     |
-| `nvbes-billing-service`    | 47,4 % |               814 | 3     |
-| `nvbes-trust-risk-service` | 40,3 % |             1 057 | 3     |
-| `nvbes-region`             | 41,7 % |             1 579 | 3     |
-| `nvbes-core`               | 47,3 % |             1 889 | 4     |
-| `nvbes-billing`            | 38,4 % |             4 769 | 5     |
+| `nvbes-audit`              |  100 % |           atteint | 1     |
+| `nvbes-trust-risk`         | 94,6 % |           atteint | 1     |
+| `nvbes-platform`           | 91,0 % |           atteint | 1     |
+| `nvbes-email-worker`       | 87,1 % |                88 | 1     |
+| `nvbes-observability`      | 84,3 % |                48 | 2     |
+| `nvbes-billing`            | 75,9 % |               578 | 5     |
+| `nvbes-billing-worker`     | 75,1 % |               103 | 1     |
+| `nvbes-identity-service`   | 74,7 % |               355 | 2     |
+| `nvbes-account-service`    | 74,5 % |               196 | 2     |
+| `nvbes-core`               | 73,4 % |               670 | 4     |
+| `nvbes-billing-service`    | 55,7 % |               663 | 3     |
+| `nvbes-trust-risk-service` | 51,0 % |               830 | 3     |
+| `nvbes-region`             | 46,3 % |             1 365 | 3     |
+
+Les vagues 1–5 et la purge Cloud orpheline sont amorcées ; l'effort restant
+porte sur les lignes/branches/mutations catalogue V1 (pas seulement le cliquet).
 
 ## Vagues
 
@@ -142,10 +146,10 @@ Deux mécanismes coexistent pour les tests adossés à PostgreSQL :
 `nvbes-billing` n'utilise ni l'un ni l'autre. La vague 5 doit trancher pour un
 mécanisme unique avant d'écrire les tests, pas après.
 
-## Limite d'environnement connue
+## Isolation llvm-cov (couverture vs branches)
 
-Sur macOS arm64 (et certains agents Linux), `llvm-cov export` segfaute quand
-`cargo llvm-cov` lui passe les objets de build scripts. Les scripts
-`scripts/test-workspace-coverage.sh` et `scripts/test-workspace-condition.sh`
-collectent avec `--no-report` puis exportent uniquement les binaires de
-`debug/deps`.
+Les scripts `scripts/test-workspace-coverage.sh` (stable, lignes) et
+`scripts/test-workspace-condition.sh` (nightly `--branch`) isolent leurs
+artefacts sous `target/coverage` et `target/condition`. Chaque lane produit un
+rapport one-shot : ne pas vider `CARGO_TARGET_DIR` entre `clean` et le rapport
+(race `CACHEDIR.TAG` / binaires nightly sous `debug/build/<crate>/out`).
