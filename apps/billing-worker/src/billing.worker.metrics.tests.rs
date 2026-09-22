@@ -8,7 +8,9 @@ use crate::{config::BillingWorkerConfig, state::BillingWorkerState};
 
 #[tokio::test]
 async fn metrics_requires_valid_bearer_token() {
-    let mut config = BillingWorkerConfig::from_env().unwrap_or_else(|_| BillingWorkerConfig {
+    // Build config explicitly: from_env() races with config EnvGuard tests that
+    // temporarily set NVBES_EMAIL_* and would make EmailClient::connect fail.
+    let config = BillingWorkerConfig {
         environment: "development".into(),
         database_url: "postgres://localhost/unused".into(),
         http_bind_addr: "127.0.0.1:8080".parse().unwrap(),
@@ -21,8 +23,7 @@ async fn metrics_requires_valid_bearer_token() {
         dispatch_mode: crate::config::DispatchMode::InMemory,
         otlp_endpoint: None,
         otlp_authorization_header: None,
-    });
-    config.metrics_token = Some("secret_metrics_token".into());
+    };
 
     let db = sqlx::postgres::PgPoolOptions::new()
         .min_connections(0)

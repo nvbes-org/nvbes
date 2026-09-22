@@ -4,10 +4,12 @@ use super::{BillingWorkerConfig, DispatchMode};
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 
+// Never clear DATABASE_URL: #[sqlx::test] reads it in parallel with these
+// tests in the same process (coverage --all-features). Mutating it races and
+// surfaces as "DATABASE_URL must be set". Prefer NVBES_BILLING_DATABASE_URL.
 const TEST_VARS: &[&str] = &[
     "NVBES_ENVIRONMENT",
     "NVBES_BILLING_DATABASE_URL",
-    "DATABASE_URL",
     "NVBES_BILLING_HTTP_BIND_ADDR",
     "NVBES_BILLING_BIND_ADDR",
     "NVBES_APP_URL",
@@ -61,11 +63,22 @@ impl Drop for EnvGuard {
 }
 
 #[test]
-fn database_url_is_strictly_required() {
+fn billing_database_url_is_required_unless_database_url_is_set() {
     let _lock = ENV_LOCK.lock().unwrap();
     let _guard = EnvGuard::isolated();
-    let res = BillingWorkerConfig::from_env();
-    assert!(res.is_err());
+    match std::env::var("DATABASE_URL") {
+        Ok(url) => {
+            let cfg = BillingWorkerConfig::from_env().expect("DATABASE_URL fallback must load");
+            assert_eq!(cfg.database_url, url);
+        }
+        Err(_) => {
+            let err = BillingWorkerConfig::from_env().expect_err("missing database URL must fail");
+            assert!(
+                err.to_string()
+                    .contains("NVBES_BILLING_DATABASE_URL is required")
+            );
+        }
+    }
 }
 
 #[test]
@@ -128,10 +141,21 @@ fn parses_scaleway_queue_configuration() {
 #[test]
 fn falls_back_to_database_url_when_billing_url_missing() {
     let _lock = ENV_LOCK.lock().unwrap();
-    let guard = EnvGuard::isolated();
-    guard.set("DATABASE_URL", "postgres://localhost/fallback_db");
+    let _guard = EnvGuard::isolated();
+    let seeded = std::env::var_os("DATABASE_URL").is_none();
+    if seeded {
+        unsafe {
+            std::env::set_var("DATABASE_URL", "postgres://localhost/fallback_db");
+        }
+    }
+    let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be available");
     let cfg = BillingWorkerConfig::from_env().expect("config should load");
-    assert_eq!(cfg.database_url, "postgres://localhost/fallback_db");
+    assert_eq!(cfg.database_url, url);
+    if seeded {
+        unsafe {
+            std::env::remove_var("DATABASE_URL");
+        }
+    }
 }
 
 #[test]
