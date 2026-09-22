@@ -37,13 +37,13 @@ for polluted in NVBES_APP_URL NVBES_WEB_BASE_URL NVBES_API_BASE_URL NVBES_TARGET
 done
 
 mkdir -p "$CONDITION_DIR"
-rustup run "$TOOLCHAIN" -- cargo llvm-cov clean --workspace --target-dir "$TARGET_DIR"
+export CARGO_TARGET_DIR="$TARGET_DIR"
+rustup run "$TOOLCHAIN" -- cargo llvm-cov clean --workspace
 rustup run "$TOOLCHAIN" -- cargo llvm-cov \
   --workspace \
   --all-targets \
   --locked \
   --branch \
-  --target-dir "$TARGET_DIR" \
   --ignore-filename-regex "$IGNORE_REGEX" \
   --no-report
 

@@ -90,7 +90,7 @@
       "inputs": ["default"],
       "outputs": [],
       "options": {
-        "command": "cargo nextest run --workspace --locked"
+        "command": "bash scripts/with-security-test-db.sh cargo nextest run --workspace --locked"
       },
       "configurations": {},
       "parallelism": true,
@@ -105,7 +105,7 @@
       ],
       "outputs": ["{workspaceRoot}/.temp/rust"],
       "options": {
-        "command": "bash scripts/test-workspace-coverage.sh"
+        "command": "bash scripts/with-security-test-db.sh bash scripts/test-workspace-coverage.sh"
       },
       "configurations": {},
       "parallelism": false,
@@ -128,7 +128,7 @@
       ],
       "outputs": ["{workspaceRoot}/.temp/rust"],
       "options": {
-        "command": "bash scripts/test-workspace-condition.sh"
+        "command": "bash scripts/with-security-test-db.sh bash scripts/test-workspace-condition.sh"
       },
       "configurations": {},
       "parallelism": false,
