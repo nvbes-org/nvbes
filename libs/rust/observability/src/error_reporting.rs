@@ -13,6 +13,15 @@ pub struct ErrorReportingGuard {
     _guard: Option<sentry::ClientInitGuard>,
 }
 
+impl Drop for ErrorReportingGuard {
+    fn drop(&mut self) {
+        // Drop the Sentry client first, then clear the process-wide flag so later
+        // tests (and condition coverage) observe a disabled reporter again.
+        drop(self._guard.take());
+        ERROR_REPORTING_CONFIGURED.store(false, Ordering::Relaxed);
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct ErrorReportingConfig<'a> {
     pub app_name: &'a str,

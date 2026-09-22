@@ -102,7 +102,7 @@ function loadOpenApiSpec() {
     return JSON.parse(stdout);
   }
 
-  const defaultSpecPath = path.resolve(ROOT_DIR, 'libs/ts/identity-sdk-core/openapi.json');
+  const defaultSpecPath = path.resolve(ROOT_DIR, 'docs/testing/v1/openapi-smoke.json');
   let defaultRaw;
   try {
     defaultRaw = readFileSync(defaultSpecPath, 'utf8');
