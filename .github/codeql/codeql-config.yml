@@ -1,0 +1,11 @@
+name: "nvbes CodeQL configuration"
+
+# archive/ holds retired products and prototypes that are not part of the
+# active V1 runtime (see AGENTS.md). They must not raise Code Scanning alerts.
+# Active code lives outside archive/ and stays fully analyzed.
+paths-ignore:
+  - archive
+  - archive/**
+  - '**/archive/**'
+  - .temp
+  - mutants.out.old
