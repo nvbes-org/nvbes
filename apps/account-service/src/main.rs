@@ -28,6 +28,7 @@ mod synthetic;
 mod teams;
 
 #[cfg(test)]
+#[allow(dead_code)]
 #[path = "account.test_support.rs"]
 mod test_support;
 

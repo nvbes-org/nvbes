@@ -276,20 +276,5 @@ fn relation_key(range: &V2flyGeoIpRange) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{decode_sha256_hex, parse_sha256sum};
-
-    #[test]
-    fn parses_sha256sum_file() {
-        let checksum =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  geoip.dat";
-
-        assert!(parse_sha256sum(checksum).is_ok());
-    }
-
-    #[test]
-    fn rejects_invalid_sha256sum() {
-        assert!(decode_sha256_hex("abc").is_none());
-        assert!(parse_sha256sum("").is_err());
-    }
-}
+#[path = "region.geo.v2fly.import.tests.rs"]
+mod tests;

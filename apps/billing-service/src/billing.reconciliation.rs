@@ -159,3 +159,7 @@ pub async fn operator_resolve_reconciliation_handler(
 
     Ok(Json(item))
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.reconciliation.tests.rs"]
+mod tests;

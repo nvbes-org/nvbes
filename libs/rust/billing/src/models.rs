@@ -228,3 +228,7 @@ pub struct PlanRecord {
     pub plan_id: Uuid,
     pub code: String,
 }
+
+#[cfg(test)]
+#[path = "models.tests.rs"]
+mod tests;

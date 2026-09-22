@@ -24,6 +24,8 @@ mod health;
 mod metrics;
 #[path = "billing.outbox.rs"]
 mod outbox;
+#[path = "billing.overview.rs"]
+mod overview;
 #[path = "billing.plans.rs"]
 mod plans;
 #[path = "billing.portal.rs"]
@@ -34,9 +36,6 @@ mod reconciliation;
 mod subscriptions;
 #[path = "billing.synthetic.rs"]
 mod synthetic;
-#[cfg(all(test, feature = "database-tests"))]
-#[path = "billing.webhooks.tests.rs"]
-mod webhook_tests;
 #[path = "billing.webhooks.rs"]
 mod webhooks;
 

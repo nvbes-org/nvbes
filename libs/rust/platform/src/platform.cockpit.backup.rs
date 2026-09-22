@@ -53,32 +53,5 @@ impl BackupRestoreMonitor {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use chrono::Duration;
-
-    #[test]
-    fn validates_backup_within_rpo_and_rto() {
-        let now = Utc::now();
-        let backup_ts = now - Duration::hours(6);
-        let summary = BackupRestoreMonitor::evaluate(
-            Some(backup_ts),
-            Some(now - Duration::days(2)),
-            Some(120), // 2 hours <= 8 hours
-            true,
-        );
-
-        assert!(summary.meets_rpo);
-        assert!(summary.meets_rto);
-        assert!(summary.restore_verification_passed);
-    }
-
-    #[test]
-    fn detects_stale_backup_violating_rpo() {
-        let now = Utc::now();
-        let stale_backup = now - Duration::hours(36);
-        let summary = BackupRestoreMonitor::evaluate(Some(stale_backup), Some(now), Some(60), true);
-
-        assert!(!summary.meets_rpo);
-    }
-}
+#[path = "platform.cockpit.backup.tests.rs"]
+mod tests;

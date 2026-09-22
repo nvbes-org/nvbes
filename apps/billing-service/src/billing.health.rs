@@ -42,3 +42,7 @@ fn response(status: &'static str) -> HealthResponse {
         service: "nvbes-billing-service",
     }
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.health.tests.rs"]
+mod tests;

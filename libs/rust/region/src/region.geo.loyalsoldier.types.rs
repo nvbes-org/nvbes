@@ -87,36 +87,5 @@ fn category_reputation(code: &str, country: bool) -> (GeoNetworkKind, i16, Vec<S
 }
 
 #[cfg(test)]
-mod tests {
-    use ipnet::IpNet;
-
-    use super::{category_reputation, map_loyalsoldier_range};
-    use crate::geo::v2fly_dat::V2flyGeoIpDatEntry;
-
-    #[test]
-    fn maps_country_and_enriched_categories() {
-        let country = map_loyalsoldier_range(&V2flyGeoIpDatEntry {
-            code: "fr".to_string(),
-            network: "203.0.113.0/24".parse::<IpNet>().unwrap(),
-        });
-        let tor = map_loyalsoldier_range(&V2flyGeoIpDatEntry {
-            code: "tor".to_string(),
-            network: "198.51.100.0/24".parse::<IpNet>().unwrap(),
-        });
-
-        assert_eq!(country.country_code.as_deref(), Some("FR"));
-        assert_eq!(country.kind, "unknown");
-        assert_eq!(tor.country_code, None);
-        assert_eq!(tor.kind, "tor");
-        assert_eq!(tor.score, 95);
-    }
-
-    #[test]
-    fn classifies_provider_categories_as_datacenter() {
-        let (kind, score, labels) = category_reputation("cloudflare", false);
-
-        assert_eq!(kind.as_str(), "datacenter");
-        assert_eq!(score, 65);
-        assert!(labels.contains(&"provider:cloudflare".to_string()));
-    }
-}
+#[path = "region.geo.loyalsoldier.types.tests.rs"]
+mod tests;

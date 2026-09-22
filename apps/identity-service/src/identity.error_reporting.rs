@@ -7,9 +7,9 @@ pub const APP_NAME: &str = "nvbes-identity-service";
 
 #[derive(Debug)]
 pub struct ErrorReportingRuntimeConfig {
-    environment: String,
-    dsn: String,
-    traces_sample_rate: f32,
+    pub(crate) environment: String,
+    pub(crate) dsn: String,
+    pub(crate) traces_sample_rate: f32,
 }
 
 impl ErrorReportingRuntimeConfig {

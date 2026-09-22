@@ -12,8 +12,22 @@ CONTAINER="nvbes-security-test-db"
 DB="nvbes_security_test"
 PORT="15432"
 
+url_is_reachable() {
+  local url="$1"
+  if command -v pg_isready >/dev/null 2>&1; then
+    # Accept any directly reachable Postgres URL (local install, CI service, etc.).
+    if pg_isready -d "$url" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+  if command -v docker >/dev/null 2>&1 && docker exec "$CONTAINER" pg_isready -U postgres >/dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
+
 if [[ -n "${NVBES_SECURITY_TEST_DATABASE_URL:-}" ]]; then
-  if docker exec "$CONTAINER" pg_isready -U postgres >/dev/null 2>&1; then
+  if url_is_reachable "$NVBES_SECURITY_TEST_DATABASE_URL"; then
     exec "$@"
   fi
   echo "with-security-test-db: preset URL unreachable, reprovisioning locally" >&2

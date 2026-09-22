@@ -73,20 +73,5 @@ fn decode_sha256_hex(value: &str) -> Option<[u8; 32]> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{decode_sha256_hex, parse_sha256sum};
-
-    #[test]
-    fn parses_sha256sum_file() {
-        let checksum =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  geoip.dat";
-
-        assert!(parse_sha256sum(checksum).is_ok());
-    }
-
-    #[test]
-    fn rejects_invalid_sha256sum() {
-        assert!(decode_sha256_hex("abc").is_none());
-        assert!(parse_sha256sum("").is_err());
-    }
-}
+#[path = "region.geo.loyalsoldier.download.tests.rs"]
+mod tests;

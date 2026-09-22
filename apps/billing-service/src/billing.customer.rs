@@ -102,3 +102,7 @@ async fn create_stripe_test_customer(
         .map(str::to_owned)
         .ok_or_else(|| BillingError::Stripe("missing id in Stripe customer response".into()))
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.customer.tests.rs"]
+mod tests;

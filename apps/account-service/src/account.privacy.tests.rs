@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use axum::{
     body::{Body, to_bytes},
     http::{Request, StatusCode},
@@ -44,6 +45,7 @@ fn export_and_closure_participants_mirror_row_status() {
     assert_eq!(closure.participants[0].last_error.as_deref(), Some("late"));
 }
 
+#[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn export_and_closure_http_lifecycle(pool: PgPool) {
     let principal_id = Uuid::new_v4();
@@ -137,6 +139,7 @@ async fn export_and_closure_http_lifecycle(pool: PgPool) {
     assert_eq!(cancel.status(), StatusCode::NO_CONTENT);
 }
 
+#[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn download_export_requires_completed_document(pool: PgPool) {
     let principal_id = Uuid::new_v4();

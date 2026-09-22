@@ -26,3 +26,7 @@ pub async fn record_audit_event(
 
     Ok(())
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.audit.tests.rs"]
+mod tests;

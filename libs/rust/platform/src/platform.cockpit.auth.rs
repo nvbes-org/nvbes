@@ -9,7 +9,7 @@ use serde_json::json;
 pub const DEFAULT_OPERATOR_ROLE: &str = "platform_owner";
 pub const MFA_STEP_UP_HEADER: &str = "x-nvbes-mfa-step-up";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperatorSession {
     pub operator_id: String,
     pub role: String,
@@ -116,3 +116,7 @@ pub async fn require_operator_auth(
         )
     })
 }
+
+#[cfg(test)]
+#[path = "platform.cockpit.auth.tests.rs"]
+mod tests;

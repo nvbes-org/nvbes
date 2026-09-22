@@ -1,24 +1,22 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use nvbes_billing::{
-    fetch_workspace_billing_overview,
-    proto::nvbes::billing::v1::{
-        BillingEventReceipt, BillingOperationsSnapshot, CreateBillingPortalSessionRequest,
-        CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest,
-        CreateCheckoutSessionResponse, GetBillingOperationsSnapshotRequest,
-        GetWorkspaceBillingOverviewRequest, GetWorkspaceEntitlementsRequest,
-        ReconcileWorkspaceRequest, ReconcileWorkspaceResponse, SubmitBillingEventRequest,
-        WorkspaceBillingOverviewResponse, WorkspaceEntitlementsResponse,
-        billing_delivery_service_server::{BillingDeliveryService, BillingDeliveryServiceServer},
-        billing_operations_service_server::{
-            BillingOperationsService, BillingOperationsServiceServer,
-        },
-    },
+use nvbes_billing::proto::nvbes::billing::v1::{
+    BillingEventReceipt, BillingOperationsSnapshot, CreateBillingPortalSessionRequest,
+    CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest,
+    CreateCheckoutSessionResponse, GetBillingOperationsSnapshotRequest,
+    GetWorkspaceBillingOverviewRequest, GetWorkspaceEntitlementsRequest, ReconcileWorkspaceRequest,
+    ReconcileWorkspaceResponse, SubmitBillingEventRequest, WorkspaceBillingOverviewResponse,
+    WorkspaceEntitlementsResponse,
+    billing_delivery_service_server::{BillingDeliveryService, BillingDeliveryServiceServer},
+    billing_operations_service_server::{BillingOperationsService, BillingOperationsServiceServer},
 };
 use prost_types::Timestamp;
 
-use crate::{customer::get_or_create_customer, outbox::record_outbox_event};
+use crate::{
+    customer::get_or_create_customer, outbox::record_outbox_event,
+    overview::fetch_account_billing_overview,
+};
 
 pub const MAX_GRPC_DECODE_BYTES: usize = 256 * 1024;
 
@@ -100,27 +98,27 @@ impl BillingDeliveryService for BillingDeliveryGrpcService {
         let workspace_id = parse_uuid(&request.get_ref().workspace_id)?;
         tracing::Span::current().record("workspace_id", workspace_id.to_string());
 
-        let overview = fetch_workspace_billing_overview(&self.state.db, workspace_id)
+        let overview = fetch_account_billing_overview(&self.state.db, workspace_id)
             .await
             .map_err(|e| {
                 tracing::error!(error = ?e, "get_workspace_entitlements db error");
                 Status::internal("entitlements unavailable")
-            })?;
+            })?
+            .ok_or_else(|| Status::not_found("no subscription for account"))?;
 
-        let ent = &overview.entitlements;
-        let sub = &overview.subscription;
-        let plan = &overview.plan;
+        let api_key_limit = i64::from(nvbes_billing::api_key_limit(&overview.plan_code));
 
         Ok(Response::new(WorkspaceEntitlementsResponse {
             workspace_id: workspace_id.to_string(),
-            plan_code: plan.code.clone(),
-            status: sub.status.clone(),
-            max_seats: i64::from(plan.included_users),
-            storage_bytes_quota: i64::from(plan.included_storage_gb) * 1024 * 1024 * 1024,
-            api_rate_limit_per_minute: i64::from(ent.api_key_limit) * 60,
+            plan_code: overview.plan_code,
+            status: overview.status,
+            // Cloud Drive quotas are out of V1 billing scope.
+            max_seats: 0,
+            storage_bytes_quota: 0,
+            api_rate_limit_per_minute: api_key_limit.saturating_mul(60),
             custom_domain_enabled: false,
             advanced_security_enabled: false,
-            current_period_end: sub.current_period_end.map(chrono_to_proto_ts),
+            current_period_end: overview.current_period_end.map(chrono_to_proto_ts),
         }))
     }
 
@@ -137,31 +135,29 @@ impl BillingDeliveryService for BillingDeliveryGrpcService {
         let workspace_id = parse_uuid(&request.get_ref().workspace_id)?;
         tracing::Span::current().record("workspace_id", workspace_id.to_string());
 
-        let overview = fetch_workspace_billing_overview(&self.state.db, workspace_id)
+        let overview = fetch_account_billing_overview(&self.state.db, workspace_id)
             .await
             .map_err(|e| {
                 tracing::error!(error = ?e, "get_workspace_billing_overview db error");
                 Status::internal("billing overview unavailable")
-            })?;
-
-        let sub = &overview.subscription;
-        let plan = &overview.plan;
+            })?
+            .ok_or_else(|| Status::not_found("no subscription for account"))?;
 
         Ok(Response::new(WorkspaceBillingOverviewResponse {
             workspace_id: workspace_id.to_string(),
-            plan_code: plan.code.clone(),
-            status: sub.status.clone(),
+            plan_code: overview.plan_code,
+            status: overview.status,
             customer_id: overview
-                .billing_account
-                .billing_email
-                .clone()
+                .stripe_customer_id
+                .or(overview.customer_email)
                 .unwrap_or_default(),
-            monthly_price_cents: plan.monthly_price_cents,
-            currency: plan.currency.clone(),
-            active_seats: overview.invoice_estimate.seat_overage_amount_cents,
-            storage_bytes_used: i64::from(plan.included_storage_gb) * 1024 * 1024 * 1024,
-            cancel_at_period_end: None,
-            current_period_end: sub.current_period_end.map(chrono_to_proto_ts),
+            monthly_price_cents: overview.monthly_price_cents,
+            currency: overview.currency,
+            // Cloud Drive usage meters are out of V1 billing scope.
+            active_seats: 0,
+            storage_bytes_used: 0,
+            cancel_at_period_end: Some(overview.cancel_at_period_end.to_string()),
+            current_period_end: overview.current_period_end.map(chrono_to_proto_ts),
         }))
     }
 

@@ -64,7 +64,15 @@ fn remote_statuses_map_to_stable_errors() {
         TrustRiskClientError::Conflict
     ));
     assert!(matches!(
+        map_status(tonic::Status::failed_precondition("hidden")),
+        TrustRiskClientError::Conflict
+    ));
+    assert!(matches!(
         map_status(tonic::Status::permission_denied("hidden")),
+        TrustRiskClientError::Unauthorized
+    ));
+    assert!(matches!(
+        map_status(tonic::Status::unauthenticated("hidden")),
         TrustRiskClientError::Unauthorized
     ));
     assert!(matches!(
@@ -72,7 +80,31 @@ fn remote_statuses_map_to_stable_errors() {
         TrustRiskClientError::Unavailable
     ));
     assert!(matches!(
+        map_status(tonic::Status::unavailable("hidden")),
+        TrustRiskClientError::Unavailable
+    ));
+    assert!(matches!(
+        map_status(tonic::Status::resource_exhausted("hidden")),
+        TrustRiskClientError::Unavailable
+    ));
+    assert!(matches!(
+        map_status(tonic::Status::invalid_argument("hidden")),
+        TrustRiskClientError::Invalid
+    ));
+    assert!(matches!(
         map_status(tonic::Status::internal("hidden")),
         TrustRiskClientError::Protocol
     ));
+}
+
+#[test]
+fn invalid_endpoint_uri_is_rejected() {
+    let error = TrustRiskClientConfig::from_values(
+        "development",
+        "not a uri".to_string(),
+        TOKEN.to_string(),
+        Duration::from_millis(100),
+    )
+    .unwrap_err();
+    assert!(matches!(error, TrustRiskClientError::Configuration(_)));
 }

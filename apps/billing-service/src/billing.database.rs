@@ -19,6 +19,11 @@ pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
     sqlx::migrate!("./migrations").run(pool).await
 }
 
+#[cfg(test)]
+#[path = "billing.database.test_support.rs"]
+#[allow(dead_code)] // consumed by metrics/health/customer/webhook tests (some feature-gated)
+pub mod test_support;
+
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "billing.database.tests.rs"]
 mod tests;

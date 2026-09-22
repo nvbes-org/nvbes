@@ -31,6 +31,7 @@ pub async fn observe_request(
     // --- W3C Trace Context ---
     let incoming_traceparent = trace_context::extract_traceparent(req.headers());
     let tracestate = trace_context::extract_tracestate(req.headers());
+    #[cfg_attr(not(feature = "otlp"), allow(unused_mut))]
     let mut current_traceparent = incoming_traceparent
         .as_ref()
         .map(trace_context::child_traceparent)

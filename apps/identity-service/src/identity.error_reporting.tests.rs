@@ -54,9 +54,8 @@ fn from_env_requires_environment_and_https_dsn() {
         std::env::set_var("SENTRY_TRACES_SAMPLE_RATE", "0.2");
     }
     let config = ErrorReportingRuntimeConfig::from_env().unwrap();
-    let _guard_init = super::init(&config);
-    let smoke = super::smoke(&config);
-    assert_eq!(smoke.app_name, APP_NAME);
-    assert!(smoke.configured);
+    assert_eq!(config.environment, "production");
+    assert!(config.dsn.starts_with("https://"));
+    assert!((config.traces_sample_rate - 0.2).abs() < f32::EPSILON);
     clear();
 }

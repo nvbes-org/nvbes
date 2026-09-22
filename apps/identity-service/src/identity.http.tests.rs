@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use axum::{
     body::Body,
     http::{Request, StatusCode},
@@ -90,6 +91,7 @@ async fn register_rejects_invalid_json_payloads_without_database() {
     assert_eq!(bad_email.status(), StatusCode::BAD_REQUEST);
 }
 
+#[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn register_and_login_round_trip(pool: PgPool) {
     use crate::{app::IdentityState, config::IdentityConfig};

@@ -14,5 +14,19 @@
   },
   "nvbes-email-worker": {
     "grpc_service::limits_tests::grpc_transport_rejects_messages_above_the_worker_budget": "gRPC loopback transport"
+  },
+  "nvbes-billing": {
+    "schema_v1_tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)"
+  },
+  "nvbes-observability": {
+    "error_reporting::tests::init_with_dsn_enables_capture_path": "Sentry client init requires network syscalls blocked in micro-test sandbox",
+    "metrics::tests::start_metrics_server_binds_and_serves_in_development": "TCP bind/connect blocked in micro-test sandbox",
+    "worker_error_reporting::capture::tests::capture_paths_run_when_error_reporting_is_configured": "Sentry client init requires network syscalls blocked in micro-test sandbox",
+    "worker_error_reporting::monitor::tests::smoke_and_heartbeat_send_when_error_reporting_is_configured": "Sentry client init requires network syscalls blocked in micro-test sandbox"
+  },
+  "nvbes-identity-service": {
+    "oauth::tests::authorize_requires_session_before_issuing_code": "Authorize path resolves clients via PostgreSQL",
+    "oauth::tests::token_authorization_code_returns_server_error_without_database": "Token exchange touches PostgreSQL",
+    "oauth::tests::token_refresh_rejects_unknown_token_without_database": "Refresh path touches PostgreSQL"
   }
 }

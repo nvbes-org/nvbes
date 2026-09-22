@@ -19,12 +19,20 @@ metrics.workspace = true
 metrics-exporter-prometheus.workspace = true
 opentelemetry = { workspace = true, optional = true }
 opentelemetry_sdk = { workspace = true, optional = true }
-opentelemetry-otlp = { workspace = true, optional = true, features = ["http-proto", "reqwest-rustls"] }
+opentelemetry-otlp = { workspace = true, optional = true, features = [
+  "http-proto",
+  "reqwest-rustls",
+] }
 pyroscope = { workspace = true, optional = true }
 tracing-opentelemetry = { workspace = true, optional = true }
 
 [features]
-otlp = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]
+otlp = [
+  "dep:opentelemetry",
+  "dep:opentelemetry_sdk",
+  "dep:opentelemetry-otlp",
+  "dep:tracing-opentelemetry",
+]
 profiling = ["dep:pyroscope"]
 
 [dev-dependencies]

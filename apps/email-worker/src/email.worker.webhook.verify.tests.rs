@@ -221,3 +221,76 @@ fn name(common_name: &str) -> openssl::x509::X509Name {
     name.append_entry_by_text("CN", common_name).unwrap();
     name.build()
 }
+
+#[test]
+fn verification_error_outcomes_are_stable() {
+    use super::SnsVerificationError;
+    assert_eq!(
+        SnsVerificationError::Envelope(anyhow::anyhow!("bad")).outcome(),
+        "invalid_envelope"
+    );
+    assert_eq!(
+        SnsVerificationError::CertificateUrl(anyhow::anyhow!("bad")).outcome(),
+        "invalid_certificate_url"
+    );
+    assert_eq!(
+        SnsVerificationError::Certificate(anyhow::anyhow!("bad")).outcome(),
+        "invalid_certificate"
+    );
+    assert_eq!(
+        SnsVerificationError::SignatureEncoding(
+            base64::Engine::decode(&base64::engine::general_purpose::STANDARD, b"!!!!")
+                .expect_err("invalid base64")
+        )
+        .outcome(),
+        "invalid_signature_encoding"
+    );
+    assert_eq!(
+        SnsVerificationError::Cryptography(openssl::error::ErrorStack::get()).outcome(),
+        "cryptography_failed"
+    );
+    assert_eq!(
+        SnsVerificationError::InvalidSignature.outcome(),
+        "invalid_signature"
+    );
+}
+
+#[test]
+fn notification_canonical_form_includes_optional_subject() {
+    let message = SnsMessage {
+        message_type: "Notification".into(),
+        message_id: "id".into(),
+        topic_arn: "arn".into(),
+        message: "payload".into(),
+        timestamp: "2026-08-02T12:00:00Z".into(),
+        signature_version: "1".into(),
+        signature: "signature".into(),
+        signing_cert_url: "https://example.test/cert.pem".into(),
+        subject: Some("hello".into()),
+        token: None,
+        subscribe_url: None,
+    };
+    assert!(
+        canonical_message(&message)
+            .unwrap()
+            .contains("Subject\nhello\n")
+    );
+}
+
+#[test]
+fn canonical_message_rejects_unsupported_type() {
+    let message = SnsMessage {
+        message_type: "UnsubscribeConfirmation".into(),
+        message_id: "id".into(),
+        topic_arn: "arn".into(),
+        message: "payload".into(),
+        timestamp: "2026-08-02T12:00:00Z".into(),
+        signature_version: "1".into(),
+        signature: "signature".into(),
+        signing_cert_url: "https://example.test/cert.pem".into(),
+        subject: None,
+        token: None,
+        subscribe_url: None,
+    };
+    assert!(canonical_message(&message).is_err());
+}

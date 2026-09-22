@@ -14,8 +14,12 @@
           "description": "Block client-controlled business outcomes by deriving billing lock state, subscription status, and credential validation on the server.",
           "evidence": [
             {
-              "path": "libs/rust/billing/src/checkout_sessions.rs",
-              "includes": ["subscription_status_requires_lock", "BillingCheckoutSessionError"]
+              "path": "libs/rust/billing/src/shared.rs",
+              "includes": ["subscription_status_requires_lock", "validate_plan_code"]
+            },
+            {
+              "path": "apps/billing-service/src/billing.checkout.rs",
+              "includes": ["create_checkout_handler", "idempotency_key"]
             },
             {
               "path": "apps/identity-service/src/identity.auth.rs",
@@ -157,11 +161,10 @@
               "includes": ["audit(&mut tx, principal_id, \"identity.authenticated\")"]
             },
             {
-              "path": "libs/rust/billing/src/checkout_sessions.audit.rs",
+              "path": "apps/billing-service/src/billing.audit.rs",
               "includes": [
-                "CheckoutRoutingBlockedAudit",
-                "CheckoutStartedAudit",
-                "insert_billing_audit_event_tx"
+                "record_audit_event",
+                "INSERT INTO billing_audit_events"
               ]
             }
           ]

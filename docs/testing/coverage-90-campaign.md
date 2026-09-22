@@ -42,23 +42,23 @@ jamais. `nvbes-email` conserve son seuil produit explicite 95/90/90.
 Workspace : **51,0 %** de lignes (16 851 couvertes / 33 033 instrumentées),
 soit **12 878 lignes** à couvrir pour atteindre 90 % partout.
 
-| Crate | Lignes | Restant pour 90 % | Vague |
-| :--- | ---: | ---: | :--- |
-| `nvbes-email` | 97,1 % | atteint | — |
-| `nvbes-email-scaleway` | 96,3 % | atteint | — |
-| `nvbes-email-worker` | 84,1 % | 180 | 1 |
-| `nvbes-platform` | 73,8 % | 211 | 1 |
-| `nvbes-trust-risk` | 73,9 % | 115 | 1 |
-| `nvbes-billing-worker` | 53,5 % | 259 | 1 |
-| `nvbes-audit` | 36,4 % | 58 | 1 |
-| `nvbes-identity-service` | 62,8 % | 631 | 2 |
-| `nvbes-observability` | 15,7 % | 661 | 2 |
-| `nvbes-account-service` | 27,9 % | 786 | 2 |
-| `nvbes-billing-service` | 47,4 % | 814 | 3 |
-| `nvbes-trust-risk-service` | 40,3 % | 1 057 | 3 |
-| `nvbes-region` | 41,7 % | 1 579 | 3 |
-| `nvbes-core` | 47,3 % | 1 889 | 4 |
-| `nvbes-billing` | 38,4 % | 4 769 | 5 |
+| Crate                      | Lignes | Restant pour 90 % | Vague |
+| :------------------------- | -----: | ----------------: | :---- |
+| `nvbes-email`              | 97,1 % |           atteint | —     |
+| `nvbes-email-scaleway`     | 96,3 % |           atteint | —     |
+| `nvbes-email-worker`       | 84,1 % |               180 | 1     |
+| `nvbes-platform`           | 73,8 % |               211 | 1     |
+| `nvbes-trust-risk`         | 73,9 % |               115 | 1     |
+| `nvbes-billing-worker`     | 53,5 % |               259 | 1     |
+| `nvbes-audit`              | 36,4 % |                58 | 1     |
+| `nvbes-identity-service`   | 62,8 % |               631 | 2     |
+| `nvbes-observability`      | 15,7 % |               661 | 2     |
+| `nvbes-account-service`    | 27,9 % |               786 | 2     |
+| `nvbes-billing-service`    | 47,4 % |               814 | 3     |
+| `nvbes-trust-risk-service` | 40,3 % |             1 057 | 3     |
+| `nvbes-region`             | 41,7 % |             1 579 | 3     |
+| `nvbes-core`               | 47,3 % |             1 889 | 4     |
+| `nvbes-billing`            | 38,4 % |             4 769 | 5     |
 
 ## Vagues
 

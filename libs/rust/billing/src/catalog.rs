@@ -42,3 +42,7 @@ impl PlanVersion {
             .map(|quota| quota.included_quantity)
     }
 }
+
+#[cfg(test)]
+#[path = "catalog.tests.rs"]
+mod tests;

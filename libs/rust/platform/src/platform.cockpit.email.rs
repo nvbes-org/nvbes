@@ -76,28 +76,5 @@ impl EmailCockpitView {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn masks_email_addresses_for_privacy() {
-        assert_eq!(
-            EmailCockpitView::mask_email("user@example.com"),
-            "u***r@example.com"
-        );
-        assert_eq!(
-            EmailCockpitView::mask_email("ab@domain.com"),
-            "*@domain.com"
-        );
-        assert_eq!(EmailCockpitView::mask_email("invalid"), "redacted");
-    }
-
-    #[test]
-    fn validates_suppression_reasons() {
-        assert!(EmailCockpitView::validate_suppression_request("Spam trap hit").is_ok());
-        assert_eq!(
-            EmailCockpitView::validate_suppression_request("  "),
-            Err(EmailCockpitError::InvalidSuppressionReason)
-        );
-    }
-}
+#[path = "platform.cockpit.email.tests.rs"]
+mod tests;

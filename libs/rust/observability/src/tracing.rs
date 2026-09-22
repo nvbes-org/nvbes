@@ -32,7 +32,10 @@ pub fn init_tracing_for_service(config: &AppConfig, service_name: &str) {
     );
 }
 
-pub fn init_tracing_with_config(config: TracingConfig<'_>, service_name: &str) {
+pub fn init_tracing_with_config(
+    config: TracingConfig<'_>,
+    #[cfg_attr(not(feature = "otlp"), allow(unused_variables))] service_name: &str,
+) {
     let default_filter = "info";
 
     let env_filter = std::env::var("RUST_LOG")

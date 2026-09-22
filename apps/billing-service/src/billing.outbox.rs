@@ -162,3 +162,7 @@ pub async fn publish_pending_outbox_events(
     tx.commit().await?;
     Ok(count)
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.outbox.tests.rs"]
+mod tests;

@@ -86,3 +86,52 @@ fn aggregates_multiple_runtimes_correctly() {
     assert_eq!(aggregate.degraded_count, 1);
     assert_eq!(aggregate.runtimes.len(), 2);
 }
+
+#[test]
+fn unavailable_probe_without_message_uses_default_details() {
+    let aggregator = HealthAggregator::default();
+    let health = aggregator.evaluate_runtime(HealthProbeResult {
+        service_id: ServiceId::TrustRisk,
+        live: false,
+        ready: false,
+        latency_ms: 5,
+        message: None,
+    });
+    assert_eq!(health.status, HealthStatus::Unavailable);
+    assert_eq!(health.details, "Runtime liveness probe failed");
+}
+
+#[test]
+fn aggregate_marks_unavailable_when_any_runtime_is_down() {
+    let aggregator = HealthAggregator::default();
+    let aggregate = aggregator.aggregate(vec![
+        HealthProbeResult {
+            service_id: ServiceId::Identity,
+            live: true,
+            ready: true,
+            latency_ms: 20,
+            message: None,
+        },
+        HealthProbeResult {
+            service_id: ServiceId::Email,
+            live: false,
+            ready: false,
+            latency_ms: 10,
+            message: None,
+        },
+    ]);
+    assert_eq!(aggregate.overall_status, HealthStatus::Unavailable);
+    assert_eq!(aggregate.degraded_count, 1);
+}
+
+#[test]
+fn aggregate_is_healthy_when_all_runtimes_pass() {
+    let aggregator = HealthAggregator::default();
+    let probes = HealthAggregator::default_probes()
+        .into_values()
+        .collect::<Vec<_>>();
+    assert_eq!(probes.len(), 5);
+    let aggregate = aggregator.aggregate(probes);
+    assert_eq!(aggregate.overall_status, HealthStatus::Healthy);
+    assert_eq!(aggregate.degraded_count, 0);
+}

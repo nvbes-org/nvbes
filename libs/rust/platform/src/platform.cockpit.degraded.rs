@@ -150,16 +150,5 @@ impl DegradedModeRegistry {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn provides_all_seven_mandatory_procedures() {
-        let procedures = DegradedModeRegistry::all_procedures();
-        assert_eq!(procedures.len(), 7);
-        for p in &procedures {
-            assert!(!p.operator_checklist.is_empty());
-            assert!(!p.verification_steps.is_empty());
-        }
-    }
-}
+#[path = "platform.cockpit.degraded.tests.rs"]
+mod tests;

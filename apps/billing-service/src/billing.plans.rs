@@ -65,9 +65,14 @@ pub async fn check_stripe_mappings(pool: &PgPool) -> anyhow::Result<StripeMappin
     .fetch_all(pool)
     .await?;
 
+    Ok(evaluate_stripe_mappings(&rows))
+}
+
+/// Pure validation of Stripe price mappings (no I/O).
+pub fn evaluate_stripe_mappings(rows: &[StripeMappingRow]) -> StripeMappingsReport {
     let mut failures = Vec::new();
     let mut seen_price_ids = std::collections::HashSet::new();
-    for row in &rows {
+    for row in rows {
         if row.plan_code.trim().is_empty() {
             failures.push("billing_plans: empty plan_code".to_string());
         }
@@ -112,9 +117,13 @@ pub async fn check_stripe_mappings(pool: &PgPool) -> anyhow::Result<StripeMappin
         failures.push("billing_plans: no active plan".to_string());
     }
 
-    Ok(StripeMappingsReport {
+    StripeMappingsReport {
         plans_checked: rows.len(),
         active_plans,
         failures,
-    })
+    }
 }
+
+#[cfg(test)]
+#[path = "billing.plans.tests.rs"]
+mod tests;

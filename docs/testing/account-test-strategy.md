@@ -29,10 +29,10 @@ Le validateur `pnpm nx run account-quality:test` bloque :
 | Lane             | Déclenchement réel                      | Couverture actuelle                                                                     | Preuve                                              |
 | ---------------- | --------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------- |
 | PR               | CI du dépôt sur projets affectés        | format, lint, types, unitaires, composants, contrats, migrations et sécurité ciblée     | rapports Nx/Cargo/Vitest                            |
-| Scheduled daily  | cron `17 1 * * *` ou dispatch `nightly` | routes publiques Playwright Chromium/Firefox/WebKit et charge publique `load`            | `account-browser-<run-id>`, `account-load-<run-id>` |
+| Scheduled daily  | cron `17 1 * * *` ou dispatch `nightly` | routes publiques Playwright Chromium/Firefox/WebKit et charge publique `load`           | `account-browser-<run-id>`, `account-load-<run-id>` |
 | Scheduled weekly | cron `31 1 * * 0`                       | `volume`, `spike`, `stress`, sérialisés                                                 | `account-<profile>-<run-id>`                        |
 | DAST weekly      | cron `41 2 * * 3`                       | canaries authentifiés puis ZAP web/API/backoffice staging                               | `zap-dast-<run-id>`                                 |
-| Trusted hermetic | commande opérateur                      | suite Account, E2E critique Chromium, random walk public borné et charge locale          | rapports Nx/Cargo/Playwright/k6                     |
+| Trusted hermetic | commande opérateur                      | suite Account, E2E critique Chromium, random walk public borné et charge locale         | rapports Nx/Cargo/Playwright/k6                     |
 | Pre-release      | session signée                          | Alpha/Beta/UAT, usability, exploration, pentest, conformité, recovery/DRP, localisation | rapports signés                                     |
 
 Le workflow planifié échoue si `ACCOUNT_TEST_AUTOMATION_ENABLED` n'est pas exactement
@@ -130,15 +130,15 @@ consomme le fichier. Le random walk public déterministe reste exécuté après 
 
 Les durées sont contractuelles. Un override différent de la durée du profil échoue.
 
-| Profil      |     Durée exacte | Forme                            | Gate de débit                               |
-| ----------- | ---------------: | -------------------------------- | ------------------------------------------- |
-| smoke       |            1 min | VU constant                      | minimum une itération par VU                |
-| load        |           20 min | arrivée progressive et pic       | ≥ 98 % des itérations planifiées, 0 dropped |
-| volume      |       max 30 min | 100 000 itérations partagées     | 100 % des itérations demandées              |
-| spike       |            6 min | saut 20 → 500 it/s puis recovery | ≥ 98 % planifiées, 0 dropped                |
-| stress      |           15 min | arrivée 10 → 50 → 100 → 250 → 500 it/s | ≥ 171 990 / 191 100, dropped ≤ 19 110 |
-| soak        |              4 h | arrivée constante                | ≥ 98 % planifiées, 0 dropped                |
-| scalability | 15 min par point | arrivée constante                | ≥ 98 % de la charge configurée, 0 dropped   |
+| Profil      |     Durée exacte | Forme                                  | Gate de débit                               |
+| ----------- | ---------------: | -------------------------------------- | ------------------------------------------- |
+| smoke       |            1 min | VU constant                            | minimum une itération par VU                |
+| load        |           20 min | arrivée progressive et pic             | ≥ 98 % des itérations planifiées, 0 dropped |
+| volume      |       max 30 min | 100 000 itérations partagées           | 100 % des itérations demandées              |
+| spike       |            6 min | saut 20 → 500 it/s puis recovery       | ≥ 98 % planifiées, 0 dropped                |
+| stress      |           15 min | arrivée 10 → 50 → 100 → 250 → 500 it/s | ≥ 171 990 / 191 100, dropped ≤ 19 110       |
+| soak        |              4 h | arrivée constante                      | ≥ 98 % planifiées, 0 dropped                |
+| scalability | 15 min par point | arrivée constante                      | ≥ 98 % de la charge configurée, 0 dropped   |
 
 Seuil nominal :
 

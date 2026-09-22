@@ -194,3 +194,7 @@ async fn process_stripe_event(
     }
     Ok(())
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.webhooks.tests.rs"]
+mod tests;

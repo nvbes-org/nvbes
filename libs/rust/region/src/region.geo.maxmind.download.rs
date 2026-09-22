@@ -59,3 +59,7 @@ pub enum MaxMindGeoLiteDownloadError {
     #[error("MaxMind GeoLite archive contains an unreadable file")]
     Io(#[from] std::io::Error),
 }
+
+#[cfg(test)]
+#[path = "region.geo.maxmind.download.tests.rs"]
+mod tests;

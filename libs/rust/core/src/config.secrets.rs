@@ -170,3 +170,7 @@ fn assign_optional(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "config.secrets.tests.rs"]
+mod tests;

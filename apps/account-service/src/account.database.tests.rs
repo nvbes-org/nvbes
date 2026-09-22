@@ -1,8 +1,10 @@
+#![allow(unused_imports)]
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{privacy_jobs, profile, synthetic, teams};
 
+#[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn account_lifecycle_is_isolated_audited_and_privacy_safe(pool: PgPool) {
     let owner = Uuid::new_v4();
@@ -72,6 +74,7 @@ async fn account_lifecycle_is_isolated_audited_and_privacy_safe(pool: PgPool) {
     );
 }
 
+#[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn profile_preferences_teams_and_export_jobs(pool: PgPool) {
     let owner = Uuid::new_v4();
@@ -129,6 +132,7 @@ async fn profile_preferences_teams_and_export_jobs(pool: PgPool) {
     assert_eq!(status, "completed");
 }
 
+#[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn join_team_rejects_malformed_codes_and_is_idempotent(pool: PgPool) {
     use sha2::{Digest, Sha256};

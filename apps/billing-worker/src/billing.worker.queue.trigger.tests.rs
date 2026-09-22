@@ -85,3 +85,43 @@ async fn trigger_dispatch_treats_whitespace_as_empty() {
 
     assert_eq!(res.status(), StatusCode::NO_CONTENT);
 }
+
+#[tokio::test]
+async fn reconcile_returns_service_unavailable_when_database_is_unreachable() {
+    let state = test_state().await;
+    state.db.close().await;
+    let app = super::router(state);
+
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/internal/reconciliation")
+                .method("POST")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::SERVICE_UNAVAILABLE);
+}
+
+#[tokio::test]
+async fn dispatch_returns_service_unavailable_when_database_is_unreachable() {
+    let state = test_state().await;
+    state.db.close().await;
+    let app = super::router(state);
+
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/internal/queue/billing-dispatch")
+                .method("POST")
+                .body(Body::from(uuid::Uuid::new_v4().to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::SERVICE_UNAVAILABLE);
+}

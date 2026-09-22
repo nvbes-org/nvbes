@@ -62,31 +62,5 @@ impl BillingCockpitView {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn strictly_rejects_live_stripe_credentials() {
-        assert_eq!(
-            BillingCockpitView::assert_test_mode("sk_live_12345"),
-            Err(BillingCockpitError::LiveModeForbidden)
-        );
-        assert_eq!(
-            BillingCockpitView::assert_test_mode("whsec_live_9999"),
-            Err(BillingCockpitError::LiveModeForbidden)
-        );
-        assert!(BillingCockpitView::assert_test_mode("sk_test_12345").is_ok());
-    }
-
-    #[test]
-    fn validates_manual_reconciliation_reason() {
-        assert!(
-            BillingCockpitView::validate_manual_reconciliation("Manual bank transfer verified")
-                .is_ok()
-        );
-        assert_eq!(
-            BillingCockpitView::validate_manual_reconciliation("no"),
-            Err(BillingCockpitError::InvalidReconciliationReason)
-        );
-    }
-}
+#[path = "platform.cockpit.billing.tests.rs"]
+mod tests;

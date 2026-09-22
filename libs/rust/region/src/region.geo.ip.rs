@@ -33,14 +33,5 @@ fn is_private_or_special_ipv6(ip: Ipv6Addr) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{is_private_or_special_ip, parse_ip};
-
-    #[test]
-    fn detects_private_and_special_addresses() {
-        assert!(is_private_or_special_ip(parse_ip("10.0.0.1").unwrap()));
-        assert!(is_private_or_special_ip(parse_ip("127.0.0.1").unwrap()));
-        assert!(is_private_or_special_ip(parse_ip("2001:db8::1").unwrap()));
-        assert!(!is_private_or_special_ip(parse_ip("8.8.8.8").unwrap()));
-    }
-}
+#[path = "region.geo.ip.tests.rs"]
+mod tests;

@@ -78,39 +78,5 @@ impl JobsMonitor {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn validates_replay_eligibility() {
-        let monitor = JobsMonitor::new(3);
-        let valid_failed = FailedEventRecord {
-            event_id: Uuid::new_v4(),
-            event_type: "email.message.dispatched".to_string(),
-            correlation_id: Uuid::new_v4(),
-            attempt_count: 2,
-            last_error: "Temporary network timeout".to_string(),
-            state: JobState::Failed,
-            failed_at: Utc::now(),
-        };
-        assert!(monitor.can_replay(&valid_failed).is_ok());
-
-        let exhausted = FailedEventRecord {
-            attempt_count: 3,
-            ..valid_failed.clone()
-        };
-        assert_eq!(
-            monitor.can_replay(&exhausted),
-            Err(JobsMonitorError::MaxAttemptsExceeded(3))
-        );
-
-        let completed = FailedEventRecord {
-            state: JobState::Completed,
-            ..valid_failed
-        };
-        assert!(matches!(
-            monitor.can_replay(&completed),
-            Err(JobsMonitorError::NotEligibleForReplay(_))
-        ));
-    }
-}
+#[path = "platform.cockpit.jobs.tests.rs"]
+mod tests;

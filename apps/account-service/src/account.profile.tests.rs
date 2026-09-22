@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use axum::{
     body::Body,
     http::{HeaderMap, Request, StatusCode},
@@ -110,6 +111,7 @@ fn profile_display_name_falls_back_to_username_then_user() {
     assert_eq!(profile.display_name, "User");
 }
 
+#[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn ensure_profile_is_idempotent(pool: PgPool) {
     let principal_id = Uuid::new_v4();
@@ -119,6 +121,7 @@ async fn ensure_profile_is_idempotent(pool: PgPool) {
     assert_eq!(second.principal_id, principal_id);
 }
 
+#[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn profile_http_get_and_update(pool: PgPool) {
     let principal_id = Uuid::new_v4();

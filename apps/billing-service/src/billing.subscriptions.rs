@@ -269,3 +269,7 @@ pub async fn apply_subscription_event_on_connection(
 
     Ok(())
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.subscriptions.tests.rs"]
+mod tests;

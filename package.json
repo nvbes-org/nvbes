@@ -127,6 +127,7 @@
   "devDependencies": {
     "@bufbuild/buf": "1.73.0",
     "@cdktn/hcl2json": "0.24.0",
+    "@cloudflare/workers-types": "^5.20260921.1",
     "@commitlint/cli": "21.2.2",
     "@commitlint/config-conventional": "21.2.2",
     "@grafana/faro-cli": "^0.12.0",
