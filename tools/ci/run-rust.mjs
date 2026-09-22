@@ -40,7 +40,13 @@ startMemoryWatchdog({ intervalMs: 2000, thresholdMb: 500 });
 const started = Date.now();
 const scoped = spawnSync(
   'cargo',
-  ['nextest', 'run', '--locked', ...packages.flatMap((name) => ['--package', name])],
+  [
+    'nextest',
+    'run',
+    '--locked',
+    '--no-fail-fast',
+    ...packages.flatMap((name) => ['--package', name]),
+  ],
   { stdio: 'inherit' },
 );
 checkOomExit(scoped.status, scoped.signal, 'cargo nextest scoped');
@@ -49,7 +55,9 @@ checkOomExit(scoped.status, scoped.signal, 'cargo nextest scoped');
 const full =
   plan.rustMode === 'scoped' || packages.length === members.length
     ? scoped
-    : spawnSync('cargo', ['nextest', 'run', '--workspace', '--locked'], { stdio: 'inherit' });
+    : spawnSync('cargo', ['nextest', 'run', '--workspace', '--locked', '--no-fail-fast'], {
+        stdio: 'inherit',
+      });
 if (full !== scoped) {
   checkOomExit(full.status, full.signal, 'cargo nextest workspace');
 }

@@ -20,19 +20,21 @@ const protectedPaths = [
   'infrastructure/modules/scaleway-ci-cache/',
 ];
 
-export function isVerifiedGpgCommit(commit) {
+export function isVerifiedCryptographicCommit(commit) {
   const verification = commit?.commit?.verification;
   if (verification?.verified !== true || verification?.reason !== 'valid') {
     return false;
   }
   const signature = typeof verification?.signature === 'string' ? verification.signature : '';
   return (
-    signature.includes('-----BEGIN PGP SIGNATURE-----') ||
-    signature.includes('-----BEGIN SSH SIGNATURE-----')
+    signature.includes('-----BEGIN SSH SIGNATURE-----') ||
+    signature.includes('-----BEGIN PGP SIGNATURE-----')
   );
 }
 
-export const isVerifiedCryptographicCommit = isVerifiedGpgCommit;
+/** @deprecated Prefer isVerifiedCryptographicCommit. */
+export const isVerifiedGpgCommit = isVerifiedCryptographicCommit;
+export const isVerifiedSshCommit = isVerifiedCryptographicCommit;
 
 export function evaluatePullRequestCacheTrust(event, commits, files) {
   const pullRequest = event?.pull_request;
@@ -57,8 +59,8 @@ export function evaluatePullRequestCacheTrust(event, commits, files) {
     if (commits.at(-1)?.sha !== pullRequest?.head?.sha) {
       reasons.push('verified commit list does not end at the pull request head');
     }
-    if (!commits.every(isVerifiedGpgCommit)) {
-      reasons.push('every pull request commit must have a valid GPG signature');
+    if (!commits.every(isVerifiedCryptographicCommit)) {
+      reasons.push('every pull request commit must have a valid SSH or OpenPGP signature');
     }
   }
   if (files.some(({ filename = '' }) => protectedPaths.some((path) => filename.startsWith(path)))) {

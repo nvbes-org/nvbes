@@ -300,6 +300,13 @@ Les ADRs formalisent les choix structurants (changement de base de données, int
   writeMarkdown(join(OUT_DOCS_DIR, 'adr-catalog.md'), content);
 }
 
+function escapeYamlDoubleQuoted(value) {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/[\r\n]+/g, ' ');
+}
+
 function syncAdrs() {
   const adrSourceDir = join(REPO_ROOT, 'docs/adr');
   if (!existsSync(adrSourceDir)) return;
@@ -321,7 +328,7 @@ function syncAdrs() {
     cleanedBody = cleanedBody.replace(/\((00\d\d-[^)]+)\.md\)/g, '(/adr/$1/)');
 
     const formatted = `---
-title: "${title.replace(/"/g, '\\"')}"
+title: "${escapeYamlDoubleQuoted(title)}"
 description: Architecture Decision Record - nvbes platform
 ---
 
