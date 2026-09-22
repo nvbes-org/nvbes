@@ -1,70 +1,77 @@
 {
   "schemaVersion": 1,
-  "description": "Seuils de couverture cargo llvm-cov par crate du workspace Cargo racine. Mesure : `cargo llvm-cov --workspace --all-targets --locked --json --summary-only` sans feature `database-tests`. La mesure de reference est realisee sans service Redis provisionne (etat CI deterministe) : les tests d'integration Redis sont ignores et ne contribuent pas au score. Marge : seuil = baseline mesure - 2 points arrondis (absorbe le bruit run-to-run de llvm-cov), plancher 0. nvbes-email conserve le seuil produit explicite 95/90/90.",
+  "description": "Seuils de couverture cargo llvm-cov par crate du workspace Cargo racine. Mesure : `bash scripts/test-workspace-coverage.sh`, soit `cargo llvm-cov --workspace --all-targets --all-features --locked` avec NVBES_SECURITY_TEST_DATABASE_URL et DATABASE_URL fournis par tools/ci/test-security-database.mjs. Les couches d'acces PostgreSQL sont donc dans le perimetre mesure. Les seuils sont un cliquet : seuil = baseline mesuree - 2 points arrondis (absorbe le bruit run-to-run de llvm-cov), plancher 0, et ils remontent a chaque vague de la campagne 90 %. nvbes-email conserve le seuil produit explicite 95/90/90.",
+  "target": {
+    "lines": 90,
+    "functions": 90,
+    "regions": 90,
+    "scope": "par crate",
+    "plan": "docs/testing/coverage-90-campaign.md"
+  },
   "baseline": {
-    "commit": "6af12ea1",
-    "date": "2026-09-09"
+    "commit": "1f0d660f",
+    "date": "2026-09-22"
   },
   "crates": {
     "nvbes-email": {
       "threshold": { "lines": 95, "functions": 90, "regions": 90 },
-      "baseline": { "lines": 98.0, "functions": 95.2, "regions": 97.4 }
-    },
-    "nvbes-email-worker": {
-      "threshold": { "lines": 33, "functions": 41, "regions": 38 },
-      "baseline": { "lines": 34.7, "functions": 42.5, "regions": 40.0 }
+      "baseline": { "lines": 97.1, "functions": 94.7, "regions": 95.9 }
     },
     "nvbes-email-scaleway": {
-      "threshold": { "lines": 85, "functions": 89, "regions": 84 },
-      "baseline": { "lines": 86.6, "functions": 91.3, "regions": 86.4 }
+      "threshold": { "lines": 94, "functions": 93, "regions": 92 },
+      "baseline": { "lines": 96.3, "functions": 95.7, "regions": 94.4 }
     },
-    "nvbes-account-service": {
-      "threshold": { "lines": 0, "functions": 2, "regions": 0 },
-      "baseline": { "lines": 2.4, "functions": 3.5, "regions": 2.3 }
-    },
-    "nvbes-billing-service": {
-      "threshold": { "lines": 0, "functions": 3, "regions": 0 },
-      "baseline": { "lines": 2.0, "functions": 5.0, "regions": 2.3 }
-    },
-    "nvbes-billing-worker": {
-      "threshold": { "lines": 30, "functions": 35, "regions": 28 },
-      "baseline": { "lines": 35.0, "functions": 40.5, "regions": 32.4 }
-    },
-    "nvbes-identity-service": {
-      "threshold": { "lines": 27, "functions": 41, "regions": 26 },
-      "baseline": { "lines": 29.9, "functions": 43.1, "regions": 28.1 }
-    },
-    "nvbes-trust-risk-service": {
-      "threshold": { "lines": 14, "functions": 17, "regions": 15 },
-      "baseline": { "lines": 15.6, "functions": 19.4, "regions": 17.0 }
-    },
-    "nvbes-core": {
-      "threshold": { "lines": 43, "functions": 43, "regions": 43 },
-      "baseline": { "lines": 45.1, "functions": 44.6, "regions": 45.1 }
-    },
-    "nvbes-billing": {
-      "threshold": { "lines": 34, "functions": 41, "regions": 40 },
-      "baseline": { "lines": 35.8, "functions": 43.0, "regions": 41.9 }
-    },
-    "nvbes-audit": {
-      "threshold": { "lines": 34, "functions": 54, "regions": 43 },
-      "baseline": { "lines": 36.4, "functions": 55.6, "regions": 44.9 }
-    },
-    "nvbes-region": {
-      "threshold": { "lines": 40, "functions": 42, "regions": 44 },
-      "baseline": { "lines": 41.6, "functions": 43.8, "regions": 45.9 }
+    "nvbes-email-worker": {
+      "threshold": { "lines": 82, "functions": 79, "regions": 73 },
+      "baseline": { "lines": 84.1, "functions": 81.9, "regions": 75.5 }
     },
     "nvbes-platform": {
-      "threshold": { "lines": 53, "functions": 54, "regions": 49 },
-      "baseline": { "lines": 54.7, "functions": 55.5, "regions": 50.7 }
-    },
-    "nvbes-observability": {
-      "threshold": { "lines": 13, "functions": 18, "regions": 12 },
-      "baseline": { "lines": 14.5, "functions": 20.2, "regions": 14.0 }
+      "threshold": { "lines": 71, "functions": 65, "regions": 69 },
+      "baseline": { "lines": 73.8, "functions": 67.3, "regions": 71.2 }
     },
     "nvbes-trust-risk": {
-      "threshold": { "lines": 62, "functions": 55, "regions": 57 },
-      "baseline": { "lines": 64.0, "functions": 57.1, "regions": 59.0 }
+      "threshold": { "lines": 71, "functions": 66, "regions": 64 },
+      "baseline": { "lines": 73.9, "functions": 68.6, "regions": 66.9 }
+    },
+    "nvbes-identity-service": {
+      "threshold": { "lines": 60, "functions": 67, "regions": 57 },
+      "baseline": { "lines": 62.8, "functions": 69.9, "regions": 59.8 }
+    },
+    "nvbes-billing-worker": {
+      "threshold": { "lines": 51, "functions": 52, "regions": 47 },
+      "baseline": { "lines": 53.5, "functions": 54.4, "regions": 49.0 }
+    },
+    "nvbes-billing-service": {
+      "threshold": { "lines": 45, "functions": 26, "regions": 42 },
+      "baseline": { "lines": 47.4, "functions": 28.8, "regions": 44.5 }
+    },
+    "nvbes-core": {
+      "threshold": { "lines": 45, "functions": 42, "regions": 45 },
+      "baseline": { "lines": 47.3, "functions": 44.6, "regions": 47.9 }
+    },
+    "nvbes-region": {
+      "threshold": { "lines": 39, "functions": 41, "regions": 44 },
+      "baseline": { "lines": 41.7, "functions": 43.8, "regions": 46.1 }
+    },
+    "nvbes-trust-risk-service": {
+      "threshold": { "lines": 38, "functions": 38, "regions": 36 },
+      "baseline": { "lines": 40.3, "functions": 40.1, "regions": 38.7 }
+    },
+    "nvbes-billing": {
+      "threshold": { "lines": 36, "functions": 42, "regions": 42 },
+      "baseline": { "lines": 38.4, "functions": 44.7, "regions": 44.3 }
+    },
+    "nvbes-audit": {
+      "threshold": { "lines": 34, "functions": 53, "regions": 42 },
+      "baseline": { "lines": 36.4, "functions": 55.6, "regions": 44.9 }
+    },
+    "nvbes-account-service": {
+      "threshold": { "lines": 25, "functions": 14, "regions": 22 },
+      "baseline": { "lines": 27.9, "functions": 16.9, "regions": 24.2 }
+    },
+    "nvbes-observability": {
+      "threshold": { "lines": 13, "functions": 20, "regions": 12 },
+      "baseline": { "lines": 15.7, "functions": 22.0, "regions": 14.1 }
     }
   },
   "excluded": [

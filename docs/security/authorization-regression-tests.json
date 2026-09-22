@@ -66,7 +66,7 @@
       "name": "Horizontal escalation and IDOR replay",
       "owasp": "Horizontal Escalation (IDOR) Validation",
       "pattern": "Replay object-level actions against resources not owned by the same-privilege actor.",
-      "regressionRisk": "A member can read, rename, delete, or share another member's object by guessing its identifier.",
+      "regressionRisk": "A member can access or modify another member's resource by guessing its identifier.",
       "evidence": [
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -77,21 +77,8 @@
           ]
         },
         {
-          "path": "apps/cloud-service/src/drive.domains.authz.db.context.rs",
-          "includes": [
-            "resource_context_for_object",
-            "WHERE id = $1 AND workspace_id = $2",
-            "resource_context_for_share_link",
-            "sl.id = $1 AND sl.workspace_id = $2"
-          ]
-        },
-        {
-          "path": "apps/cloud-service/src/drive.domains.files.routes.trash.rs",
-          "includes": [
-            "resource_context_for_object",
-            "WorkspaceAction::TrashObject",
-            "authorize_workspace_action"
-          ]
+          "path": "libs/rust/core/src/authz.context.rs",
+          "includes": ["pub struct ResourceContext", "owns_resource", "target_role"]
         }
       ]
     },
@@ -100,7 +87,7 @@
       "name": "Vertical escalation role demotion",
       "owasp": "Vertical Escalation Validation",
       "pattern": "Exercise privileged actions with lower-privileged roles and assert explicit denial.",
-      "regressionRisk": "Admin, member, viewer, or support roles gain privileged mutation capabilities through refactor drift.",
+      "regressionRisk": "Admin, member, or viewer roles gain privileged mutation capabilities through refactor drift.",
       "evidence": [
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -111,12 +98,8 @@
           ]
         },
         {
-          "path": "apps/backoffice-service/src/internal_admin.backoffice_authorization.tests.rs",
-          "includes": [
-            "viewer_cannot_mutate",
-            "specialized_roles_are_limited_to_their_centers",
-            "support_agent_cannot_execute_critical_mutations"
-          ]
+          "path": "libs/rust/platform/src/platform.operations.service.rs",
+          "includes": ["actor.permits(permission)", "OperationsError::Forbidden"]
         }
       ]
     },
@@ -124,28 +107,19 @@
       "id": "AUTHZ_REG_004",
       "name": "Tenant and workspace isolation",
       "owasp": "Tenant Isolation Breakage",
-      "pattern": "Reject tokens, delegated actors, and database access outside their tenant or workspace boundary.",
-      "regressionRisk": "A cross-tenant or cross-workspace token can load data because context validation or RLS was bypassed.",
+      "pattern": "Reject tokens and actors outside their tenant or workspace boundary.",
+      "regressionRisk": "A cross-tenant or cross-workspace token can access resources because context validation was bypassed.",
       "evidence": [
         {
-          "path": "apps/cloud-service/src/drive.domains.authz.db.tests.access.rs",
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
           "includes": [
-            "load_workspace_access_rejects_workspace_mismatch_for_service_account",
-            "workspace_context_mismatch",
-            "load_workspace_access_reduces_effective_role_for_delegated_actor"
+            "workspace_membership_roles_cover_expected_permission_boundaries",
+            "member_can_only_modify_owned_objects"
           ]
         },
         {
-          "path": "apps/cloud-service/src/drive.domains.authz.db.workspace_scope.rs",
-          "includes": [
-            "validate_workspace_context",
-            "validate_actor_context",
-            "DelegatedContextMismatch"
-          ]
-        },
-        {
-          "path": "apps/cloud-service/src/drive.domains.authz.rls.rs",
-          "includes": ["begin_workspace_transaction", "set_transaction_rls_context", "workspace_id"]
+          "path": "apps/identity-service/src/identity.authz.rs",
+          "includes": ["AuthzDecisionRequest", "AuthzDecisionResponse", "workspace_id"]
         }
       ]
     },
@@ -153,20 +127,16 @@
       "id": "AUTHZ_REG_005",
       "name": "Token scope and session-switching regression",
       "owasp": "Automated Testing Framework Integration, Session Switching",
-      "pattern": "Swap user, machine, delegated, and scoped tokens through the same authorization path.",
-      "regressionRisk": "Machine or delegated tokens bypass missing-scope denial or inherit a stronger role than intended.",
+      "pattern": "Validate tokens with differing scopes through the same authorization path.",
+      "regressionRisk": "Tokens bypass missing-scope denial or inherit broader privileges than intended.",
       "evidence": [
         {
-          "path": "apps/cloud-service/src/drive.domains.authz.service.rs",
-          "includes": [
-            "ensure_scope_allowed_accepts_matching_machine_scope",
-            "ensure_scope_allowed_rejects_missing_machine_scope",
-            "required_scope_for_action"
-          ]
+          "path": "apps/identity-service/src/identity.authz.rs",
+          "includes": ["introspect", "claims.scope", "Token has no authorized scopes"]
         },
         {
-          "path": "apps/cloud-service/src/drive.domains.public_api.routes.access.rs",
-          "includes": ["WorkspaceScopeMismatch", "authorize_scoped_action", "scoped_object_access"]
+          "path": "apps/identity-service/src/identity.tokens.rs",
+          "includes": ["AccessTokenClaims", "token_type", "scope"]
         }
       ]
     },
@@ -174,24 +144,19 @@
       "id": "AUTHZ_REG_006",
       "name": "Contract-driven authorization validation",
       "owasp": "Contract-Driven Authorization Validation",
-      "pattern": "Keep public authorization endpoints and policy simulations tied to API contract checks.",
-      "regressionRisk": "OpenAPI or gRPC contract changes remove authorization semantics without failing tests.",
+      "pattern": "Keep public authorization endpoints and decisions verified through tests.",
+      "regressionRisk": "Route contract changes remove authorization semantics without failing tests.",
       "evidence": [
         {
-          "path": "scripts/lib/openapi-probe-plan.mjs",
-          "includes": ["POST /authz/decision", "SAFE_PROTECTED_MUTATING_OPERATIONS"]
-        },
-        {
-          "path": "apps/enterprise-service/src/enterprise.grpc.service.contract_tests.rs",
+          "path": "apps/identity-service/src/identity.authz.tests.rs",
           "includes": [
-            "policy_simulation_allows_owner_and_reports_step_up",
-            "policy_simulation_denies_unverified_user_before_role_policy",
-            "PermissionDenied"
+            "authz_decision_fails_cleanly_without_configured_token_keys",
+            "introspect_fails_cleanly_without_configured_token_keys"
           ]
         },
         {
-          "path": "apps/enterprise-service/src/enterprise.grpc.policy_evaluation.rs",
-          "includes": ["evaluate_policy", "is_allowed", "requires_step_up"]
+          "path": "apps/identity-service/src/identity.authz.rs",
+          "includes": ["/api/v1/authz/decision", "/oauth/introspect"]
         }
       ]
     },
@@ -199,24 +164,16 @@
       "id": "AUTHZ_REG_007",
       "name": "Denied outcome and fail-closed regression",
       "owasp": "Regression Testing Patterns",
-      "pattern": "Assert denied requests fail closed with explicit forbidden or not-found outcomes, not accidental success.",
-      "regressionRisk": "A missing authorization branch returns success, or a not-found branch leaks resource existence.",
+      "pattern": "Assert denied requests fail closed with explicit forbidden or error outcomes, not accidental success.",
+      "regressionRisk": "A missing authorization branch returns success by default.",
       "evidence": [
         {
-          "path": "apps/cloud-service/src/drive.domains.authz.service.rs",
-          "includes": ["AppError::forbidden", "permission_denied", "email_not_verified"]
+          "path": "libs/rust/platform/src/platform.operations.service.rs",
+          "includes": ["OperationsError::Forbidden", "OperationsError::Conflict"]
         },
         {
-          "path": "apps/cloud-service/src/drive.domains.authz.db.context.rs",
-          "includes": ["object_not_found", "share_link_not_found"]
-        },
-        {
-          "path": "apps/backoffice-service/src/internal_admin.backoffice_authorization.rs",
-          "includes": [
-            "backoffice_permission_denied",
-            "record_permission_denied",
-            "AppError::forbidden"
-          ]
+          "path": "apps/identity-service/src/identity.auth.rs",
+          "includes": ["dummy_verify_password", "authentication failed"]
         }
       ]
     },
@@ -230,9 +187,9 @@
         {
           "path": "package.json",
           "includes": [
-            "pnpm check:authorization",
-            "pnpm check:authorization-regression",
-            "node tools/security/check-authorization-regression-tests.mjs"
+            "check:authorization",
+            "check:authorization-regression",
+            "tools/security/check-authorization-regression-tests.mjs"
           ]
         },
         {

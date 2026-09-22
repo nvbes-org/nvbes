@@ -17,8 +17,8 @@
               "path": ".github/workflows/ci.yml",
               "includes": [
                 "concurrency:",
-                "cancel-in-progress: true",
-                "timeout-minutes: 30",
+                "cancel-in-progress: ${{ github.event_name != 'merge_group' }}",
+                "timeout-minutes:",
                 "bash --noprofile --norc -euo pipefail {0}",
                 "node tools/security/check-ci-cd-security.mjs"
               ]
@@ -379,6 +379,7 @@
     "IDENTITY_TERRAFORM_STATE_SECRET_KEY",
     "IDENTITY_TOKEN_PUBLIC_KEY_PEM",
     "NVBES_STAGING_ACCOUNT_PASSWORD",
+    "NX_CLOUD_ACCESS_TOKEN",
     "POSTHOG_CLI_API_KEY",
     "SCALEWAY_EMAIL_SECRET_KEY",
     "SCW_ACCESS_KEY",

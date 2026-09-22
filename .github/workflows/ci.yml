@@ -1,23 +1,13 @@
 name: continuous integration
-run-name: ${{ inputs.fallback_of && format('CI local fallback {0}', inputs.fallback_of) || format('CI {0} {1}', inputs.runner || 'github-hosted', github.run_id) }}
+run-name: CI github-hosted ${{ github.run_id }}
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
   workflow_dispatch:
     inputs:
-      runner:
-        description: GitHub-hosted first; local for a confirmed hosted outage
-        type: choice
-        options: [github-hosted, local]
-        default: github-hosted
-      expected_sha:
-        description: Required exact candidate SHA when using local runners
-        type: string
-      fallback_of:
-        description: Original hosted run ID (automatic fallback deduplication)
-        type: string
       base_sha:
         description: Optional full base SHA (otherwise last successful branch CI)
         type: string
@@ -32,7 +22,7 @@ on:
         required: false
 concurrency:
   group: continuous-integration-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
 permissions:
   actions: read
   contents: read
@@ -45,12 +35,12 @@ env:
   NVBES_ENV: ci
   NX_NO_CLOUD: 'true'
   NX_DAEMON: 'false'
+  NX_CLOUD_CONTINUOUS_ASSIGNMENT: 'true'
   NX_WORKSPACE_DATA_DIRECTORY: .nx/cache/workspace-data
   TF_PLUGIN_CACHE_DIR: /tmp/nvbes-terraform-plugin-cache
 jobs:
   authorize-cache:
-    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) }}
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       trusted: ${{ steps.authorize.outputs.trusted }}
@@ -77,11 +67,10 @@ jobs:
 
   scope:
     needs: authorize-cache
-    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -136,11 +125,11 @@ jobs:
 
   contracts:
     needs: [authorize-cache, scope]
-    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) && !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.contracts-required == 'true' }}
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.contracts-required == 'true' }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -173,17 +162,23 @@ jobs:
 
   typescript:
     needs: [authorize-cache, scope]
-    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) && !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.typescript-required == 'true' }}
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.typescript-required == 'true' }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
       SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
       NVBES_CI_PLAN: ${{ needs.scope.outputs.plan }}
+      # Opt this lane into Nx Cloud distribution (global default is
+      # NX_NO_CLOUD=true for the custom Scaleway cache path). The Start Nx
+      # Agents step below flips back to local execution when the token is
+      # unavailable (fork PRs), preserving current behavior there.
+      NX_NO_CLOUD: 'false'
+      NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -199,6 +194,19 @@ jobs:
           caches: pnpm nx
           cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
           cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Start Nx Agents
+        # After ci-setup on purpose: uses the locked nx 23.2.1 binary directly
+        # (repo convention, see v1-testing.yml) instead of an unpinned fetch,
+        # trading agent boot parallelism during install for version pinning.
+        # Reads `.nx/ci-config.yaml`; provisions `3 nvbes-medium-js` (see
+        # `.nx/workflows/agents.yaml`).
+        run: |
+          if [[ -z "${NX_CLOUD_ACCESS_TOKEN:-}" ]]; then
+            printf '%s\n' 'NX_NO_CLOUD=true' >> "$GITHUB_ENV"
+            printf '%s\n' 'Nx Cloud token unavailable; falling back to local execution.'
+          else
+            ./node_modules/.bin/nx-cloud start-nx-agents
+          fi
       - name: Validate typescript
         run: node tools/ci/run-lane.mjs typescript
       - name: Publish successful protected lane caches
@@ -210,11 +218,11 @@ jobs:
 
   rust:
     needs: [authorize-cache, scope]
-    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) && !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.rust-required == 'true' }}
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.rust-required == 'true' }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       NVBES_ENV: test
@@ -278,11 +286,11 @@ jobs:
 
   database:
     needs: [authorize-cache, scope]
-    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) && !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.database-required == 'true' }}
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.database-required == 'true' }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -320,11 +328,11 @@ jobs:
 
   terraform:
     needs: [authorize-cache, scope]
-    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) && !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.terraform-required == 'true' }}
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.terraform-required == 'true' }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -357,11 +365,11 @@ jobs:
 
   containers:
     needs: [authorize-cache, scope]
-    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) && !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.containers-required == 'true' }}
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.containers-required == 'true' }}
     environment:
       name: ${{ github.event_name == 'push' && ((github.ref == 'refs/heads/main') && 'production-ci-cache' || 'branch-ci-cache') || (needs.authorize-cache.outputs.trusted == 'true' && 'branch-ci-cache' || 'ci-no-secrets') }}
       deployment: false
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
@@ -440,13 +448,13 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: false
           exit-code: '1'
-          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,infrastructure/local/observability/app-logs
+          skip-dirs: node_modules,target,.nx,.pnpm-store,.temp,archive,infrastructure/local/observability/app-logs
 
   ci-gate:
     name: ci-gate
-    if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.runner != 'local' || inputs.expected_sha == github.sha) }}
+    if: ${{ always() }}
     needs: [authorize-cache, scope, contracts, typescript, rust, database, terraform, containers, security]
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner == 'local' && fromJSON('["self-hosted","Linux","ARM64","docker"]') || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -458,22 +466,3 @@ jobs:
           NVBES_CI_NEEDS: ${{ toJSON(needs) }}
         run: node tools/ci/ci-gate.mjs
 
-  local-fallback:
-    if: ${{ inputs.runner != 'local' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
-    runs-on: [self-hosted, Linux, ARM64, docker]
-    timeout-minutes: 5
-    permissions:
-      actions: write
-      checks: read
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: CI/CD security gate
-        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
-      - name: Retry confirmed hosted startup failure once on local runners
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node tools/ci/runner-fallback.mjs

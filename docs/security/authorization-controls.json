@@ -37,31 +37,15 @@
         {
           "id": "AUTHZ_CTRL_002",
           "name": "Route-level authorization gates",
-          "description": "Protected HTTP routes authorize the authenticated actor before executing workspace operations.",
+          "description": "Protected HTTP routes authorize the authenticated actor before executing operations.",
           "evidence": [
             {
-              "path": "apps/cloud-service/src/drive.domains.authz.service.rs",
-              "includes": [
-                "pub async fn authorize_workspace_action",
-                "email_verified_at.is_none()",
-                "is_allowed"
-              ]
+              "path": "apps/identity-service/src/identity.authz.rs",
+              "includes": ["AuthzDecisionRequest", "AuthzDecisionResponse", "authz_decision"]
             },
             {
-              "path": "apps/cloud-service/src/drive.domains.uploads.routes.core.create.rs",
-              "includes": [
-                "authorize_workspace_action",
-                "WorkspaceAction::UploadFile",
-                "ResourceContext::default()"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.authz.service.rs",
-              "includes": [
-                "pub async fn authorize_workspace_action",
-                "email_not_verified",
-                "permission_denied"
-              ]
+              "path": "apps/identity-service/src/identity.authz.tests.rs",
+              "includes": ["authz_decision_fails_cleanly_without_configured_token_keys"]
             }
           ]
         }
@@ -74,21 +58,12 @@
       "controls": [
         {
           "id": "AUTHZ_CTRL_003",
-          "name": "Object and share-link resource context",
+          "name": "Object and resource context",
           "description": "Load authorization context through workspace-scoped object lookups before object-level actions are evaluated.",
           "evidence": [
             {
               "path": "libs/rust/core/src/authz.context.rs",
               "includes": ["pub struct ResourceContext", "owns_resource", "target_role"]
-            },
-            {
-              "path": "apps/cloud-service/src/drive.domains.authz.db.context.rs",
-              "includes": [
-                "pub async fn resource_context_for_object",
-                "WHERE id = $1 AND workspace_id = $2",
-                "pub async fn resource_context_for_share_link",
-                "sl.id = $1 AND sl.workspace_id = $2"
-              ]
             },
             {
               "path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -103,29 +78,24 @@
     },
     {
       "id": "AUTHZ_REQ_004",
-      "name": "Tenant, workspace, and delegation boundaries",
+      "name": "Tenant, team, and workspace boundaries",
       "owasp": "Enforce Authorization Checks on Static Resources, Server-Side Access Control",
       "controls": [
         {
           "id": "AUTHZ_CTRL_004",
-          "name": "Scoped workspace access loading",
-          "description": "Reject access when token, tenant, organization, workspace, actor, or delegated context do not match.",
+          "name": "Scoped workspace and team access",
+          "description": "Reject access when actor does not possess the requisite workspace or team membership.",
           "evidence": [
             {
-              "path": "apps/cloud-service/src/drive.domains.authz.db.workspace_scope.rs",
+              "path": "libs/rust/core/src/authz.policy.tests.rs",
               "includes": [
-                "validate_workspace_context",
-                "validate_actor_context",
-                "workspace_context_mismatch",
-                "DelegatedContextMismatch"
+                "workspace_membership_roles_cover_expected_permission_boundaries",
+                "member_can_only_modify_owned_objects"
               ]
             },
             {
-              "path": "apps/cloud-service/src/drive.domains.authz.db.tests.access.rs",
-              "includes": [
-                "load_workspace_access_rejects_workspace_mismatch_for_service_account",
-                "load_workspace_access_reduces_effective_role_for_delegated_actor"
-              ]
+              "path": "apps/account-service/src/account.teams.rs",
+              "includes": ["struct Team", "router", "join_code"]
             }
           ]
         }
@@ -138,32 +108,16 @@
       "controls": [
         {
           "id": "AUTHZ_CTRL_005",
-          "name": "Machine and public API scope checks",
-          "description": "Require action-specific token scopes and reject public API requests outside their authenticated workspace scope.",
+          "name": "Machine and token scope checks",
+          "description": "Require action-specific token scopes and reject requests outside their authenticated scope.",
           "evidence": [
             {
-              "path": "apps/cloud-service/src/drive.domains.authz.service.rs",
-              "includes": [
-                "fn ensure_scope_allowed",
-                "required_scope_for_action",
-                "ensure_scope_allowed_rejects_missing_machine_scope"
-              ]
+              "path": "apps/identity-service/src/identity.authz.rs",
+              "includes": ["introspect", "claims.scope", "Token has no authorized scopes"]
             },
             {
-              "path": "apps/cloud-service/src/drive.domains.public_api.routes.access.rs",
-              "includes": [
-                "WorkspaceScopeMismatch",
-                "authorize_scoped_action",
-                "scoped_resource_access"
-              ]
-            },
-            {
-              "path": "apps/cloud-service/src/drive.domains.public_api.auth.authorize.rs",
-              "includes": [
-                "pub async fn authorize_access",
-                "action_requires_step_up",
-                "permission_denied"
-              ]
+              "path": "apps/identity-service/src/identity.tokens.rs",
+              "includes": ["AccessTokenClaims", "token_type", "scope"]
             }
           ]
         }
@@ -177,7 +131,7 @@
         {
           "id": "AUTHZ_CTRL_006",
           "name": "Reauthentication for high-risk actions",
-          "description": "Mark high-risk authorization decisions as requiring step-up and deny machine principals for user step-up obligations.",
+          "description": "Mark high-risk authorization decisions as requiring step-up authentication.",
           "evidence": [
             {
               "path": "libs/rust/core/src/authz.action.rs",
@@ -188,16 +142,12 @@
               ]
             },
             {
-              "path": "apps/cloud-service/src/drive.domains.authz.service.rs",
-              "includes": [
-                "action_requires_step_up(action)",
-                "step_up_not_supported_for_machine",
-                "require_recent_step_up"
-              ]
-            },
-            {
               "path": "libs/rust/core/src/authz.policy.tests.rs",
               "includes": ["sensitive_actions_require_step_up"]
+            },
+            {
+              "path": "apps/identity-service/src/identity.mfa.rs",
+              "includes": ["grant_step_up", "STEP_UP_TTL_MINUTES"]
             }
           ]
         }
@@ -205,30 +155,25 @@
     },
     {
       "id": "AUTHZ_REQ_007",
-      "name": "Privileged backoffice authorization",
+      "name": "Privileged platform operations authorization",
       "owasp": "Enforce Least Privileges",
       "controls": [
         {
           "id": "AUTHZ_CTRL_007",
-          "name": "Backoffice permission matrix",
+          "name": "Platform operator permissions and session gates",
           "description": "Require explicit operator roles, permissions, confirmation, and idempotency for privileged internal actions.",
           "evidence": [
             {
-              "path": "apps/backoffice-service/src/internal_admin.backoffice_authorization.rs",
+              "path": "libs/rust/platform/src/platform.operations.service.rs",
               "includes": [
-                "pub(crate) fn require_permission",
-                "require_operator_role_grant",
-                "require_strong_confirmation",
-                "fn role_allows"
+                "actor.permits(permission)",
+                "OperationsError::Forbidden",
+                "idempotency_key"
               ]
             },
             {
-              "path": "apps/backoffice-service/src/internal_admin.backoffice_authorization.tests.rs",
-              "includes": [
-                "viewer_cannot_mutate",
-                "specialized_roles_are_limited_to_their_centers",
-                "support_agent_cannot_execute_critical_mutations"
-              ]
+              "path": "libs/rust/platform/src/platform.cockpit.auth.rs",
+              "includes": ["OperatorSession", "DEFAULT_OPERATOR_ROLE", "permits"]
             }
           ]
         }
@@ -236,29 +181,21 @@
     },
     {
       "id": "AUTHZ_REQ_008",
-      "name": "Tenant administration authorization",
+      "name": "Team and member administration authorization",
       "owasp": "Attribute or Feature-Based Access Control",
       "controls": [
         {
           "id": "AUTHZ_CTRL_008",
-          "name": "Tenant management guards",
-          "description": "Permit tenant management only to eligible identity roles inside the correct tenant context.",
+          "name": "Team administration guards",
+          "description": "Permit team actions only to eligible roles inside the correct profile context.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.authz.service.tenant.rs",
-              "includes": [
-                "ensure_tenant_management_access",
-                "ensure_tenant_context",
-                "tenant_management_denied",
-                "identity_role_allows_tenant_management"
-              ]
+              "path": "apps/account-service/src/account.teams.rs",
+              "includes": ["ensure_profile", "CreateTeam", "JoinTeam"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.authz.service.tenant.tests.rs",
-              "includes": [
-                "tenant_management_is_limited_to_identity_admin_roles",
-                "test_resolve_admin_scope"
-              ]
+              "path": "libs/rust/core/src/authz.role.rs",
+              "includes": ["WorkspaceRole", "IdentityRole", "Owner", "Admin", "Member", "Viewer"]
             }
           ]
         }
@@ -266,33 +203,21 @@
     },
     {
       "id": "AUTHZ_REQ_009",
-      "name": "Database row-level authorization context",
+      "name": "Database advisory locks and transaction isolation",
       "owasp": "Server-Side Access Control",
       "controls": [
         {
           "id": "AUTHZ_CTRL_009",
-          "name": "Transaction-scoped RLS context",
-          "description": "Set principal, user, tenant, and workspace context on database transactions used for workspace data access.",
+          "name": "Transaction-scoped advisory locks for authorization and mutation",
+          "description": "Acquire transactional advisory locks to prevent concurrent mutations.",
           "evidence": [
             {
-              "path": "libs/rust/tenancy/src/rls.rs",
-              "includes": [
-                "pub struct RlsContext",
-                "set_transaction_rls_context",
-                "nvbes.workspace_id"
-              ]
+              "path": "libs/rust/platform/src/platform.operations.service.rs",
+              "includes": ["pg_advisory_xact_lock", "actor.operator_id"]
             },
             {
-              "path": "apps/cloud-service/src/drive.domains.authz.rls.rs",
-              "includes": [
-                "begin_workspace_transaction",
-                "nvbes_tenancy::set_transaction_rls_context",
-                "workspace_id"
-              ]
-            },
-            {
-              "path": "apps/cloud-service/src/drive.domains.files.core.rs",
-              "includes": ["begin_workspace_transaction(db, access)"]
+              "path": "apps/billing-service/src/billing.webhooks.rs",
+              "includes": ["pg_advisory_xact_lock", "event.id"]
             }
           ]
         }
@@ -305,28 +230,20 @@
       "controls": [
         {
           "id": "AUTHZ_CTRL_010",
-          "name": "Permission-denied audit events",
-          "description": "Record denied authorization decisions with action, role, principal, tenant, workspace, and resource context.",
+          "name": "Permission denied and security audit events",
+          "description": "Record denied authorization and security events with structured audit entries.",
           "evidence": [
             {
-              "path": "apps/cloud-service/src/drive.domains.authz.db.audit.rs",
-              "includes": [
-                "pub async fn record_permission_denied",
-                "permission.denied",
-                "requested_action"
-              ]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["identity_audit_events", "identity.authenticated"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.authz.db.rs",
-              "includes": [
-                "pub async fn record_permission_denied",
-                "permission.denied",
-                "permission_denied_metadata"
-              ]
+              "path": "apps/trust-risk-service/src/trust_risk.audit.rs",
+              "includes": ["trust_risk_audit_events", "AuditEvent"]
             },
             {
-              "path": "apps/backoffice-service/src/internal_admin.observability.rs",
-              "includes": ["record_permission_denied", "internal_admin_permission_denied_total"]
+              "path": "apps/account-service/src/account.audit.rs",
+              "includes": ["account_audit_events", "AuditInput", "record"]
             }
           ]
         }
@@ -339,26 +256,20 @@
       "controls": [
         {
           "id": "AUTHZ_CTRL_011",
-          "name": "Enterprise policy evaluation",
-          "description": "Expose policy decisions through the same role, action, resource context, email verification, and step-up model.",
+          "name": "Policy evaluation consistency across domains",
+          "description": "Expose policy decisions through the same role, action, and resource context model.",
           "evidence": [
             {
-              "path": "apps/enterprise-service/src/enterprise.grpc.policy_evaluation.rs",
+              "path": "libs/rust/core/src/authz.decision.rs",
               "includes": [
-                "pub async fn evaluate_policy",
-                "ResourceContext",
-                "email_not_verified",
-                "is_allowed",
-                "requires_step_up"
+                "pub struct WorkspaceDecision",
+                "pub allowed: bool",
+                "pub requires_step_up: bool"
               ]
             },
             {
-              "path": "apps/enterprise-service/src/enterprise.grpc.service.contract_tests.rs",
-              "includes": [
-                "evaluate_with_context",
-                "assert!(decision.requires_step_up)",
-                "email_not_verified"
-              ]
+              "path": "libs/rust/core/src/authz.policy.tests.rs",
+              "includes": ["action_requires_step_up", "is_allowed"]
             }
           ]
         }

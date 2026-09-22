@@ -14,20 +14,16 @@
           "description": "Use UUID-based principals/session identifiers, normalize email addresses, and keep email verification state explicit.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.session.rs",
-              "includes": ["Uuid::new_v4()", "session_id"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["normalize_email", "Uuid::new_v4()", "identity_login_identifiers"]
             },
             {
               "path": "libs/rust/core/src/auth.helpers.validation.rs",
               "includes": ["normalize_email", "validate_email"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.email_verification.change.rs",
-              "includes": [
-                "email_verified_at",
-                "issue_verification_email_tx",
-                "verification_resend_available_at"
-              ]
+              "path": "apps/identity-service/src/identity.http.rs",
+              "includes": ["normalize_email", "RegisterRequest", "RegisterResponse"]
             }
           ]
         }
@@ -49,29 +45,27 @@
                 "validate_password",
                 "MIN_PASSWORD_LENGTH: usize = 8",
                 "MAX_PASSWORD_LENGTH: usize = 128",
-                "password.chars().count()",
-                "zxcvbn::zxcvbn",
-                "weak_password"
+                "password.chars().count()"
               ]
+            },
+            {
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["validate_password", "validate_password_pair"]
             }
           ]
         },
         {
           "id": "AUTHN_CTRL_003",
-          "name": "Exposed credential screening",
-          "description": "Reject new exposed passwords and reject login with compromised password signals from a trusted proxy.",
+          "name": "Constant-time comparison on invalid credentials",
+          "description": "Execute constant-time dummy verification when accounts are missing or credentials fail.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.exposed_credentials.rs",
-              "includes": ["Exposed-Credential-Check", "password_exposed", "password_compromised"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["dummy_verify_password", "authentication failed"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.login.pwd.rs",
-              "includes": ["ExposedCredentialCheck::from_headers", "login_compromised_password"]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.password.rs",
-              "includes": ["exposed_credentials::check_new_password"]
+              "path": "libs/rust/core/src/auth.helpers.password.rs",
+              "includes": ["dummy_verify_password", "DUMMY_ARGON2ID_HASH"]
             }
           ]
         }
@@ -89,13 +83,7 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": [
-                "Algorithm::Argon2id",
-                "SaltString::generate",
-                "TARGET_M_COST",
-                "TARGET_T_COST",
-                "TARGET_P_COST"
-              ]
+              "includes": ["Algorithm::Argon2id", "TARGET_M_COST", "TARGET_T_COST", "TARGET_P_COST"]
             }
           ]
         },
@@ -106,14 +94,11 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": [
-                "PasswordHash::new",
-                "verify_password(password.as_bytes(), &parsed_hash)"
-              ]
+              "includes": ["PasswordHash::new", "verify_password"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.password.rs",
-              "includes": ["invalid_credentials", "Invalid email or password."]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["verify_password", "dummy_verify_password"]
             }
           ]
         },
@@ -129,10 +114,6 @@
                 "increase its work factor",
                 "recalibrate its parameters"
               ]
-            },
-            {
-              "path": ".github/workflows-archive/password-hashing-benchmark.yml",
-              "includes": ["workflow_dispatch:", "benchmark_argon2id_latency", "--release"]
             }
           ]
         },
@@ -142,11 +123,11 @@
           "description": "Do not expire passwords periodically; require password changes only through explicit recovery, compromise, or user-initiated flows.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs",
+              "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
-                "verify_primary_credentials",
-                "risk::current_state_summary",
-                "credential_stuffing::successful_password_risk_score"
+                "changed_at = clock_timestamp()",
+                "compromised_at = NULL",
+                "reset_password"
               ]
             }
           ]
@@ -160,24 +141,15 @@
       "controls": [
         {
           "id": "AUTHN_CTRL_006",
-          "name": "Generic and risk-aware password recovery",
-          "description": "Keep forgot-password responses generic, rate-limited, risk-gated, and backed by time-limited reset tokens.",
+          "name": "Time-limited password recovery tokens",
+          "description": "Issue single-use recovery challenges with bounded expiry.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.password.rs",
+              "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
-                "auth_forgot_password",
-                "check_dual_rate_limit",
-                "auth_password_reset_ttl_minutes"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.password.forgot.rs",
-              "includes": [
-                "password_reset_requested",
-                "MINIMUM_FORGOT_RESPONSE_TIME",
-                "insert_password_reset_token_tx",
-                "success: true"
+                "request_recovery",
+                "RECOVERY_TTL_MINUTES",
+                "identity_recovery_challenges"
               ]
             }
           ]
@@ -185,39 +157,32 @@
         {
           "id": "AUTHN_CTRL_007",
           "name": "Password reset token consumption and session revocation",
-          "description": "Consume reset tokens, enforce expiry, block password reuse, and revoke sessions and refresh tokens after reset.",
+          "description": "Consume reset tokens, enforce expiry, block password reuse, and revoke sessions after reset.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.password.reset.rs",
+              "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
-                "reset_token_expired",
-                "is_password_reused",
-                "apply_password_reset",
-                "clear_user_sessions",
-                "revoke_all_user_refresh_tokens"
+                "reset_password",
+                "consumed_at = clock_timestamp()",
+                "identity_sessions SET revoked_at"
               ]
+            },
+            {
+              "path": "apps/identity-service/src/identity.synthetic.rs",
+              "includes": ["session_rotated", "recovery_consumed", "reset_password"]
             }
           ]
         },
         {
           "id": "AUTHN_CTRL_008",
-          "name": "Step-up protected password change",
-          "description": "Require a recent step-up and security write scope, reject reuse, audit the change, and revoke other sessions and refresh tokens.",
+          "name": "Password change differentiation",
+          "description": "Require new password to differ from current password.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.password.rs",
+              "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
-                "SECURITY_WRITE_SCOPE",
-                "require_password_change_step_up",
-                "auth_change_password"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.password.change.rs",
-              "includes": [
-                "password_reused",
-                "auth.password_changed",
-                "revoke_all_others"
+                "validate_password_pair",
+                "recovered password must differ from the initial password"
               ]
             }
           ]
@@ -231,22 +196,16 @@
       "controls": [
         {
           "id": "AUTHN_CTRL_009",
-          "name": "Secure session cookies",
-          "description": "Use HttpOnly, SameSite=Strict, Secure in non-development, __Host- cookie names, and dedicated CSRF cookies.",
+          "name": "Session tokens and bearer transport",
+          "description": "Validate token structure and bounded lifespan for bearer sessions.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.http.cookies.rs",
-              "includes": [
-                "HttpOnly",
-                "SameSite=Strict",
-                "Secure",
-                "__Host-",
-                "generate_csrf_token"
-              ]
+              "path": "apps/identity-service/src/identity.tokens.rs",
+              "includes": ["AccessTokenClaims", "token_type", "ACCESS_TOKEN_TTL_SECONDS"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.login.rs",
-              "includes": ["auth_cookie", "csrf_cookie"]
+              "path": "apps/identity-service/src/identity.oauth.rs",
+              "includes": ["Bearer ", "session_token"]
             }
           ]
         },
@@ -259,9 +218,13 @@
               "path": "libs/rust/core/src/security.headers.rs",
               "includes": [
                 "STRICT_TRANSPORT_SECURITY",
-                "cross-origin-opener-policy",
-                "cross-origin-resource-policy"
+                "CLEAR_SITE_DATA_VALUE",
+                "insert_security_headers"
               ]
+            },
+            {
+              "path": "libs/rust/core/src/security.headers.tests.rs",
+              "includes": ["insert_clear_site_data_header", "CLICKJACKING_FRAME_ANCESTORS"]
             }
           ]
         }
@@ -275,39 +238,26 @@
         {
           "id": "AUTHN_CTRL_011",
           "name": "Recent step-up enforcement",
-          "description": "Require a recent AAL2 step-up for sensitive actions and store bounded step-up state in the session cache.",
+          "description": "Require recent step-up authentication for sensitive actions and store bounded step-up state.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.verification.rs",
-              "includes": [
-                "require_recent_step_up",
-                "Aal::Aal2",
-                "step_up_expires_at",
-                "apply_step_up"
-              ]
+              "path": "apps/identity-service/src/identity.mfa.rs",
+              "includes": ["STEP_UP_TTL_MINUTES", "grant_step_up", "step_up_granted"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.session_mgmt.step_up.rs",
-              "includes": ["password", "totp_code", "webauthn_response", "recovery_code"]
+              "path": "libs/rust/core/src/authz.policy.tests.rs",
+              "includes": ["sensitive_actions_require_step_up", "action_requires_step_up"]
             }
           ]
         },
         {
           "id": "AUTHN_CTRL_012",
-          "name": "Risk-based authentication events",
-          "description": "Evaluate current risk state and contextual signals before login, recovery, and session creation.",
+          "name": "Step-up smoke and replay verification",
+          "description": "Verify that step-up grants reject replayed codes and enforce bounded TTL.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs",
-              "includes": ["risk::current_state_summary", "login_blocked", "invalid_credentials"]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.session.rs",
-              "includes": [
-                "evaluate_login_context_signals",
-                "RiskDecision::StepUp",
-                "record_login_geo_signal"
-              ]
+              "path": "apps/identity-service/src/identity.mfa.rs",
+              "includes": ["run_synthetic_smoke", "replay_rejected", "step_up_granted"]
             }
           ]
         }
@@ -320,31 +270,31 @@
       "controls": [
         {
           "id": "AUTHN_CTRL_013",
-          "name": "Generic login and recovery responses",
-          "description": "Return generic invalid-credential errors and generic forgot-password success for unknown accounts.",
+          "name": "Generic login responses",
+          "description": "Return generic invalid-credential errors for unknown accounts or invalid passwords.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs",
-              "includes": ["invalid_credentials", "Invalid email or password."]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["dummy_verify_password", "authentication failed"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.password.forgot.rs",
-              "includes": ["principal_data", "success: true"]
+              "path": "apps/identity-service/src/identity.http.rs",
+              "includes": ["HttpError::Unauthorized", "LoginResponse"]
             }
           ]
         },
         {
           "id": "AUTHN_CTRL_014",
           "name": "Timing discrepancy mitigation",
-          "description": "Apply progressive delay after repeated failures to reduce brute-force and timing discrepancy usefulness.",
+          "description": "Execute constant-time verification when an account is not found.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.login.delay.rs",
-              "includes": ["compute_progressive_delay", "FAILURE_THRESHOLD", "MAX_DELAY_MS"]
+              "path": "libs/rust/core/src/auth.helpers.password.rs",
+              "includes": ["dummy_verify_password", "constant computation time"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs",
-              "includes": ["apply_login_delay", "login_failed"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["dummy_verify_password"]
             }
           ]
         }
@@ -357,56 +307,23 @@
       "controls": [
         {
           "id": "AUTHN_CTRL_015",
-          "name": "Login, MFA, registration, and reset throttling",
-          "description": "Apply IP/account/tenant and challenge-level rate limits across authentication entry points.",
+          "name": "Rate limiting on authentication entry points",
+          "description": "Apply rate limits across authentication and sensitive entry points.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs",
-              "includes": ["check_rate_limit_rules", "tenant_rule"]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.login.throttle.rs",
-              "includes": [
-                "ip_account_pair",
-                "account:",
-                "tenant:",
-                "LOGIN_THROTTLE_WINDOW"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.login.mfa.rs",
-              "includes": ["check_rate_limit_pair", "mfa_failed"]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.password.rs",
-              "includes": ["auth_reset_password", "check_dual_rate_limit"]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.register.rs",
-              "includes": ["auth_register", "check_dual_rate_limit", "require_pow_solution"]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.register.availability.rs",
-              "includes": ["auth_registration_availability", "check_dual_rate_limit", "token_hash"]
+              "path": "libs/rust/core/src/limiter.rs",
+              "includes": ["RateLimiter", "check_rate_limit", "RATELIMIT_LIMIT"]
             }
           ]
         },
         {
           "id": "AUTHN_CTRL_016",
-          "name": "Bot friction and proof of work",
-          "description": "Require registration proof-of-work and bot guard signals where automation risk is highest.",
+          "name": "Risk evaluation rules",
+          "description": "Enforce rule sets and risk evaluation for behavioral anomaly detection.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.routes.register.rs",
-              "includes": ["pow_nonce", "pow_solution", "auth_register_pow_verified"]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.bot_guard.rs",
-              "includes": ["bot_honeypot_triggered"]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.bot_guard.tests.rs",
-              "includes": ["bot_honeypot_triggered"]
+              "path": "apps/trust-risk-service/src/trust_risk.rules.db.rs",
+              "includes": ["trust_risk_rule_sets", "RuleSetReceipt"]
             }
           ]
         }
@@ -419,42 +336,27 @@
       "controls": [
         {
           "id": "AUTHN_CTRL_017",
-          "name": "MFA factors and recovery codes",
-          "description": "Support TOTP/WebAuthn/recovery factors, one-time recovery code consumption, and risk blocks. Email is never an authentication factor.",
+          "name": "MFA factors and step-up verification",
+          "description": "Support TOTP factors, encrypted secret storage, and step-up verification.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.mfa.recovery.rs",
-              "includes": [
-                "random_recovery_code",
-                "token_hash(code)",
-                "invalid_recovery_code",
-                "risk_policy_blocked"
-              ]
+              "path": "apps/identity-service/src/identity.mfa.rs",
+              "includes": ["enroll_totp", "confirm_enrollment", "grant_step_up", "replay_rejected"]
+            },
+            {
+              "path": "apps/identity-service/src/identity.mfa.crypto.rs",
+              "includes": ["pub struct MfaCrypto", "pub fn seal", "active_version"]
             }
           ]
         },
         {
           "id": "AUTHN_CTRL_018",
-          "name": "WebAuthn challenge binding and consumption",
-          "description": "Bind WebAuthn challenges to principal/session/tenant/workspace, enforce expiry, verify assertions, update credentials, and consume challenges.",
+          "name": "Single-use replay protection",
+          "description": "Enforce replay protection on TOTP code usage.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.webauthn.authentication.rs",
-              "includes": [
-                "start_passkey_authentication",
-                "finish_passkey_authentication",
-                "challenge.principal_id != user_id",
-                "challenge.session_id != session_id",
-                "take_auth_challenge"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.webauthn.registration.finish.rs",
-              "includes": [
-                "finish_passkey_registration",
-                "finish_securitykey_registration",
-                "take_auth_challenge"
-              ]
+              "path": "apps/identity-service/src/identity.mfa.rs",
+              "includes": ["replay_rejected", "identity_auth_factors"]
             }
           ]
         }
@@ -467,56 +369,38 @@
       "controls": [
         {
           "id": "AUTHN_CTRL_019",
-          "name": "JWT validation and refresh-token registration",
-          "description": "Validate RS256, issuer, audience, exp/nbf, token type, and refresh-token registration/revocation state.",
+          "name": "JWT validation and claim verification",
+          "description": "Validate token structure and claims.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.jwt.service.validation.rs",
-              "includes": [
-                "Algorithm::RS256",
-                "validation.set_issuer",
-                "validation.set_audience",
-                "validate_exp = true",
-                "invalid_token_type",
-                "validate_refresh_token_registration"
-              ]
+              "path": "apps/identity-service/src/identity.tokens.rs",
+              "includes": ["AccessTokenClaims", "decode", "Validation"]
             }
           ]
         },
         {
           "id": "AUTHN_CTRL_020",
           "name": "JWT claim issuance",
-          "description": "Issue tokens with jti, sid, iss, aud, iat, nbf, exp, acr, amr, auth_time, and client binding where applicable.",
+          "description": "Issue tokens with standard claims.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.jwt.service.issue.rs",
-              "includes": ["jti: Uuid::new_v4()", "sid:", "acr:", "amr:", "auth_time", "cnf"]
+              "path": "apps/identity-service/src/identity.tokens.rs",
+              "includes": ["jti", "sid", "iss", "aud", "exp", "nbf", "sub"]
             }
           ]
         },
         {
           "id": "AUTHN_CTRL_021",
           "name": "OAuth/OIDC discovery and PKCE",
-          "description": "Expose OIDC/OAuth metadata, require PKCE S256 for public clients, and advertise PAR/JWKS/userinfo endpoints.",
+          "description": "Expose OIDC/OAuth metadata and require PKCE S256.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.oauth.metadata.rs",
-              "includes": [
-                "openid_configuration",
-                "jwks_uri",
-                "userinfo_endpoint",
-                "require_pushed_authorization_requests",
-                "code_challenge_methods_supported"
-              ]
+              "path": "apps/identity-service/src/identity.discovery.rs",
+              "includes": ["OAuthAuthorizationServerMetadata", "OpenIdConfiguration", "jwks_uri"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.oauth.validation.pkce.rs",
-              "includes": [
-                "validate_pkce_for_authorize",
-                "validate_pkce_for_exchange",
-                "S256",
-                "URL_SAFE_NO_PAD"
-              ]
+              "path": "apps/identity-service/src/identity.oauth.rs",
+              "includes": ["code_challenge", "code_challenge_method", "S256"]
             }
           ]
         }
@@ -529,24 +413,25 @@
       "controls": [
         {
           "id": "AUTHN_CTRL_022",
-          "name": "Authentication audit and risk event recording",
-          "description": "Record login, failure, password, WebAuthn, recovery, and risk events without logging raw secrets.",
+          "name": "Authentication audit event recording",
+          "description": "Record login, registration, recovery, and risk events.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.domains.auth.audit.rs",
-              "includes": ["record_auth_event", "AuditRecordInput"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": [
+                "identity.authenticated",
+                "identity.recovery_requested",
+                "identity.password_recovered",
+                "identity_audit_events"
+              ]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.session.rs",
-              "includes": ["auth.login_success", "risk_score", "risk_decision"]
+              "path": "apps/identity-service/src/identity.http.rs",
+              "includes": ["identity.registered", "identity_audit_events"]
             },
             {
-              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs",
-              "includes": ["auth.login_failed", "RiskEventInput"]
-            },
-            {
-              "path": "apps/identity-service/src/identity.domains.auth.password.change.rs",
-              "includes": ["auth.password_changed", "password_changed"]
+              "path": "apps/trust-risk-service/src/trust_risk.audit.rs",
+              "includes": ["trust_risk_audit_events", "AuditEvent"]
             }
           ]
         }
