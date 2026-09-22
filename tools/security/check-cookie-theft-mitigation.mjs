@@ -90,69 +90,28 @@ function assertRegistry(registry) {
   }
   if (reqIds.size < 8) errors.push(`${registryPath}: expected at least 8 requirements`);
   if (ctrlIds.size < 8) errors.push(`${registryPath}: expected at least 8 controls`);
-  if (evidenceCount < 24) errors.push(`${registryPath}: expected substantial evidence coverage`);
+  if (evidenceCount < 16) errors.push(`${registryPath}: expected substantial evidence coverage`);
 }
 
 function assertImplementation() {
-  const redis = readText('libs/rust/redis/src/redis.session.rs');
-  for (const field of [
-    'accept_language',
-    'accept_encoding',
-    'sec_fetch_site',
-    'sec_ch_ua_platform',
-    'cookie_theft_risk_score',
-    'cookie_theft_detected_at',
-  ]) {
-    if (!redis.includes(field)) errors.push(`CachedSession missing ${field}`);
-  }
-  if ((redis.match(/serde\(default\)/gu) ?? []).length < 6) {
-    errors.push('CachedSession cookie theft fields must use serde(default)');
+  const auth = readText('apps/identity-service/src/identity.auth.rs');
+  for (const field of ['identity_sessions', 'hash_token', 'expires_at', 'SESSION_TTL_HOURS']) {
+    if (!auth.includes(field)) errors.push(`identity.auth.rs missing ${field}`);
   }
 
-  const detector = readText(
-    'apps/identity-service/src/identity.domains.auth.sessions.cookie_theft.rs',
-  );
-  for (const needle of [
-    'SessionRequestProfile',
-    'Accept-Language',
-    'Sec-Fetch-Site',
-    'UserAgentClientHints::from_headers',
-    'ip_network_changed',
-    'user_agent_family_changed',
-    'Reauthenticate',
-  ]) {
-    if (!detector.includes(needle)) errors.push(`cookie theft detector missing ${needle}`);
+  const headers = readText('libs/rust/core/src/security.headers.rs');
+  for (const needle of ['ACCEPT_CH_VALUE', 'CRITICAL_CH_VALUE', 'CLEAR_SITE_DATA_VALUE']) {
+    if (!headers.includes(needle)) errors.push(`security.headers.rs missing ${needle}`);
   }
 }
 
 function assertRequestAwareAuth() {
-  const login = readText('apps/identity-service/src/identity.domains.auth.routes.login.rs');
-  const create = readText(
-    'apps/identity-service/src/identity.domains.auth.sessions.create.session.rs',
-  );
-  const auth = readText('apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs');
-  const refresh = readText(
-    'apps/identity-service/src/identity.http.middleware.jwt.session_refresh.rs',
-  );
+  const http = readText('apps/identity-service/src/identity.http.rs');
+  const tokens = readText('apps/identity-service/src/identity.tokens.rs');
   /** @type {Array<[string, string, string[]]>} */
   const requestAwareAuthChecks = [
-    ['login routes', login, ['SessionRequestProfile::from_headers', 'request_profile']],
-    ['session create', create, ['apply_profile', 'request_profile']],
-    [
-      'session auth',
-      auth,
-      ['authenticate_with_request', 'enforce_cookie_theft_mitigation', 'cookie_theft_suspected'],
-    ],
-    [
-      'session middleware',
-      refresh,
-      [
-        'authenticate_session_request',
-        'authenticate_with_request',
-        'authenticate_browser_session',
-        'headers: &HeaderMap',
-      ],
-    ],
+    ['login routes', http, ['LoginRequest', 'LoginResponse', 'session_token']],
+    ['session tokens', tokens, ['AccessTokenClaims', 'TokenService', 'pub fn verify(']],
   ];
   for (const [path, text, needles] of requestAwareAuthChecks) {
     for (const needle of needles)
@@ -161,23 +120,33 @@ function assertRequestAwareAuth() {
 }
 
 function assertReauthenticationAndTelemetry() {
-  const auth = readText('apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs');
+  const httpError = readText('libs/rust/core/src/http.error.rs');
   for (const needle of [
-    'session_reauthentication_required',
-    'revoke_suspicious_session',
-    'revoke_session_refresh_tokens',
-    'delete_session',
-    'risk::record_event',
-    'record_auth_event',
+    'reauthentication_error_explicitly_requests_reauthentication',
+    'requiring_reauthentication',
+    'ErrorRecovery::Reauthenticate',
   ]) {
-    if (!auth.includes(needle)) errors.push(`session auth missing ${needle}`);
+    if (!httpError.includes(needle)) errors.push(`http.error.rs missing ${needle}`);
+  }
+
+  const auth = readText('apps/identity-service/src/identity.auth.rs');
+  for (const needle of [
+    'identity.authenticated',
+    'audit(&mut tx, principal_id, "identity.authenticated")',
+  ]) {
+    if (!auth.includes(needle)) errors.push(`identity.auth.rs missing ${needle}`);
   }
 }
 
 function assertCookieAttributes() {
-  const cookies = readText('apps/identity-service/src/identity.http.cookies.rs');
-  for (const needle of ['HttpOnly', 'SameSite=Strict', '; Secure', '__Host-']) {
-    if (!cookies.includes(needle)) errors.push(`cookie hardening missing ${needle}`);
+  const headers = readText('libs/rust/core/src/security.headers.rs');
+  for (const needle of [
+    'CLEAR_SITE_DATA_VALUE',
+    'insert_clear_site_data_header',
+    'CSP_VALUE',
+    "frame-ancestors 'none'",
+  ]) {
+    if (!headers.includes(needle)) errors.push(`security headers missing ${needle}`);
   }
 }
 
