@@ -8,10 +8,10 @@ use crate::{config::BillingWorkerConfig, state::BillingWorkerState};
 
 use super::{live, router};
 
-async fn unreachable_state() -> BillingWorkerState {
+async fn lazy_state() -> BillingWorkerState {
     let config = BillingWorkerConfig {
         environment: "development".into(),
-        database_url: "postgres://127.0.0.1:1/unreachable".into(),
+        database_url: "postgres://localhost/unused".into(),
         http_bind_addr: "127.0.0.1:8080".parse().unwrap(),
         app_url: "http://localhost:3000".into(),
         email_grpc_endpoint: None,
@@ -27,8 +27,7 @@ async fn unreachable_state() -> BillingWorkerState {
     let db = sqlx::postgres::PgPoolOptions::new()
         .min_connections(0)
         .max_connections(1)
-        .acquire_timeout(std::time::Duration::from_millis(50))
-        .connect_lazy("postgres://127.0.0.1:1/unreachable")
+        .connect_lazy("postgres://localhost/unused")
         .unwrap();
 
     BillingWorkerState::new(config, db).await.unwrap()
@@ -55,10 +54,17 @@ async fn liveness_returns_alive_payload() {
 }
 
 #[tokio::test]
-async fn readiness_reports_not_ready_when_database_is_unreachable() {
-    let app = router(unreachable_state().await);
+async fn readiness_reports_not_ready_when_database_pool_is_closed() {
+    // Model an unavailable database without opening a real network connection
+    // (micro-test seccomp denies AF_INET and would SIGSYS on connect).
+    let state = lazy_state().await;
+    state.db.close().await;
+    assert!(matches!(
+        state.db.acquire().await,
+        Err(sqlx::Error::PoolClosed)
+    ));
 
-    let response = app
+    let response = router(state)
         .oneshot(
             Request::builder()
                 .uri("/health/ready")
