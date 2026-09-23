@@ -6,6 +6,8 @@ mod audit;
 mod auth;
 #[path = "account.config.rs"]
 mod config;
+#[path = "account.consents.rs"]
+mod consents;
 #[path = "account.database.rs"]
 mod database;
 #[path = "account.error.rs"]
@@ -16,6 +18,8 @@ mod health;
 mod metrics;
 #[path = "account.operator.rs"]
 mod operator;
+#[path = "account.outbox.rs"]
+mod outbox;
 #[path = "account.preferences.rs"]
 mod preferences;
 #[path = "account.privacy.rs"]
@@ -55,6 +59,13 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
+    if matches!(command.as_slice(), [action] if action == "publish-outbox") {
+        let database_url = config::required_database_url()?;
+        let pool = database::connect(&database_url, 2).await?;
+        let published = outbox::publish_pending(&pool, 100).await?;
+        println!("published {published} outbox events");
+        return Ok(());
+    }
 
     let config = config::AccountConfig::from_env()?;
     if matches!(command.as_slice(), [action] if action == "validate-runtime") {
@@ -65,7 +76,7 @@ async fn main() -> anyhow::Result<()> {
     }
     if !command.is_empty() {
         anyhow::bail!(
-            "usage: nvbes-account-service [migrate|validate-runtime|synthetic-account-smoke|process-privacy-jobs]"
+            "usage: nvbes-account-service [migrate|validate-runtime|synthetic-account-smoke|process-privacy-jobs|publish-outbox]"
         );
     }
 
@@ -90,6 +101,14 @@ async fn main() -> anyhow::Result<()> {
     );
     let db = database::connect_lazy(&config.database_url, config.database_max_connections)?;
     let state = app::AccountState::new(config.clone(), db.clone())?;
+    let outbox_db = db.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
+        loop {
+            interval.tick().await;
+            let _ = outbox::publish_pending(&outbox_db, 50).await;
+        }
+    });
     let http_metrics = nvbes_observability::metrics::HttpMetrics {
         handle: state.metrics.clone(),
     };

@@ -10,6 +10,7 @@ const ignoredArchivedGeneratedAndBuildOutputs = [
   '**/playwright-report/**',
   '**/apps/*/migrations/**',
   '**/libs/ts/identity-sdk-core/src/types.gen.ts',
+  '**/libs/ts/account-sdk-core/src/types.gen.ts',
   '**/openapi.json',
 ];
 

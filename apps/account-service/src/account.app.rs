@@ -31,6 +31,7 @@ pub fn router(state: AccountState) -> Router {
         .merge(crate::metrics::router(state.clone()))
         .merge(crate::profile::router(state.clone()))
         .merge(crate::preferences::router(state.clone()))
+        .merge(crate::consents::router(state.clone()))
         .merge(crate::teams::router(state.clone()))
         .merge(crate::privacy::router(state.clone()))
         .merge(crate::operator::router(state))

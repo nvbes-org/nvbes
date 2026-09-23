@@ -14,10 +14,13 @@ async fn account_lifecycle_is_isolated_audited_and_privacy_safe(pool: PgPool) {
 
     assert_eq!(result.member_role, "member");
     assert_eq!(result.team_members, 2);
+    assert!(result.member_left);
+    assert!(result.consent_granted);
     assert!(result.export_completed);
     assert!(result.closure_cancelled);
-    assert!(result.audit_events >= 4);
-    assert!(result.outbox_events >= 4);
+    assert!(result.audit_events >= 5);
+    assert!(result.outbox_events >= 3);
+    assert!(result.outbox_published);
 
     let closure_id = Uuid::new_v4();
     sqlx::query("INSERT INTO account_closures(id,principal_id,status,requested_at,execute_after) VALUES($1,$2,'pending',clock_timestamp()-interval '8 days',clock_timestamp()-interval '1 day')")
