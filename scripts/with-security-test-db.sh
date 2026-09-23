@@ -26,11 +26,24 @@ url_is_reachable() {
   return 1
 }
 
+url_ends_with_test_db() {
+  local url="$1"
+  local path
+  path="$(printf '%s' "$url" | sed -E 's#^[a-z]+://[^/]+/##' | sed -E 's#[?#].*$##')"
+  [[ "$path" == *_test ]]
+}
+
 if [[ -n "${NVBES_SECURITY_TEST_DATABASE_URL:-}" ]]; then
-  if url_is_reachable "$NVBES_SECURITY_TEST_DATABASE_URL"; then
+  if url_is_reachable "$NVBES_SECURITY_TEST_DATABASE_URL" \
+    && url_ends_with_test_db "$NVBES_SECURITY_TEST_DATABASE_URL"; then
     exec "$@"
   fi
-  echo "with-security-test-db: preset URL unreachable, reprovisioning locally" >&2
+  if ! url_ends_with_test_db "${NVBES_SECURITY_TEST_DATABASE_URL}"; then
+    echo "with-security-test-db: preset URL database must end in _test, reprovisioning locally" >&2
+  else
+    echo "with-security-test-db: preset URL unreachable, reprovisioning locally" >&2
+  fi
+  unset NVBES_SECURITY_TEST_DATABASE_URL
 fi
 
 if ! command -v docker >/dev/null 2>&1; then

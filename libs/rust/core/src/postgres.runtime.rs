@@ -130,6 +130,10 @@ pub async fn health_check(pool: &PgPool) -> Result<(), sqlx::Error> {
 }
 
 #[cfg(test)]
+#[path = "postgres.runtime.tests.rs"]
+mod integration_tests;
+
+#[cfg(test)]
 mod tests {
     use super::{PostgresPoolSettings, connect_pool_with_url_and_role};
     use crate::config::AppConfig;

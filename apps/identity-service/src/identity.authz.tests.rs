@@ -23,6 +23,23 @@ async fn introspect_fails_cleanly_without_configured_token_keys() {
 }
 
 #[tokio::test]
+async fn introspect_rejects_malformed_json_body() {
+    let app = router(&state());
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/oauth/introspect")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"token":}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), axum::http::StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn authz_decision_fails_cleanly_without_configured_token_keys() {
     let app = router(&state());
     let res = app

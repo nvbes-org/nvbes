@@ -178,3 +178,7 @@ pub fn projection(outcome: &'static str, count: u64) {
             .add(count, &[KeyValue::new("outcome", outcome)]);
     }
 }
+
+#[cfg(test)]
+#[path = "trust_risk.metrics.tests.rs"]
+mod tests;

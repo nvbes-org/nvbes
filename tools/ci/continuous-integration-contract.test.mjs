@@ -39,6 +39,8 @@ test('PostgreSQL limiter tests remain components, without stale Redis classifica
   assert.deepEqual(components['nvbes-core'], {
     'limiter::tests::rate_limiter_blocks_after_limit': 'PostgreSQL persistence',
     'limiter::postgres_tests::': 'PostgreSQL persistence and concurrency',
+    'postgres_runtime::integration_tests::':
+      'PostgreSQL pool integration requires NVBES_SECURITY_TEST_DATABASE_URL',
   });
   assert.equal(components['nvbes-redis'], undefined);
 });

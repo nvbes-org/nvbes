@@ -204,6 +204,78 @@ fn enabled_enforcement_keeps_monitor_as_log_only_action() {
 }
 
 #[test]
+fn proxy_and_vpn_networks_add_expected_reasons() {
+    let proxy = assess_checkout_fraud(CheckoutFraudInput {
+        policy: CheckoutFraudPolicy::default(),
+        network_kind: "proxy",
+        network_risk_score: 70,
+        network_labels: &[],
+        geo_country: Some("FR"),
+        billing_country: Some("FR"),
+        vat_number: None,
+        amount_minor: 2_000,
+        existing_provider_customer: false,
+        active_paid_customer: false,
+        recent_ip_checkouts: 0,
+        recent_ip_workspaces: 0,
+        recent_workspace_countries: 0,
+        recent_payment_methods: 0,
+        recent_payment_failures: 0,
+        trusted_checkout_assessments: 0,
+    });
+    assert!(proxy.reasons.contains(&"proxy_network".to_string()));
+
+    let vpn = assess_checkout_fraud(CheckoutFraudInput {
+        policy: CheckoutFraudPolicy::default(),
+        network_kind: "vpn",
+        network_risk_score: 65,
+        network_labels: &[],
+        geo_country: Some("FR"),
+        billing_country: Some("FR"),
+        vat_number: None,
+        amount_minor: 2_000,
+        existing_provider_customer: false,
+        active_paid_customer: false,
+        recent_ip_checkouts: 0,
+        recent_ip_workspaces: 0,
+        recent_workspace_countries: 0,
+        recent_payment_methods: 0,
+        recent_payment_failures: 0,
+        trusted_checkout_assessments: 0,
+    });
+    assert!(vpn.reasons.contains(&"vpn_network".to_string()));
+}
+
+#[test]
+fn high_checkout_amount_and_payment_failures_raise_risk() {
+    let assessment = assess_checkout_fraud(CheckoutFraudInput {
+        policy: CheckoutFraudPolicy::default(),
+        network_kind: "unknown",
+        network_risk_score: 10,
+        network_labels: &[],
+        geo_country: Some("FR"),
+        billing_country: Some("FR"),
+        vat_number: None,
+        amount_minor: 75_000,
+        existing_provider_customer: false,
+        active_paid_customer: false,
+        recent_ip_checkouts: 0,
+        recent_ip_workspaces: 0,
+        recent_workspace_countries: 0,
+        recent_payment_methods: 0,
+        recent_payment_failures: 4,
+        trusted_checkout_assessments: 0,
+    });
+    assert!(assessment.score >= 40);
+    assert!(
+        assessment
+            .labels
+            .iter()
+            .any(|label| label.contains("payment") || label.contains("amount"))
+    );
+}
+
+#[test]
 fn enabled_enforcement_holds_manual_review_and_blocks_block() {
     assert_eq!(
         checkout_fraud_enforcement_action(true, CheckoutFraudDecision::ManualReview),

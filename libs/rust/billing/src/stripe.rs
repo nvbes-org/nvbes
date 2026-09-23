@@ -233,40 +233,8 @@ pub fn verify_stripe_signature(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn signed_header(secret: &str, payload: &[u8], timestamp: i64) -> String {
-        let signed_payload = format!("{timestamp}.{}", String::from_utf8_lossy(payload));
-        let signature = hmac_sha256_hex(secret.as_bytes(), signed_payload.as_bytes());
-        format!("t={timestamp},v1={signature}")
-    }
-
-    #[test]
-    fn verify_stripe_signature_accepts_valid_signature() {
-        let secret = "whsec_test_secret";
-        let payload = br#"{"id":"evt_1","type":"checkout.session.completed","data":{"object":{"id":"cs_1"}}}"#;
-        let header = signed_header(secret, payload, Utc::now().timestamp());
-
-        assert!(verify_stripe_signature(secret, Some(&header), payload).is_ok());
-    }
-
-    #[test]
-    fn verify_stripe_signature_rejects_stale_signature() {
-        let secret = "whsec_test_secret";
-        let payload = br#"{"id":"evt_1","type":"checkout.session.completed","data":{"object":{"id":"cs_1"}}}"#;
-        let header = signed_header(
-            secret,
-            payload,
-            Utc::now().timestamp() - STRIPE_WEBHOOK_TOLERANCE_SECONDS - 1,
-        );
-
-        assert_eq!(
-            verify_stripe_signature(secret, Some(&header), payload),
-            Err("stale_stripe_signature")
-        );
-    }
-}
+#[path = "stripe.tests.rs"]
+mod tests;
 
 #[cfg(test)]
 #[path = "stripe.property.tests.rs"]

@@ -22,7 +22,7 @@ pub async fn stripe_post_form(
         path
     );
     let body = form_encode(fields);
-    let client = nvbes_core::security::pinned_http_client();
+    let client = crate::shared::provider_http_client(&config.stripe_api_base_url);
 
     let request = client
         .post(url)

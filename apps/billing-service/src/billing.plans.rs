@@ -127,3 +127,7 @@ pub fn evaluate_stripe_mappings(rows: &[StripeMappingRow]) -> StripeMappingsRepo
 #[cfg(test)]
 #[path = "billing.plans.tests.rs"]
 mod tests;
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.plans.http.tests.rs"]
+mod http_tests;

@@ -9,7 +9,7 @@ pub async fn mollie_post_json(
     payload: serde_json::Value,
 ) -> Result<serde_json::Value, MollieProviderError> {
     let api_key = mollie_api_key(config)?;
-    let request = nvbes_core::security::pinned_http_client()
+    let request = crate::shared::provider_http_client(&config.mollie_api_base_url)
         .post(mollie_url(config, path))
         .bearer_auth(api_key)
         .json(&payload);
@@ -21,7 +21,7 @@ pub async fn mollie_get_json(
     path: &str,
 ) -> Result<serde_json::Value, MollieProviderError> {
     let api_key = mollie_api_key(config)?;
-    let request = nvbes_core::security::pinned_http_client()
+    let request = crate::shared::provider_http_client(&config.mollie_api_base_url)
         .get(mollie_url(config, path))
         .bearer_auth(api_key);
     mollie_send(request).await

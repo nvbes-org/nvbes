@@ -45,35 +45,5 @@ pub fn classify_webhook_retry(existing_status: Option<&str>) -> WebhookRetryDeci
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{WebhookRetryDecision, classify_webhook_retry};
-
-    #[test]
-    fn classify_webhook_retry_treats_processed_as_duplicate() {
-        assert_eq!(
-            classify_webhook_retry(Some("processed")),
-            WebhookRetryDecision::Duplicate
-        );
-    }
-
-    #[test]
-    fn classify_webhook_retry_treats_failed_as_replayable() {
-        assert_eq!(
-            classify_webhook_retry(Some("failed")),
-            WebhookRetryDecision::ReplayFailed
-        );
-    }
-
-    #[test]
-    fn classify_webhook_retry_treats_received_as_replayable() {
-        assert_eq!(
-            classify_webhook_retry(Some("received")),
-            WebhookRetryDecision::ReplayFailed
-        );
-    }
-
-    #[test]
-    fn classify_webhook_retry_treats_missing_status_as_insert() {
-        assert_eq!(classify_webhook_retry(None), WebhookRetryDecision::Insert);
-    }
-}
+#[path = "stripe_webhook_intake.tests.rs"]
+mod tests;

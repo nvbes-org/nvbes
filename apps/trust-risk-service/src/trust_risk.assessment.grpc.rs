@@ -139,3 +139,7 @@ fn map_error(state: &TrustRiskState, error: AssessmentPersistenceError) -> Statu
         _ => Status::unavailable("assessment unavailable"),
     }
 }
+
+#[cfg(test)]
+#[path = "trust_risk.assessment.grpc.tests.rs"]
+mod tests;

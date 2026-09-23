@@ -191,6 +191,10 @@ fn remove_encryption_headers(headers: &mut HeaderMap) {
 }
 
 #[cfg(test)]
+#[path = "http.e2ee.tests.rs"]
+mod integration_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use aes_gcm::aead::Aead;

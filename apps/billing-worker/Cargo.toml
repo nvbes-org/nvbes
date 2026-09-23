@@ -11,6 +11,10 @@ database-tests = []
 name = "nvbes-billing-worker"
 path = "src/main.rs"
 
+[[test]]
+name = "cli-coverage"
+path = "src/billing.worker.cli.coverage.tests.rs"
+
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true

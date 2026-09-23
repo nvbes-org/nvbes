@@ -360,7 +360,7 @@ impl BillingOperationsService for BillingOperationsGrpcService {
         .map_err(|_| Status::internal("db error"))?;
 
         let mrr: i64 = sqlx::query_scalar(
-            "SELECT coalesce(sum(monthly_price_cents), 0) \
+            "SELECT coalesce(sum(monthly_price_cents), 0)::bigint \
              FROM billing_subscriptions WHERE status = 'active'",
         )
         .fetch_one(&self.state.db)
@@ -419,3 +419,7 @@ fn chrono_to_proto_ts(dt: chrono::DateTime<chrono::Utc>) -> Timestamp {
         nanos: dt.timestamp_subsec_nanos() as i32,
     }
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.grpc.tests.rs"]
+mod tests;

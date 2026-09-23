@@ -113,6 +113,23 @@ fn receipt_notification_requires_recipient_and_defaults_fields() {
 }
 
 #[test]
+fn failure_notification_preserves_optional_invoice_url() {
+    let row = sample_row(
+        "billing.invoice.payment_failed.v1",
+        json!({
+            "recipient_email": "carol@example.test",
+            "invoice_id": "in_fail",
+            "invoice_url": "https://stripe.test/in_fail"
+        }),
+    );
+    let notif = failure_notification_from_event(&row, "https://app.nvbes.test").expect("recipient");
+    assert_eq!(
+        notif.invoice_url.as_deref(),
+        Some("https://stripe.test/in_fail")
+    );
+}
+
+#[test]
 fn failure_notification_builds_portal_url_from_app_url() {
     let row = sample_row(
         "billing.invoice.payment_failed.v1",
@@ -127,6 +144,63 @@ fn failure_notification_builds_portal_url_from_app_url() {
         Some("https://app.nvbes.test/billing/portal")
     );
     assert_eq!(notif.invoice_id, "in_fail");
+}
+
+#[tokio::test]
+async fn dispatch_acknowledges_custom_event_without_email_client() {
+    if !postgres_reachable() {
+        return;
+    }
+    let pool =
+        sqlx::postgres::PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+                "postgres://postgres:postgres@127.0.0.1:5432/nvbes_billing".into()
+            }))
+            .await
+            .expect("postgres");
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("migrations");
+    let config = BillingWorkerConfig {
+        environment: "development".into(),
+        database_url: "postgres://localhost/unused".into(),
+        http_bind_addr: "127.0.0.1:8080".parse().unwrap(),
+        app_url: "https://nvbes.test".into(),
+        email_grpc_endpoint: None,
+        email_token: None,
+        billing_grpc_endpoint: None,
+        billing_grpc_token: None,
+        metrics_token: None,
+        dispatch_mode: crate::config::DispatchMode::InMemory,
+        otlp_endpoint: None,
+        otlp_authorization_header: None,
+    };
+    let state = BillingWorkerState::new(config, pool.clone())
+        .await
+        .expect("state");
+    let event_uuid = Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO billing_outbox (event_uuid, event_type, aggregate_id, payload) VALUES ($1, 'billing.custom.noop.v1', $2, '{}'::jsonb)",
+    )
+    .bind(event_uuid)
+    .bind(Uuid::new_v4())
+    .execute(&pool)
+    .await
+    .expect("insert");
+    let outcome = dispatch_message(&state, &event_uuid.to_string())
+        .await
+        .expect("dispatch");
+    assert_eq!(outcome, DispatchOutcome::Acknowledged);
+}
+
+fn postgres_reachable() -> bool {
+    std::net::TcpStream::connect_timeout(
+        &"127.0.0.1:5432".parse().unwrap(),
+        std::time::Duration::from_millis(200),
+    )
+    .is_ok()
 }
 
 #[cfg(feature = "database-tests")]

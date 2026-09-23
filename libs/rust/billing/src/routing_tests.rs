@@ -252,6 +252,43 @@ fn selected_provider_is_reported_as_eligible_candidate() {
 }
 
 #[test]
+fn operational_status_from_config_normalizes_values() {
+    assert_eq!(
+        ProviderOperationalStatus::from_config("available"),
+        ProviderOperationalStatus::Available
+    );
+    assert_eq!(
+        ProviderOperationalStatus::from_config(" DEGRADED "),
+        ProviderOperationalStatus::Degraded
+    );
+    assert_eq!(
+        ProviderOperationalStatus::from_config("offline"),
+        ProviderOperationalStatus::Unavailable
+    );
+    assert!(!ProviderOperationalStatus::Unavailable.accepts_new_checkouts());
+    assert_eq!(
+        ProviderRouteReason::LowestEstimatedCost.as_str(),
+        "lowest_estimated_cost"
+    );
+}
+
+#[test]
+fn non_eur_currency_excludes_regional_provider_without_fallback() {
+    let error = route_provider(&ProviderRouteRequest {
+        country: Some("FR".to_string()),
+        currency: "USD".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: None,
+        mollie_enabled: true,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: false,
+        external_provider_status: ProviderOperationalStatus::Available,
+    });
+    assert_eq!(error, Err(ProviderRoutingError::NoCompliantProvider));
+}
+
+#[test]
 fn cb_provider_is_modelled_as_local_for_french_card_routing() {
     assert_eq!(
         provider_residency_scope(Some("FR"), ProviderCode::Cb),

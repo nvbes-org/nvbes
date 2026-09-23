@@ -53,6 +53,20 @@ async fn state_rejects_invalid_email_client_configuration() {
 }
 
 #[tokio::test]
+async fn state_with_unreachable_email_endpoint_omits_email_client() {
+    let mut config = base_config();
+    config.email_grpc_endpoint = Some("http://127.0.0.1:1".into());
+    config.email_token = Some("01234567890123456789012345678901".into());
+    let db = sqlx::postgres::PgPoolOptions::new()
+        .min_connections(0)
+        .max_connections(1)
+        .connect_lazy("postgres://localhost/unused")
+        .unwrap();
+    let state = BillingWorkerState::new(config, db).await.unwrap();
+    assert!(state.email_client.is_none());
+}
+
+#[tokio::test]
 async fn state_with_invalid_billing_endpoint_stays_optional() {
     let mut config = base_config();
     config.billing_grpc_endpoint = Some("not-a-uri".into());

@@ -69,3 +69,52 @@ fn development_verifier_accepts_uuid_and_test_prefix() {
     let fallback = verifier.verify("not-a-uuid").expect("nil fallback");
     assert_eq!(fallback.id(), Uuid::nil());
 }
+
+#[test]
+fn jwt_verifier_rejects_malformed_and_accepts_scoped_token() {
+    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+    use openssl::{pkey::PKey, rsa::Rsa};
+    use serde::Serialize;
+
+    let private = PKey::from_rsa(Rsa::generate(2048).expect("rsa")).expect("pkey");
+    let public_pem = String::from_utf8(private.public_key_to_pem().expect("pub")).expect("utf8");
+    let private_pem =
+        String::from_utf8(private.private_key_to_pem_pkcs8().expect("priv")).expect("utf8");
+
+    let config = BillingConfig {
+        identity_public_key_pem: Some(public_pem),
+        ..config_without_key()
+    };
+    let verifier = TokenVerifier::new(&config).expect("verifier");
+    assert!(verifier.verify("not-a-jwt").is_err());
+
+    #[derive(Serialize)]
+    struct Claims {
+        sub: String,
+        scope: Option<String>,
+        amr: Option<Vec<String>>,
+        exp: u64,
+        iat: u64,
+    }
+    let now = jsonwebtoken::get_current_timestamp();
+    let principal_id = Uuid::new_v4();
+    let claims = Claims {
+        sub: principal_id.to_string(),
+        scope: Some("billing:read".into()),
+        amr: Some(vec!["totp".into()]),
+        exp: now + 300,
+        iat: now,
+    };
+    let token = encode(
+        &Header::new(Algorithm::RS256),
+        &claims,
+        &EncodingKey::from_rsa_pem(private_pem.as_bytes()).expect("key"),
+    )
+    .expect("token");
+
+    let principal = verifier.verify(&token).expect("jwt");
+    assert_eq!(principal.id(), principal_id);
+    assert!(principal.has_mfa());
+    assert!(principal.require_scope("billing:read").is_ok());
+    assert!(principal.require_scope("billing:write").is_err());
+}

@@ -33,3 +33,4 @@ tonic-prost-build = "0.14.6"
 
 [dev-dependencies]
 proptest.workspace = true
+wiremock = "0.6"

@@ -238,3 +238,7 @@ pub async fn create_stripe_checkout_grpc(
     )
     .await
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.checkout.tests.rs"]
+mod tests;

@@ -58,6 +58,15 @@ pub fn form_encode(fields: Vec<(String, String)>) -> String {
         .join("&")
 }
 
+/// HTTPS uses the pinned TLS client; loopback HTTP is reserved for local fixtures
+/// (wiremock). Non-loopback cleartext bases are rejected by the caller contract.
+pub(crate) fn provider_http_client(base_url: &str) -> reqwest::Client {
+    if base_url.starts_with("https://") {
+        return nvbes_core::security::pinned_http_client();
+    }
+    reqwest::Client::new()
+}
+
 pub fn percent_encode(value: &str) -> String {
     let mut encoded = String::new();
     for byte in value.bytes() {

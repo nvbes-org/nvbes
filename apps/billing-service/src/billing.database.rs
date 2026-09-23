@@ -25,5 +25,9 @@ pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
 pub mod test_support;
 
 #[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.http.test_support.rs"]
+pub mod http_test_support;
+
+#[cfg(all(test, feature = "database-tests"))]
 #[path = "billing.database.tests.rs"]
 mod tests;

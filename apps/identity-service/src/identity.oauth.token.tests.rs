@@ -17,7 +17,7 @@ async fn authorization_code_grant_issues_access_and_refresh_tokens(pool: PgPool)
     let client_id = "db-test-oauth-client";
     let client_secret = "db-test-client-secret-value-12345";
     let redirect_uri = "https://app.example.com/oauth/callback";
-    seed_confidential_oauth_client(&state.db, client_id, client_secret, redirect_uri).await;
+    seed_confidential_oauth_client(&state.db, &client_id, client_secret, redirect_uri).await;
     let (principal_id, session_id, _) = seed_principal_and_session(&state.db).await;
     let code = create_authorization_code(
         &state.db,
@@ -67,15 +67,15 @@ async fn authorization_code_grant_issues_access_and_refresh_tokens(pool: PgPool)
 async fn refresh_token_grant_rotates_and_reissues_access_token(pool: PgPool) {
     let _env = TokenEnvGuard::install_test_keys();
     let state = identity_state(pool);
-    let client_id = "db-test-refresh-client";
+    let client_id = format!("db-test-refresh-{}", uuid::Uuid::new_v4().simple());
     let client_secret = "db-test-refresh-secret-value-123";
     let redirect_uri = "https://app.example.com/oauth/callback";
-    seed_confidential_oauth_client(&state.db, client_id, client_secret, redirect_uri).await;
+    seed_confidential_oauth_client(&state.db, &client_id, client_secret, redirect_uri).await;
     let (principal_id, session_id, _) = seed_principal_and_session(&state.db).await;
     let code = create_authorization_code(
         &state.db,
         CreateAuthorizationCodeParams {
-            client_id,
+            client_id: &client_id,
             principal_id,
             session_id,
             redirect_uri: redirect_uri.to_string(),

@@ -141,3 +141,97 @@ async fn resolve_rejects_invalid_secret_manager_region_without_network() {
         }
     }
 }
+
+#[test]
+fn apply_secret_values_covers_optional_secret_fields() {
+    let mut config = AppConfig::default();
+    let mut secrets = Map::new();
+    secrets.insert("database_url".into(), json!("postgres://primary"));
+    secrets.insert("billing_database_url".into(), json!("postgres://billing"));
+    secrets.insert(
+        "jwt_secret".into(),
+        json!("secret-manager-jwt-with-32-chars!!"),
+    );
+    secrets.insert("auth_password_pepper".into(), json!("pepper-value"));
+    secrets.insert(
+        "auth_factor_encryption_key".into(),
+        json!("ZmFrZS1mYWN0b3ItZW5jcnlwdGlvbi1rZXk="),
+    );
+    secrets.insert("stripe_webhook_secret".into(), json!("whsec_test"));
+    secrets.insert("mollie_api_key".into(), json!("test_mollie"));
+    secrets.insert("otlp_authorization_header".into(), json!("Bearer otlp"));
+    secrets.insert("product_analytics_token".into(), json!("phc_token"));
+    secrets.insert("analytics_id_salt".into(), json!("analytics-salt-value"));
+    secrets.insert(
+        "profiling_basic_auth_password".into(),
+        json!("profile-pass"),
+    );
+    secrets.insert(
+        "observability_internal_token".into(),
+        json!("observability-internal-token-value-32"),
+    );
+    secrets.insert("twilio_auth_token".into(), json!("twilio-token"));
+    secrets.insert("storage_access_key".into(), json!("access"));
+    secrets.insert("storage_secret_key".into(), json!("secret"));
+    secrets.insert("maxmind_account_id".into(), json!("12345"));
+    secrets.insert("maxmind_license_key".into(), json!("license"));
+    secrets.insert(
+        "request_e2ee_secret".into(),
+        json!("0123456789abcdef0123456789abcdef"),
+    );
+
+    config.apply_secret_values(&secrets).expect("apply");
+    assert_eq!(config.auth_password_pepper.as_deref(), Some("pepper-value"));
+    assert_eq!(config.mollie_api_key.as_deref(), Some("test_mollie"));
+    assert_eq!(
+        config.request_e2ee_secret.as_deref(),
+        Some("0123456789abcdef0123456789abcdef")
+    );
+}
+
+#[tokio::test]
+async fn resolve_requires_auth_token_when_secret_manager_enabled() {
+    let name_region = "NVBES_SECRET_MANAGER_REGION";
+    let name_secret = "NVBES_SECRET_MANAGER_SECRET_ID";
+    let name_auth = "NVBES_SECRET_MANAGER_AUTH_TOKEN";
+    let name_scw = "SCW_SECRET_KEY";
+    let saved_region = std::env::var_os(name_region);
+    let saved_secret = std::env::var_os(name_secret);
+    let saved_auth = std::env::var_os(name_auth);
+    let saved_scw = std::env::var_os(name_scw);
+    unsafe {
+        std::env::set_var(name_secret, "test-secret-id");
+        std::env::set_var(name_region, "fr-par");
+        std::env::remove_var(name_auth);
+        std::env::remove_var(name_scw);
+    }
+
+    let mut config = AppConfig {
+        secret_manager_enabled: true,
+        ..AppConfig::default()
+    };
+    let err = config
+        .resolve_from_secret_manager()
+        .await
+        .expect_err("missing auth token");
+    assert!(err.contains("NVBES_SECRET_MANAGER_AUTH_TOKEN"));
+
+    unsafe {
+        match saved_region {
+            Some(value) => std::env::set_var(name_region, value),
+            None => std::env::remove_var(name_region),
+        }
+        match saved_secret {
+            Some(value) => std::env::set_var(name_secret, value),
+            None => std::env::remove_var(name_secret),
+        }
+        match saved_auth {
+            Some(value) => std::env::set_var(name_auth, value),
+            None => std::env::remove_var(name_auth),
+        }
+        match saved_scw {
+            Some(value) => std::env::set_var(name_scw, value),
+            None => std::env::remove_var(name_scw),
+        }
+    }
+}

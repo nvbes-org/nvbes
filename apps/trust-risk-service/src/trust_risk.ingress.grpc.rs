@@ -91,3 +91,7 @@ fn map_persistence(state: &TrustRiskState, error: PersistSignalError) -> Status 
         PersistSignalError::Database(_) => Status::unavailable("signal persistence unavailable"),
     }
 }
+
+#[cfg(test)]
+#[path = "trust_risk.ingress.grpc.tests.rs"]
+mod tests;

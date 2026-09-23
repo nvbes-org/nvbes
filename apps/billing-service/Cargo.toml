@@ -40,4 +40,10 @@ tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+openssl.workspace = true
 tower.workspace = true
+wiremock = "0.6"
+
+[[test]]
+name = "cli-coverage"
+path = "src/billing.cli.coverage.tests.rs"

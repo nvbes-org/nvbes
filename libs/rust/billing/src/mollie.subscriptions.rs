@@ -79,42 +79,5 @@ pub fn subscription_from_mollie_response(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn mollie_subscription_payload_uses_amount_interval_start_date_and_webhook() {
-        let payload = build_mollie_subscription_payload(&ProviderSubscriptionInput {
-            provider_customer_id: "cst_123".to_string(),
-            amount_minor: 2500,
-            currency: "EUR".to_string(),
-            interval: "1 month".to_string(),
-            description: "nvbes monthly subscription".to_string(),
-            start_date: Some("2026-08-01".to_string()),
-            webhook_url: Some("https://api.example/webhooks/mollie".to_string()),
-        })
-        .expect("payload should build");
-
-        assert_eq!(payload["amount"]["value"], "25.00");
-        assert_eq!(payload["interval"], "1 month");
-        assert_eq!(payload["startDate"], "2026-08-01");
-        assert_eq!(payload["webhookUrl"], "https://api.example/webhooks/mollie");
-    }
-
-    #[test]
-    fn mollie_subscription_response_extracts_subscription_id() {
-        let subscription = subscription_from_mollie_response(
-            "cst_123",
-            serde_json::json!({
-                "id": "sub_123",
-                "status": "active"
-            }),
-        )
-        .expect("subscription should parse");
-
-        assert_eq!(subscription.provider, ProviderCode::Mollie);
-        assert_eq!(subscription.provider_subscription_id, "sub_123");
-        assert_eq!(subscription.provider_customer_id, "cst_123");
-        assert_eq!(subscription.status, "active");
-    }
-}
+#[path = "mollie.subscriptions.tests.rs"]
+mod tests;

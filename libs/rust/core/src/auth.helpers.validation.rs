@@ -83,3 +83,7 @@ pub fn require_non_empty(field: &'static str, value: &str) -> Result<String, App
 
     Ok(trimmed.to_string())
 }
+
+#[cfg(test)]
+#[path = "auth.helpers.validation.tests.rs"]
+mod tests;

@@ -69,6 +69,10 @@ fn map_status_classifies_grpc_codes() {
         BillingClientError::Unavailable
     ));
     assert!(matches!(
+        map_status(Status::new(Code::ResourceExhausted, "")),
+        BillingClientError::Unavailable
+    ));
+    assert!(matches!(
         map_status(Status::new(Code::InvalidArgument, "")),
         BillingClientError::Protocol
     ));

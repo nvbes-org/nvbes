@@ -60,6 +60,22 @@ fn build_customer_fields_maps_workspace_and_owner_metadata() {
 }
 
 #[tokio::test]
+async fn create_stripe_customer_rejects_invalid_response_shape() {
+    let config = AppConfig {
+        stripe_secret_key: Some("sk_test_mock".into()),
+        stripe_api_base_url: "https://127.0.0.1:1".into(),
+        ..AppConfig::default()
+    };
+    let err = create_stripe_customer(&config, &sample_record())
+        .await
+        .unwrap_err();
+    assert!(matches!(
+        err,
+        StripeProviderError::RequestFailed(_) | StripeProviderError::ResponseFailed(_)
+    ));
+}
+
+#[tokio::test]
 async fn create_stripe_customer_requires_configuration() {
     let config = AppConfig {
         stripe_secret_key: None,

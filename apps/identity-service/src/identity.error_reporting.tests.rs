@@ -59,3 +59,19 @@ fn from_env_requires_environment_and_https_dsn() {
     assert!((config.traces_sample_rate - 0.2).abs() < f32::EPSILON);
     clear();
 }
+
+#[test]
+fn smoke_returns_structured_result_in_development_without_network() {
+    let _guard = env_lock();
+    clear();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "development");
+        std::env::set_var("SENTRY_DSN", "https://public@o.ingest.sentry.io/1");
+        std::env::set_var("SENTRY_TRACES_SAMPLE_RATE", "0");
+    }
+    let config = ErrorReportingRuntimeConfig::from_env().expect("config");
+    let _guard = super::init(&config);
+    let result = super::smoke(&config);
+    assert!(result.configured);
+    clear();
+}

@@ -69,3 +69,55 @@ async fn stripe_post_form_surfaces_connection_failures() {
     .expect_err("unreachable host");
     assert!(matches!(err, StripeProviderError::RequestFailed(_)));
 }
+
+#[tokio::test]
+async fn stripe_post_form_parses_successful_json_response() {
+    use wiremock::{
+        Mock, MockServer, ResponseTemplate,
+        matchers::{method, path},
+    };
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/customers"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "id": "cus_wiremock"
+        })))
+        .mount(&server)
+        .await;
+
+    let config = AppConfig {
+        stripe_secret_key: Some("sk_test_wiremock".to_string()),
+        stripe_api_base_url: server.uri(),
+        ..AppConfig::default()
+    };
+    let response = stripe_post_form(&config, "/v1/customers", vec![])
+        .await
+        .expect("stripe response");
+    assert_eq!(response["id"], "cus_wiremock");
+}
+
+#[tokio::test]
+async fn stripe_post_form_rejects_invalid_json_body() {
+    use wiremock::{
+        Mock, MockServer, ResponseTemplate,
+        matchers::{method, path},
+    };
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/customers"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("not-json"))
+        .mount(&server)
+        .await;
+
+    let config = AppConfig {
+        stripe_secret_key: Some("sk_test_wiremock".to_string()),
+        stripe_api_base_url: server.uri(),
+        ..AppConfig::default()
+    };
+    let err = stripe_post_form(&config, "/v1/customers", vec![])
+        .await
+        .unwrap_err();
+    assert!(matches!(err, StripeProviderError::ResponseInvalid(_)));
+}

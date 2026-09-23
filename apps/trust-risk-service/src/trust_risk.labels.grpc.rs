@@ -101,3 +101,7 @@ fn map_error(state: &TrustRiskState, error: LabelPersistenceError) -> Status {
         LabelPersistenceError::Database(_) => Status::unavailable("label persistence unavailable"),
     }
 }
+
+#[cfg(test)]
+#[path = "trust_risk.labels.grpc.tests.rs"]
+mod tests;

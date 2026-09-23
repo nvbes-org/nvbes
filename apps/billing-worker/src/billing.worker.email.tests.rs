@@ -1,6 +1,26 @@
 use super::*;
 
 #[test]
+fn receipt_command_carries_optional_invoice_url() {
+    let notif = BillingReceiptNotification {
+        account_id: Uuid::new_v4(),
+        recipient_email: "test@example.com".into(),
+        customer_name: None,
+        amount_minor: 500,
+        currency: "EUR".into(),
+        invoice_id: "in_url".into(),
+        invoice_url: Some("https://stripe.test/in_url".into()),
+    };
+    let cmd = receipt_command(&notif).expect("valid");
+    match cmd.template {
+        EmailTemplate::BillingReceiptV1 { invoice_url, .. } => {
+            assert_eq!(invoice_url.as_deref(), Some("https://stripe.test/in_url"));
+        }
+        _ => panic!("expected billing receipt template"),
+    }
+}
+
+#[test]
 fn builds_valid_receipt_command() {
     let notif = BillingReceiptNotification {
         account_id: Uuid::new_v4(),
@@ -73,4 +93,18 @@ fn rejects_invalid_recipient_email_for_receipt_and_failure() {
         invoice_url: None,
     };
     assert!(failure_command(&failure).is_err());
+}
+
+#[test]
+fn receipt_command_rejects_overlong_invoice_identifier() {
+    let receipt = BillingReceiptNotification {
+        account_id: Uuid::new_v4(),
+        recipient_email: "user@example.com".into(),
+        customer_name: None,
+        amount_minor: 100,
+        currency: "EUR".into(),
+        invoice_id: "x".repeat(300),
+        invoice_url: None,
+    };
+    assert!(receipt_command(&receipt).is_err());
 }

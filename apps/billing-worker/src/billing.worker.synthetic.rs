@@ -71,3 +71,7 @@ pub async fn run(
         idempotent_reprocessed,
     })
 }
+
+#[cfg(test)]
+#[path = "billing.worker.synthetic.tests.rs"]
+mod tests;

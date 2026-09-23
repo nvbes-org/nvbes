@@ -131,3 +131,7 @@ pub(crate) fn validate_webauthn_rp_id(value: &str, strict_mode: bool) -> Result<
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "config.validation.urls.tests.rs"]
+mod tests;

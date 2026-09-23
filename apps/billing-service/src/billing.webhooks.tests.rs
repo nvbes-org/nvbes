@@ -103,3 +103,114 @@ async fn failed_delivery_rolls_back_then_retries_once(pool: PgPool) {
             .unwrap();
     assert_eq!(status, "processed");
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn rejects_invalid_signature_and_livemode(pool: PgPool) {
+    let config = test_config();
+    let state = crate::app::BillingState {
+        db: pool,
+        tokens: crate::auth::TokenVerifier::new(&config).unwrap(),
+        metrics: crate::metrics::install(),
+        config,
+        email_client: None,
+    };
+    let app = crate::app::create_router(state);
+    let payload = json!({
+        "id": "evt_live",
+        "type": "invoice.paid",
+        "livemode": true,
+        "created": chrono::Utc::now().timestamp(),
+        "data": { "object": { "id": "in_live" } }
+    })
+    .to_string();
+    let timestamp = chrono::Utc::now().timestamp();
+    let signature = sign(b"whsec_fixture", timestamp, &payload);
+    let live = app
+        .clone()
+        .oneshot(
+            Request::post("/webhooks/stripe")
+                .header("stripe-signature", format!("t={timestamp},v1={signature}"))
+                .body(Body::from(payload.clone()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(live.status(), StatusCode::BAD_REQUEST);
+
+    let bad_sig = app
+        .oneshot(
+            Request::post("/webhooks/stripe")
+                .header("stripe-signature", "t=0,v1=deadbeef")
+                .body(Body::from(payload))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(bad_sig.status(), StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn checkout_session_completed_updates_session_and_audit(pool: PgPool) {
+    let config = test_config();
+    let state = crate::app::BillingState {
+        db: pool.clone(),
+        tokens: crate::auth::TokenVerifier::new(&config).unwrap(),
+        metrics: crate::metrics::install(),
+        config,
+        email_client: None,
+    };
+    let app = crate::app::create_router(state);
+
+    let account = Uuid::new_v4();
+    let session_id = format!("cs_{}", Uuid::new_v4().simple());
+    sqlx::query(
+        "INSERT INTO billing_checkout_sessions
+         (idempotency_key, account_id, account_type, plan_code, stripe_session_id, stripe_customer_id, checkout_url)
+         VALUES ($1, $2, 'team', 'standard_monthly', $3, 'cus_fixture', 'https://nvbes.test/checkout')",
+    )
+    .bind(format!("idem_{}", Uuid::new_v4()))
+    .bind(account)
+    .bind(&session_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let event_id = format!("evt_{}", Uuid::new_v4().simple());
+    let payload = json!({
+        "id": event_id,
+        "type": "checkout.session.completed",
+        "livemode": false,
+        "created": chrono::Utc::now().timestamp(),
+        "data": { "object": { "id": session_id } }
+    })
+    .to_string();
+    let timestamp = chrono::Utc::now().timestamp();
+    let signature = sign(b"whsec_fixture", timestamp, &payload);
+    let response = app
+        .oneshot(
+            Request::post("/webhooks/stripe")
+                .header("stripe-signature", format!("t={timestamp},v1={signature}"))
+                .body(Body::from(payload))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let status: String = sqlx::query_scalar(
+        "SELECT status FROM billing_checkout_sessions WHERE stripe_session_id = $1",
+    )
+    .bind(&session_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(status, "completed");
+
+    let audits: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM billing_audit_events WHERE account_id = $1")
+            .bind(account)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(audits, 1);
+}

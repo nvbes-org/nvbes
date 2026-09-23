@@ -168,6 +168,25 @@ async fn register_and_login_round_trip(pool: PgPool) {
 }
 
 #[tokio::test]
+async fn login_rejects_invalid_email_shape_without_database() {
+    let app = router(&lazy_state());
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/auth/login")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"email":"not-an-email","password":"long-enough-password"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
 async fn register_rejects_short_password() {
     let app = router(&lazy_state());
     let response = app
