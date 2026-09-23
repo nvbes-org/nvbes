@@ -1,10 +1,10 @@
-use std::sync::{Mutex, OnceLock};
-
 use super::{APP_NAME, ErrorReportingRuntimeConfig};
+use crate::database::database_test_support::test_env_lock;
 
 fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+    test_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 fn clear() {
@@ -13,6 +13,7 @@ fn clear() {
         "SENTRY_DSN",
         "SENTRY_TRACES_SAMPLE_RATE",
     ] {
+        // SAFETY: serialized by `test_env_lock` for test-only env mutation.
         unsafe { std::env::remove_var(name) };
     }
 }

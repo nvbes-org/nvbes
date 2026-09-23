@@ -2,9 +2,10 @@ use std::ffi::OsString;
 use std::process::Command;
 use std::time::Duration;
 
-use tokio::sync::Mutex;
+use std::sync::MutexGuard;
 
 use super::{required_secret, run, serve};
+use crate::database::database_test_support::test_env_lock;
 
 const TEST_VARS: &[&str] = &[
     "NVBES_ENVIRONMENT",
@@ -17,7 +18,6 @@ const TEST_VARS: &[&str] = &[
     "NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY",
     "NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION",
     "NVBES_IDENTITY_METRICS_TOKEN",
-    "NVBES_IDENTITY_TOKEN_ISSUER",
     "SENTRY_DSN",
     "SENTRY_TRACES_SAMPLE_RATE",
     "NVBES_OTLP_ENDPOINT",
@@ -29,25 +29,29 @@ const TEST_VARS: &[&str] = &[
     "NVBES_IDENTITY_RECOVERY_BASE_URL",
 ];
 
-static ENV_LOCK: Mutex<()> = Mutex::const_new(());
-
 struct EnvGuard {
+    _lock: MutexGuard<'static, ()>,
     saved: Vec<(&'static str, Option<OsString>)>,
 }
 
 impl EnvGuard {
     fn isolated() -> Self {
+        let lock = test_env_lock()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let saved = TEST_VARS
             .iter()
             .map(|name| (*name, std::env::var_os(name)))
             .collect();
         for name in TEST_VARS {
+            // SAFETY: serialized by `test_env_lock` for test-only env mutation.
             unsafe { std::env::remove_var(name) };
         }
-        Self { saved }
+        Self { _lock: lock, saved }
     }
 
     fn set(&self, name: &str, value: impl AsRef<std::ffi::OsStr>) {
+        // SAFETY: caller holds `test_env_lock` via `EnvGuard`.
         unsafe { std::env::set_var(name, value) };
     }
 }
@@ -56,6 +60,7 @@ impl Drop for EnvGuard {
     fn drop(&mut self) {
         for (name, val) in &self.saved {
             match val {
+                // SAFETY: serialized by `test_env_lock` for test-only env mutation.
                 Some(v) => unsafe { std::env::set_var(name, v) },
                 None => unsafe { std::env::remove_var(name) },
             }
@@ -83,7 +88,6 @@ fn postgres_reachable() -> bool {
 
 #[tokio::test]
 async fn run_rejects_unknown_commands() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     let err = run(vec!["not-a-command".into()]).await.unwrap_err();
@@ -92,7 +96,6 @@ async fn run_rejects_unknown_commands() {
 
 #[tokio::test]
 async fn run_validate_runtime_accepts_development_defaults() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     run(vec!["validate-runtime".into()])
@@ -102,7 +105,6 @@ async fn run_validate_runtime_accepts_development_defaults() {
 
 #[tokio::test]
 async fn required_secret_reports_missing_and_blank_values() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     let missing = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL").unwrap_err();
     assert!(missing.to_string().contains("is required"));
@@ -120,7 +122,6 @@ async fn required_secret_reports_missing_and_blank_values() {
 
 #[tokio::test]
 async fn run_synthetic_auth_smoke_requires_explicit_credentials() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     let err = run(vec!["synthetic-auth-smoke".into()]).await.unwrap_err();
@@ -129,7 +130,6 @@ async fn run_synthetic_auth_smoke_requires_explicit_credentials() {
 
 #[tokio::test]
 async fn run_synthetic_mfa_smoke_requires_explicit_credentials() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     let err = run(vec!["synthetic-mfa-smoke".into()]).await.unwrap_err();
@@ -138,7 +138,6 @@ async fn run_synthetic_mfa_smoke_requires_explicit_credentials() {
 
 #[tokio::test]
 async fn run_synthetic_token_smoke_requires_explicit_credentials() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     let err = run(vec!["synthetic-token-smoke".into()]).await.unwrap_err();
@@ -147,7 +146,6 @@ async fn run_synthetic_token_smoke_requires_explicit_credentials() {
 
 #[tokio::test]
 async fn run_synthetic_auth_email_smoke_requires_explicit_credentials() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     let err = run(vec!["synthetic-auth-email-smoke".into()])
@@ -158,7 +156,6 @@ async fn run_synthetic_auth_email_smoke_requires_explicit_credentials() {
 
 #[tokio::test]
 async fn run_error_reporting_smoke_requires_sentry_configuration() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     guard.set("NVBES_ENVIRONMENT", "development");
     let err = run(vec!["error-reporting-smoke".into()]).await.unwrap_err();
@@ -167,7 +164,6 @@ async fn run_error_reporting_smoke_requires_sentry_configuration() {
 
 #[tokio::test]
 async fn run_migrate_fails_for_unreachable_database() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     guard.set(
@@ -185,7 +181,6 @@ async fn run_migrate_applies_schema_when_database_is_available() {
         return;
     }
 
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
 
@@ -240,7 +235,6 @@ async fn run_migrate_applies_schema_when_database_is_available() {
 
 #[tokio::test]
 async fn run_rotate_mfa_key_fails_for_unreachable_database() {
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     guard.set(
@@ -257,7 +251,6 @@ async fn run_without_arguments_starts_runtime_until_stopped() {
         eprintln!("skipping serve smoke: postgres unavailable");
         return;
     }
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     guard.set("NVBES_IDENTITY_BIND_ADDR", "127.0.0.1:0");
@@ -276,7 +269,6 @@ async fn serve_exposes_live_health_until_stopped() {
 
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
     guard.set("NVBES_IDENTITY_BIND_ADDR", "127.0.0.1:0");

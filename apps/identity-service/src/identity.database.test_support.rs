@@ -11,7 +11,10 @@ use uuid::Uuid;
 
 use crate::{app::IdentityState, auth::hash_token, config::IdentityConfig};
 
-fn token_env_lock() -> &'static Mutex<()> {
+/// Shared lock for any Identity test that mutates process environment.
+/// Token issuance reads `NVBES_IDENTITY_TOKEN_*` at request time, so all
+/// env writers must serialize through this lock to avoid cross-test flakes.
+pub fn test_env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
 }
@@ -23,7 +26,7 @@ pub struct TokenEnvGuard {
 
 impl TokenEnvGuard {
     pub fn install_test_keys() -> Self {
-        let lock = token_env_lock()
+        let lock = test_env_lock()
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let private = PKey::from_rsa(Rsa::generate(2048).expect("rsa")).expect("pkey");
@@ -41,7 +44,7 @@ impl TokenEnvGuard {
         let mut saved = Vec::with_capacity(pairs.len());
         for (name, value) in pairs {
             saved.push((name.to_string(), std::env::var(name).ok()));
-            // SAFETY: serialized by `token_env_lock` for test-only env mutation.
+            // SAFETY: serialized by `test_env_lock` for test-only env mutation.
             unsafe { std::env::set_var(name, value) };
         }
         Self { _lock: lock, saved }
@@ -49,6 +52,44 @@ impl TokenEnvGuard {
 }
 
 impl Drop for TokenEnvGuard {
+    fn drop(&mut self) {
+        for (name, previous) in &self.saved {
+            match previous {
+                Some(value) => unsafe { std::env::set_var(name, value) },
+                None => unsafe { std::env::remove_var(name) },
+            }
+        }
+    }
+}
+
+/// Clears token key env vars while holding the shared test env lock.
+pub struct WithoutTokenKeysGuard {
+    _lock: MutexGuard<'static, ()>,
+    saved: Vec<(String, Option<String>)>,
+}
+
+impl WithoutTokenKeysGuard {
+    pub fn install() -> Self {
+        let lock = test_env_lock()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let names = [
+            "NVBES_IDENTITY_TOKEN_KEY_ID",
+            "NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM",
+            "NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM",
+            "NVBES_IDENTITY_TOKEN_AUDIENCES",
+        ];
+        let mut saved = Vec::with_capacity(names.len());
+        for name in names {
+            saved.push((name.to_string(), std::env::var(name).ok()));
+            // SAFETY: serialized by `test_env_lock` for test-only env mutation.
+            unsafe { std::env::remove_var(name) };
+        }
+        Self { _lock: lock, saved }
+    }
+}
+
+impl Drop for WithoutTokenKeysGuard {
     fn drop(&mut self) {
         for (name, previous) in &self.saved {
             match previous {

@@ -103,10 +103,15 @@ async fn refresh_token_grant_rotates_and_reissues_access_token(pool: PgPool) {
         )
         .await
         .unwrap();
-    assert!(initial.status().is_success());
+    let initial_status = initial.status();
     let initial_body = axum::body::to_bytes(initial.into_body(), usize::MAX)
         .await
         .unwrap();
+    assert!(
+        initial_status.is_success(),
+        "authorization_code grant failed: {initial_status} {}",
+        String::from_utf8_lossy(&initial_body)
+    );
     let initial_json: serde_json::Value = serde_json::from_slice(&initial_body).unwrap();
     let refresh = initial_json["refresh_token"]
         .as_str()

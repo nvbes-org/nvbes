@@ -90,15 +90,27 @@ fn key_id_and_audience_identifiers_are_validated() {
 
 #[test]
 fn from_env_requires_explicit_key_material() {
-    let previous = std::env::var("NVBES_IDENTITY_TOKEN_KEY_ID").ok();
-    unsafe {
-        std::env::remove_var("NVBES_IDENTITY_TOKEN_KEY_ID");
-        std::env::remove_var("NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM");
-        std::env::remove_var("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM");
-        std::env::remove_var("NVBES_IDENTITY_TOKEN_AUDIENCES");
+    let _lock = crate::database::database_test_support::test_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let previous = [
+        "NVBES_IDENTITY_TOKEN_KEY_ID",
+        "NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM",
+        "NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM",
+        "NVBES_IDENTITY_TOKEN_AUDIENCES",
+    ]
+    .into_iter()
+    .map(|name| (name, std::env::var(name).ok()))
+    .collect::<Vec<_>>();
+    for (name, _) in &previous {
+        // SAFETY: serialized by `test_env_lock` for test-only env mutation.
+        unsafe { std::env::remove_var(name) };
     }
     assert!(TokenConfig::from_env("test").is_err());
-    if let Some(value) = previous {
-        unsafe { std::env::set_var("NVBES_IDENTITY_TOKEN_KEY_ID", value) };
+    for (name, value) in previous {
+        match value {
+            Some(value) => unsafe { std::env::set_var(name, value) },
+            None => unsafe { std::env::remove_var(name) },
+        }
     }
 }

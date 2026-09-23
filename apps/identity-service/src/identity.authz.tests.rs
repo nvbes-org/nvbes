@@ -2,10 +2,12 @@ use axum::{body::Body, http::Request};
 use tower::ServiceExt;
 
 use crate::authz::router;
+use crate::database::database_test_support::WithoutTokenKeysGuard;
 use crate::health::tests::state;
 
 #[tokio::test]
 async fn introspect_fails_cleanly_without_configured_token_keys() {
+    let _env = WithoutTokenKeysGuard::install();
     let app = router(&state());
     let res = app
         .oneshot(
@@ -41,6 +43,7 @@ async fn introspect_rejects_malformed_json_body() {
 
 #[tokio::test]
 async fn authz_decision_fails_cleanly_without_configured_token_keys() {
+    let _env = WithoutTokenKeysGuard::install();
     let app = router(&state());
     let res = app
         .oneshot(
