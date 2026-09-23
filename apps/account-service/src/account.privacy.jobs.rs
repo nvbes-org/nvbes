@@ -41,10 +41,19 @@ pub async fn process_pending(db: &PgPool) -> AccountResult<PrivacyJobResult> {
 }
 
 async fn complete_export(db: &PgPool, id: Uuid, principal_id: Uuid) -> AccountResult<()> {
-    let document: Value = sqlx::query_scalar("SELECT jsonb_build_object('exported_at',clock_timestamp(),'principal_id',$1,'profile',(SELECT to_jsonb(p)-'lifecycle_status'-'closed_at' FROM account_profiles p WHERE principal_id=$1),'preferences',(SELECT to_jsonb(p) FROM account_preferences p WHERE principal_id=$1),'teams',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',t.id,'name',t.name,'role',m.role,'created_at',t.created_at)) FROM account_team_memberships m JOIN account_teams t ON t.id=m.team_id WHERE m.principal_id=$1),'[]'::jsonb))")
-        .bind(principal_id)
-        .fetch_one(db)
-        .await?;
+    let document: Value = sqlx::query_scalar(
+        "SELECT jsonb_build_object(
+            'exported_at', clock_timestamp(),
+            'principal_id', $1,
+            'profile', (SELECT to_jsonb(p)-'lifecycle_status'-'closed_at' FROM account_profiles p WHERE principal_id=$1),
+            'preferences', (SELECT to_jsonb(p) FROM account_preferences p WHERE principal_id=$1),
+            'consents', COALESCE((SELECT jsonb_agg(jsonb_build_object('id',c.id,'consent_type',c.consent_type,'document_version',c.document_version,'granted_at',c.granted_at,'revoked_at',c.revoked_at) ORDER BY c.granted_at DESC, c.id DESC) FROM account_consents c WHERE c.principal_id=$1), '[]'::jsonb),
+            'teams', COALESCE((SELECT jsonb_agg(jsonb_build_object('id',t.id,'name',t.name,'role',m.role,'created_at',t.created_at)) FROM account_team_memberships m JOIN account_teams t ON t.id=m.team_id WHERE m.principal_id=$1), '[]'::jsonb)
+        )",
+    )
+    .bind(principal_id)
+    .fetch_one(db)
+    .await?;
     sqlx::query("UPDATE account_exports SET status='completed',document=$2,completed_at=clock_timestamp(),expires_at=clock_timestamp()+interval '24 hours',updated_at=clock_timestamp() WHERE id=$1 AND status='processing'")
         .bind(id)
         .bind(document)
@@ -60,6 +69,10 @@ async fn complete_closure(db: &PgPool, id: Uuid, principal_id: Uuid) -> AccountR
         .execute(&mut *tx)
         .await?;
     sqlx::query("DELETE FROM account_team_memberships WHERE principal_id=$1")
+        .bind(principal_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM account_consents WHERE principal_id=$1")
         .bind(principal_id)
         .execute(&mut *tx)
         .await?;

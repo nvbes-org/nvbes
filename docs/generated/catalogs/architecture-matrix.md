@@ -12,6 +12,7 @@ flowchart TD
     subgraph Applications ["Services & Workers"]
         nvbes_account_service["nvbes-account-service"]
         nvbes_billing_service["nvbes-billing-service"]
+        nvbes_billing_worker["nvbes-billing-worker"]
         nvbes_email_worker["nvbes-email-worker"]
         nvbes_identity_service["nvbes-identity-service"]
         nvbes_trust_risk_service["nvbes-trust-risk-service"]
@@ -33,7 +34,12 @@ flowchart TD
     nvbes_account_service --> nvbes_observability
     nvbes_billing_service --> nvbes_billing
     nvbes_billing_service --> nvbes_core
+    nvbes_billing_service --> nvbes_email
     nvbes_billing_service --> nvbes_observability
+    nvbes_billing_worker --> nvbes_billing
+    nvbes_billing_worker --> nvbes_core
+    nvbes_billing_worker --> nvbes_email
+    nvbes_billing_worker --> nvbes_observability
     nvbes_email_worker --> nvbes_core
     nvbes_email_worker --> nvbes_email
     nvbes_email_worker --> nvbes_email_scaleway

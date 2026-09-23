@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
@@ -51,10 +51,29 @@ struct JoinTeam {
     join_code: String,
 }
 
+#[derive(Debug, Serialize, FromRow)]
+struct TeamMember {
+    principal_id: Uuid,
+    role: String,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+struct MembersEnvelope {
+    members: Vec<TeamMember>,
+}
+
 pub fn router(state: AccountState) -> Router {
     Router::new()
         .route("/api/v1/teams", get(list).post(create))
         .route("/api/v1/teams/join", post(join))
+        .route("/api/v1/teams/{team_id}", get(get_team))
+        .route("/api/v1/teams/{team_id}/members", get(list_members))
+        .route(
+            "/api/v1/teams/{team_id}/members/{principal_id}",
+            axum::routing::delete(remove_member),
+        )
+        .route("/api/v1/teams/{team_id}/leave", post(leave))
         .with_state(state)
 }
 
@@ -70,6 +89,39 @@ async fn list(
     .fetch_all(&state.db)
     .await?;
     Ok(Json(TeamsEnvelope { teams }))
+}
+
+async fn get_team(
+    State(state): State<AccountState>,
+    principal: Principal,
+    Path(team_id): Path<Uuid>,
+) -> AccountResult<Json<Team>> {
+    principal.require("account:read")?;
+    let team = sqlx::query_as::<_, Team>(
+        "SELECT t.id, t.name, m.role, t.created_at FROM account_team_memberships m JOIN account_teams t ON t.id=m.team_id WHERE m.principal_id=$1 AND t.id=$2 AND t.status='active'",
+    )
+    .bind(principal.id)
+    .bind(team_id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or(AccountError::NotFound)?;
+    Ok(Json(team))
+}
+
+async fn list_members(
+    State(state): State<AccountState>,
+    principal: Principal,
+    Path(team_id): Path<Uuid>,
+) -> AccountResult<Json<MembersEnvelope>> {
+    principal.require("account:read")?;
+    require_active_membership(&state.db, team_id, principal.id).await?;
+    let members = sqlx::query_as::<_, TeamMember>(
+        "SELECT principal_id, role, created_at FROM account_team_memberships WHERE team_id=$1 ORDER BY created_at ASC LIMIT 200",
+    )
+    .bind(team_id)
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(MembersEnvelope { members }))
 }
 
 async fn create(
@@ -155,6 +207,51 @@ async fn join(
     Ok(Json(team))
 }
 
+async fn leave(
+    State(state): State<AccountState>,
+    principal: Principal,
+    headers: HeaderMap,
+    Path(team_id): Path<Uuid>,
+) -> AccountResult<StatusCode> {
+    principal.require("account:write")?;
+    leave_team(
+        &state.db,
+        team_id,
+        principal.id,
+        principal.id,
+        audit::correlation_id(&headers),
+        true,
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn remove_member(
+    State(state): State<AccountState>,
+    principal: Principal,
+    headers: HeaderMap,
+    Path((team_id, member_id)): Path<(Uuid, Uuid)>,
+) -> AccountResult<StatusCode> {
+    principal.require("account:write")?;
+    if member_id == principal.id {
+        return Err(AccountError::Invalid("use leave to remove yourself"));
+    }
+    let role = require_active_membership(&state.db, team_id, principal.id).await?;
+    if role != "owner" {
+        return Err(AccountError::Forbidden);
+    }
+    leave_team(
+        &state.db,
+        team_id,
+        member_id,
+        principal.id,
+        audit::correlation_id(&headers),
+        false,
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 async fn join_team(
     db: &PgPool,
     principal_id: Uuid,
@@ -209,6 +306,90 @@ async fn join_team(
         },
         created_at,
     })
+}
+
+async fn leave_team(
+    db: &PgPool,
+    team_id: Uuid,
+    principal_id: Uuid,
+    actor_principal_id: Uuid,
+    correlation_id: Uuid,
+    allow_owner_close: bool,
+) -> AccountResult<()> {
+    let mut tx = db.begin().await?;
+    let role: String = sqlx::query_scalar(
+        "SELECT m.role FROM account_team_memberships m JOIN account_teams t ON t.id=m.team_id WHERE m.team_id=$1 AND m.principal_id=$2 AND t.status='active' FOR UPDATE OF m",
+    )
+    .bind(team_id)
+    .bind(principal_id)
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(AccountError::NotFound)?;
+    if role == "owner" {
+        if !allow_owner_close {
+            return Err(AccountError::Conflict);
+        }
+        let members: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM account_team_memberships WHERE team_id=$1")
+                .bind(team_id)
+                .fetch_one(&mut *tx)
+                .await?;
+        if members > 1 {
+            return Err(AccountError::Conflict);
+        }
+        sqlx::query(
+            "UPDATE account_teams SET status='closed', updated_at=clock_timestamp() WHERE id=$1",
+        )
+        .bind(team_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+    sqlx::query("DELETE FROM account_team_memberships WHERE team_id=$1 AND principal_id=$2")
+        .bind(team_id)
+        .bind(principal_id)
+        .execute(&mut *tx)
+        .await?;
+    audit::record(
+        &mut tx,
+        AuditInput {
+            principal_id,
+            actor_principal_id,
+            event_type: "account.team.left",
+            resource_type: "team",
+            resource_id: Some(team_id),
+            correlation_id,
+            details: json!({"role": role, "closed_team": role == "owner"}),
+        },
+    )
+    .await?;
+    audit::enqueue(
+        &mut tx,
+        "account.team.member_left.v1",
+        team_id,
+        json!({
+            "team_id": team_id,
+            "principal_id": principal_id,
+            "actor_principal_id": actor_principal_id
+        }),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn require_active_membership(
+    db: &PgPool,
+    team_id: Uuid,
+    principal_id: Uuid,
+) -> AccountResult<String> {
+    sqlx::query_scalar(
+        "SELECT m.role FROM account_team_memberships m JOIN account_teams t ON t.id=m.team_id WHERE m.team_id=$1 AND m.principal_id=$2 AND t.status='active'",
+    )
+    .bind(team_id)
+    .bind(principal_id)
+    .fetch_optional(db)
+    .await?
+    .ok_or(AccountError::NotFound)
 }
 
 async fn membership_role(db: &PgPool, team_id: Uuid, principal_id: Uuid) -> AccountResult<String> {
@@ -267,4 +448,8 @@ pub async fn create_and_join_for_synthetic(
     tx.commit().await?;
     let joined = join_team(db, member, &join_code, Uuid::new_v4()).await?;
     Ok((id, joined.role))
+}
+
+pub async fn leave_for_synthetic(db: &PgPool, team_id: Uuid, member: Uuid) -> AccountResult<()> {
+    leave_team(db, team_id, member, member, Uuid::new_v4(), true).await
 }
