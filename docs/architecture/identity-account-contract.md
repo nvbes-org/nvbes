@@ -121,8 +121,14 @@ NVBES_IDENTITY_TOKEN_ISSUER=https://identity.example.com
 NVBES_IDENTITY_TOKEN_KEY_ID=key-id
 NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM="<PEM-encoded private key>"
 NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM="<PEM-encoded public key>"
-NVBES_IDENTITY_TOKEN_AUDIENCES=account,billing,platform
+NVBES_IDENTITY_TOKEN_AUDIENCES=account,billing,platform-operations
 ```
+
+Platform Operations consomme un JWT opérateur distinct (`typ=operator+jwt`) avec
+`aud=platform-operations`, `role=platform_owner`, `amr` MFA et `auth_time`.
+Identity l'émet via `POST /api/v1/operator/token` uniquement pour les
+principals listés dans `NVBES_IDENTITY_PLATFORM_OPERATOR_PRINCIPALS`, après
+session MFA step-up active.
 
 ## Sécurité
 

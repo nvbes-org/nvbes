@@ -14,6 +14,8 @@ mod error;
 mod health;
 #[path = "account.metrics.rs"]
 mod metrics;
+#[path = "account.operator.rs"]
+mod operator;
 #[path = "account.preferences.rs"]
 mod preferences;
 #[path = "account.privacy.rs"]

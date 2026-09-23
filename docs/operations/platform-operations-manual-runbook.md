@@ -136,17 +136,22 @@ l'autorité jusqu'à livraison d'un rapprochement automatique fiable et gratuit.
 
 1. Ouvrir un dossier dans Platform Operations
    (`catégorie: compromission de compte`).
-2. Révoquer immédiatement toutes les sessions actives du principal concerné :
+2. Avec un JWT opérateur frais (step-up ≤ 5 min), révoquer les sessions :
+
+   ```sh
+   curl -X POST "$IDENTITY_URL/api/v1/operator/principals/$PRINCIPAL_ID/sessions/revoke" \
+     -H "Authorization: Bearer $NVBES_PLATFORM_OPERATIONS_ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"reason":"Compromise reported for ticket OPS-…"}'
+   ```
+
+3. Si Identity est indisponible, secours SQL (même base Identity uniquement) :
 
    ```sql
    UPDATE identity_sessions
    SET revoked_at = clock_timestamp()
    WHERE principal_id = $1 AND revoked_at IS NULL;
-   ```
 
-3. Révoquer l'ensemble des familles de refresh tokens associées :
-
-   ```sql
    UPDATE identity_refresh_tokens
    SET revoked_at = clock_timestamp()
    WHERE principal_id = $1 AND revoked_at IS NULL;

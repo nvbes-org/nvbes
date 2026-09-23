@@ -12,6 +12,9 @@ use crate::auth;
 use crate::tokens_config::TokenConfig;
 
 const ACCESS_TOKEN_TTL_SECONDS: u64 = 15 * 60;
+pub const OPERATOR_AUDIENCE: &str = "platform-operations";
+pub const OPERATOR_ROLE: &str = "platform_owner";
+pub const OPERATOR_TOKEN_TYPE: &str = "operator";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccessTokenClaims {
@@ -26,6 +29,21 @@ pub struct AccessTokenClaims {
     pub nbf: u64,
     pub jti: String,
     pub sid: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperatorTokenClaims {
+    pub sub: String,
+    pub token_type: String,
+    pub role: String,
+    pub amr: Vec<String>,
+    pub auth_time: i64,
+    pub iss: String,
+    pub aud: String,
+    pub exp: u64,
+    pub iat: u64,
+    pub nbf: u64,
+    pub jti: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -120,6 +138,74 @@ impl TokenService {
         header.kid = Some(self.config.key_id.clone());
         header.typ = Some("at+jwt".into());
         Ok(encode(&header, &claims, &self.encoding_key)?)
+    }
+
+    pub fn issue_operator(
+        &self,
+        principal_id: Uuid,
+        amr: Vec<String>,
+        auth_time: i64,
+    ) -> anyhow::Result<String> {
+        if !self.config.allowed_audiences.contains(OPERATOR_AUDIENCE) {
+            anyhow::bail!("token audience is not allowed");
+        }
+        let mfa = amr
+            .iter()
+            .any(|method| matches!(method.as_str(), "mfa" | "totp" | "webauthn"));
+        if !mfa {
+            anyhow::bail!("operator token requires an MFA authentication method");
+        }
+        let issued_at = Utc::now().timestamp() as u64;
+        let claims = OperatorTokenClaims {
+            sub: principal_id.to_string(),
+            token_type: OPERATOR_TOKEN_TYPE.into(),
+            role: OPERATOR_ROLE.into(),
+            amr,
+            auth_time,
+            iss: self.config.issuer.clone(),
+            aud: OPERATOR_AUDIENCE.into(),
+            exp: issued_at + ACCESS_TOKEN_TTL_SECONDS,
+            iat: issued_at,
+            nbf: issued_at,
+            jti: Uuid::new_v4().to_string(),
+        };
+        let mut header = Header::new(Algorithm::RS256);
+        header.kid = Some(self.config.key_id.clone());
+        header.typ = Some("operator+jwt".into());
+        Ok(encode(&header, &claims, &self.encoding_key)?)
+    }
+
+    pub fn verify_operator(&self, token: &str) -> anyhow::Result<OperatorTokenClaims> {
+        if !self.config.allowed_audiences.contains(OPERATOR_AUDIENCE) {
+            anyhow::bail!("token audience is not allowed");
+        }
+        let header = decode_header(token)?;
+        if header.alg != Algorithm::RS256
+            || header.kid.as_deref() != Some(&self.config.key_id)
+            || header.typ.as_deref() != Some("operator+jwt")
+        {
+            anyhow::bail!("token header is invalid");
+        }
+        let mut validation = Validation::new(Algorithm::RS256);
+        validation.set_issuer(&[&self.config.issuer]);
+        validation.set_audience(&[OPERATOR_AUDIENCE]);
+        validation.set_required_spec_claims(&["exp", "iat", "iss", "aud", "sub", "nbf"]);
+        validation.validate_nbf = true;
+        validation.leeway = 0;
+        let claims = decode::<OperatorTokenClaims>(token, &self.decoding_key, &validation)?.claims;
+        let mfa = claims
+            .amr
+            .iter()
+            .any(|method| matches!(method.as_str(), "mfa" | "totp" | "webauthn"));
+        if claims.token_type != OPERATOR_TOKEN_TYPE
+            || claims.role != OPERATOR_ROLE
+            || claims.sub.trim().is_empty()
+            || claims.sub.len() > 128
+            || !mfa
+        {
+            anyhow::bail!("operator token claims are invalid");
+        }
+        Ok(claims)
     }
 
     pub fn verify(

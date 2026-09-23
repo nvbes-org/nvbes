@@ -1,5 +1,6 @@
 use base64::{Engine, engine::general_purpose::STANDARD};
-use std::net::SocketAddr;
+use std::{collections::BTreeSet, net::SocketAddr};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentityConfig {
@@ -17,6 +18,7 @@ pub struct IdentityConfig {
     pub mfa_previous_encryption_key: Option<[u8; 32]>,
     pub mfa_previous_key_version: Option<i16>,
     pub token_issuer: String,
+    pub platform_operator_principals: BTreeSet<Uuid>,
     pub public_signup_enabled: bool,
     pub login_url: String,
     pub session_cookie_secure: bool,
@@ -75,6 +77,8 @@ impl IdentityConfig {
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_METRICS_TOKEN"))?;
         let token_issuer = optional("NVBES_IDENTITY_TOKEN_ISSUER")
             .unwrap_or_else(|| format!("http://{}", bind_addr));
+        let platform_operator_principals =
+            parse_principal_allowlist(optional("NVBES_IDENTITY_PLATFORM_OPERATOR_PRINCIPALS"))?;
         let public_signup_enabled = match optional("NVBES_IDENTITY_PUBLIC_SIGNUP") {
             Some(value) => parse_bool("NVBES_IDENTITY_PUBLIC_SIGNUP", &value)?,
             None => development,
@@ -107,11 +111,29 @@ impl IdentityConfig {
             mfa_previous_encryption_key,
             mfa_previous_key_version,
             token_issuer,
+            platform_operator_principals,
             public_signup_enabled,
             login_url,
             session_cookie_secure,
         })
     }
+}
+
+fn parse_principal_allowlist(raw: Option<String>) -> Result<BTreeSet<Uuid>, ConfigError> {
+    let Some(raw) = raw else {
+        return Ok(BTreeSet::new());
+    };
+    let mut principals = BTreeSet::new();
+    for part in raw.split(',') {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+        let id = Uuid::parse_str(part)
+            .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_PLATFORM_OPERATOR_PRINCIPALS"))?;
+        principals.insert(id);
+    }
+    Ok(principals)
 }
 
 fn validate_observability(

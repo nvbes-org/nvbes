@@ -34,7 +34,10 @@ pub fn config(provider: ProviderConfig) -> EmailWorkerConfig {
         http_bind_addr: "127.0.0.1:0".parse::<SocketAddr>().unwrap(),
         producer_tokens: HashMap::from([
             ("identity-service".to_string(), INTERNAL_TOKEN.to_string()),
-            ("backoffice-service".to_string(), INTERNAL_TOKEN.to_string()),
+            (
+                "platform-operations-service".to_string(),
+                INTERNAL_TOKEN.to_string(),
+            ),
         ]),
         data_encryption_key: [7; 32],
         recipient_hmac_key: [9; 32],
@@ -98,7 +101,7 @@ pub fn caller(name: &str) -> EmailCallerContext {
 #[cfg(feature = "database-tests")]
 pub fn operator() -> EmailOperatorContext {
     EmailOperatorContext {
-        caller: Some(caller("backoffice-service")),
+        caller: Some(caller("platform-operations-service")),
         actor: "00000000-0000-0000-0000-000000000001".to_string(),
         reason: "ticket EMAIL-123 approved".to_string(),
     }

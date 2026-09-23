@@ -101,6 +101,7 @@ async fn missing_context_is_unknown_and_domain_actions_fail_closed() {
     let value: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(value["operator"], "operator-one");
     assert_eq!(value["backup_restore"], "not_verified");
+    assert_eq!(value["panels"], "removed");
     assert!(
         value["services"]
             .as_array()
@@ -143,4 +144,43 @@ fn stale_signed_authentication_does_not_become_fresh_with_header() {
         .authenticate_headers(&headers)
         .unwrap();
     assert!(!actor.has_mfa_step_up);
+}
+
+#[tokio::test]
+async fn write_commands_require_fresh_mfa_step_up() {
+    let stale = format!(
+        "Bearer {}",
+        token(
+            "platform_owner",
+            &["totp"],
+            chrono::Utc::now().timestamp() - 600
+        )
+    );
+    let body = serde_json::json!({
+        "idempotency_key": "00000000-0000-4000-8000-000000000001",
+        "correlation_id": "00000000-0000-4000-8000-000000000002",
+        "reason": "Investigate delayed transactional email delivery",
+        "action": {
+            "type": "open_case",
+            "category": "support",
+            "owner": "email",
+            "subject_id": "00000000-0000-4000-8000-000000000003",
+            "source": "ticket-1",
+            "summary": "Check delivery",
+            "related_case_id": null
+        }
+    });
+    let response = setup()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/commands")
+                .header(header::AUTHORIZATION, stale)
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
 }
