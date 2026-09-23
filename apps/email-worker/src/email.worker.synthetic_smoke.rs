@@ -55,7 +55,15 @@ async fn wait_for_signed_delivery(message_id: &str) -> anyhow::Result<(String, i
         .acquire_timeout(std::time::Duration::from_secs(10))
         .connect(&database_url)
         .await?;
+    let result = wait_for_signed_delivery_with_pool(&pool, message_id).await;
+    pool.close().await;
+    result
+}
 
+async fn wait_for_signed_delivery_with_pool(
+    pool: &sqlx::PgPool,
+    message_id: &str,
+) -> anyhow::Result<(String, i64)> {
     for _attempt in 1..=DELIVERY_POLL_ATTEMPTS {
         let delivery = sqlx::query_as::<_, (String, i64)>(
             r#"
@@ -72,12 +80,11 @@ async fn wait_for_signed_delivery(message_id: &str) -> anyhow::Result<(String, i
             "#,
         )
         .bind(message_id)
-        .fetch_optional(&pool)
+        .fetch_optional(pool)
         .await?;
 
         if let Some((state, processed_provider_events)) = delivery {
             if state == "delivered" && processed_provider_events > 0 {
-                pool.close().await;
                 return Ok((state, processed_provider_events));
             }
             if is_terminal_failure(&state) {

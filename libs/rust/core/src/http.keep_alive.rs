@@ -52,3 +52,7 @@ fn env_parse_u32(name: &str, default: u32) -> u32 {
         .and_then(|v| v.parse().ok())
         .unwrap_or(default)
 }
+
+#[cfg(test)]
+#[path = "http.keep_alive.tests.rs"]
+mod tests;

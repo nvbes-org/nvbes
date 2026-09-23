@@ -154,6 +154,163 @@ fn deployment_bootstrap_serves_live_health_check() {
     assert!(body.contains("204") || body.contains("200"), "{body}");
 }
 
+#[test]
+fn deployment_bootstrap_accepts_legacy_bind_addr_env() {
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::time::Duration;
+
+    let listener = TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
+    let addr = listener.local_addr().expect("local addr").to_string();
+    drop(listener);
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
+        .env_clear()
+        .arg("deployment-bootstrap")
+        .env("NVBES_BILLING_BIND_ADDR", &addr)
+        .spawn()
+        .expect("spawn bootstrap");
+
+    let response = (0..40).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(50));
+        if let Some(status) = child.try_wait().ok().flatten() {
+            panic!("bootstrap exited early: {status}");
+        }
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+            .and_then(|mut stream| {
+                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
+                let mut buf = [0_u8; 128];
+                let read = stream.read(&mut buf)?;
+                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
+            })
+            .ok()
+    });
+
+    let _ = child.kill();
+    let _ = child.wait();
+    let body = response.expect("health response");
+    assert!(body.contains("204") || body.contains("200"), "{body}");
+}
+
+#[test]
+fn deployment_bootstrap_rejects_invalid_bind_address() {
+    let output = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
+        .env_clear()
+        .arg("deployment-bootstrap")
+        .env("NVBES_BILLING_HTTP_BIND_ADDR", "not-a-socket")
+        .output()
+        .expect("billing worker runs");
+    assert!(!output.status.success());
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("NVBES_BILLING_HTTP_BIND_ADDR"), "{error}");
+}
+
+#[test]
+fn serve_alias_starts_http_health_when_database_is_available() {
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::time::Duration;
+
+    if !postgres_reachable() {
+        eprintln!("skipping serve integration: postgres unavailable");
+        return;
+    }
+
+    let listener = TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
+    let addr = listener.local_addr().expect("local addr").to_string();
+    drop(listener);
+
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
+    });
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
+        .env_clear()
+        .arg("serve")
+        .env("NVBES_BILLING_DATABASE_URL", database_url)
+        .env("NVBES_APP_URL", "https://nvbes.test")
+        .env("NVBES_BILLING_HTTP_BIND_ADDR", &addr)
+        .spawn()
+        .expect("spawn serve");
+
+    let response = (0..80).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(50));
+        if let Some(status) = child.try_wait().ok().flatten() {
+            panic!("serve exited early: {status}");
+        }
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+            .and_then(|mut stream| {
+                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
+                let mut buf = [0_u8; 256];
+                let read = stream.read(&mut buf)?;
+                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
+            })
+            .ok()
+    });
+
+    let _ = child.kill();
+    let _ = child.wait();
+    let body = response.expect("health response");
+    assert!(
+        body.contains("200") || body.contains("alive") || body.contains("billing"),
+        "{body}"
+    );
+}
+
+#[test]
+fn serve_without_arguments_starts_when_database_is_available() {
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::time::Duration;
+
+    if !postgres_reachable() {
+        eprintln!("skipping default serve integration: postgres unavailable");
+        return;
+    }
+
+    let listener = TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
+    let addr = listener.local_addr().expect("local addr").to_string();
+    drop(listener);
+
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
+    });
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
+        .env_clear()
+        .env("NVBES_BILLING_DATABASE_URL", database_url)
+        .env("NVBES_APP_URL", "https://nvbes.test")
+        .env("NVBES_BILLING_HTTP_BIND_ADDR", &addr)
+        .spawn()
+        .expect("spawn default serve");
+
+    let response = (0..80).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(50));
+        if let Some(status) = child.try_wait().ok().flatten() {
+            panic!("default serve exited early: {status}");
+        }
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+            .and_then(|mut stream| {
+                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
+                let mut buf = [0_u8; 256];
+                let read = stream.read(&mut buf)?;
+                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
+            })
+            .ok()
+    });
+
+    let _ = child.kill();
+    let _ = child.wait();
+    let body = response.expect("health response");
+    assert!(body.contains("200") || body.contains("alive"), "{body}");
+}
+
+#[test]
+fn migrate_fails_against_unreachable_database() {
+    let output = run(&["migrate"], Some("postgres://127.0.0.1:1/unreachable"));
+    assert!(!output.status.success());
+}
+
 fn postgres_reachable() -> bool {
     std::net::TcpStream::connect_timeout(
         &"127.0.0.1:5432".parse().unwrap(),

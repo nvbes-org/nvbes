@@ -131,3 +131,20 @@ pub async fn seed_confidential_oauth_client(
     .await
     .expect("oauth client");
 }
+
+pub async fn seed_public_oauth_client(pool: &PgPool, client_id: &str, redirect_uri: &str) {
+    sqlx::query(
+        "INSERT INTO identity_oauth_clients (id, client_id, client_secret_hash, name, redirect_uris, scopes, is_confidential)
+         VALUES ($1, $2, $3, $4, $5, $6, false)
+         ON CONFLICT (client_id) DO NOTHING",
+    )
+    .bind(Uuid::new_v4())
+    .bind(client_id)
+    .bind(hash_token("unused-public-client-placeholder"))
+    .bind("Database test public client")
+    .bind(vec![redirect_uri.to_string()])
+    .bind(vec!["openid".to_string(), "profile".to_string()])
+    .execute(pool)
+    .await
+    .expect("public oauth client");
+}

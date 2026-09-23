@@ -41,12 +41,12 @@
       "threshold": {
         "lines": 85,
         "functions": 84,
-        "regions": 76
+        "regions": 77
       },
       "baseline": {
-        "lines": 87.1,
-        "functions": 86.2,
-        "regions": 78.5
+        "lines": 87.6,
+        "functions": 86.8,
+        "regions": 79.2
       }
     },
     "nvbes-platform": {
@@ -56,7 +56,7 @@
         "regions": 84
       },
       "baseline": {
-        "lines": 91,
+        "lines": 91.0,
         "functions": 86.5,
         "regions": 86.3
       }
@@ -75,86 +75,86 @@
     },
     "nvbes-identity-service": {
       "threshold": {
-        "lines": 72,
-        "functions": 78,
-        "regions": 68
+        "lines": 82,
+        "functions": 84,
+        "regions": 76
       },
       "baseline": {
-        "lines": 74.7,
-        "functions": 80.3,
-        "regions": 70.2
+        "lines": 84.5,
+        "functions": 86.0,
+        "regions": 78.9
       }
     },
     "nvbes-billing-worker": {
       "threshold": {
-        "lines": 73,
-        "functions": 66,
-        "regions": 64
+        "lines": 76,
+        "functions": 73,
+        "regions": 67
       },
       "baseline": {
-        "lines": 75.1,
-        "functions": 68.8,
-        "regions": 66
+        "lines": 78.5,
+        "functions": 75.3,
+        "regions": 69.1
       }
     },
     "nvbes-billing-service": {
       "threshold": {
-        "lines": 53,
-        "functions": 36,
-        "regions": 50
+        "lines": 77,
+        "functions": 61,
+        "regions": 71
       },
       "baseline": {
-        "lines": 55.7,
-        "functions": 38.7,
-        "regions": 52.1
+        "lines": 79.2,
+        "functions": 63.6,
+        "regions": 73.2
       }
     },
     "nvbes-core": {
       "threshold": {
-        "lines": 71,
-        "functions": 68,
-        "regions": 71
+        "lines": 84,
+        "functions": 81,
+        "regions": 83
       },
       "baseline": {
-        "lines": 73.4,
-        "functions": 70.3,
-        "regions": 73.2
+        "lines": 86.9,
+        "functions": 83.5,
+        "regions": 85.7
       }
     },
     "nvbes-region": {
       "threshold": {
-        "lines": 44,
-        "functions": 48,
-        "regions": 47
+        "lines": 89,
+        "functions": 85,
+        "regions": 83
       },
       "baseline": {
-        "lines": 46.3,
-        "functions": 50.3,
-        "regions": 49.6
+        "lines": 91.4,
+        "functions": 87.5,
+        "regions": 85.5
       }
     },
     "nvbes-trust-risk-service": {
       "threshold": {
-        "lines": 48,
-        "functions": 55,
-        "regions": 46
+        "lines": 88,
+        "functions": 88,
+        "regions": 83
       },
       "baseline": {
-        "lines": 51,
-        "functions": 57.7,
-        "regions": 48.8
+        "lines": 90.1,
+        "functions": 90.2,
+        "regions": 85.7
       }
     },
     "nvbes-billing": {
       "threshold": {
-        "lines": 73,
-        "functions": 70,
-        "regions": 71
+        "lines": 87,
+        "functions": 85,
+        "regions": 84
       },
       "baseline": {
-        "lines": 75.9,
-        "functions": 72.9,
-        "regions": 73.8
+        "lines": 89.7,
+        "functions": 87.6,
+        "regions": 86.9
       }
     },
     "nvbes-audit": {
@@ -171,33 +171,33 @@
     },
     "nvbes-account-service": {
       "threshold": {
-        "lines": 72,
-        "functions": 76,
-        "regions": 65
+        "lines": 90,
+        "functions": 91,
+        "regions": 79
       },
       "baseline": {
-        "lines": 74.5,
-        "functions": 78.3,
-        "regions": 67.9
+        "lines": 92.1,
+        "functions": 93.0,
+        "regions": 81.1
       }
     },
     "nvbes-observability": {
       "threshold": {
-        "lines": 82,
-        "functions": 87,
-        "regions": 81
+        "lines": 95,
+        "functions": 96,
+        "regions": 94
       },
       "baseline": {
-        "lines": 84.3,
-        "functions": 89.1,
-        "regions": 83.2
+        "lines": 97.7,
+        "functions": 98.0,
+        "regions": 96.9
       }
     }
   },
   "excluded": [
     {
       "crate": "nvbes-test-utils",
-      "reason": "Bibliothèque utilitaire de tests uniquement (support keyword runner, pools de test) ; hors périmètre de production, non mesurée."
+      "reason": "Biblioth\u00e8que utilitaire de tests uniquement (support keyword runner, pools de test) ; hors p\u00e9rim\u00e8tre de production, non mesur\u00e9e."
     }
   ]
 }

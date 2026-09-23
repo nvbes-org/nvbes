@@ -235,3 +235,218 @@ async fn resolve_requires_auth_token_when_secret_manager_enabled() {
         }
     }
 }
+
+fn development_config_ready_for_secret_apply() -> AppConfig {
+    AppConfig {
+        environment: "development".into(),
+        web_base_url: "http://localhost:5173".into(),
+        api_base_url: "http://localhost:3000".into(),
+        billing_default_success_url: "http://localhost:5173/billing/success".into(),
+        billing_default_cancel_url: "http://localhost:5173/billing/cancel".into(),
+        billing_default_portal_return_url: "http://localhost:5173/billing".into(),
+        webauthn_rp_origin: "http://localhost:5173".into(),
+        webauthn_rp_id: "localhost".into(),
+        stripe_api_base_url: "https://api.stripe.com".into(),
+        mollie_api_base_url: "https://api.mollie.com".into(),
+        twilio_api_base_url: "https://verify.twilio.com".into(),
+        otp_provider: "mock".into(),
+        auth_session_idle_ttl_minutes: 30,
+        auth_verification_resend_cooldown_seconds: 60,
+        auth_unverified_account_ttl_days: 7,
+        profiling_sample_rate_hz: 100,
+        auth_factor_encryption_key_version: 1,
+        ip_intelligence_timeout_secs: 5,
+        ip_intelligence_cache_ttl_hours: 24,
+        secret_manager_enabled: true,
+        ..AppConfig::default()
+    }
+}
+
+struct SecretManagerEnv {
+    saved: Vec<(&'static str, Option<std::ffi::OsString>)>,
+}
+
+impl SecretManagerEnv {
+    fn install(pairs: &[(&str, Option<&str>)]) -> Self {
+        let names = [
+            "NVBES_SECRET_MANAGER_SECRET_ID",
+            "NVBES_SECRET_MANAGER_REGION",
+            "NVBES_SECRET_MANAGER_AUTH_TOKEN",
+            "NVBES_SECRET_MANAGER_API_BASE_URL",
+            "SCW_SECRET_KEY",
+        ];
+        let saved = names
+            .into_iter()
+            .map(|name| (name, std::env::var_os(name)))
+            .collect();
+        for name in names {
+            unsafe { std::env::remove_var(name) };
+        }
+        for (name, value) in pairs {
+            match value {
+                Some(value) => unsafe { std::env::set_var(name, value) },
+                None => unsafe { std::env::remove_var(name) },
+            }
+        }
+        Self { saved }
+    }
+}
+
+impl Drop for SecretManagerEnv {
+    fn drop(&mut self) {
+        for (name, value) in &self.saved {
+            match value {
+                Some(value) => unsafe { std::env::set_var(name, value) },
+                None => unsafe { std::env::remove_var(name) },
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn resolve_requires_secret_id_when_secret_manager_enabled() {
+    let _env = SecretManagerEnv::install(&[
+        ("NVBES_SECRET_MANAGER_SECRET_ID", None),
+        ("NVBES_SECRET_MANAGER_REGION", Some("fr-par")),
+        ("NVBES_SECRET_MANAGER_AUTH_TOKEN", Some("token")),
+    ]);
+    let mut config = development_config_ready_for_secret_apply();
+    let err = config
+        .resolve_from_secret_manager()
+        .await
+        .expect_err("missing secret id");
+    assert!(err.contains("NVBES_SECRET_MANAGER_SECRET_ID"));
+}
+
+#[tokio::test]
+async fn resolve_fetches_reports_unavailable_secret_manager() {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
+    let addr = listener.local_addr().expect("addr");
+    drop(listener);
+    let base = format!("http://{addr}");
+    let _env = SecretManagerEnv::install(&[
+        ("NVBES_SECRET_MANAGER_SECRET_ID", Some("test-secret")),
+        ("NVBES_SECRET_MANAGER_REGION", Some("nl-ams")),
+        ("NVBES_SECRET_MANAGER_AUTH_TOKEN", Some("token")),
+        ("NVBES_SECRET_MANAGER_API_BASE_URL", Some(base.as_str())),
+    ]);
+    let mut config = development_config_ready_for_secret_apply();
+    let err = config
+        .resolve_from_secret_manager()
+        .await
+        .expect_err("unavailable");
+    assert!(err.contains("Secret Manager is unavailable"), "{err}");
+}
+
+#[tokio::test]
+async fn resolve_fetches_rejects_non_success_status() {
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let addr = listener.local_addr().expect("addr");
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.expect("accept");
+        stream
+            .write_all(b"HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n")
+            .await
+            .expect("write");
+    });
+    let base = format!("http://{addr}");
+    let _env = SecretManagerEnv::install(&[
+        ("NVBES_SECRET_MANAGER_SECRET_ID", Some("test-secret")),
+        ("NVBES_SECRET_MANAGER_REGION", Some("pl-waw")),
+        ("NVBES_SECRET_MANAGER_AUTH_TOKEN", Some("token")),
+        ("NVBES_SECRET_MANAGER_API_BASE_URL", Some(base.as_str())),
+    ]);
+    let mut config = development_config_ready_for_secret_apply();
+    let err = config
+        .resolve_from_secret_manager()
+        .await
+        .expect_err("rejected");
+    assert!(err.contains("Secret Manager rejected access"), "{err}");
+    server.await.expect("server");
+}
+
+#[tokio::test]
+async fn resolve_fetches_rejects_invalid_json_payload() {
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let addr = listener.local_addr().expect("addr");
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.expect("accept");
+        let body = b"not-json";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: application/json\r\n\r\n{}",
+            body.len(),
+            std::str::from_utf8(body).unwrap()
+        );
+        stream.write_all(response.as_bytes()).await.expect("write");
+    });
+    let base = format!("http://{addr}");
+    let _env = SecretManagerEnv::install(&[
+        ("NVBES_SECRET_MANAGER_SECRET_ID", Some("test-secret")),
+        ("NVBES_SECRET_MANAGER_REGION", Some("fr-par")),
+        ("NVBES_SECRET_MANAGER_AUTH_TOKEN", Some("token")),
+        ("NVBES_SECRET_MANAGER_API_BASE_URL", Some(base.as_str())),
+    ]);
+    let mut config = development_config_ready_for_secret_apply();
+    let err = config
+        .resolve_from_secret_manager()
+        .await
+        .expect_err("invalid json");
+    assert!(err.contains("invalid JSON"), "{err}");
+    server.await.expect("server");
+}
+
+#[tokio::test]
+async fn resolve_fetches_applies_secret_payload_from_loopback() {
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+
+    let stripe_key = format!("{}_{}", "sk_test", "from_secret_manager");
+    let secrets = json!({
+        "database_url": "postgres://postgres:postgres@127.0.0.1:5432/nvbes",
+        "billing_database_url": "postgres://postgres:postgres@127.0.0.1:5432/billing",
+        "jwt_secret": "secret-manager-jwt-with-32-chars!!",
+        "stripe_secret_key": stripe_key,
+    });
+    let encoded = base64::engine::general_purpose::STANDARD.encode(secrets.to_string());
+    let payload = json!({ "data": encoded }).to_string();
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let addr = listener.local_addr().expect("addr");
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.expect("accept");
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: application/json\r\n\r\n{payload}",
+            payload.len()
+        );
+        stream.write_all(response.as_bytes()).await.expect("write");
+    });
+    let base = format!("http://{addr}");
+    let _env = SecretManagerEnv::install(&[
+        ("NVBES_SECRET_MANAGER_SECRET_ID", Some("test-secret")),
+        ("NVBES_SECRET_MANAGER_REGION", Some("fr-par")),
+        ("NVBES_SECRET_MANAGER_AUTH_TOKEN", Some("token")),
+        ("NVBES_SECRET_MANAGER_API_BASE_URL", Some(base.as_str())),
+    ]);
+    let mut config = development_config_ready_for_secret_apply();
+    config
+        .resolve_from_secret_manager()
+        .await
+        .expect("secret manager resolve");
+    assert_eq!(
+        config.database_url,
+        "postgres://postgres:postgres@127.0.0.1:5432/nvbes"
+    );
+    assert_eq!(config.jwt_secret, "secret-manager-jwt-with-32-chars!!");
+    let expected_stripe = format!("{}_{}", "sk_test", "from_secret_manager");
+    assert_eq!(
+        config.stripe_secret_key.as_deref(),
+        Some(expected_stripe.as_str())
+    );
+    server.await.expect("server");
+}

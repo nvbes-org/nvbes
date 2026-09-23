@@ -203,3 +203,157 @@ async fn checkout_calls_stripe_api_when_not_dummy_key(pool: PgPool) {
     assert_eq!(payload["session_id"], "cs_test_wiremock");
     assert_eq!(payload["url"], "https://checkout.stripe.test/session");
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn checkout_rejects_oversized_idempotency_key(pool: PgPool) {
+    let workspace = Uuid::new_v4();
+    let app = test_router(pool);
+    let oversized = "x".repeat(256);
+    let response = app
+        .oneshot(
+            Request::post(format!("/workspaces/{workspace}/billing/checkout"))
+                .header("authorization", bearer(Uuid::new_v4()))
+                .header("idempotency-key", &oversized)
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "plan_code": "standard_monthly" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn checkout_surfaces_stripe_api_errors(pool: PgPool) {
+    let mock = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/customers"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "id": "cus_err" })))
+        .mount(&mock)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v1/checkout/sessions"))
+        .respond_with(ResponseTemplate::new(400).set_body_string("stripe_checkout_failed"))
+        .mount(&mock)
+        .await;
+
+    let workspace = Uuid::new_v4();
+    let mut config = test_config();
+    config.stripe_secret_key = "sk_test_from_wiremock".into();
+    config.stripe_api_base_url = mock.uri();
+
+    let app = test_router_with_config(pool, config);
+    let response = app
+        .oneshot(
+            Request::post(format!("/workspaces/{workspace}/billing/checkout"))
+                .header("authorization", bearer(Uuid::new_v4()))
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "plan_code": "standard_monthly" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn checkout_rejects_stripe_payload_missing_fields(pool: PgPool) {
+    let mock = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/customers"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "id": "cus_partial" })))
+        .mount(&mock)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v1/checkout/sessions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "id": "cs_partial" })))
+        .mount(&mock)
+        .await;
+
+    let workspace = Uuid::new_v4();
+    let mut config = test_config();
+    config.stripe_secret_key = "sk_test_from_wiremock".into();
+    config.stripe_api_base_url = mock.uri();
+
+    let app = test_router_with_config(pool, config);
+    let response = app
+        .oneshot(
+            Request::post(format!("/workspaces/{workspace}/billing/checkout"))
+                .header("authorization", bearer(Uuid::new_v4()))
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "plan_code": "standard_monthly" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn create_stripe_checkout_grpc_uses_wiremock(pool: PgPool) {
+    let mock = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/checkout/sessions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "cs_test_grpc",
+            "url": "https://checkout.stripe.test/grpc"
+        })))
+        .mount(&mock)
+        .await;
+
+    let mut config = test_config();
+    config.stripe_secret_key = "sk_test_from_wiremock".into();
+    config.stripe_api_base_url = mock.uri();
+    let tokens = crate::auth::TokenVerifier::new(&config).expect("verifier");
+    let state = crate::app::BillingState {
+        db: pool,
+        config,
+        metrics: crate::metrics::install(),
+        tokens,
+        email_client: None,
+    };
+
+    let (url, session_id) = crate::checkout::create_stripe_checkout_grpc(
+        &state,
+        "cus_grpc",
+        Uuid::new_v4(),
+        "standard_monthly",
+        "idem-grpc-checkout",
+    )
+    .await
+    .expect("grpc checkout");
+    assert_eq!(session_id, "cs_test_grpc");
+    assert_eq!(url, "https://checkout.stripe.test/grpc");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn create_stripe_checkout_grpc_rejects_unknown_plan(pool: PgPool) {
+    let config = test_config();
+    let tokens = crate::auth::TokenVerifier::new(&config).expect("verifier");
+    let state = crate::app::BillingState {
+        db: pool,
+        config,
+        metrics: crate::metrics::install(),
+        tokens,
+        email_client: None,
+    };
+    let err = crate::checkout::create_stripe_checkout_grpc(
+        &state,
+        "cus_x",
+        Uuid::new_v4(),
+        "missing_plan",
+        "idem",
+    )
+    .await
+    .expect_err("unknown plan");
+    assert!(matches!(
+        err,
+        crate::error::BillingError::Invalid("unknown_or_inactive_plan")
+    ));
+}

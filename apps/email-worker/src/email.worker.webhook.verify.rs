@@ -229,6 +229,14 @@ impl WebhookVerifier {
         }
         Ok(())
     }
+
+    #[cfg(test)]
+    async fn seed_certificate(&self, url: &str, certificate: X509) {
+        self.certificates
+            .write()
+            .await
+            .insert(url.to_string(), certificate);
+    }
 }
 
 fn validated_url(value: &str, expected_host: &str, path_prefix: &str) -> anyhow::Result<Url> {
@@ -296,3 +304,7 @@ fn canonical_message(message: &SnsMessage) -> anyhow::Result<String> {
 #[cfg(test)]
 #[path = "email.worker.webhook.verify.tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "email.worker.webhook.verify.signature.tests.rs"]
+mod signature_tests;

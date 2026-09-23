@@ -41,6 +41,10 @@ test('PostgreSQL limiter tests remain components, without stale Redis classifica
     'limiter::postgres_tests::': 'PostgreSQL persistence and concurrency',
     'postgres_runtime::integration_tests::':
       'PostgreSQL pool integration requires NVBES_SECURITY_TEST_DATABASE_URL',
+    'http::keep_alive::tests::bind_listener_with_keepalive_accepts_ephemeral_ipv4_port':
+      'TCP bind blocked in micro-test sandbox',
+    'config::secrets::tests::resolve_fetches_':
+      'HTTP loopback Secret Manager requires network syscalls blocked in micro-test sandbox',
   });
   assert.equal(components['nvbes-redis'], undefined);
 });

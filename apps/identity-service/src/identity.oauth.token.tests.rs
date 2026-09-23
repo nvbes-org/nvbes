@@ -5,6 +5,7 @@ use tower::ServiceExt;
 use crate::{
     database::database_test_support::{
         TokenEnvGuard, identity_state, seed_confidential_oauth_client, seed_principal_and_session,
+        seed_public_oauth_client,
     },
     oauth::router,
     oauth_clients::{CreateAuthorizationCodeParams, create_authorization_code},
@@ -174,4 +175,135 @@ async fn authorization_code_grant_rejects_invalid_client_secret(pool: PgPool) {
         .await
         .unwrap();
     assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn authorization_code_requires_client_secret_for_confidential_clients(pool: PgPool) {
+    let _env = TokenEnvGuard::install_test_keys();
+    let state = identity_state(pool);
+    let client_id = "db-test-missing-secret-client";
+    let redirect_uri = "https://app.example.com/oauth/callback";
+    seed_confidential_oauth_client(&state.db, client_id, "secret-value", redirect_uri).await;
+    let (principal_id, session_id, _) = seed_principal_and_session(&state.db).await;
+    let code = create_authorization_code(
+        &state.db,
+        CreateAuthorizationCodeParams {
+            client_id,
+            principal_id,
+            session_id,
+            redirect_uri: redirect_uri.to_string(),
+            scope: "account:read".to_string(),
+            code_challenge: None,
+            code_challenge_method: None,
+        },
+    )
+    .await
+    .unwrap();
+
+    let response = router(&state)
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/oauth/token")
+                .header("content-type", "application/json")
+                .body(Body::from(format!(
+                    r#"{{"grant_type":"authorization_code","code":"{code}","client_id":"{client_id}","redirect_uri":"{redirect_uri}"}}"#
+                )))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn authorization_code_rejects_unknown_client(pool: PgPool) {
+    let _env = TokenEnvGuard::install_test_keys();
+    let state = identity_state(pool);
+    let response = router(&state)
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/oauth/token")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"grant_type":"authorization_code","code":"abc","client_id":"missing-client","client_secret":"s","redirect_uri":"https://app.example.com/cb"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn public_client_authorization_code_uses_default_audience_without_account_scope(
+    pool: PgPool,
+) {
+    let _env = TokenEnvGuard::install_test_keys();
+    let state = identity_state(pool);
+    let client_id = format!("db-test-public-{}", uuid::Uuid::new_v4().simple());
+    let redirect_uri = "https://app.example.com/oauth/callback";
+    seed_public_oauth_client(&state.db, &client_id, redirect_uri).await;
+    let (principal_id, session_id, _) = seed_principal_and_session(&state.db).await;
+    let code = create_authorization_code(
+        &state.db,
+        CreateAuthorizationCodeParams {
+            client_id: &client_id,
+            principal_id,
+            session_id,
+            redirect_uri: redirect_uri.to_string(),
+            scope: "openid profile".to_string(),
+            code_challenge: None,
+            code_challenge_method: None,
+        },
+    )
+    .await
+    .expect("authorization code");
+
+    let response = router(&state)
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/oauth/token")
+                .header("content-type", "application/json")
+                .body(Body::from(format!(
+                    r#"{{"grant_type":"authorization_code","code":"{code}","client_id":"{client_id}","redirect_uri":"{redirect_uri}"}}"#
+                )))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), axum::http::StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert!(json["access_token"].as_str().is_some_and(|v| !v.is_empty()));
+    assert_eq!(json["scope"], "openid profile");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn authorization_code_rejects_invalid_grant(pool: PgPool) {
+    let _env = TokenEnvGuard::install_test_keys();
+    let state = identity_state(pool);
+    let client_id = "db-test-invalid-grant-client";
+    let client_secret = "db-test-invalid-grant-secret";
+    let redirect_uri = "https://app.example.com/oauth/callback";
+    seed_confidential_oauth_client(&state.db, client_id, client_secret, redirect_uri).await;
+
+    let response = router(&state)
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/oauth/token")
+                .header("content-type", "application/json")
+                .body(Body::from(format!(
+                    r#"{{"grant_type":"authorization_code","code":"not-a-real-code","client_id":"{client_id}","client_secret":"{client_secret}","redirect_uri":"{redirect_uri}"}}"#
+                )))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
 }

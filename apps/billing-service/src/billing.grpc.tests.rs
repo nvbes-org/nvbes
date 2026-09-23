@@ -52,6 +52,67 @@ async fn delivery_requires_operator_token(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "./migrations")]
+async fn delivery_rejects_invalid_operator_token(pool: PgPool) {
+    let service = BillingDeliveryGrpcService::new(state(pool));
+    let mut request = Request::new(GetWorkspaceEntitlementsRequest {
+        context: None,
+        workspace_id: Uuid::new_v4().to_string(),
+    });
+    request
+        .metadata_mut()
+        .insert("authorization", "Bearer wrong-token".parse().unwrap());
+    let err = service
+        .get_workspace_entitlements(request)
+        .await
+        .expect_err("invalid token");
+    assert_eq!(err.code(), Code::Unauthenticated);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn delivery_rejects_when_operator_token_unconfigured(pool: PgPool) {
+    let mut config = test_config();
+    config.operator_token = None;
+    let tokens = TokenVerifier::new(&config).expect("verifier");
+    let service = BillingDeliveryGrpcService::new(BillingState {
+        db: pool,
+        config,
+        metrics: install(),
+        tokens,
+        email_client: None,
+    });
+    let err = service
+        .get_workspace_entitlements(authed_request(GetWorkspaceEntitlementsRequest {
+            context: None,
+            workspace_id: Uuid::new_v4().to_string(),
+        }))
+        .await
+        .expect_err("auth not configured");
+    assert_eq!(err.code(), Code::Unauthenticated);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn delivery_entitlements_not_found_without_subscription(pool: PgPool) {
+    let service = BillingDeliveryGrpcService::new(state(pool));
+    let err = service
+        .get_workspace_entitlements(authed_request(GetWorkspaceEntitlementsRequest {
+            context: None,
+            workspace_id: Uuid::new_v4().to_string(),
+        }))
+        .await
+        .expect_err("missing subscription");
+    assert_eq!(err.code(), Code::NotFound);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn delivery_servers_apply_decode_budget(pool: PgPool) {
+    use crate::grpc::{MAX_GRPC_DECODE_BYTES, delivery_server, operations_server};
+
+    let delivery = delivery_server(BillingDeliveryGrpcService::new(state(pool.clone())));
+    let operations = operations_server(BillingOperationsGrpcService::new(state(pool)));
+    let _ = (delivery, operations, MAX_GRPC_DECODE_BYTES);
+}
+
+#[sqlx::test(migrations = "./migrations")]
 async fn delivery_entitlements_and_overview(pool: PgPool) {
     let workspace = Uuid::new_v4();
     let customer_id = format!("cus_{}", Uuid::new_v4().simple());
@@ -197,6 +258,18 @@ async fn delivery_validates_arguments(pool: PgPool) {
         .await
         .expect_err("bad json");
     assert_eq!(bad_json.code(), Code::InvalidArgument);
+
+    let empty_event = service
+        .submit_billing_event(authed_request(SubmitBillingEventRequest {
+            context: None,
+            event_type: "".into(),
+            aggregate_id: Uuid::new_v4().to_string(),
+            payload_json: "".into(),
+            idempotency_key: "empty".into(),
+        }))
+        .await
+        .expect_err("empty event");
+    assert_eq!(empty_event.code(), Code::InvalidArgument);
 }
 
 #[sqlx::test(migrations = "./migrations")]
@@ -250,4 +323,14 @@ async fn operations_snapshot_and_reconcile(pool: PgPool) {
         .into_inner();
     assert_eq!(reconcile.current_status, "active");
     assert!(reconcile.status_synced);
+
+    let missing = service
+        .reconcile_workspace(authed_request(ReconcileWorkspaceRequest {
+            context: None,
+            workspace_id: Uuid::new_v4().to_string(),
+        }))
+        .await
+        .expect("reconcile missing")
+        .into_inner();
+    assert_eq!(missing.current_status, "none");
 }

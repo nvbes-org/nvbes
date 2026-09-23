@@ -59,11 +59,29 @@ async fn authz_decision_fails_cleanly_without_configured_token_keys() {
     assert_eq!(res.status(), axum::http::StatusCode::INTERNAL_SERVER_ERROR);
 }
 
+#[tokio::test]
+async fn authz_decision_rejects_malformed_json_body() {
+    let app = router(&state());
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/authz/decision")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"token":}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), axum::http::StatusCode::BAD_REQUEST);
+}
+
 #[cfg(feature = "database-tests")]
 mod database {
     use axum::{body::Body, http::Request};
     use sqlx::PgPool;
     use tower::ServiceExt;
+    use uuid::Uuid;
 
     use crate::authz::router;
     use crate::database::database_test_support::{
@@ -114,6 +132,31 @@ mod database {
     }
 
     #[sqlx::test(migrations = "./migrations")]
+    async fn introspect_reports_inactive_for_unknown_token(pool: PgPool) {
+        let _env = TokenEnvGuard::install_test_keys();
+        let state = identity_state(pool);
+        let response = router(&state)
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/oauth/introspect")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        r#"{"token":"not.a.valid.jwt","token_type_hint":"account"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["active"], false);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
     async fn authz_decision_allows_scoped_token_and_denies_empty_scope(pool: PgPool) {
         let _env = TokenEnvGuard::install_test_keys();
         let token_config = TokenConfig::from_env("test").expect("token config");
@@ -128,8 +171,18 @@ mod database {
                 vec!["pwd".to_string()],
             )
             .expect("access token");
+        let empty_scope_token = service
+            .issue(
+                principal_id,
+                session_id,
+                "account",
+                "",
+                vec!["pwd".to_string()],
+            )
+            .expect("empty scope token");
         let state = identity_state(pool);
         let app = router(&state);
+        let workspace_id = Uuid::new_v4();
 
         let allowed = app
             .clone()
@@ -139,7 +192,7 @@ mod database {
                     .uri("/api/v1/authz/decision")
                     .header("content-type", "application/json")
                     .body(Body::from(format!(
-                        r#"{{"token":"{access_token}","resource":"profile","action":"read"}}"#
+                        r#"{{"token":"{access_token}","resource":"profile","action":"read","workspace_id":"{workspace_id}"}}"#
                     )))
                     .unwrap(),
             )
@@ -154,6 +207,36 @@ mod database {
         assert_eq!(
             allowed_json["context"]["principal_id"],
             principal_id.to_string()
+        );
+        assert_eq!(
+            allowed_json["context"]["workspace_id"],
+            workspace_id.to_string()
+        );
+
+        let empty_scope = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/authz/decision")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"token":"{empty_scope_token}","resource":"profile","action":"read"}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(empty_scope.status(), axum::http::StatusCode::OK);
+        let empty_body = axum::body::to_bytes(empty_scope.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let empty_json: serde_json::Value = serde_json::from_slice(&empty_body).unwrap();
+        assert_eq!(empty_json["allowed"], false);
+        assert!(
+            empty_json["reason"]
+                .as_str()
+                .is_some_and(|r| r.contains("no authorized scopes"))
         );
 
         let denied = app

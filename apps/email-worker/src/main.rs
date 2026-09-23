@@ -54,6 +54,10 @@ mod webhook_db;
 mod webhook_verify;
 
 #[cfg(test)]
+#[path = "email.worker.webhook.verify.fixtures.rs"]
+mod webhook_verify_fixtures;
+
+#[cfg(test)]
 #[path = "email.worker.test_support.rs"]
 mod test_support;
 

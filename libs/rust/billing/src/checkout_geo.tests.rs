@@ -194,3 +194,145 @@ async fn resolve_checkout_geo_skips_maxmind_when_disabled(pool: PgPool) {
         Some("BE")
     );
 }
+
+#[sqlx::test]
+async fn resolve_checkout_geo_tolerates_public_ip_when_remote_lookups_fail(pool: PgPool) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+    let config = AppConfig {
+        maxmind_geolite_web_enabled: false,
+        ip_intelligence_provider_specs: Vec::new(),
+        maxmind_web_timeout_secs: 1,
+        ip_intelligence_timeout_secs: 1,
+        ..AppConfig::default()
+    };
+    let resolution = resolve_checkout_geo(&mut tx, &config, Some("203.0.113.99"), None, Some("FR"))
+        .await
+        .expect("geo resolves after remote lookup failure");
+    tx.commit().await.unwrap();
+
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("FR")
+    );
+}
+
+#[sqlx::test]
+async fn resolve_checkout_geo_rejects_invalid_maxmind_configuration(pool: PgPool) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+    let config = AppConfig {
+        maxmind_geolite_web_enabled: true,
+        maxmind_account_id: Some("account".to_string()),
+        maxmind_license_key: Some("license".to_string()),
+        maxmind_geolite_eula_accepted: false,
+        maxmind_web_timeout_secs: 1,
+        ip_intelligence_provider_specs: Vec::new(),
+        ..AppConfig::default()
+    };
+    let resolution = resolve_checkout_geo(&mut tx, &config, Some("203.0.113.77"), None, Some("IT"))
+        .await
+        .expect("invalid maxmind config is ignored");
+    tx.commit().await.unwrap();
+
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("IT")
+    );
+}
+
+#[sqlx::test]
+async fn resolve_checkout_geo_tolerates_maxmind_network_failure(pool: PgPool) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+    let config = AppConfig {
+        maxmind_geolite_web_enabled: true,
+        maxmind_account_id: Some("account".to_string()),
+        maxmind_license_key: Some("license".to_string()),
+        maxmind_geolite_eula_accepted: true,
+        maxmind_web_timeout_secs: 1,
+        ip_intelligence_provider_specs: Vec::new(),
+        ..AppConfig::default()
+    };
+    let resolution = resolve_checkout_geo(&mut tx, &config, Some("203.0.113.88"), None, Some("ES"))
+        .await
+        .expect("maxmind network failure is ignored");
+    tx.commit().await.unwrap();
+
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("ES")
+    );
+}
+
+#[sqlx::test]
+async fn resolve_checkout_geo_uses_cached_ip_intelligence(pool: PgPool) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+    sqlx::query(
+        r#"
+        INSERT INTO geo_ip_network_relations (
+          source_code, relation_key, network, country_code, network_kind, risk_score, risk_labels
+        )
+        VALUES (
+          'ip_intelligence', 'intel:198.51.100.0/24', '198.51.100.0/24'::cidr, 'CA',
+          'hosting', 80, ARRAY['datacenter']
+        )
+        "#,
+    )
+    .execute(&mut *tx)
+    .await
+    .unwrap();
+    let config = AppConfig {
+        maxmind_geolite_web_enabled: false,
+        ip_intelligence_provider_specs: vec!["fixture|https://127.0.0.1:1/ip/{ip}".to_string()],
+        ip_intelligence_timeout_secs: 1,
+        ..AppConfig::default()
+    };
+    let resolution =
+        resolve_checkout_geo(&mut tx, &config, Some("198.51.100.10"), Some("CA"), None)
+            .await
+            .expect("cached intelligence resolves");
+    tx.commit().await.unwrap();
+
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("CA")
+    );
+}
+
+#[sqlx::test]
+async fn resolve_checkout_geo_tolerates_ip_intelligence_provider_failure(pool: PgPool) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+    let config = AppConfig {
+        maxmind_geolite_web_enabled: false,
+        ip_intelligence_provider_specs: vec!["fixture|https://127.0.0.1:1/ip/{ip}".to_string()],
+        ip_intelligence_timeout_secs: 1,
+        ..AppConfig::default()
+    };
+    let resolution = resolve_checkout_geo(&mut tx, &config, Some("203.0.113.55"), Some("PT"), None)
+        .await
+        .expect("intelligence provider failure is ignored");
+    tx.commit().await.unwrap();
+
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("PT")
+    );
+}

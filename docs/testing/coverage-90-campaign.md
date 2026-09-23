@@ -37,32 +37,34 @@ seuil = baseline mesurée − 2 points (bruit run-to-run de llvm-cov), plancher 
 Chaque vague relève les seuils des crates qu'elle traite. Un seuil ne redescend
 jamais. `nvbes-email` conserve son seuil produit explicite 95/90/90.
 
-## État au commit `11c85640`
+## État au commit `7a342eb7`
 
-Workspace : mesure llvm-cov post-isolation (`target/coverage` vs
-`target/condition`). Crates déjà ≥ 90 % lignes : `nvbes-audit`,
-`nvbes-email`, `nvbes-email-scaleway`, `nvbes-trust-risk`, `nvbes-platform`.
+Workspace : mesure llvm-cov (`pnpm test:rust:coverage`) sur la vague courante.
+Crates ≥ 90 % lignes : `nvbes-audit`, `nvbes-email`, `nvbes-email-scaleway`,
+`nvbes-trust-risk`, `nvbes-platform`, `nvbes-region`, `nvbes-trust-risk-service`,
+`nvbes-account-service`, `nvbes-observability`.
 
 | Crate                      | Lignes | Restant pour 90 % | Vague |
 | :------------------------- | -----: | ----------------: | :---- |
 | `nvbes-email`              | 98,3 % |           atteint | —     |
 | `nvbes-email-scaleway`     | 96,3 % |           atteint | —     |
 | `nvbes-audit`              |  100 % |           atteint | 1     |
+| `nvbes-observability`      | 97,7 % |           atteint | 2     |
 | `nvbes-trust-risk`         | 94,6 % |           atteint | 1     |
-| `nvbes-platform`           | 91,0 % |           atteint | 1     |
-| `nvbes-email-worker`       | 87,1 % |                88 | 1     |
-| `nvbes-observability`      | 84,3 % |                48 | 2     |
-| `nvbes-billing`            | 75,9 % |               578 | 5     |
-| `nvbes-billing-worker`     | 75,1 % |               103 | 1     |
-| `nvbes-identity-service`   | 74,7 % |               355 | 2     |
-| `nvbes-account-service`    | 74,5 % |               196 | 2     |
-| `nvbes-core`               | 73,4 % |               670 | 4     |
-| `nvbes-billing-service`    | 55,7 % |               663 | 3     |
-| `nvbes-trust-risk-service` | 51,0 % |               830 | 3     |
-| `nvbes-region`             | 46,3 % |             1 365 | 3     |
+| `nvbes-account-service`    | 92,1 % |           atteint | 2     |
+| `nvbes-region`             | 91,4 % |           atteint | 3     |
+| `nvbes-platform`           | 90,3 % |           atteint | 1     |
+| `nvbes-trust-risk-service` | 90,1 % |           atteint | 3     |
+| `nvbes-billing`            | 89,7 % |                12 | 5     |
+| `nvbes-email-worker`       | 87,6 % |                71 | 1     |
+| `nvbes-core`               | 86,9 % |               131 | 4     |
+| `nvbes-identity-service`   | 84,5 % |               127 | 2     |
+| `nvbes-billing-service`    | 79,2 % |               210 | 3     |
+| `nvbes-billing-worker`     | 78,5 % |                80 | 1     |
 
-Les vagues 1–5 et la purge Cloud orpheline sont amorcées ; l'effort restant
-porte sur les lignes/branches/mutations catalogue V1 (pas seulement le cliquet).
+Les vagues 1–5 et la purge Cloud orpheline sont livrées structurellement ;
+l'effort restant porte sur les lignes/branches/mutations catalogue V1
+(pas seulement le cliquet).
 
 ## Vagues
 
