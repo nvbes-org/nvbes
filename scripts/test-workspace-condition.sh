@@ -40,6 +40,14 @@ if ! rustup run "$TOOLCHAIN" -- rustc --version >/dev/null 2>&1; then
   exit 1
 fi
 
+for variable in NVBES_SECURITY_TEST_DATABASE_URL DATABASE_URL; do
+  if [[ -z "${!variable:-}" ]]; then
+    printf 'error: missing required environment variable: %s\n' "$variable" >&2
+    printf 'hint: provision the test PostgreSQL with tools/ci/test-security-database.mjs\n' >&2
+    exit 1
+  fi
+done
+
 for polluted in NVBES_APP_URL NVBES_WEB_BASE_URL NVBES_API_BASE_URL NVBES_TARGET_ENV; do
   unset "$polluted" || true
 done
@@ -47,11 +55,12 @@ done
 mkdir -p "$CONDITION_DIR" "$CARGO_TARGET_DIR"
 rustup run "$TOOLCHAIN" -- cargo llvm-cov clean --workspace || true
 
-# One-shot report: nightly --branch places instrumented test binaries under
-# debug/build/<crate>/out; do not delete that tree before export.
+# Align with the V1 campaign line measure: --all-features + Postgres so
+# database-tests modules and sqlx suites contribute branch evidence.
 rustup run "$TOOLCHAIN" -- cargo llvm-cov \
   --workspace \
   --all-targets \
+  --all-features \
   --locked \
   --branch \
   --ignore-filename-regex "$IGNORE_REGEX" \
