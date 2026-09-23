@@ -131,3 +131,134 @@ async fn suppression_sweep_only_blocks_messages_in_scope(pool: PgPool) {
     .unwrap();
     assert_eq!(suppress_due_messages(&pool).await.unwrap(), 1);
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn claim_message_covers_missing_busy_active_lease_and_deadline(pool: PgPool) {
+    assert!(matches!(
+        claim_message(&pool, uuid::Uuid::new_v4()).await.unwrap(),
+        ClaimResult::Missing
+    ));
+
+    let busy_id = accept(&pool, "claim-busy", "claim-busy@example.com").await;
+    sqlx::query(
+        "UPDATE email_messages SET next_attempt_at = clock_timestamp() + INTERVAL '1 hour' WHERE id = $1",
+    )
+    .bind(busy_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert!(matches!(
+        claim_message(&pool, busy_id).await.unwrap(),
+        ClaimResult::Busy
+    ));
+
+    let leased_id = accept(&pool, "claim-leased", "claim-leased@example.com").await;
+    let leased = claim(&pool, leased_id).await;
+    assert!(matches!(
+        claim_message(&pool, leased_id).await.unwrap(),
+        ClaimResult::Settled
+    ));
+    complete_success(&pool, &leased, "provider-id")
+        .await
+        .unwrap();
+    assert!(matches!(
+        claim_message(&pool, leased_id).await.unwrap(),
+        ClaimResult::Settled
+    ));
+
+    let expired_id = accept(&pool, "claim-deadline", "claim-deadline@example.com").await;
+    sqlx::query(
+        "UPDATE email_messages SET accepted_at = clock_timestamp() - INTERVAL '2 seconds', deliver_before = clock_timestamp() - INTERVAL '1 second' WHERE id = $1",
+    )
+    .bind(expired_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert!(matches!(
+        claim_message(&pool, expired_id).await.unwrap(),
+        ClaimResult::Settled
+    ));
+    let state: String = sqlx::query_scalar("SELECT state::text FROM email_messages WHERE id = $1")
+        .bind(expired_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(state, "expired");
+
+    let suppressed_id = accept(&pool, "claim-suppressed", "claim-suppressed@example.com").await;
+    sqlx::query(
+        r#"INSERT INTO email_suppressions (
+            recipient_hash, recipient_ciphertext, recipient_nonce, recipient_encryption_id,
+            scope, reason
+        ) SELECT recipient_hash, recipient_ciphertext, recipient_nonce, id, 'all', 'manual_operator'
+          FROM email_messages WHERE id = $1"#,
+    )
+    .bind(suppressed_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert!(matches!(
+        claim_message(&pool, suppressed_id).await.unwrap(),
+        ClaimResult::Settled
+    ));
+    let suppressed_state: String =
+        sqlx::query_scalar("SELECT state::text FROM email_messages WHERE id = $1")
+            .bind(suppressed_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(suppressed_state, "suppressed");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn complete_failure_expires_when_retry_passes_deadline_and_ignores_stale_leases(
+    pool: PgPool,
+) {
+    let expire_id = accept(&pool, "fail-expire", "fail-expire@example.com").await;
+    sqlx::query(
+        "UPDATE email_messages SET deliver_before = clock_timestamp() + INTERVAL '30 seconds' WHERE id = $1",
+    )
+    .bind(expire_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let claimed = claim(&pool, expire_id).await;
+    let resolution = complete_failure(
+        &pool,
+        &claimed,
+        "transient_failure",
+        "provider_unavailable",
+        5,
+        Duration::minutes(5),
+    )
+    .await
+    .unwrap();
+    assert!(matches!(
+        resolution,
+        crate::dispatch_attempt::FailureResolution::Expired
+    ));
+    let state: String = sqlx::query_scalar("SELECT state::text FROM email_messages WHERE id = $1")
+        .bind(expire_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(state, "expired");
+
+    let stale_id = accept(&pool, "fail-stale", "fail-stale@example.com").await;
+    let stale = claim(&pool, stale_id).await;
+    complete_success(&pool, &stale, "done").await.unwrap();
+    let ignored = complete_failure(
+        &pool,
+        &stale,
+        "transient_failure",
+        "provider_unavailable",
+        5,
+        Duration::minutes(1),
+    )
+    .await
+    .unwrap();
+    assert!(matches!(
+        ignored,
+        crate::dispatch_attempt::FailureResolution::RetryAt(_)
+    ));
+}

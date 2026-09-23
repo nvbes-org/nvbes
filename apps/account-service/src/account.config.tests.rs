@@ -1,11 +1,5 @@
-use std::sync::{Mutex, OnceLock};
-
 use super::{AccountConfig, ConfigError, required_database_url};
-
-fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
-}
+use crate::test_support::test_env_lock;
 
 fn clear() {
     for name in [
@@ -24,11 +18,13 @@ fn clear() {
         "NVBES_OTLP_ENDPOINT",
         "NVBES_OTLP_AUTHORIZATION_HEADER",
     ] {
+        // SAFETY: serialized by `test_env_lock`.
         unsafe { std::env::remove_var(name) };
     }
 }
 
 fn set_development_token_material() {
+    // SAFETY: serialized by `test_env_lock`.
     unsafe {
         std::env::set_var("NVBES_IDENTITY_TOKEN_KEY_ID", "identity-key-1");
         std::env::set_var(
@@ -40,7 +36,7 @@ fn set_development_token_material() {
 
 #[test]
 fn development_config_loads_with_defaults() {
-    let _guard = env_lock();
+    let _guard = test_env_lock().lock().unwrap();
     clear();
     set_development_token_material();
     unsafe {
@@ -56,7 +52,7 @@ fn development_config_loads_with_defaults() {
 
 #[test]
 fn production_requires_database_url() {
-    let _guard = env_lock();
+    let _guard = test_env_lock().lock().unwrap();
     clear();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "production");
@@ -70,7 +66,7 @@ fn production_requires_database_url() {
 
 #[test]
 fn invalid_bind_addr_and_pool_size_fail_closed() {
-    let _guard = env_lock();
+    let _guard = test_env_lock().lock().unwrap();
     clear();
     set_development_token_material();
     unsafe {
@@ -97,7 +93,7 @@ fn invalid_bind_addr_and_pool_size_fail_closed() {
 
 #[test]
 fn token_contract_rejects_insecure_issuer_and_bad_identifiers() {
-    let _guard = env_lock();
+    let _guard = test_env_lock().lock().unwrap();
     clear();
     set_development_token_material();
     unsafe {
@@ -130,17 +126,46 @@ fn token_contract_rejects_insecure_issuer_and_bad_identifiers() {
         AccountConfig::from_env(),
         Err(ConfigError::Invalid("NVBES_ACCOUNT_TOKEN_AUDIENCE"))
     ));
+
+    unsafe {
+        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account");
+        std::env::set_var("NVBES_IDENTITY_TOKEN_KEY_ID", "bad key!");
+    }
+    assert!(matches!(
+        AccountConfig::from_env(),
+        Err(ConfigError::Invalid("NVBES_IDENTITY_TOKEN_KEY_ID"))
+    ));
+
+    unsafe {
+        std::env::set_var("NVBES_IDENTITY_TOKEN_KEY_ID", "identity-key-1");
+        std::env::set_var("NVBES_IDENTITY_TOKEN_ISSUER", "not-a-uri");
+    }
+    assert!(matches!(
+        AccountConfig::from_env(),
+        Err(ConfigError::Invalid("NVBES_IDENTITY_TOKEN_ISSUER"))
+    ));
     clear();
 }
 
 #[test]
 fn observability_and_metrics_token_validation_fail_closed() {
-    let _guard = env_lock();
+    let _guard = test_env_lock().lock().unwrap();
     clear();
     set_development_token_material();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "test");
         std::env::set_var("NVBES_ACCOUNT_METRICS_TOKEN", "short");
+    }
+    assert!(matches!(
+        AccountConfig::from_env(),
+        Err(ConfigError::Invalid("NVBES_ACCOUNT_METRICS_TOKEN"))
+    ));
+
+    unsafe {
+        std::env::set_var(
+            "NVBES_ACCOUNT_METRICS_TOKEN",
+            "development-account-metrics-token\nvalue",
+        );
     }
     assert!(matches!(
         AccountConfig::from_env(),
@@ -163,7 +188,7 @@ fn observability_and_metrics_token_validation_fail_closed() {
 
 #[test]
 fn production_requires_https_observability() {
-    let _guard = env_lock();
+    let _guard = test_env_lock().lock().unwrap();
     clear();
     set_development_token_material();
     unsafe {
@@ -202,12 +227,50 @@ fn production_requires_https_observability() {
         AccountConfig::from_env(),
         Err(ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER"))
     ));
+
+    unsafe {
+        std::env::set_var("NVBES_OTLP_AUTHORIZATION_HEADER", "Basic abc\r\ndef");
+    }
+    assert!(matches!(
+        AccountConfig::from_env(),
+        Err(ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER"))
+    ));
+    clear();
+}
+
+#[test]
+fn production_config_loads_when_complete() {
+    let _guard = test_env_lock().lock().unwrap();
+    clear();
+    set_development_token_material();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var(
+            "NVBES_ACCOUNT_DATABASE_URL",
+            "postgres://account.test/account",
+        );
+        std::env::set_var("NVBES_ACCOUNT_DATABASE_MAX_CONNECTIONS", "8");
+        std::env::set_var("NVBES_IDENTITY_TOKEN_ISSUER", "https://identity.test/");
+        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account");
+        std::env::set_var(
+            "NVBES_ACCOUNT_METRICS_TOKEN",
+            "production-account-metrics-token-value",
+        );
+        std::env::set_var("SENTRY_DSN", "https://public@o.ingest.sentry.io/1");
+        std::env::set_var("NVBES_OTLP_ENDPOINT", "https://otlp.example");
+        std::env::set_var("NVBES_OTLP_AUTHORIZATION_HEADER", "Basic abc");
+        std::env::set_var("SENTRY_TRACES_SAMPLE_RATE", "0.25");
+    }
+    let config = AccountConfig::from_env().expect("production config");
+    assert_eq!(config.token_issuer, "https://identity.test");
+    assert_eq!(config.database_max_connections, 8);
+    assert_eq!(config.sentry_traces_sample_rate, 0.25);
     clear();
 }
 
 #[test]
 fn required_database_url_and_port_defaults() {
-    let _guard = env_lock();
+    let _guard = test_env_lock().lock().unwrap();
     clear();
     assert!(matches!(
         required_database_url(),
@@ -217,6 +280,7 @@ fn required_database_url_and_port_defaults() {
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "test");
         std::env::set_var("PORT", "4010");
+        std::env::set_var("NVBES_ACCOUNT_DATABASE_URL", "   ");
     }
     let config = AccountConfig::from_env().unwrap();
     assert_eq!(config.bind_addr.to_string(), "0.0.0.0:4010");

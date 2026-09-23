@@ -210,4 +210,93 @@ mod database {
             Err(ErasureError::LegalHold)
         ));
     }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn apply_deletes_expired_evaluations_labels_reviews_and_audit(pool: sqlx::PgPool) {
+        let evaluation_id = Uuid::new_v4();
+        let review_id = Uuid::new_v4();
+        let label_id = Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO trust_risk_evaluations (
+                id, producer, assessment_key, operation_class, request_fingerprint,
+                score, band, recommendation, feature_version, rule_set_version, expires_at
+            ) VALUES (
+                $1, 'billing-checkout-fixture', $2, 'payment.checkout', $3,
+                10, 'low', 'allow', 'features-v1', 'baseline-v1',
+                clock_timestamp() - INTERVAL '1 day'
+            )
+            "#,
+        )
+        .bind(evaluation_id)
+        .bind(format!("retention-eval-{evaluation_id}"))
+        .bind(vec![2_u8; 32])
+        .execute(&pool)
+        .await
+        .expect("evaluation");
+
+        sqlx::query(
+            r#"
+            INSERT INTO trust_risk_review_cases (
+                id, evaluation_id, state, expires_at
+            ) VALUES ($1, $2, 'open', clock_timestamp() - INTERVAL '1 day')
+            "#,
+        )
+        .bind(review_id)
+        .bind(evaluation_id)
+        .execute(&pool)
+        .await
+        .expect("review");
+
+        sqlx::query(
+            r#"
+            INSERT INTO trust_risk_labels (
+                id, schema_version, producer, evaluation_id, kind, source_class,
+                source_id, confidence, knowledge_at, mapping_version, fingerprint, expires_at
+            ) VALUES (
+                $1, 1, 'billing-checkout-fixture', $2, 1, 3, 'product:expired',
+                0.5, clock_timestamp(), 'map-v1', $3, clock_timestamp() - INTERVAL '1 day'
+            )
+            "#,
+        )
+        .bind(label_id)
+        .bind(evaluation_id)
+        .bind(vec![6_u8; 32])
+        .execute(&pool)
+        .await
+        .expect("label");
+
+        sqlx::query(
+            r#"
+            INSERT INTO trust_risk_audit_events (
+                action, actor, reason, target_type, target_id, expires_at
+            ) VALUES (
+                'rules.stage', 'operator:ada', 'expired audit', 'rule_set', 'v1',
+                clock_timestamp() - INTERVAL '1 day'
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .expect("audit");
+
+        let result = apply(&pool).await.expect("retention apply");
+        assert_eq!(result.labels, 1);
+        assert_eq!(result.reviews, 1);
+        assert_eq!(result.evaluations, 1);
+        assert_eq!(result.audit, 1);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn retention_run_exits_when_shutdown_sender_drops(pool: sqlx::PgPool) {
+        use tokio::sync::watch;
+
+        use super::super::run;
+
+        let state = crate::grpc_test_support::state(pool);
+        let (tx, rx) = watch::channel(false);
+        let handle = tokio::spawn(run(state, rx));
+        drop(tx);
+        handle.await.expect("retention task joins");
+    }
 }

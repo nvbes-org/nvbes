@@ -4,7 +4,7 @@ use axum::{Router, body::Body, http::Request, routing::get};
 use nvbes_core::config::AppConfig;
 use tower::ServiceExt;
 
-use super::{HttpMetrics, metrics_handler, start_metrics_server};
+use super::{HttpMetrics, log_metrics_listener_stop, metrics_handler, start_metrics_server};
 
 #[test]
 fn http_metrics_records_request_lifecycle_and_domain_operations() {
@@ -94,4 +94,10 @@ async fn start_metrics_server_rejects_invalid_bind_addr() {
         .await
         .expect_err("invalid bind must fail");
     assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
+}
+
+#[test]
+fn log_metrics_listener_stop_covers_ok_and_err_outcomes() {
+    log_metrics_listener_stop(Ok(()));
+    log_metrics_listener_stop(Err(std::io::Error::other("metrics listener stopped")));
 }

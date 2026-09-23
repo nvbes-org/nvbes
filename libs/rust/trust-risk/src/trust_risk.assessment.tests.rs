@@ -86,6 +86,13 @@ fn rejects_empty_subjects_and_too_many_signals() {
     );
 
     let mut value = request();
+    value.subjects = (0..17).map(|_| subject()).collect();
+    assert_eq!(
+        Assessment::try_from(value).unwrap_err(),
+        AssessmentError::InvalidSubjects
+    );
+
+    let mut value = request();
     value.instantaneous_signals = (0..17).map(|_| signal("billing-checkout")).collect();
     assert_eq!(
         Assessment::try_from(value).unwrap_err(),

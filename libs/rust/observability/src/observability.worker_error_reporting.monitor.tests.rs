@@ -1,11 +1,13 @@
 use super::{
     ErrorReportingSmokeResult, WorkerMonitorSchedule, capture_error_reporting_smoke,
-    capture_worker_heartbeat, monitor_config, start_worker_monitor_check_in, worker_monitor_slug,
+    capture_worker_heartbeat, monitor_config, send_monitor_check_in, start_worker_monitor_check_in,
+    worker_monitor_slug,
 };
 use crate::error_reporting::{
     ErrorReportingConfig, error_reporting_test_lock, init_error_reporting_with_config,
 };
-use sentry::protocol::{MonitorIntervalUnit, MonitorSchedule};
+use sentry::protocol::{MonitorCheckInStatus, MonitorIntervalUnit, MonitorSchedule};
+use uuid::Uuid;
 
 #[test]
 fn worker_monitor_slug_normalizes_to_stable_ascii_slug() {
@@ -147,4 +149,30 @@ fn smoke_and_heartbeat_send_when_error_reporting_is_configured() {
     check_in.finish_ok();
     let check_in = start_worker_monitor_check_in("test", "nvbes-observability-job", schedule);
     check_in.finish_error();
+}
+
+#[test]
+fn send_monitor_check_in_returns_false_when_hub_has_no_client() {
+    let _lock = error_reporting_test_lock();
+    let _guard = init_error_reporting_with_config(ErrorReportingConfig {
+        app_name: "nvbes-observability-tests",
+        service_name: "nvbes-observability-tests",
+        environment: "test",
+        dsn: Some("https://public@127.0.0.1/1"),
+        traces_sample_rate: 0.0,
+    });
+
+    sentry::Hub::with_active(|hub| {
+        hub.bind_client(None);
+    });
+
+    let sent = send_monitor_check_in(
+        "test",
+        "nvbes-observability-no-client",
+        MonitorCheckInStatus::Ok,
+        Uuid::new_v4(),
+        None,
+        None,
+    );
+    assert!(!sent);
 }

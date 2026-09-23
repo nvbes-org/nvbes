@@ -137,6 +137,12 @@ fn token_verifier_rejects_wrong_type_kid_and_claims() {
     let bad_kid = encode(&header, &valid_claims(now), &encoding_key()).unwrap();
     assert!(verifier.verify(&bad_kid).is_err());
 
+    let mut header = Header::new(Algorithm::RS256);
+    header.kid = Some("identity-key-1".into());
+    header.typ = Some("JWT".into());
+    let bad_typ = encode(&header, &valid_claims(now), &encoding_key()).unwrap();
+    assert!(verifier.verify(&bad_typ).is_err());
+
     let mut claims = valid_claims(now);
     claims.token_type = "refresh".into();
     assert!(verifier.verify(&encode_access(claims)).is_err());
@@ -168,4 +174,59 @@ fn token_verifier_rejects_wrong_type_kid_and_claims() {
     let mut claims = valid_claims(now);
     claims.sub = "not-a-uuid".into();
     assert!(verifier.verify(&encode_access(claims)).is_err());
+}
+
+#[test]
+fn token_verifier_rejects_invalid_pem() {
+    let mut bad = config();
+    bad.token_public_key_pem = "not-a-pem".into();
+    assert!(TokenVerifier::new(&bad).is_err());
+}
+
+#[tokio::test]
+async fn principal_extractor_requires_bearer_token() {
+    use axum::extract::FromRequestParts;
+    use axum::http::{HeaderMap, HeaderValue, Request};
+
+    let state = crate::app::AccountState::new(
+        config(),
+        sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("postgres://localhost/account")
+            .expect("lazy pool"),
+    )
+    .expect("state");
+
+    let mut missing = Request::builder().uri("/").body(()).unwrap().into_parts().0;
+    assert!(matches!(
+        Principal::from_request_parts(&mut missing, &state).await,
+        Err(AccountError::Unauthorized)
+    ));
+
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        "authorization",
+        HeaderValue::from_static("Basic not-bearer"),
+    );
+    let mut request = Request::builder().uri("/").body(()).unwrap();
+    *request.headers_mut() = headers;
+    let mut non_bearer = request.into_parts().0;
+    assert!(matches!(
+        Principal::from_request_parts(&mut non_bearer, &state).await,
+        Err(AccountError::Unauthorized)
+    ));
+
+    let token = encode_access(valid_claims(jsonwebtoken::get_current_timestamp()));
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        "authorization",
+        HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
+    );
+    let mut request = Request::builder().uri("/").body(()).unwrap();
+    *request.headers_mut() = headers;
+    let mut authorized = request.into_parts().0;
+    let principal = Principal::from_request_parts(&mut authorized, &state)
+        .await
+        .expect("authorized");
+    assert!(principal.require("account:read").is_ok());
 }

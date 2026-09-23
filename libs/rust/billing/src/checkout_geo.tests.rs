@@ -336,3 +336,107 @@ async fn resolve_checkout_geo_tolerates_ip_intelligence_provider_failure(pool: P
         Some("PT")
     );
 }
+
+#[sqlx::test]
+async fn resolve_checkout_geo_uses_stored_profile_when_ip_absent_or_invalid(pool: PgPool) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+    for ip in [None, Some("not-an-ip"), Some("")] {
+        let resolution = resolve_checkout_geo(&mut tx, &test_config(), ip, None, Some("IE"))
+            .await
+            .expect("geo resolves without ip");
+        assert_eq!(
+            resolution
+                .location
+                .as_ref()
+                .map(|location| location.country_code.as_str()),
+            Some("IE")
+        );
+    }
+    tx.commit().await.unwrap();
+}
+
+#[sqlx::test]
+async fn resolve_checkout_geo_skips_maxmind_when_credentials_incomplete(pool: PgPool) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+
+    let account_only = AppConfig {
+        maxmind_geolite_web_enabled: true,
+        maxmind_account_id: Some("account".to_string()),
+        maxmind_license_key: None,
+        maxmind_geolite_eula_accepted: true,
+        ip_intelligence_provider_specs: Vec::new(),
+        maxmind_web_timeout_secs: 1,
+        ..AppConfig::default()
+    };
+    let resolution = resolve_checkout_geo(
+        &mut tx,
+        &account_only,
+        Some("203.0.113.41"),
+        None,
+        Some("AT"),
+    )
+    .await
+    .expect("missing license skips maxmind");
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("AT")
+    );
+
+    let license_only = AppConfig {
+        maxmind_geolite_web_enabled: true,
+        maxmind_account_id: None,
+        maxmind_license_key: Some("license".to_string()),
+        maxmind_geolite_eula_accepted: true,
+        ip_intelligence_provider_specs: Vec::new(),
+        maxmind_web_timeout_secs: 1,
+        ..AppConfig::default()
+    };
+    let resolution = resolve_checkout_geo(
+        &mut tx,
+        &license_only,
+        Some("203.0.113.42"),
+        None,
+        Some("CH"),
+    )
+    .await
+    .expect("missing account skips maxmind");
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("CH")
+    );
+    tx.commit().await.unwrap();
+}
+
+#[sqlx::test]
+async fn resolve_checkout_geo_ignores_invalid_ip_intelligence_specs_without_trusted_header(
+    pool: PgPool,
+) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+    let config = AppConfig {
+        maxmind_geolite_web_enabled: false,
+        ip_intelligence_provider_specs: vec!["broken|not-a-url".to_string()],
+        ip_intelligence_timeout_secs: 1,
+        ..AppConfig::default()
+    };
+    let resolution = resolve_checkout_geo(&mut tx, &config, Some("203.0.113.66"), None, Some("NO"))
+        .await
+        .expect("invalid intelligence specs are ignored");
+    tx.commit().await.unwrap();
+
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("NO")
+    );
+}

@@ -198,4 +198,69 @@ fn validated_name_enforces_length_and_charset() {
         validated_name(" bad ", 3, 10, false).as_deref(),
         Some("bad")
     );
+    assert_eq!(validated_name(&"x".repeat(11), 3, 10, false), None);
+}
+
+#[test]
+fn rejects_partition_subject_and_namespace_boundary_violations() {
+    let mut signal = base_signal();
+    signal.partition_key = format!("pk:{}", "a".repeat(200));
+    assert_eq!(
+        RiskSignal::try_from(signal).unwrap_err(),
+        SignalError::InvalidPartitionKey
+    );
+
+    let mut signal = base_signal();
+    signal.partition_key = "bad key!".to_string();
+    assert_eq!(
+        RiskSignal::try_from(signal).unwrap_err(),
+        SignalError::InvalidPartitionKey
+    );
+
+    let mut signal = base_signal();
+    signal.subjects = (0..17).map(|_| base_subject()).collect();
+    assert_eq!(
+        RiskSignal::try_from(signal).unwrap_err(),
+        SignalError::InvalidSubjects
+    );
+
+    let mut subject = base_subject();
+    subject.namespace = format!("ns.{}", "a".repeat(80));
+    assert_eq!(
+        SubjectReference::try_from(subject).unwrap_err(),
+        SignalError::InvalidNamespace
+    );
+
+    let mut subject = base_subject();
+    subject.namespace = "bad namespace".to_string();
+    assert_eq!(
+        SubjectReference::try_from(subject).unwrap_err(),
+        SignalError::InvalidNamespace
+    );
+
+    let mut subject = base_subject();
+    subject.opaque_id = format!("id:{}", "a".repeat(200));
+    assert_eq!(
+        SubjectReference::try_from(subject).unwrap_err(),
+        SignalError::InvalidSubject
+    );
+
+    let mut subject = base_subject();
+    subject.opaque_id = "opaque id!".to_string();
+    assert_eq!(
+        SubjectReference::try_from(subject).unwrap_err(),
+        SignalError::InvalidSubject
+    );
+}
+
+#[test]
+fn accepts_digit_namespace_and_tenant_scoped_subject() {
+    let mut subject = base_subject();
+    subject.namespace = "nvbes.identity2".to_string();
+    subject.scope = DataScope::Tenant.into();
+    subject.tenant_id = Some("018f7f2d-fc7d-7b7a-9f72-3abddda8d001".to_string());
+    let parsed = SubjectReference::try_from(subject).expect("tenant subject");
+    assert_eq!(parsed.namespace(), "nvbes.identity2");
+    assert_eq!(parsed.scope(), DataScope::Tenant);
+    assert!(parsed.tenant_id().is_some());
 }

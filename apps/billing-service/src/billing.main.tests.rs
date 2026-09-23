@@ -209,6 +209,62 @@ async fn run_without_arguments_starts_runtime_until_stopped() {
     let handle = tokio::spawn(run(vec![]));
     tokio::time::sleep(std::time::Duration::from_millis(400)).await;
     handle.abort();
+    let _ = handle.await;
+}
+
+#[tokio::test]
+async fn run_serve_alias_starts_runtime_until_stopped() {
+    if !postgres_reachable() {
+        eprintln!("skipping serve alias smoke: postgres unavailable");
+        return;
+    }
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+    apply_development_defaults(&guard);
+    guard.set("NVBES_BILLING_BIND_ADDR", "127.0.0.1:0");
+    let handle = tokio::spawn(run(vec!["serve".into()]));
+    tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+    handle.abort();
+    let _ = handle.await;
+}
+
+#[tokio::test]
+async fn run_serve_swallows_invalid_email_client_config() {
+    if !postgres_reachable() {
+        eprintln!("skipping serve email-config smoke: postgres unavailable");
+        return;
+    }
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+    apply_development_defaults(&guard);
+    guard.set("NVBES_BILLING_BIND_ADDR", "127.0.0.1:0");
+    guard.set("NVBES_EMAIL_GRPC_ENDPOINT", "http://127.0.0.1:1");
+    guard.set("NVBES_BILLING_EMAIL_TOKEN", "short");
+    let handle = tokio::spawn(run(vec!["serve".into()]));
+    tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+    handle.abort();
+    let _ = handle.await;
+}
+
+#[tokio::test]
+async fn run_serve_attempts_email_client_connect_when_configured() {
+    if !postgres_reachable() {
+        eprintln!("skipping serve email-connect smoke: postgres unavailable");
+        return;
+    }
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+    apply_development_defaults(&guard);
+    guard.set("NVBES_BILLING_BIND_ADDR", "127.0.0.1:0");
+    guard.set("NVBES_EMAIL_GRPC_ENDPOINT", "http://127.0.0.1:1");
+    guard.set(
+        "NVBES_BILLING_EMAIL_TOKEN",
+        "billing-email-token-with-enough-length",
+    );
+    let handle = tokio::spawn(run(vec!["serve".into()]));
+    tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+    handle.abort();
+    let _ = handle.await;
 }
 
 #[tokio::test]
@@ -223,3 +279,6 @@ async fn run_migrate_fails_for_unreachable_database() {
     let err = run(vec!["migrate".into()]).await.unwrap_err();
     assert!(!err.to_string().is_empty());
 }
+
+#[path = "billing.main.commands.tests.rs"]
+mod commands;

@@ -35,14 +35,14 @@ const TEST_VARS: &[&str] = &[
     "NVBES_OBSERVABILITY_INTERNAL_TOKEN",
 ];
 
-static ENV_LOCK: Mutex<()> = Mutex::const_new(());
+pub(super) static ENV_LOCK: Mutex<()> = Mutex::const_new(());
 
-struct EnvGuard {
+pub(super) struct EnvGuard {
     saved: Vec<(&'static str, Option<OsString>)>,
 }
 
 impl EnvGuard {
-    fn isolated() -> Self {
+    pub(super) fn isolated() -> Self {
         let saved = TEST_VARS
             .iter()
             .map(|name| (*name, std::env::var_os(name)))
@@ -53,7 +53,7 @@ impl EnvGuard {
         Self { saved }
     }
 
-    fn set(&self, name: &str, value: impl AsRef<std::ffi::OsStr>) {
+    pub(super) fn set(&self, name: &str, value: impl AsRef<std::ffi::OsStr>) {
         unsafe { std::env::set_var(name, value) };
     }
 }
@@ -69,7 +69,7 @@ impl Drop for EnvGuard {
     }
 }
 
-fn apply_development_defaults(guard: &EnvGuard) {
+pub(super) fn apply_development_defaults(guard: &EnvGuard) {
     guard.set("NVBES_ENVIRONMENT", "development");
     guard.set(
         "NVBES_EMAIL_DATABASE_URL",
@@ -180,72 +180,90 @@ async fn serve_stops_background_workers_without_process_signals() {
     handle.await.expect("join").expect("serve");
 }
 
-#[cfg(feature = "database-tests")]
-#[sqlx::test(migrations = "./migrations")]
-async fn audited_release_command_validates_input_and_changes_suppression(pool: sqlx::PgPool) {
-    use crate::{database, operations_actions};
+#[tokio::test]
+async fn run_error_reporting_smoke_emits_json_with_development_defaults() {
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+    apply_development_defaults(&guard);
+    // Tracing subscriber init is process-global and panics on a second install.
+    let handle = tokio::spawn(run(vec!["error-reporting-smoke".into()]));
+    match handle.await {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => panic!("error-reporting-smoke: {error}"),
+        Err(join) if join.is_panic() => {}
+        Err(join) => panic!("error-reporting-smoke join: {join}"),
+    }
+}
 
-    let email = "release-cli@example.com";
-    operations_actions::apply_suppression(
-        &pool,
-        &crate::crypto::EmailCrypto::new([7; 32], [9; 32]),
-        email,
-        "all",
-        operations_actions::OperatorAction {
-            actor: "00000000-0000-0000-0000-000000000001",
-            reason: "ticket EMAIL-123 approved",
-        },
-    )
-    .await
-    .unwrap();
-    let command = crate::test_support::command("release-cli", email);
-    let receipt = database::accept_command(
-        &pool,
-        &crate::crypto::EmailCrypto::new([7; 32], [9; 32]),
-        "nvbes.fr",
-        &command.clone().into_proto(),
-        &command,
-    )
-    .await
-    .unwrap();
-    let message_id: uuid::Uuid =
-        sqlx::query_scalar("SELECT id FROM email_messages WHERE message_id = $1")
-            .bind(receipt.receipt.message_id)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-
+#[tokio::test]
+async fn run_synthetic_smoke_requires_explicit_recipient() {
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+    apply_development_defaults(&guard);
+    let err = run(vec!["synthetic-smoke".into()]).await.unwrap_err();
     assert!(
-        super::release_suppression(&pool, "invalid", "actor", "valid reason")
-            .await
-            .is_err()
-    );
-    assert!(
-        super::release_suppression(&pool, &message_id.to_string(), "bad actor", "valid reason")
-            .await
-            .is_err()
-    );
-    assert!(
-        super::release_suppression(&pool, &message_id.to_string(), "operator:1", "bad\nreason")
-            .await
-            .is_err()
-    );
-    super::release_suppression(
-        &pool,
-        &message_id.to_string(),
-        "operator:1",
-        "recipient ownership verified",
-    )
-    .await
-    .unwrap();
-    assert!(
-        super::release_suppression(
-            &pool,
-            &message_id.to_string(),
-            "operator:1",
-            "recipient ownership verified",
-        )
-        .await
-        .is_err()
+        err.to_string().contains("NVBES_EMAIL_SYNTHETIC_RECIPIENT"),
+        "{err}"
     );
 }
+
+#[tokio::test]
+async fn deployment_bootstrap_serves_live_health_check() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+
+    let probe = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("ephemeral bind");
+    let addr = probe.local_addr().expect("local addr").to_string();
+    drop(probe);
+    guard.set("NVBES_EMAIL_HTTP_BIND_ADDR", &addr);
+
+    let handle = tokio::spawn(run_deployment_bootstrap());
+    let mut response = None;
+    for _ in 0..40 {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        if handle.is_finished() {
+            break;
+        }
+        if let Ok(mut stream) = tokio::net::TcpStream::connect(&addr).await {
+            if stream
+                .write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                .await
+                .is_err()
+            {
+                continue;
+            }
+            let mut buf = [0_u8; 128];
+            if let Ok(read) = stream.read(&mut buf).await
+                && read > 0
+            {
+                response = Some(String::from_utf8_lossy(&buf[..read]).to_string());
+                break;
+            }
+        }
+    }
+
+    handle.abort();
+    let _ = handle.await;
+    let body = response.expect("health response");
+    assert!(body.contains("204") || body.contains("200"), "{body}");
+}
+
+#[tokio::test]
+async fn run_deployment_bootstrap_command_rejects_invalid_bind_addr() {
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_EMAIL_HTTP_BIND_ADDR", "not-a-socket-addr");
+    let err = run(vec!["deployment-bootstrap".into()]).await.unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("NVBES_EMAIL_HTTP_BIND_ADDR is invalid"),
+        "{err}"
+    );
+}
+
+#[path = "email.worker.main.runtime.tests.rs"]
+mod runtime;

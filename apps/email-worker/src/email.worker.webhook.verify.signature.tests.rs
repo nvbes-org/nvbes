@@ -162,7 +162,35 @@ fn confirmation_url_rejects_disallowed_hosts_and_parameters() {
     ));
     assert!(verifier.confirmation_url(&message).is_err());
 
+    message.subscribe_url = Some(format!(
+        "https://sns.mnq.fr-par.scaleway.com:8443/?Action=ConfirmSubscription&TopicArn={topic}&Token={token}"
+    ));
+    assert!(verifier.confirmation_url(&message).is_err());
+
+    message.subscribe_url = Some(format!(
+        "https://user:pass@sns.mnq.fr-par.scaleway.com/?Action=ConfirmSubscription&TopicArn={topic}&Token={token}"
+    ));
+    assert!(verifier.confirmation_url(&message).is_err());
+
+    message.subscribe_url = Some(format!(
+        "https://sns.mnq.fr-par.scaleway.com/?Action=ConfirmSubscription&TopicArn={topic}&Token={token}#frag"
+    ));
+    assert!(verifier.confirmation_url(&message).is_err());
+
+    message.subscribe_url = Some(format!(
+        "https://sns.mnq.fr-par.scaleway.com/?Action=ConfirmSubscription&TopicArn=other&Token={token}"
+    ));
+    assert!(verifier.confirmation_url(&message).is_err());
+
+    message.token = None;
+    message.subscribe_url = Some(format!(
+        "https://sns.mnq.fr-par.scaleway.com/?Action=ConfirmSubscription&TopicArn={topic}&Token={token}"
+    ));
+    assert!(verifier.confirmation_url(&message).is_err());
+    assert!(canonical_message(&message).is_err());
+
     message.timestamp = (chrono::Utc::now() + chrono::Duration::minutes(6)).to_rfc3339();
+    message.token = Some(token.into());
     assert!(verifier.validate_envelope(&message).is_err());
 }
 
@@ -214,4 +242,182 @@ async fn seeded_certificate_is_reused_without_a_second_network_fetch() {
     .unwrap();
     verifier.verify(&body).await.expect("first verify");
     verifier.verify(&body).await.expect("cached verify");
+}
+
+async fn cleartext_verifier(topic: &str, authority_pem: Vec<u8>) -> WebhookVerifier {
+    WebhookVerifier::new_allowing_cleartext(&WebhookTrustConfig {
+        topic_arn: topic.to_string(),
+        ca_bundle_pem: authority_pem,
+        signing_certificate_host: "127.0.0.1".to_string(),
+        confirmation_host: "127.0.0.1".to_string(),
+    })
+    .unwrap()
+}
+
+#[tokio::test]
+async fn confirm_accepts_successful_and_rejects_failed_subscription_responses() {
+    use axum::{Router, http::StatusCode, routing::get};
+    use std::net::SocketAddr;
+
+    let (authority, _) = certificate_authority("nvbes-test-ca");
+    let verifier =
+        cleartext_verifier("arn:scw:sns:fr-par:test:topic", authority.to_pem().unwrap()).await;
+
+    let ok_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let ok_addr = ok_listener.local_addr().unwrap();
+    let ok_server = tokio::spawn(async move {
+        axum::serve(
+            ok_listener,
+            Router::new().route("/confirm", get(|| async { StatusCode::NO_CONTENT })),
+        )
+        .await
+        .unwrap();
+    });
+    let ok_url = format!("http://{ok_addr}/confirm").parse().unwrap();
+    verifier.confirm(ok_url).await.expect("confirm succeeds");
+    ok_server.abort();
+
+    let fail_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let fail_addr = fail_listener.local_addr().unwrap();
+    let fail_server = tokio::spawn(async move {
+        axum::serve(
+            fail_listener,
+            Router::new().route("/confirm", get(|| async { StatusCode::FORBIDDEN })),
+        )
+        .await
+        .unwrap();
+    });
+    let fail_url: reqwest::Url = format!("http://{fail_addr}/confirm").parse().unwrap();
+    let err = verifier.confirm(fail_url).await.expect_err("rejected");
+    assert!(
+        err.to_string()
+            .contains("SNS subscription confirmation was rejected"),
+        "{err}"
+    );
+    fail_server.abort();
+
+    let unreachable: SocketAddr = "127.0.0.1:1".parse().unwrap();
+    let err = verifier
+        .confirm(format!("http://{unreachable}/confirm").parse().unwrap())
+        .await
+        .expect_err("unreachable");
+    assert!(!err.to_string().is_empty());
+}
+
+#[tokio::test]
+async fn certificate_fetch_loads_valid_pem_and_rejects_oversized_or_failed_responses() {
+    use axum::{
+        Router,
+        body::Body,
+        http::{HeaderMap, HeaderValue, StatusCode, header},
+        response::Response,
+        routing::get,
+    };
+
+    let (authority, authority_key) = certificate_authority("nvbes-test-ca");
+    let (leaf, _) = leaf_certificate("sns.scaleway.test", &authority, &authority_key);
+    let pem = leaf.to_pem().unwrap();
+    let verifier =
+        cleartext_verifier("arn:scw:sns:fr-par:test:topic", authority.to_pem().unwrap()).await;
+
+    let ok_pem = pem.clone();
+    let ok_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let ok_addr = ok_listener.local_addr().unwrap();
+    let ok_server = tokio::spawn(async move {
+        axum::serve(
+            ok_listener,
+            Router::new().route(
+                "/cert.pem",
+                get(move || {
+                    let body = ok_pem.clone();
+                    async move { Response::new(Body::from(body)) }
+                }),
+            ),
+        )
+        .await
+        .unwrap();
+    });
+    let loaded = verifier
+        .fetch_certificate_for_tests(&format!("http://{ok_addr}/cert.pem"))
+        .await
+        .expect("valid certificate");
+    assert_eq!(loaded.to_pem().unwrap(), pem);
+    // Second fetch hits the in-memory cache.
+    verifier
+        .fetch_certificate_for_tests(&format!("http://{ok_addr}/cert.pem"))
+        .await
+        .expect("cached certificate");
+    ok_server.abort();
+
+    let fail_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let fail_addr = fail_listener.local_addr().unwrap();
+    let fail_server = tokio::spawn(async move {
+        axum::serve(
+            fail_listener,
+            Router::new().route("/cert.pem", get(|| async { StatusCode::NOT_FOUND })),
+        )
+        .await
+        .unwrap();
+    });
+    assert!(
+        verifier
+            .fetch_certificate_for_tests(&format!("http://{fail_addr}/cert.pem"))
+            .await
+            .is_err()
+    );
+    fail_server.abort();
+
+    let oversized = vec![b'A'; 65 * 1024];
+    let large_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let large_addr = large_listener.local_addr().unwrap();
+    let large_server = tokio::spawn(async move {
+        axum::serve(
+            large_listener,
+            Router::new().route(
+                "/cert.pem",
+                get(move || {
+                    let body = oversized.clone();
+                    async move {
+                        let mut headers = HeaderMap::new();
+                        headers.insert(header::CONTENT_LENGTH, HeaderValue::from_static("66560"));
+                        (headers, Body::from(body))
+                    }
+                }),
+            ),
+        )
+        .await
+        .unwrap();
+    });
+    assert!(
+        verifier
+            .fetch_certificate_for_tests(&format!("http://{large_addr}/cert.pem"))
+            .await
+            .is_err()
+    );
+    large_server.abort();
+
+    let body_too_large = vec![b'B'; 65 * 1024];
+    let body_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let body_addr = body_listener.local_addr().unwrap();
+    let body_server = tokio::spawn(async move {
+        axum::serve(
+            body_listener,
+            Router::new().route(
+                "/cert.pem",
+                get(move || {
+                    let body = body_too_large.clone();
+                    async move { Response::new(Body::from(body)) }
+                }),
+            ),
+        )
+        .await
+        .unwrap();
+    });
+    assert!(
+        verifier
+            .fetch_certificate_for_tests(&format!("http://{body_addr}/cert.pem"))
+            .await
+            .is_err()
+    );
+    body_server.abort();
 }

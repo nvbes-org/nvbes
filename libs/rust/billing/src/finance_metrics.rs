@@ -204,4 +204,48 @@ mod tests {
             FinanceAnomaly::ProviderWebhookLag { .. }
         ));
     }
+
+    #[test]
+    fn finance_anomalies_skip_below_thresholds() {
+        let anomalies = detect_finance_anomalies(FinanceAnomalyInput {
+            usage_current: 2_999,
+            usage_baseline: 1_000,
+            failed_payment_count: 4,
+            ledger_balances: true,
+            provider_webhook_lag_seconds: 899,
+        });
+        assert!(anomalies.is_empty());
+
+        let anomalies = detect_finance_anomalies(FinanceAnomalyInput {
+            usage_current: 10_000,
+            usage_baseline: 0,
+            failed_payment_count: 0,
+            ledger_balances: true,
+            provider_webhook_lag_seconds: 0,
+        });
+        assert!(anomalies.is_empty());
+    }
+
+    #[test]
+    fn ratio_bps_is_zero_when_denominator_non_positive() {
+        let kpis = calculate_finance_kpis(
+            &[SubscriptionMetricInput {
+                tenant_id: "tenant-a".to_string(),
+                current_mrr_minor: 1_000,
+                previous_mrr_minor: 1_000,
+                was_trial: false,
+                converted_from_trial: false,
+            }],
+            &[TenantMarginInput {
+                tenant_id: "tenant-a".to_string(),
+                revenue_minor: 0,
+                cost_minor: 100,
+            }],
+        );
+        assert_eq!(kpis.trial_conversion_rate_bps, 0);
+        assert_eq!(kpis.gross_margin_bps, 0);
+        assert_eq!(kpis.churned_count, 0);
+        assert_eq!(kpis.expansion_minor, 0);
+        assert_eq!(kpis.contraction_minor, 0);
+    }
 }

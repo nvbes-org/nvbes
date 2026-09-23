@@ -237,6 +237,34 @@ impl WebhookVerifier {
             .await
             .insert(url.to_string(), certificate);
     }
+
+    /// Test-only verifier that may call cleartext HTTP endpoints.
+    #[cfg(test)]
+    pub fn new_allowing_cleartext(config: &WebhookTrustConfig) -> anyhow::Result<Self> {
+        let trust_chain = X509::stack_from_pem(&config.ca_bundle_pem)?;
+        if trust_chain.is_empty() {
+            anyhow::bail!("SNS CA bundle contains no certificate");
+        }
+        let client = Client::builder()
+            .https_only(false)
+            .redirect(Policy::none())
+            .connect_timeout(Duration::from_secs(3))
+            .timeout(Duration::from_secs(5))
+            .build()?;
+        Ok(Self {
+            topic_arn: config.topic_arn.clone(),
+            signing_certificate_host: config.signing_certificate_host.clone(),
+            confirmation_host: config.confirmation_host.clone(),
+            trust_chain,
+            client,
+            certificates: RwLock::new(HashMap::new()),
+        })
+    }
+
+    #[cfg(test)]
+    pub async fn fetch_certificate_for_tests(&self, url: &str) -> anyhow::Result<X509> {
+        self.certificate(&Url::parse(url)?).await
+    }
 }
 
 fn validated_url(value: &str, expected_host: &str, path_prefix: &str) -> anyhow::Result<Url> {

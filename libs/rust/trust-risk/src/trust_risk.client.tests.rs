@@ -108,3 +108,19 @@ fn invalid_endpoint_uri_is_rejected() {
     .unwrap_err();
     assert!(matches!(error, TrustRiskClientError::Configuration(_)));
 }
+
+#[test]
+fn production_accepts_https_and_configures_tls() {
+    let config = TrustRiskClientConfig::from_values(
+        "production",
+        "https://trust-risk.example.invalid:443".to_string(),
+        TOKEN.to_string(),
+        Duration::from_millis(100),
+    )
+    .expect("https is required and accepted in production");
+    assert_eq!(config.assessment_timeout, Duration::from_millis(100));
+    assert_eq!(
+        config.authorization.to_str().unwrap(),
+        format!("Bearer {TOKEN}")
+    );
+}

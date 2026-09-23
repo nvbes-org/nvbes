@@ -133,3 +133,40 @@ async fn resolve_cached_geo_uses_personal_and_cached_relations(pool: PgPool) {
     tx.commit().await.expect("commit");
     assert!(intelligence.is_some());
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn cached_remote_lookup_covers_miss_and_invalid_country(pool: PgPool) {
+    let mut tx = pool.begin().await.expect("begin");
+    assert!(
+        cached_remote_lookup_tx(&mut tx, "8.8.8.8".parse().unwrap())
+            .await
+            .expect("lookup")
+            .is_none()
+    );
+    tx.commit().await.expect("commit");
+
+    sqlx::query(
+        r#"
+        INSERT INTO geo_ip_network_relations (
+          source_code, relation_key, registry, network, country_code,
+          network_kind, risk_score, risk_labels
+        )
+        VALUES (
+          'ripe', 'network:203.0.113.0/24', 'ripe', '203.0.113.0/24', 'ZZ',
+          'unknown', 50, ARRAY['source:ripe']
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .expect("seed invalid country");
+
+    let mut tx = pool.begin().await.expect("begin");
+    assert!(
+        cached_remote_lookup_tx(&mut tx, "203.0.113.10".parse().unwrap())
+            .await
+            .expect("lookup")
+            .is_none()
+    );
+    tx.commit().await.expect("commit");
+}

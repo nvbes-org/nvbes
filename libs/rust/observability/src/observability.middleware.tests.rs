@@ -1,7 +1,7 @@
 use axum::{
     Router,
     body::Body,
-    http::{Request, StatusCode},
+    http::{HeaderMap, HeaderName, Request, StatusCode},
     middleware,
     routing::get,
 };
@@ -9,9 +9,9 @@ use tower::ServiceExt;
 
 use crate::metrics::HttpMetrics;
 use crate::request_id::REQUEST_ID_HEADER;
-use crate::trace_context::{TRACEPARENT_HEADER, TRACESTATE_HEADER};
+use crate::trace_context::{TRACEPARENT_HEADER, TRACESTATE_HEADER, TraceParent};
 
-use super::{observe_request, request_path_template, server_timing_value};
+use super::{insert_header_str, observe_request, request_path_template, server_timing_value};
 
 #[test]
 fn request_path_template_uses_matched_path_when_present() {
@@ -135,4 +135,117 @@ async fn observe_request_rejects_unsafe_inbound_request_id() {
         .unwrap();
     assert!(returned.starts_with("req_"));
     assert_ne!(returned, "not safe");
+}
+
+#[tokio::test]
+async fn observe_request_accepts_unsampled_inbound_traceparent() {
+    let response = app_with_status(StatusCode::OK)
+        .oneshot(
+            Request::builder()
+                .uri("/probe")
+                .header(
+                    TRACEPARENT_HEADER,
+                    "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let traceparent = response
+        .headers()
+        .get(TRACEPARENT_HEADER)
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(
+        traceparent.ends_with("-00"),
+        "unsampled flag must propagate: {traceparent}"
+    );
+}
+
+#[test]
+fn insert_header_str_accepts_valid_and_skips_invalid_values() {
+    let mut headers = HeaderMap::new();
+    let name = HeaderName::from_static("x-nvbes-test");
+    insert_header_str(&mut headers, name.clone(), "ok-value");
+    assert_eq!(headers.get(&name).unwrap(), "ok-value");
+
+    insert_header_str(&mut headers, HeaderName::from_static("x-bad"), "bad\nvalue");
+    assert!(headers.get("x-bad").is_none());
+}
+
+#[cfg(feature = "otlp")]
+mod otlp_span_branches {
+    use axum::http::Method;
+    use opentelemetry::trace::TracerProvider as _;
+    use opentelemetry_sdk::trace::SdkTracerProvider;
+    use tracing_subscriber::prelude::*;
+
+    use super::super::{build_otel_span, traceparent_from_span};
+    use super::*;
+
+    #[test]
+    fn build_otel_span_covers_invalid_ids_and_unsampled_parent() {
+        let method = Method::GET;
+
+        let invalid_trace = TraceParent {
+            trace_id: "not-a-valid-trace-id".to_owned(),
+            span_id: "00f067aa0ba902b7".to_owned(),
+            sampled: true,
+        };
+        assert!(build_otel_span(&Some(invalid_trace), &method, "/probe").is_some());
+
+        let invalid_span = TraceParent {
+            trace_id: "4bf92f3577b34da6a3ce929d0e0e4736".to_owned(),
+            span_id: "bad-span".to_owned(),
+            sampled: true,
+        };
+        assert!(build_otel_span(&Some(invalid_span), &method, "/probe").is_some());
+
+        let unsampled = TraceParent {
+            trace_id: "4bf92f3577b34da6a3ce929d0e0e4736".to_owned(),
+            span_id: "00f067aa0ba902b7".to_owned(),
+            sampled: false,
+        };
+        assert!(build_otel_span(&Some(unsampled), &method, "/probe").is_some());
+    }
+
+    #[test]
+    fn traceparent_from_span_returns_valid_context_with_otel_layer() {
+        let provider = SdkTracerProvider::builder().build();
+        let tracer = provider.tracer("nvbes-observability-tests");
+        let subscriber =
+            tracing_subscriber::registry().with(tracing_opentelemetry::layer().with_tracer(tracer));
+        let _guard = tracing::subscriber::set_default(subscriber);
+
+        let span = build_otel_span(&None, &Method::GET, "/probe").expect("span");
+        let _entered = span.enter();
+        let traceparent = traceparent_from_span(&span).expect("valid otel span context");
+        assert_eq!(traceparent.trace_id.len(), 32);
+        assert_eq!(traceparent.span_id.len(), 16);
+    }
+
+    #[tokio::test]
+    async fn observe_request_replaces_traceparent_from_valid_otel_span() {
+        let provider = SdkTracerProvider::builder().build();
+        let tracer = provider.tracer("nvbes-observability-middleware");
+        let subscriber =
+            tracing_subscriber::registry().with(tracing_opentelemetry::layer().with_tracer(tracer));
+        let _guard = tracing::subscriber::set_default(subscriber);
+
+        let response = app_with_status(StatusCode::OK)
+            .oneshot(
+                Request::builder()
+                    .uri("/probe")
+                    .header(REQUEST_ID_HEADER, "req_otel_span")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(response.headers().contains_key(TRACEPARENT_HEADER));
+    }
 }

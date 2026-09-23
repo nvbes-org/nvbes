@@ -2,7 +2,7 @@ use std::{ffi::OsString, sync::Mutex};
 
 use super::{
     ConfigError, TrustRiskConfig, database_url_from_env,
-    observability::{ObservabilityConfig, parse_sample_rate, validate},
+    observability::{self, ObservabilityConfig, parse_sample_rate, validate},
     parse_operators, parse_producers,
 };
 
@@ -118,18 +118,136 @@ fn production_requires_sentry_and_authenticated_https_otlp() {
         otlp_authorization_header: Some("Basic dXNlcjp0b2tlbg==".to_string()),
     };
     assert!(validate("production", &valid).is_ok());
+    assert!(
+        validate(
+            "development",
+            &ObservabilityConfig {
+                sentry_dsn: None,
+                sentry_traces_sample_rate: 0.0,
+                otlp_endpoint: None,
+                otlp_authorization_header: None,
+            }
+        )
+        .is_ok()
+    );
+    assert!(
+        validate(
+            "test",
+            &ObservabilityConfig {
+                sentry_dsn: None,
+                sentry_traces_sample_rate: 0.0,
+                otlp_endpoint: None,
+                otlp_authorization_header: None,
+            }
+        )
+        .is_ok()
+    );
+
+    let mut bad_rate = valid.clone();
+    bad_rate.sentry_traces_sample_rate = 1.5;
+    assert_eq!(
+        validate("production", &bad_rate).unwrap_err(),
+        ConfigError::Invalid("SENTRY_TRACES_SAMPLE_RATE")
+    );
 
     let mut missing_sentry = valid.clone();
     missing_sentry.sentry_dsn = None;
     assert!(validate("production", &missing_sentry).is_err());
 
+    let mut http_sentry = valid.clone();
+    http_sentry.sentry_dsn = Some("http://public@example.ingest.sentry.io/42".to_string());
+    assert_eq!(
+        validate("production", &http_sentry).unwrap_err(),
+        ConfigError::Invalid("SENTRY_DSN")
+    );
+
+    let mut no_at = valid.clone();
+    no_at.sentry_dsn = Some("https://example.ingest.sentry.io/42".to_string());
+    assert_eq!(
+        validate("production", &no_at).unwrap_err(),
+        ConfigError::Invalid("SENTRY_DSN")
+    );
+
+    let mut padded_sentry = valid.clone();
+    padded_sentry.sentry_dsn = Some(" https://public@example.ingest.sentry.io/42 ".to_string());
+    assert_eq!(
+        validate("production", &padded_sentry).unwrap_err(),
+        ConfigError::Invalid("SENTRY_DSN")
+    );
+
     let mut insecure_otlp = valid.clone();
     insecure_otlp.otlp_endpoint = Some("http://collector:4317".to_string());
-    assert!(validate("production", &insecure_otlp).is_err());
+    assert_eq!(
+        validate("production", &insecure_otlp).unwrap_err(),
+        ConfigError::Invalid("NVBES_OTLP_ENDPOINT")
+    );
 
-    let mut missing_auth = valid;
+    let mut missing_otlp = valid.clone();
+    missing_otlp.otlp_endpoint = None;
+    assert!(validate("production", &missing_otlp).is_err());
+
+    let mut missing_auth = valid.clone();
     missing_auth.otlp_authorization_header = None;
     assert!(validate("production", &missing_auth).is_err());
+
+    let mut short_auth = valid.clone();
+    short_auth.otlp_authorization_header = Some("Basic short".to_string());
+    assert_eq!(
+        validate("production", &short_auth).unwrap_err(),
+        ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER")
+    );
+
+    let mut bearer_auth = valid.clone();
+    bearer_auth.otlp_authorization_header = Some("Bearer dXNlcjp0b2tlbg==".to_string());
+    assert_eq!(
+        validate("production", &bearer_auth).unwrap_err(),
+        ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER")
+    );
+
+    let mut newline_auth = valid;
+    newline_auth.otlp_authorization_header = Some("Basic dXNlcjp0b2tlbg==\n".to_string());
+    assert_eq!(
+        validate("production", &newline_auth).unwrap_err(),
+        ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER")
+    );
+}
+
+#[test]
+fn observability_from_environment_reads_aliases_in_test() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let guard = EnvGuard::isolated();
+    guard.set(
+        "NVBES_SENTRY_DSN",
+        "https://public@example.ingest.sentry.io/42",
+    );
+    guard.set("NVBES_SENTRY_TRACES_SAMPLE_RATE", "0.25");
+    guard.set("NVBES_OTLP_ENDPOINT", "https://otlp.example.net");
+    guard.set("NVBES_OTLP_AUTHORIZATION_HEADER", "Basic dXNlcjp0b2tlbg==");
+    let cfg = observability::from_environment("test").expect("test observability");
+    assert_eq!(
+        cfg.sentry_dsn.as_deref(),
+        Some("https://public@example.ingest.sentry.io/42")
+    );
+    assert_eq!(cfg.sentry_traces_sample_rate, 0.25);
+    assert_eq!(
+        cfg.otlp_endpoint.as_deref(),
+        Some("https://otlp.example.net")
+    );
+    assert!(
+        cfg.otlp_authorization_header
+            .as_deref()
+            .unwrap()
+            .starts_with("Basic ")
+    );
+
+    drop(guard);
+    let guard = EnvGuard::isolated();
+    guard.set("SENTRY_TRACES_SAMPLE_RATE", "2.0");
+    assert_eq!(
+        observability::from_environment("development").unwrap_err(),
+        ConfigError::Invalid("SENTRY_TRACES_SAMPLE_RATE")
+    );
+    let _ = guard;
 }
 
 #[test]

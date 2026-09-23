@@ -64,6 +64,65 @@ fn test_dummy_verify_password_does_not_panic() {
 }
 
 #[test]
+fn password_verify_table_covers_invalid_hash_and_mismatch() {
+    let password = "SuperSecretPassword123!";
+    let hash = hash_password(password).expect("hash");
+
+    let cases = [
+        ("not-a-phc-hash", "err"),
+        ("$argon2id$v=19$m=65536,t=3,p=4$bad", "err"),
+        ("wrong-password", "false"),
+        (password, "true"),
+    ];
+    for (candidate, expected) in cases {
+        let result = if expected == "err" {
+            verify_password(password, candidate)
+        } else {
+            verify_password(candidate, &hash)
+        };
+        match expected {
+            "err" => {
+                let err = result.expect_err("invalid hash");
+                assert_eq!(err.code, "password_hash_invalid");
+            }
+            "false" => assert!(!result.expect("verify")),
+            "true" => assert!(result.expect("verify")),
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[test]
+fn empty_pepper_is_treated_as_unpeppered() {
+    let password = "SuperSecretPassword123!";
+    let hash = hash_password_with_pepper(password, Some(&[])).expect("empty pepper hash");
+    let (valid, needs_rehash) =
+        verify_and_check_rehash(password, &hash, Some(&[])).expect("verify empty pepper");
+    assert!(valid);
+    assert!(!needs_rehash);
+    assert!(verify_password(password, &hash).expect("unpeppered verify against empty-pepper hash"));
+}
+
+#[test]
+fn weak_argon2_params_require_rehash() {
+    use argon2::password_hash::PasswordHasher;
+    use argon2::{Algorithm, Argon2, Params, Version};
+
+    let password = "SuperSecretPassword123!";
+    let params = Params::new(4096, 1, 1, None).expect("weak params");
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let weak_hash = argon2
+        .hash_password(password.as_bytes())
+        .expect("weak hash")
+        .to_string();
+
+    let (valid, needs_rehash) =
+        verify_and_check_rehash(password, &weak_hash, None).expect("weak verify");
+    assert!(valid);
+    assert!(needs_rehash, "weaker params must request rehash");
+}
+
+#[test]
 fn validate_password_accepts_strong_password() {
     assert!(validate_password("CorrectHorseBatteryStaple123!").is_ok());
 }

@@ -89,36 +89,5 @@ impl TrustRiskCockpitView {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn enforces_shadow_mode_and_blocks_automated_enforcement() {
-        let err = TrustRiskCockpitView::prevent_automatic_enforcement(RiskRecommendation::Deny);
-        assert_eq!(
-            err,
-            Err(TrustRiskReviewError::AutomatedEnforcementForbidden(
-                RiskRecommendation::Deny
-            ))
-        );
-    }
-
-    #[test]
-    fn summarizes_trust_risk_cases_correctly() {
-        let case = TrustRiskCaseItem {
-            case_id: Uuid::new_v4(),
-            evaluation_id: Uuid::new_v4(),
-            score: 85,
-            band: "high".to_string(),
-            recommendation: "deny".to_string(),
-            state: "open".to_string(),
-            created_at: Utc::now(),
-        };
-
-        let summary = TrustRiskCockpitView::summarize(&[case]);
-        assert!(summary.shadow_mode);
-        assert_eq!(summary.pending_reviews_count, 1);
-        assert_eq!(summary.deny_count, 1);
-        assert_eq!(summary.allow_count, 0);
-    }
-}
+#[path = "platform.cockpit.trust_risk.tests.rs"]
+mod tests;

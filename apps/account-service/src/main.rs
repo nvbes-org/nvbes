@@ -34,7 +34,10 @@ mod test_support;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let command: Vec<String> = std::env::args().skip(1).collect();
+    run(std::env::args().skip(1).collect()).await
+}
+
+async fn run(command: Vec<String>) -> anyhow::Result<()> {
     if matches!(command.as_slice(), [action] if action == "migrate") {
         let database_url = config::required_database_url()?;
         let pool = database::connect(&database_url, 2).await?;
@@ -93,6 +96,18 @@ async fn main() -> anyhow::Result<()> {
     );
     let db = database::connect_lazy(&config.database_url, config.database_max_connections)?;
     let state = app::AccountState::new(config.clone(), db.clone())?;
+    let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
+    serve(state, db, listener, shutdown_signal()).await
+}
+
+async fn serve(
+    state: app::AccountState,
+    db: sqlx::PgPool,
+    listener: tokio::net::TcpListener,
+    shutdown_signal: impl std::future::Future<Output = ()> + Send + 'static,
+) -> anyhow::Result<()> {
+    let bind_addr = listener.local_addr()?;
+    let environment = state.config.environment.clone();
     let http_metrics = nvbes_observability::metrics::HttpMetrics {
         handle: state.metrics.clone(),
     };
@@ -100,10 +115,9 @@ async fn main() -> anyhow::Result<()> {
         http_metrics,
         nvbes_observability::middleware::observe_request,
     ));
-    let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
-    tracing::info!(bind_addr = %config.bind_addr, environment = %config.environment, "starting Account runtime");
+    tracing::info!(%bind_addr, %environment, "starting Account runtime");
     axum::serve(listener, router)
-        .with_graceful_shutdown(shutdown_signal())
+        .with_graceful_shutdown(shutdown_signal)
         .await?;
     nvbes_observability::flush_error_reporting(std::time::Duration::from_secs(2));
     db.close().await;
@@ -125,3 +139,7 @@ async fn shutdown_signal() {
     #[cfg(not(unix))]
     let _ = tokio::signal::ctrl_c().await;
 }
+
+#[cfg(test)]
+#[path = "account.main.tests.rs"]
+mod main_tests;

@@ -4,10 +4,16 @@ use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 use openssl::{pkey::PKey, rsa::Rsa};
 use serde::Serialize;
 use sqlx::PgPool;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use uuid::Uuid;
 
 use crate::{app::AccountState, auth::TokenVerifier, config::AccountConfig};
+
+/// Serializes process-wide env mutation across Account unit tests.
+pub(crate) fn test_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
 
 struct TestKeys {
     private_pem: String,

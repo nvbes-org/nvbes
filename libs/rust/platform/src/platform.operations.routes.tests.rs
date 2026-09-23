@@ -199,3 +199,107 @@ async fn routes_cover_command_cases_audits_and_costs(pool: PgPool) {
     assert_eq!(costs_body["review"], "within_recorded_budget");
     assert!(costs_body["actual_cents"].as_i64().unwrap() >= 400);
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn costs_review_covers_budget_decision_branches(pool: PgPool) {
+    let actor = crate::cockpit_auth::OperatorSession {
+        operator_id: "operator-routes".into(),
+        role: DEFAULT_OPERATOR_ROLE.into(),
+        has_mfa_step_up: true,
+    };
+    let app = create_platform_cockpit_router(state(pool.clone()));
+
+    let unknown = app
+        .clone()
+        .oneshot(auth_request(
+            "GET",
+            "/api/v1/costs?month=2026-01-01",
+            Body::empty(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(unknown.status(), StatusCode::OK);
+    let unknown_body: Value = serde_json::from_slice(
+        &axum::body::to_bytes(unknown.into_body(), 64_000)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(unknown_body["review"], "unknown");
+
+    async fn record(pool: &PgPool, actor: &crate::cockpit_auth::OperatorSession, forecast: u32) {
+        execute(
+            pool,
+            actor,
+            Command {
+                idempotency_key: Uuid::new_v4(),
+                correlation_id: Uuid::new_v4(),
+                reason: "Recorded cost for FinOps review".into(),
+                action: Action::RecordCost {
+                    month: NaiveDate::from_ymd_opt(2026, 2, 1).unwrap(),
+                    provider: format!("provider-{forecast}"),
+                    category: "compute".into(),
+                    actual_cents: forecast,
+                    forecast_cents: forecast,
+                    evidence: "synthetic invoice reference".into(),
+                    replaces: None,
+                },
+            },
+        )
+        .await
+        .unwrap();
+    }
+
+    record(&pool, &actor, 2_500).await;
+    let economy = app
+        .clone()
+        .oneshot(auth_request(
+            "GET",
+            "/api/v1/costs?month=2026-02-01",
+            Body::empty(),
+        ))
+        .await
+        .unwrap();
+    let economy_body: Value = serde_json::from_slice(
+        &axum::body::to_bytes(economy.into_body(), 64_000)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(economy_body["review"], "economy");
+
+    record(&pool, &actor, 300).await;
+    let critical = app
+        .clone()
+        .oneshot(auth_request(
+            "GET",
+            "/api/v1/costs?month=2026-02-01",
+            Body::empty(),
+        ))
+        .await
+        .unwrap();
+    let critical_body: Value = serde_json::from_slice(
+        &axum::body::to_bytes(critical.into_body(), 64_000)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(critical_body["review"], "critical");
+
+    record(&pool, &actor, 200).await;
+    let stop = app
+        .oneshot(auth_request(
+            "GET",
+            "/api/v1/costs?month=2026-02-01",
+            Body::empty(),
+        ))
+        .await
+        .unwrap();
+    let stop_body: Value = serde_json::from_slice(
+        &axum::body::to_bytes(stop.into_body(), 64_000)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(stop_body["review"], "stop");
+}

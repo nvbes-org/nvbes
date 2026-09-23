@@ -214,3 +214,110 @@ async fn checkout_session_completed_updates_session_and_audit(pool: PgPool) {
             .unwrap();
     assert_eq!(audits, 1);
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn rejects_missing_signature_and_malformed_payload(pool: PgPool) {
+    let config = test_config();
+    let state = crate::app::BillingState {
+        db: pool,
+        tokens: crate::auth::TokenVerifier::new(&config).unwrap(),
+        metrics: crate::metrics::install(),
+        config,
+        email_client: None,
+    };
+    let app = crate::app::create_router(state);
+
+    let missing = app
+        .clone()
+        .oneshot(
+            Request::post("/webhooks/stripe")
+                .body(Body::from("{}"))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(missing.status(), StatusCode::BAD_REQUEST);
+
+    let payload = json!({
+        "id": "evt_malformed",
+        "type": "invoice.paid",
+        "livemode": false
+    })
+    .to_string();
+    let timestamp = chrono::Utc::now().timestamp();
+    let signature = sign(b"whsec_fixture", timestamp, &payload);
+    let malformed = app
+        .oneshot(
+            Request::post("/webhooks/stripe")
+                .header("stripe-signature", format!("t={timestamp},v1={signature}"))
+                .body(Body::from(payload))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(malformed.status(), StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn ignores_unknown_events_and_checkout_without_session_id(pool: PgPool) {
+    let config = test_config();
+    let state = crate::app::BillingState {
+        db: pool.clone(),
+        tokens: crate::auth::TokenVerifier::new(&config).unwrap(),
+        metrics: crate::metrics::install(),
+        config,
+        email_client: None,
+    };
+    let app = crate::app::create_router(state);
+
+    let unknown_id = format!("evt_{}", Uuid::new_v4().simple());
+    let unknown_payload = json!({
+        "id": unknown_id,
+        "type": "radar.early_fraud_warning.created",
+        "livemode": false,
+        "data": { "object": { "id": "issfr_1" } }
+    })
+    .to_string();
+    let timestamp = chrono::Utc::now().timestamp();
+    let signature = sign(b"whsec_fixture", timestamp, &unknown_payload);
+    let unknown = app
+        .clone()
+        .oneshot(
+            Request::post("/webhooks/stripe")
+                .header("stripe-signature", format!("t={timestamp},v1={signature}"))
+                .body(Body::from(unknown_payload))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(unknown.status(), StatusCode::OK);
+
+    let checkout_id = format!("evt_{}", Uuid::new_v4().simple());
+    let checkout_payload = json!({
+        "id": checkout_id,
+        "type": "checkout.session.completed",
+        "livemode": false,
+        "data": { "object": { "customer": "cus_orphan" } }
+    })
+    .to_string();
+    let timestamp = chrono::Utc::now().timestamp();
+    let signature = sign(b"whsec_fixture", timestamp, &checkout_payload);
+    let checkout = app
+        .oneshot(
+            Request::post("/webhooks/stripe")
+                .header("stripe-signature", format!("t={timestamp},v1={signature}"))
+                .body(Body::from(checkout_payload))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(checkout.status(), StatusCode::OK);
+
+    let status: String =
+        sqlx::query_scalar("SELECT status FROM billing_webhook_events WHERE event_id=$1")
+            .bind(unknown_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(status, "processed");
+}

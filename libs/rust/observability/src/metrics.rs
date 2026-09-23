@@ -221,11 +221,15 @@ pub async fn start_metrics_server(
     Ok((
         addr,
         tokio::spawn(async move {
-            if let Err(error) = axum::serve(listener, router).await {
-                tracing::error!(error = %error, "Worker metrics listener stopped");
-            }
+            log_metrics_listener_stop(axum::serve(listener, router).await);
         }),
     ))
+}
+
+fn log_metrics_listener_stop(result: std::io::Result<()>) {
+    if let Err(error) = result {
+        tracing::error!(error = %error, "Worker metrics listener stopped");
+    }
 }
 
 impl Default for HttpMetrics {

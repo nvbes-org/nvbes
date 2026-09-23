@@ -316,3 +316,149 @@ fn invalid_mfa_key_version_fails_closed() {
     ));
     clear_identity_env();
 }
+
+#[test]
+fn previous_mfa_version_without_key_is_rejected() {
+    let _guard = env_lock();
+    clear_identity_env();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "test");
+        std::env::set_var("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION", "1");
+    }
+    assert!(matches!(
+        IdentityConfig::from_env(),
+        Err(ConfigError::Invalid("MFA previous key pair"))
+    ));
+    clear_identity_env();
+}
+
+#[test]
+fn production_requires_sentry_after_metrics_token() {
+    let _guard = env_lock();
+    clear_identity_env();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var(
+            "NVBES_IDENTITY_DATABASE_URL",
+            "postgres://identity.test/identity",
+        );
+        std::env::set_var(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        );
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+        std::env::set_var(
+            "NVBES_IDENTITY_METRICS_TOKEN",
+            "production-identity-metrics-token-value",
+        );
+    }
+    assert!(matches!(
+        IdentityConfig::from_env(),
+        Err(ConfigError::Missing("SENTRY_DSN"))
+    ));
+    clear_identity_env();
+}
+
+#[test]
+fn production_rejects_authorization_header_with_newlines() {
+    let _guard = env_lock();
+    clear_identity_env();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var(
+            "NVBES_IDENTITY_DATABASE_URL",
+            "postgres://identity.test/identity",
+        );
+        std::env::set_var(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        );
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+        std::env::set_var(
+            "NVBES_IDENTITY_METRICS_TOKEN",
+            "production-identity-metrics-token-value",
+        );
+        std::env::set_var("SENTRY_DSN", "https://public@o.ingest.sentry.io/1");
+        std::env::set_var("NVBES_OTLP_ENDPOINT", "https://otlp.example");
+        std::env::set_var("NVBES_OTLP_AUTHORIZATION_HEADER", "Basic abc\n");
+    }
+    assert!(matches!(
+        IdentityConfig::from_env(),
+        Err(ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER"))
+    ));
+    clear_identity_env();
+}
+
+#[test]
+fn production_rejects_wrong_length_mfa_key_even_when_base64() {
+    let _guard = env_lock();
+    clear_identity_env();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var(
+            "NVBES_IDENTITY_DATABASE_URL",
+            "postgres://identity.test/identity",
+        );
+        // 16 bytes when decoded — valid base64, wrong key length.
+        std::env::set_var(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AQEBAQEBAQEBAQEBAQEBAQ==",
+        );
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+    }
+    assert!(matches!(
+        IdentityConfig::from_env(),
+        Err(ConfigError::Invalid("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
+    ));
+    clear_identity_env();
+}
+
+#[test]
+fn database_pool_zero_and_unparseable_fail_closed() {
+    let _guard = env_lock();
+    clear_identity_env();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "test");
+        std::env::set_var("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS", "0");
+    }
+    assert!(matches!(
+        IdentityConfig::from_env(),
+        Err(ConfigError::Invalid(
+            "NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS"
+        ))
+    ));
+    unsafe {
+        std::env::set_var("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS", "nope");
+    }
+    assert!(matches!(
+        IdentityConfig::from_env(),
+        Err(ConfigError::Invalid(
+            "NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS"
+        ))
+    ));
+    clear_identity_env();
+}
+
+#[test]
+fn unset_environment_defaults_to_development() {
+    let _guard = env_lock();
+    clear_identity_env();
+    let config = IdentityConfig::from_env().expect("defaults");
+    assert_eq!(config.environment, "development");
+    clear_identity_env();
+}
+
+#[test]
+fn blank_optional_env_values_are_ignored() {
+    let _guard = env_lock();
+    clear_identity_env();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "test");
+        std::env::set_var("NVBES_IDENTITY_TOKEN_ISSUER", "   ");
+        std::env::set_var("SENTRY_DSN", "");
+    }
+    let config = IdentityConfig::from_env().unwrap();
+    assert!(config.token_issuer.starts_with("http://"));
+    assert!(config.sentry_dsn.is_none());
+    clear_identity_env();
+}

@@ -170,3 +170,56 @@ fn rejects_empty_any_predicate_list() {
         Err(RuleSetError::PredicateCount)
     ));
 }
+
+#[test]
+fn rejects_oversized_rule_reason_and_predicate_collections() {
+    let mut document = base_ruleset();
+    document["rules"] = (0..257)
+        .map(|index| {
+            serde_json::json!({
+              "code": format!("rule-{index}"),
+              "predicate":{"op":"gte","feature":"network_risk_score_max","value":80},
+              "score_delta":1,
+              "reasons":[format!("reason-{index}")],
+              "minimum_recommendation":null
+            })
+        })
+        .collect();
+    assert!(matches!(
+        RuleSet::from_json(&serde_json::to_vec(&document).unwrap()),
+        Err(RuleSetError::RuleCount)
+    ));
+
+    let mut document = base_ruleset();
+    document["rules"][0]["reasons"] = (0..9)
+        .map(|index| format!("reason-{index}"))
+        .collect::<Vec<_>>()
+        .into();
+    assert!(matches!(
+        RuleSet::from_json(&serde_json::to_vec(&document).unwrap()),
+        Err(RuleSetError::ReasonCount)
+    ));
+
+    let mut document = base_ruleset();
+    document["rules"][0]["predicate"] = serde_json::json!({
+      "op":"all",
+      "predicates":(0..17).map(|_| serde_json::json!({
+        "op":"gte","feature":"network_risk_score_max","value":1
+      })).collect::<Vec<_>>()
+    });
+    assert!(matches!(
+        RuleSet::from_json(&serde_json::to_vec(&document).unwrap()),
+        Err(RuleSetError::PredicateCount)
+    ));
+}
+
+#[test]
+fn rejects_non_monotonic_mid_thresholds() {
+    // challenge <= review holds, but review > deny must fail the middle conjunct.
+    let mut document = base_ruleset();
+    document["thresholds"] = serde_json::json!({"challenge":40,"review":90,"deny":70});
+    assert!(matches!(
+        RuleSet::from_json(&serde_json::to_vec(&document).unwrap()),
+        Err(RuleSetError::Thresholds)
+    ));
+}

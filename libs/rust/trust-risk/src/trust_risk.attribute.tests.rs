@@ -97,6 +97,14 @@ fn malformed_payloads_are_rejected() {
         convert(
             "network",
             "network_kind",
+            Value::StringValue("x".repeat(81))
+        ),
+        Err(SignalError::InvalidAttribute)
+    );
+    assert_eq!(
+        convert(
+            "network",
+            "network_kind",
             Value::StringValue("data centre".into())
         ),
         Err(SignalError::InvalidAttribute)

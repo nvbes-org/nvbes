@@ -28,3 +28,13 @@ async fn get_or_create_is_idempotent_for_account(pool: PgPool) {
     .expect("count");
     assert_eq!(rows, 1);
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn get_or_create_accepts_missing_email(pool: PgPool) {
+    let config = test_config();
+    let account_id = Uuid::new_v4();
+    let customer_id = get_or_create_customer(&pool, &config, account_id, "team", None)
+        .await
+        .expect("create without email");
+    assert!(customer_id.starts_with("cus_test_"));
+}

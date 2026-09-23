@@ -1,7 +1,7 @@
 use nvbes_core::config::AppConfig;
 use pyroscope::PyroscopeAgent;
 use pyroscope::backend::{BackendConfig, PprofConfig, pprof_backend};
-use pyroscope::pyroscope::{PyroscopeAgentBuilder, PyroscopeAgentRunning};
+use pyroscope::pyroscope::{PyroscopeAgentBuilder, PyroscopeAgentReady, PyroscopeAgentRunning};
 
 pub struct ContinuousProfilingGuard {
     agent: Option<PyroscopeAgent<PyroscopeAgentRunning>>,
@@ -13,11 +13,21 @@ impl Drop for ContinuousProfilingGuard {
             return;
         };
 
-        match agent.stop() {
-            Ok(agent) => agent.shutdown(),
-            Err(error) => tracing::warn!(error = %error, "continuous profiling shutdown failed"),
-        }
+        finish_profiling_stop(agent.stop());
     }
+}
+
+fn finish_profiling_stop(
+    result: Result<PyroscopeAgent<PyroscopeAgentReady>, impl std::fmt::Display>,
+) {
+    match result {
+        Ok(agent) => agent.shutdown(),
+        Err(error) => log_profiling_shutdown_failure(error),
+    }
+}
+
+fn log_profiling_shutdown_failure(error: impl std::fmt::Display) {
+    tracing::warn!(error = %error, "continuous profiling shutdown failed");
 }
 
 pub fn start_continuous_profiling(
@@ -55,10 +65,7 @@ pub fn start_continuous_profiling(
         builder = builder.basic_auth(username, password);
     }
 
-    let agent = builder
-        .build()
-        .and_then(|agent| agent.start())
-        .map_err(|error| format!("failed to start continuous profiling: {error}"))?;
+    let agent = into_profiling_start_result(builder.build().and_then(|agent| agent.start()))?;
 
     tracing::info!(
         service = service_name,
@@ -68,6 +75,16 @@ pub fn start_continuous_profiling(
     );
 
     Ok(Some(ContinuousProfilingGuard { agent: Some(agent) }))
+}
+
+fn into_profiling_start_result(
+    result: Result<PyroscopeAgent<PyroscopeAgentRunning>, impl std::fmt::Display>,
+) -> Result<PyroscopeAgent<PyroscopeAgentRunning>, String> {
+    result.map_err(map_profiling_start_error)
+}
+
+fn map_profiling_start_error(error: impl std::fmt::Display) -> String {
+    format!("failed to start continuous profiling: {error}")
 }
 
 #[cfg(test)]

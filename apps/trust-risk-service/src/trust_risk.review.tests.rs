@@ -3,11 +3,15 @@ use super::ReviewState;
 #[test]
 fn review_state_machine_is_explicit_and_resolution_requires_a_label() {
     assert!(ReviewState::Open.permits(ReviewState::InReview, false));
+    assert!(ReviewState::Open.permits(ReviewState::InReview, true));
     assert!(!ReviewState::Open.permits(ReviewState::Resolved, true));
+    assert!(!ReviewState::Open.permits(ReviewState::Inconclusive, false));
     assert!(!ReviewState::InReview.permits(ReviewState::Resolved, false));
     assert!(ReviewState::InReview.permits(ReviewState::Resolved, true));
     assert!(ReviewState::InReview.permits(ReviewState::Inconclusive, false));
+    assert!(!ReviewState::InReview.permits(ReviewState::Open, true));
     assert!(!ReviewState::Resolved.permits(ReviewState::Open, true));
+    assert!(!ReviewState::Inconclusive.permits(ReviewState::InReview, true));
 }
 
 #[test]
@@ -106,10 +110,125 @@ mod database {
                 ReviewState::InReview,
                 None,
                 "operator-ada",
+                "  ",
+            )
+            .await,
+            Err(ReviewError::InvalidInput)
+        ));
+        let long_reason = "x".repeat(301);
+        assert!(matches!(
+            transition(
+                &pool,
+                Uuid::new_v4(),
+                ReviewState::InReview,
+                None,
+                "operator-ada",
+                &long_reason,
+            )
+            .await,
+            Err(ReviewError::InvalidInput)
+        ));
+        assert!(matches!(
+            transition(
+                &pool,
+                Uuid::new_v4(),
+                ReviewState::InReview,
+                None,
+                "operator-ada",
                 "missing case",
             )
             .await,
             Err(ReviewError::NotFound)
         ));
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn transition_rejects_illegal_moves_and_resolves_with_label(pool: sqlx::PgPool) {
+        let evaluation_id = seed_evaluation(&pool).await;
+        let mut tx = pool.begin().await.expect("tx");
+        let case_id = ensure_case_in_transaction(&mut tx, evaluation_id, 400)
+            .await
+            .expect("open case");
+        tx.commit().await.expect("commit");
+
+        assert!(matches!(
+            transition(
+                &pool,
+                case_id,
+                ReviewState::Resolved,
+                None,
+                "operator-ada",
+                "skip straight to resolved",
+            )
+            .await,
+            Err(ReviewError::InvalidTransition)
+        ));
+
+        transition(
+            &pool,
+            case_id,
+            ReviewState::InReview,
+            Some("operator-ada".into()),
+            "operator-ada",
+            "start investigation",
+        )
+        .await
+        .expect("in review");
+
+        assert!(matches!(
+            transition(
+                &pool,
+                case_id,
+                ReviewState::Resolved,
+                None,
+                "operator-ada",
+                "resolve without label",
+            )
+            .await,
+            Err(ReviewError::InvalidTransition)
+        ));
+
+        let label_id = Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO trust_risk_labels (
+                id, schema_version, producer, evaluation_id, review_case_id, kind,
+                source_class, source_id, confidence, actor, knowledge_at,
+                evidence_reference, mapping_version, fingerprint, expires_at
+            ) VALUES (
+                $1, 1, 'backoffice-service', $2, $3, 2, 1, 'review:resolve',
+                0.95, 'operator-ada', clock_timestamp(), 'case:resolve',
+                'human-review-v1', $4, clock_timestamp() + INTERVAL '400 days'
+            )
+            "#,
+        )
+        .bind(label_id)
+        .bind(evaluation_id)
+        .bind(case_id)
+        .bind(vec![11_u8; 32])
+        .execute(&pool)
+        .await
+        .expect("label");
+        sqlx::query(
+            "INSERT INTO trust_risk_canonical_labels (evaluation_id, label_id) VALUES ($1, $2)",
+        )
+        .bind(evaluation_id)
+        .bind(label_id)
+        .execute(&pool)
+        .await
+        .expect("canonical");
+
+        let resolved = transition(
+            &pool,
+            case_id,
+            ReviewState::Resolved,
+            None,
+            "operator-ada",
+            "confirmed fraud",
+        )
+        .await
+        .expect("resolved");
+        assert_eq!(resolved.state, ReviewState::Resolved);
+        assert_eq!(resolved.assigned_to.as_deref(), Some("operator-ada"));
     }
 }
