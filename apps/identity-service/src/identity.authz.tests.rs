@@ -160,7 +160,7 @@ mod database {
     async fn authz_decision_allows_scoped_token_and_denies_empty_scope(pool: PgPool) {
         let _env = TokenEnvGuard::install_test_keys();
         let token_config = TokenConfig::from_env("test").expect("token config");
-        let service = TokenService::new(token_config).expect("token service");
+        let service = TokenService::new(token_config.clone()).expect("token service");
         let (principal_id, session_id, _) = seed_principal_and_session(&pool).await;
         let access_token = service
             .issue(
@@ -171,15 +171,30 @@ mod database {
                 vec!["pwd".to_string()],
             )
             .expect("access token");
-        let empty_scope_token = service
-            .issue(
-                principal_id,
-                session_id,
-                "account",
-                "",
-                vec!["pwd".to_string()],
-            )
-            .expect("empty scope token");
+        let empty_scope_token = {
+            use crate::tokens::AccessTokenClaims;
+            use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+            let issued_at = chrono::Utc::now().timestamp() as u64;
+            let claims = AccessTokenClaims {
+                sub: principal_id.to_string(),
+                token_type: "access".into(),
+                scope: String::new(),
+                amr: vec!["pwd".to_string()],
+                iss: token_config.issuer.clone(),
+                aud: "account".into(),
+                exp: issued_at + 900,
+                iat: issued_at,
+                nbf: issued_at,
+                jti: Uuid::new_v4().to_string(),
+                sid: session_id.to_string(),
+            };
+            let mut header = Header::new(Algorithm::RS256);
+            header.kid = Some(token_config.key_id.clone());
+            header.typ = Some("at+jwt".into());
+            let encoding_key =
+                EncodingKey::from_rsa_pem(token_config.private_key_pem.as_bytes()).expect("key");
+            encode(&header, &claims, &encoding_key).expect("empty scope token")
+        };
         let state = identity_state(pool);
         let app = router(&state);
         let workspace_id = Uuid::new_v4();
