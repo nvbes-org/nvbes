@@ -91,3 +91,65 @@ async fn assessment_persists_evidence_and_replays_original_result(pool: sqlx::Pg
         .unwrap();
     assert_eq!((signal_count, evaluation_count), (1, 1));
 }
+
+#[cfg(feature = "database-tests")]
+#[sqlx::test(migrations = "./migrations")]
+async fn assessment_rejects_feature_version_mismatch_and_opens_review(pool: sqlx::PgPool) {
+    sqlx::query(
+        "UPDATE trust_risk_rule_sets SET feature_version = 'features-mismatch' WHERE state = 'active'",
+    )
+    .execute(&pool)
+    .await
+    .expect("mismatch feature version column");
+    let wire = request();
+    let domain = Assessment::try_from(wire.clone()).unwrap();
+    assert!(matches!(
+        assess(&pool, &wire, &domain, 400, 30, 400)
+            .await
+            .unwrap_err(),
+        AssessmentPersistenceError::InvalidRules
+    ));
+
+    sqlx::query(
+        "UPDATE trust_risk_rule_sets SET feature_version = 'features-v1' WHERE state = 'active'",
+    )
+    .execute(&pool)
+    .await
+    .expect("restore feature version");
+
+    // Seed projected features so baseline rules push the score into the review band.
+    sqlx::query(
+        r#"
+        INSERT INTO trust_risk_feature_state (
+            subject_kind, namespace, opaque_id, feature_version, features,
+            event_watermark, expires_at
+        ) VALUES (
+            1, 'nvbes.identity', 'principal:018f7f2d-fc7d', 'features-v1',
+            '{"events_1h":10,"negative_labels":1}'::jsonb,
+            clock_timestamp(), clock_timestamp() + INTERVAL '25 hours'
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .expect("seed features");
+
+    let mut review_wire = request();
+    review_wire.assessment_key = "checkout:review-band".to_string();
+    review_wire.instantaneous_signals.clear();
+    let review_domain = Assessment::try_from(review_wire.clone()).unwrap();
+    let stored = assess(&pool, &review_wire, &review_domain, 400, 30, 400)
+        .await
+        .expect("review assessment");
+    assert_eq!(
+        stored.recommendation,
+        nvbes_trust_risk::types::Recommendation::Review
+    );
+    let review_cases: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM trust_risk_review_cases WHERE evaluation_id = $1")
+            .bind(stored.id)
+            .fetch_one(&pool)
+            .await
+            .expect("review case");
+    assert_eq!(review_cases, 1);
+}

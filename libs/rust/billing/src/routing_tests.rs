@@ -382,4 +382,43 @@ fn cb_provider_is_modelled_as_local_for_french_card_routing() {
         ),
         96
     );
+    assert_eq!(
+        provider_success_priority(
+            Some("DE"),
+            ProviderCode::Cb,
+            ProviderOperationalStatus::Available
+        ),
+        86
+    );
+}
+
+#[test]
+fn external_fallback_skips_unavailable_stripe_provider() {
+    let decision = route_provider(&ProviderRouteRequest {
+        country: Some("FR".to_string()),
+        currency: "EUR".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: None,
+        mollie_enabled: true,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Unavailable,
+    })
+    .expect("mollie remains selectable");
+    assert_eq!(decision.provider, ProviderCode::Mollie);
+
+    let candidates = provider_route_candidates(&ProviderRouteRequest {
+        country: Some("NL".to_string()),
+        currency: "EUR".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: None,
+        mollie_enabled: false,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Unavailable,
+    });
+    assert!(!candidates[1].eligible);
+    assert_eq!(candidates[1].exclusion_reason, Some("provider_unavailable"));
 }

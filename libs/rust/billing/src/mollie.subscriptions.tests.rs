@@ -81,3 +81,21 @@ fn mollie_subscription_response_rejects_missing_id() {
         subscription_from_mollie_response("cst_123", json!({ "status": "active" })).unwrap_err();
     assert!(matches!(err, MollieProviderError::InvalidResponse { .. }));
 }
+
+#[test]
+fn mollie_subscription_payload_omits_optional_start_date_and_webhook() {
+    let payload = build_mollie_subscription_payload(&ProviderSubscriptionInput {
+        provider_customer_id: "cst_123".to_string(),
+        amount_minor: 1000,
+        currency: "EUR".to_string(),
+        interval: "1 month".to_string(),
+        description: "nvbes monthly".to_string(),
+        start_date: None,
+        webhook_url: None,
+    })
+    .expect("payload should build");
+
+    assert!(payload.get("startDate").is_none());
+    assert!(payload.get("webhookUrl").is_none());
+    assert_eq!(payload["amount"]["value"], "10.00");
+}

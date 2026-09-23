@@ -202,4 +202,52 @@ mod tests {
 
         assert_eq!(selected.amount.amount_minor, 3_900);
     }
+
+    #[test]
+    fn active_plan_price_falls_back_to_active_monthly_catalog_price() {
+        let plan_version_id = Uuid::new_v4();
+        let prices = vec![
+            PriceVersion {
+                id: Uuid::new_v4(),
+                plan_version_id: Some(plan_version_id),
+                meter_code: None,
+                amount: Money::eur(3_900),
+                interval_unit: BillingInterval::Year,
+                active: true,
+            },
+            PriceVersion {
+                id: Uuid::new_v4(),
+                plan_version_id: Some(plan_version_id),
+                meter_code: None,
+                amount: Money::eur(2_900),
+                interval_unit: BillingInterval::Month,
+                active: false,
+            },
+            PriceVersion {
+                id: Uuid::new_v4(),
+                plan_version_id: Some(plan_version_id),
+                meter_code: None,
+                amount: Money::eur(3_500),
+                interval_unit: BillingInterval::Month,
+                active: true,
+            },
+        ];
+
+        let selected = active_plan_price(PriceSelection {
+            plan_version_id,
+            tenant_price_version_id: None,
+            prices: &prices,
+        })
+        .expect("active monthly price should be selected");
+        assert_eq!(selected.amount.amount_minor, 3_500);
+
+        assert!(
+            active_plan_price(PriceSelection {
+                plan_version_id: Uuid::new_v4(),
+                tenant_price_version_id: None,
+                prices: &prices,
+            })
+            .is_none()
+        );
+    }
 }

@@ -129,6 +129,52 @@ async fn complaint_and_soft_bounce_threshold_create_global_suppressions(pool: Pg
 }
 
 #[sqlx::test(migrations = "./migrations")]
+async fn dropped_and_hard_bounce_events_apply_terminal_state_and_suppression(pool: PgPool) {
+    provider_accepted_message(&pool, "dropped").await;
+    let dropped = apply_notification(
+        &pool,
+        "sns-dropped",
+        &event("event-dropped", "provider-dropped", "email_dropped"),
+    )
+    .await
+    .unwrap();
+    assert_eq!(dropped.processing_result, "state_applied");
+    let dropped_state: String = sqlx::query_scalar(
+        "SELECT state::text FROM email_messages WHERE provider_message_id = 'provider-dropped'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(dropped_state, "dropped");
+    let drop_reason: String =
+        sqlx::query_scalar("SELECT reason FROM email_suppressions WHERE reason = 'provider_drop'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(drop_reason, "provider_drop");
+
+    provider_accepted_message(&pool, "hardbounce").await;
+    let bounced = apply_notification(
+        &pool,
+        "sns-hardbounce",
+        &event(
+            "event-hardbounce",
+            "provider-hardbounce",
+            "email_mailbox_not_found",
+        ),
+    )
+    .await
+    .unwrap();
+    assert_eq!(bounced.processing_result, "state_applied");
+    let bounce_reason: String =
+        sqlx::query_scalar("SELECT reason FROM email_suppressions WHERE reason = 'hard_bounce'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(bounce_reason, "hard_bounce");
+}
+
+#[sqlx::test(migrations = "./migrations")]
 async fn subscription_unknown_and_duplicate_events_are_idempotent(pool: PgPool) {
     assert!(
         record_subscription_confirmation(&pool, "sns-confirm")

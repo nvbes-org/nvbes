@@ -44,4 +44,7 @@ tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+prost-types = "0.14"
+tokio-stream = { version = "0.1.18", features = ["net"] }
+tonic.workspace = true
 tower.workspace = true

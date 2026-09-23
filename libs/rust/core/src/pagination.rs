@@ -144,4 +144,17 @@ mod tests {
         assert!(!page.has_more);
         assert_eq!(page.next_cursor, None);
     }
+
+    #[test]
+    fn zero_limit_page_reports_more_without_cursor() {
+        let page = page_from_rows(vec![1], 0, |value| value.to_string());
+        assert!(page.items.is_empty());
+        assert!(page.has_more);
+        assert_eq!(page.next_cursor, None);
+    }
+
+    #[test]
+    fn decode_cursor_rejects_invalid_base64() {
+        assert!(KeysetCursor::decode("%%%").is_err());
+    }
 }

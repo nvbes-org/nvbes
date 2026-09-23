@@ -76,4 +76,17 @@ mod tests {
         let line = credit_note_reversal(1_000, NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(), "EUR");
         assert_eq!(line.amount_minor, -1_000);
     }
+
+    #[test]
+    fn recognize_evenly_returns_empty_for_zero_months() {
+        assert!(
+            recognize_evenly(
+                1_000,
+                0,
+                NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
+                "EUR"
+            )
+            .is_empty()
+        );
+    }
 }

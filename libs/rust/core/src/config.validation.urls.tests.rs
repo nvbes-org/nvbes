@@ -73,3 +73,32 @@ fn validate_database_url_rejects_invalid_url() {
     let err = validate_database_url("not-a-url", false).expect_err("invalid");
     assert!(err.contains("valid URL"));
 }
+
+#[test]
+fn validate_public_url_covers_remaining_strict_branches() {
+    validate_public_url("NVBES_WEB_BASE_URL", "http://app.example.com", true, false)
+        .expect("http allowed when https not required");
+    validate_public_url("NVBES_WEB_BASE_URL", "https://203.0.113.10", true, true)
+        .expect("public ipv4 accepted");
+
+    let ipv6 = validate_public_url("NVBES_API_BASE_URL", "https://[::1]", true, true)
+        .expect_err("ipv6 loopback");
+    assert!(ipv6.contains("loopback"));
+
+    let invalid =
+        validate_public_url("NVBES_WEB_BASE_URL", "not a url", true, true).expect_err("invalid");
+    assert!(invalid.contains("valid URL"));
+}
+
+#[test]
+fn validate_jwt_secret_and_profiling_and_webauthn_happy_paths() {
+    validate_jwt_secret(&"a".repeat(32), true).expect("strict jwt ok");
+    validate_profiling_endpoint("https://collector.example.com/ingest").expect("https");
+    validate_profiling_endpoint("http://collector.example.com/ingest").expect("http");
+    let no_host = validate_profiling_endpoint("https://").expect_err("empty host");
+    assert!(no_host.contains("valid URL") || no_host.contains("host"));
+    validate_webauthn_rp_id("localhost", false).expect("dev localhost");
+    validate_webauthn_rp_id("login.example.com", true).expect("prod rp id");
+    let ipv6 = validate_webauthn_rp_id("::1", true).expect_err("ipv6 loopback");
+    assert!(ipv6.contains("loopback"));
+}

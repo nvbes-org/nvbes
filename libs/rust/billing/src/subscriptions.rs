@@ -271,4 +271,40 @@ mod tests {
         assert_eq!(change.effective_at, now);
         assert_eq!(change.proration_amount_minor, 0);
     }
+
+    #[test]
+    fn prorated_upgrade_returns_zero_for_non_upgrade_inputs() {
+        assert_eq!(prorated_upgrade_amount(2_000, 1_000, 10, 30), 0);
+        assert_eq!(prorated_upgrade_amount(1_000, 2_000, 30, 30), 0);
+        assert_eq!(prorated_upgrade_amount(1_000, 2_000, 10, 0), 0);
+        assert_eq!(prorated_upgrade_amount(1_000, 2_000, 10, -5), 0);
+    }
+
+    #[test]
+    fn cancel_at_period_end_requires_canceled_status_before_period_end() {
+        let period = SubscriptionPeriod {
+            starts_at: DateTime::from_timestamp(1_735_689_600, 0).unwrap(),
+            ends_at: DateTime::from_timestamp(1_738_368_000, 0).unwrap(),
+        };
+        let during = DateTime::from_timestamp(1_736_000_000, 0).unwrap();
+        let after = DateTime::from_timestamp(1_738_368_001, 0).unwrap();
+        assert!(!cancel_at_period_end_keeps_access(
+            SubscriptionStatus::Active,
+            during,
+            &period
+        ));
+        assert!(!cancel_at_period_end_keeps_access(
+            SubscriptionStatus::Canceled,
+            after,
+            &period
+        ));
+    }
+
+    #[test]
+    fn monthly_period_handles_december_rollover() {
+        let december = DateTime::from_timestamp(1_733_011_200, 0).unwrap(); // 2024-12-01 UTC
+        assert_eq!(december.month(), 12);
+        let period = next_period(december, SubscriptionInterval::Monthly);
+        assert_eq!(period.ends_at, december + Duration::days(31));
+    }
 }

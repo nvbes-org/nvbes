@@ -15,6 +15,15 @@ fn webhook_verifier_rejects_an_empty_ca_bundle() {
         })
         .is_err()
     );
+    assert!(
+        WebhookVerifier::new_allowing_cleartext(&WebhookTrustConfig {
+            topic_arn: "arn:scw:sns:fr-par:test:topic".to_string(),
+            ca_bundle_pem: Vec::new(),
+            signing_certificate_host: "messaging.s3.fr-par.scw.cloud".to_string(),
+            confirmation_host: "sns.mnq.fr-par.scaleway.com".to_string(),
+        })
+        .is_err()
+    );
 }
 
 #[test]

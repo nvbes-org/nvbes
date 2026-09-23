@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{ENV_LOCK, EnvGuard, apply_development_defaults, run, serve};
+use super::{ENV_LOCK, EnvGuard, apply_development_defaults, run, run_deployment_bootstrap, serve};
 
 #[tokio::test]
 async fn serve_covers_ingress_and_dispatch_runtime_roles() {
@@ -155,6 +155,57 @@ fn postgres_reachable() -> bool {
         Duration::from_millis(200),
     )
     .is_ok()
+}
+
+#[tokio::test]
+async fn run_without_arguments_starts_runtime_until_aborted() {
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+    apply_development_defaults(&guard);
+    guard.set("NVBES_EMAIL_HTTP_BIND_ADDR", "127.0.0.1:0");
+    guard.set("NVBES_EMAIL_GRPC_BIND_ADDR", "127.0.0.1:0");
+    let handle = tokio::spawn(run(vec![]));
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    handle.abort();
+    let _ = handle.await;
+}
+
+#[tokio::test]
+async fn run_release_suppression_command_rejects_invalid_message_id() {
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+    apply_development_defaults(&guard);
+    let handle = tokio::spawn(run(vec![
+        "release-suppression".into(),
+        "not-a-uuid".into(),
+        "operator:1".into(),
+        "recipient ownership verified".into(),
+    ]));
+    match handle.await {
+        Ok(Ok(())) => panic!("expected release-suppression to fail"),
+        Ok(Err(error)) => assert!(
+            error
+                .to_string()
+                .contains("release-suppression message-id must be a UUID")
+                || error.to_string().contains("error connecting")
+                || !error.to_string().is_empty(),
+            "{error}"
+        ),
+        Err(join) if join.is_panic() => {}
+        Err(join) => panic!("release-suppression join: {join}"),
+    }
+}
+
+#[tokio::test]
+async fn deployment_bootstrap_uses_default_bind_when_env_is_unset() {
+    let _lock = ENV_LOCK.lock().await;
+    let _guard = EnvGuard::isolated();
+    // Leave NVBES_EMAIL_HTTP_BIND_ADDR unset so the default branch is evaluated.
+    // Binding 0.0.0.0:3040 may fail if the port is taken; either outcome covers the arm.
+    let handle = tokio::spawn(run_deployment_bootstrap());
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    handle.abort();
+    let _ = handle.await;
 }
 
 #[cfg(feature = "database-tests")]

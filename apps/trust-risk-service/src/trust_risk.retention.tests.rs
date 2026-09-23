@@ -13,6 +13,56 @@ fn retention_classes_remain_independent() {
     assert!(policy.evaluations_days < policy.audit_days);
 }
 
+#[tokio::test]
+async fn erase_subject_rejects_each_invalid_input_arm_without_database() {
+    use super::{ErasureError, erase_subject};
+
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://localhost/nvbes_trust_risk_unused")
+        .expect("lazy pool");
+    let retention = RetentionConfig {
+        signals_days: 30,
+        evaluations_days: 400,
+        labels_days: 400,
+        reviews_days: 400,
+        audit_days: 730,
+    };
+    let cases = [
+        (
+            0_i16,
+            "nvbes.identity",
+            "principal:enough",
+            "operator-ada",
+            "valid reason",
+        ),
+        (1, "ab", "principal:enough", "operator-ada", "valid reason"),
+        (1, "nvbes.identity", "short", "operator-ada", "valid reason"),
+        (
+            1,
+            "nvbes.identity",
+            "principal:enough",
+            "ab",
+            "valid reason",
+        ),
+        (
+            1,
+            "nvbes.identity",
+            "principal:enough",
+            "operator-ada",
+            "  ",
+        ),
+    ];
+    for (kind, namespace, opaque_id, actor, reason) in cases {
+        assert!(
+            matches!(
+                erase_subject(&pool, kind, namespace, opaque_id, actor, reason, retention).await,
+                Err(ErasureError::InvalidInput)
+            ),
+            "expected InvalidInput for kind={kind} ns={namespace}"
+        );
+    }
+}
+
 #[cfg(feature = "database-tests")]
 mod database {
     use sha2::{Digest, Sha256};
@@ -285,6 +335,19 @@ mod database {
         assert_eq!(result.reviews, 1);
         assert_eq!(result.evaluations, 1);
         assert_eq!(result.audit, 1);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn retention_run_exits_when_shutdown_flag_is_set(pool: sqlx::PgPool) {
+        use tokio::sync::watch;
+
+        use super::super::run;
+
+        let state = crate::grpc_test_support::state(pool);
+        let (tx, rx) = watch::channel(false);
+        let handle = tokio::spawn(run(state, rx));
+        tx.send(true).expect("signal shutdown");
+        handle.await.expect("retention task joins");
     }
 
     #[sqlx::test(migrations = "./migrations")]

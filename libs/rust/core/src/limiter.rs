@@ -174,6 +174,7 @@ pub async fn check_rate_limit_rules(
 mod unit_tests {
     use super::*;
     use axum::http::HeaderMap;
+    use std::time::Duration;
 
     #[test]
     fn rate_limit_info_appends_standard_headers() {
@@ -188,6 +189,32 @@ mod unit_tests {
         assert_eq!(headers.get("ratelimit-limit").unwrap(), "100");
         assert_eq!(headers.get("ratelimit-remaining").unwrap(), "99");
         assert_eq!(headers.get("ratelimit-reset").unwrap(), "60");
+    }
+
+    #[tokio::test]
+    async fn check_rejects_invalid_policy_before_touching_storage() {
+        let db = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@127.0.0.1:1/unused")
+            .expect("lazy pool");
+        let limiter = RateLimiter::new(db.clone());
+
+        let cases = [
+            (0usize, Duration::from_secs(60), "action"),
+            (1usize, Duration::from_secs(0), "action"),
+            (1usize, Duration::from_secs(60), ""),
+            (1usize, Duration::from_secs(60), &"a".repeat(256)),
+        ];
+        for (max_hits, window, action) in cases {
+            let err = limiter
+                .check(action, "key", max_hits, window)
+                .await
+                .expect_err("invalid policy");
+            assert_eq!(err.code, "rate_limiter_config");
+        }
+
+        check_rate_limit_rules(&db, "noop", &[])
+            .await
+            .expect("empty rules");
     }
 }
 

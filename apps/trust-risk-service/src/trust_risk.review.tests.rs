@@ -231,4 +231,45 @@ mod database {
         assert_eq!(resolved.state, ReviewState::Resolved);
         assert_eq!(resolved.assigned_to.as_deref(), Some("operator-ada"));
     }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn transition_rejects_corrupt_persisted_state(pool: sqlx::PgPool) {
+        let evaluation_id = seed_evaluation(&pool).await;
+        let case_id = Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO trust_risk_review_cases (id, evaluation_id, state, expires_at)
+            VALUES ($1, $2, 'open', clock_timestamp() + INTERVAL '400 days')
+            "#,
+        )
+        .bind(case_id)
+        .bind(evaluation_id)
+        .execute(&pool)
+        .await
+        .expect("review");
+        sqlx::query(
+            "ALTER TABLE trust_risk_review_cases DROP CONSTRAINT IF EXISTS trust_risk_review_cases_state_check",
+        )
+        .execute(&pool)
+        .await
+        .expect("drop check");
+        sqlx::query("UPDATE trust_risk_review_cases SET state = 'corrupt' WHERE id = $1")
+            .bind(case_id)
+            .execute(&pool)
+            .await
+            .expect("corrupt");
+
+        assert!(matches!(
+            transition(
+                &pool,
+                case_id,
+                ReviewState::InReview,
+                None,
+                "operator-ada",
+                "start investigation",
+            )
+            .await,
+            Err(ReviewError::CorruptState)
+        ));
+    }
 }

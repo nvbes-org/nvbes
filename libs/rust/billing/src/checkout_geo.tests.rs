@@ -440,3 +440,55 @@ async fn resolve_checkout_geo_ignores_invalid_ip_intelligence_specs_without_trus
         Some("NO")
     );
 }
+
+#[sqlx::test]
+async fn resolve_checkout_geo_fetches_intelligence_for_public_ip_with_trusted_header(pool: PgPool) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+    let config = AppConfig {
+        maxmind_geolite_web_enabled: false,
+        ip_intelligence_provider_specs: vec!["fixture|https://127.0.0.1:1/ip/{ip}".to_string()],
+        ip_intelligence_timeout_secs: 1,
+        ..AppConfig::default()
+    };
+    // 8.8.8.8 is a public address (not documentation/special), so intelligence is attempted.
+    let resolution = resolve_checkout_geo(&mut tx, &config, Some("8.8.8.8"), Some("US"), None)
+        .await
+        .expect("public ip intelligence failure is ignored");
+    tx.commit().await.unwrap();
+
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("US")
+    );
+}
+
+#[sqlx::test]
+async fn resolve_checkout_geo_attempts_maxmind_for_public_ip_when_enabled(pool: PgPool) {
+    let mut tx = pool.begin().await.unwrap();
+    seed_geo_schema(&mut tx).await;
+    let config = AppConfig {
+        maxmind_geolite_web_enabled: true,
+        maxmind_account_id: Some("account".to_string()),
+        maxmind_license_key: Some("license".to_string()),
+        maxmind_geolite_eula_accepted: true,
+        maxmind_web_timeout_secs: 1,
+        ip_intelligence_provider_specs: Vec::new(),
+        ..AppConfig::default()
+    };
+    let resolution = resolve_checkout_geo(&mut tx, &config, Some("1.1.1.1"), None, Some("AU"))
+        .await
+        .expect("maxmind network failure is ignored for public ip");
+    tx.commit().await.unwrap();
+
+    assert_eq!(
+        resolution
+            .location
+            .as_ref()
+            .map(|location| location.country_code.as_str()),
+        Some("AU")
+    );
+}

@@ -313,6 +313,44 @@ async fn serve_stops_background_workers_without_process_signals() {
 }
 
 #[tokio::test]
+async fn serve_without_local_dispatcher_shuts_down_cleanly() {
+    if !postgres_reachable() {
+        eprintln!("skipping scaleway serve shutdown smoke: postgres unavailable");
+        return;
+    }
+
+    let _lock = ENV_LOCK.lock().await;
+    let guard = EnvGuard::isolated();
+    apply_development_defaults(&guard);
+
+    let mut config = crate::config::BillingWorkerConfig::from_env().expect("config");
+    config.dispatch_mode =
+        crate::config::DispatchMode::Scaleway(crate::config::DispatchQueueConfig {
+            endpoint: "https://sqs.example.test".into(),
+            queue_url: "https://sqs.example.test/billing".into(),
+            region: "fr-par".into(),
+            access_key: "SCWTEST".into(),
+            secret_key: "secret".into(),
+        });
+    let db = crate::database::connect(&config.database_url, 2)
+        .await
+        .expect("connect");
+    let state = crate::state::BillingWorkerState::new(config, db.clone())
+        .await
+        .expect("state");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
+    let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
+    let serve = tokio::spawn(super::serve(state, db, listener, async move {
+        let _ = stop_rx.await;
+    }));
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    let _ = stop_tx.send(());
+    serve.await.expect("join").expect("serve");
+}
+
+#[tokio::test]
 async fn run_without_arguments_starts_runtime_until_stopped() {
     if !postgres_reachable() {
         eprintln!("skipping serve smoke: postgres unavailable");

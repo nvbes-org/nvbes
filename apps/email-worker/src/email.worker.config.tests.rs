@@ -2,7 +2,7 @@ use std::{ffi::OsString, path::PathBuf, sync::Mutex};
 
 use super::{
     DEVELOPMENT_DATA_KEY, DEVELOPMENT_HMAC_KEY, EmailWorkerConfig, database_url_from_env,
-    development_value, key, local_smtp, producers, validate_shared_bind_address,
+    development_value, key, local_smtp, producers, queue, validate_shared_bind_address,
 };
 
 static ENVIRONMENT_LOCK: Mutex<()> = Mutex::new(());
@@ -180,7 +180,9 @@ fn smtp_is_local_only_and_supports_an_unauthenticated_mail_sink() {
 fn producer_parser_rejects_malformed_credentials() {
     assert!(producers::parse("missing-separator", "test").is_err());
     assert!(producers::parse("invalid producer=01234567890123456789012345678901", "test").is_err());
+    assert!(producers::parse("=01234567890123456789012345678901", "test").is_err());
     assert!(producers::parse("identity-service=short", "test").is_err());
+    assert!(producers::parse(&format!("identity-service={}", "é".repeat(32)), "test").is_err());
     assert!(
         producers::parse(
             "identity-service=01234567890123456789012345678901,identity-service=abcdefghijklmnopqrstuvwxyzABCDEF",
@@ -193,6 +195,37 @@ fn producer_parser_rejects_malformed_credentials() {
     names.sort_unstable();
     assert_eq!(names, ["billing-service", "identity-service"]);
     assert!(producers::from_environment(None, "production").is_err());
+}
+
+#[test]
+fn queue_configuration_requires_https_when_explicitly_enabled() {
+    let _lock = ENVIRONMENT_LOCK.lock().unwrap();
+    let environment = EnvironmentGuard::isolated();
+
+    assert!(matches!(
+        queue::from_environment("development").unwrap(),
+        crate::config::DispatchMode::InMemory
+    ));
+
+    environment.set("NVBES_EMAIL_QUEUE_URL", "https://sqs.example.test/queue");
+    environment.set("NVBES_EMAIL_QUEUE_ACCESS_KEY", "access");
+    environment.set("NVBES_EMAIL_QUEUE_SECRET_KEY", "secret");
+    environment.set("NVBES_EMAIL_QUEUE_ENDPOINT", "http://sqs.example.test");
+    assert!(
+        queue::from_environment("development")
+            .unwrap_err()
+            .to_string()
+            .contains("must use HTTPS")
+    );
+
+    environment.set(
+        "NVBES_EMAIL_QUEUE_ENDPOINT",
+        "https://sqs.mnq.fr-par.scaleway.com",
+    );
+    assert!(matches!(
+        queue::from_environment("development").unwrap(),
+        crate::config::DispatchMode::Scaleway(_)
+    ));
 }
 
 #[test]
@@ -283,7 +316,63 @@ fn environment_configuration_covers_supported_providers_and_guardrails() {
     let production = EmailWorkerConfig::from_env().unwrap();
     assert_eq!(production.provider.label(), "scaleway");
     assert_eq!(production.webhook.unwrap().ca_bundle_pem, b"test-ca");
-    std::fs::remove_file(ca_path).unwrap();
+
+    let empty_ca = std::env::temp_dir().join(format!(
+        "nvbes-email-worker-empty-ca-{}.pem",
+        uuid::Uuid::new_v4()
+    ));
+    std::fs::write(&empty_ca, b"").unwrap();
+    environment.set("NVBES_EMAIL_SNS_CA_BUNDLE_PATH", &empty_ca);
+    assert!(
+        EmailWorkerConfig::from_env()
+            .unwrap_err()
+            .to_string()
+            .contains("SNS CA bundle is empty")
+    );
+    environment.remove("NVBES_EMAIL_SNS_CA_BUNDLE_PATH");
+    environment.set("NVBES_EMAIL_SNS_CA_BUNDLE_PEM", "pem-bytes");
+    let pem_config = EmailWorkerConfig::from_env().unwrap();
+    assert_eq!(pem_config.webhook.unwrap().ca_bundle_pem, b"pem-bytes");
+    environment.set("NVBES_EMAIL_SNS_CA_BUNDLE_PATH", &ca_path);
+    assert!(
+        EmailWorkerConfig::from_env()
+            .unwrap_err()
+            .to_string()
+            .contains("configure only one")
+    );
+    environment.remove("NVBES_EMAIL_SNS_CA_BUNDLE_PATH");
+    environment.remove("NVBES_EMAIL_SNS_CA_BUNDLE_PEM");
+    environment.set("NVBES_EMAIL_SNS_CA_BUNDLE_PATH", &ca_path);
+
+    environment.set("NVBES_EMAIL_RUNTIME_ROLE", "invalid");
+    assert!(
+        EmailWorkerConfig::from_env()
+            .unwrap_err()
+            .to_string()
+            .contains("must be ingress or dispatch")
+    );
+    environment.remove("NVBES_EMAIL_RUNTIME_ROLE");
+    assert!(
+        EmailWorkerConfig::from_env()
+            .unwrap_err()
+            .to_string()
+            .contains("RUNTIME_ROLE is required")
+    );
+    environment.set("NVBES_EMAIL_RUNTIME_ROLE", "ingress");
+    environment.set("PORT", "3099");
+    environment.remove("NVBES_EMAIL_HTTP_BIND_ADDR");
+    environment.remove("NVBES_EMAIL_GRPC_BIND_ADDR");
+    let port_bound = EmailWorkerConfig::from_env().unwrap();
+    assert_eq!(port_bound.http_bind_addr.port(), 3099);
+
+    environment.set("NVBES_EMAIL_HTTP_BIND_ADDR", "127.0.0.1:3040");
+    environment.set("NVBES_EMAIL_GRPC_BIND_ADDR", "not-a-socket");
+    assert!(EmailWorkerConfig::from_env().is_err());
+    environment.remove("NVBES_EMAIL_GRPC_BIND_ADDR");
+    environment.remove("NVBES_EMAIL_HTTP_BIND_ADDR");
+
+    std::fs::remove_file(&ca_path).unwrap();
+    std::fs::remove_file(&empty_ca).unwrap();
 
     assert!(development_value("production", DEVELOPMENT_DATA_KEY).is_none());
 }

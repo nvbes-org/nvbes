@@ -86,7 +86,12 @@ pub fn random_recovery_code() -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::provisioning_uri;
+    use chrono::{TimeZone, Utc};
+
+    use super::{
+        generate_totp_code, generate_totp_secret, normalize_code, provisioning_uri,
+        random_recovery_code, verify_totp_code,
+    };
 
     #[test]
     fn provisioning_uri_uses_standard_otpauth_totp_shape() {
@@ -98,5 +103,31 @@ mod tests {
         assert!(uri.contains("algorithm=SHA1"));
         assert!(uri.contains("digits=6"));
         assert!(uri.contains("period=30"));
+    }
+
+    #[test]
+    fn totp_round_trip_accepts_window_and_rejects_bad_codes() {
+        let secret = generate_totp_secret();
+        let now = Utc.with_ymd_and_hms(2026, 9, 23, 12, 0, 0).unwrap();
+        let counter = super::current_counter(now);
+        let code = generate_totp_code(&secret, counter);
+        assert_eq!(code.len(), 6);
+        assert_eq!(verify_totp_code(&secret, &code, now, 1), Some(counter));
+        assert_eq!(
+            verify_totp_code(&secret, &format!(" {code} "), now, 1),
+            Some(counter)
+        );
+        assert!(verify_totp_code(&secret, "123", now, 1).is_none());
+        assert!(verify_totp_code(&secret, "000000", now, 1).is_none());
+        assert!(generate_totp_code("!!!", 0).is_empty());
+        assert_eq!(normalize_code("12-34 56"), "123456");
+        assert!(!random_recovery_code().is_empty());
+    }
+
+    #[test]
+    fn verify_totp_skips_negative_candidate_counters() {
+        let secret = "JBSWY3DPEHPK3PXP";
+        let epoch = Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap();
+        assert!(verify_totp_code(secret, "000000", epoch, 2).is_none());
     }
 }

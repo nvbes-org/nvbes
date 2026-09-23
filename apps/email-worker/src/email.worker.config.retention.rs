@@ -40,5 +40,9 @@ mod tests {
         assert!(parse("30", "400").is_ok());
         assert!(parse("91", "400").is_err());
         assert!(parse("30", "29").is_err());
+        assert!(parse("30", "3651").is_err());
+        assert!(parse("abc", "400").is_err());
+        assert!(parse("0", "400").is_err());
+        assert!(parse("-1", "400").is_err());
     }
 }

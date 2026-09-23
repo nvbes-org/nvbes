@@ -240,4 +240,22 @@ mod tests {
         assert!(pdf_text.contains("Team \\(EU\\)"));
         assert!(pdf_text.contains("%%EOF"));
     }
+
+    #[test]
+    fn invoice_document_text_omits_vat_id_when_absent() {
+        let lines = vec![invoice_line("plan", "Team", 1, 3_900, 780)];
+        let document = InvoiceDocument {
+            invoice_number: "NVBES-2026-000002".to_string(),
+            issue_date: "2026-06-21".to_string(),
+            seller_name: "nvbes".to_string(),
+            customer_name: "Acme".to_string(),
+            customer_vat_id: None,
+            totals: calculate_invoice_totals(&lines),
+            lines,
+            currency: "EUR".to_string(),
+        };
+        let text = invoice_document_text(&document);
+        assert!(!text.contains("VAT ID:"));
+        assert!(text.contains("NVBES-2026-000002"));
+    }
 }

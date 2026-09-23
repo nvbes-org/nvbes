@@ -248,4 +248,29 @@ mod tests {
         assert_eq!(kpis.expansion_minor, 0);
         assert_eq!(kpis.contraction_minor, 0);
     }
+
+    #[test]
+    fn churn_ignores_subscriptions_without_previous_mrr() {
+        let kpis = calculate_finance_kpis(
+            &[
+                SubscriptionMetricInput {
+                    tenant_id: "new".to_string(),
+                    current_mrr_minor: 0,
+                    previous_mrr_minor: 0,
+                    was_trial: false,
+                    converted_from_trial: false,
+                },
+                SubscriptionMetricInput {
+                    tenant_id: "growing".to_string(),
+                    current_mrr_minor: 2_000,
+                    previous_mrr_minor: 1_000,
+                    was_trial: false,
+                    converted_from_trial: false,
+                },
+            ],
+            &[],
+        );
+        assert_eq!(kpis.churned_count, 0);
+        assert_eq!(kpis.expansion_minor, 1_000);
+    }
 }

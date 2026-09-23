@@ -164,4 +164,42 @@ mod tests {
 
         assert!(!from_trusted_proxy(&headers));
     }
+
+    #[test]
+    fn trusted_peer_falls_back_to_real_ip_and_peer() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-real-ip", "198.51.100.20".parse().unwrap());
+        let selected = set_trusted_client_ip(
+            &mut headers,
+            Some("10.0.0.5:443".parse().unwrap()),
+            &["10.0.0.0/8".to_string()],
+        );
+        assert_eq!(selected.as_deref(), Some("198.51.100.20"));
+
+        let mut bare = HeaderMap::new();
+        let peer_only = set_trusted_client_ip(
+            &mut bare,
+            Some("10.0.0.5:443".parse().unwrap()),
+            &["10.0.0.0/8".to_string()],
+        );
+        assert_eq!(peer_only.as_deref(), Some("10.0.0.5"));
+        assert!(from_trusted_proxy(&bare));
+    }
+
+    #[test]
+    fn missing_peer_yields_no_client_ip() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "203.0.113.10".parse().unwrap());
+        let selected = set_trusted_client_ip(&mut headers, None, &["10.0.0.0/8".to_string()]);
+        assert!(selected.is_none());
+        assert!(client_ip(&headers).is_none());
+        assert!(!from_trusted_proxy(&headers));
+    }
+
+    #[test]
+    fn client_ip_ignores_blank_trusted_header() {
+        let mut headers = HeaderMap::new();
+        headers.insert(TRUSTED_CLIENT_IP_HEADER, "   ".parse().unwrap());
+        assert!(client_ip(&headers).is_none());
+    }
 }

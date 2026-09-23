@@ -277,3 +277,39 @@ fn mollie_payment_method_tolerates_invalid_expiry_formats() {
     assert_eq!(method.exp_year, None);
     assert_eq!(method.mandate_status, "unknown");
 }
+
+#[test]
+fn mollie_payment_method_keeps_card_label_without_mandate_or_fingerprint() {
+    let payment = payment_from_mollie_response(serde_json::json!({
+        "id": "tr_x",
+        "status": "open",
+        "amount": { "currency": "EUR", "value": "1.00" },
+        "details": {
+            "cardLabel": "Amex",
+            "cardNumber": "12"
+        }
+    }))
+    .expect("payment parses");
+    let method = payment.payment_method.expect("method from card label");
+    assert_eq!(method.brand.as_deref(), Some("amex"));
+    assert!(method.provider_payment_method_id.is_none());
+    assert!(method.last4.is_none());
+    assert!(!method.reusable);
+    assert_eq!(method.mandate_status, "unknown");
+}
+
+#[test]
+fn mollie_payment_method_marks_unpaid_mandate_as_unknown() {
+    let payment = payment_from_mollie_response(serde_json::json!({
+        "id": "tr_x",
+        "status": "authorized",
+        "amount": { "currency": "EUR", "value": "1.00" },
+        "mandateId": "mdt_pending",
+        "details": { "cardLabel": "Visa" }
+    }))
+    .expect("payment parses");
+    let method = payment.payment_method.expect("method");
+    assert!(method.reusable);
+    assert_eq!(method.mandate_status, "unknown");
+    assert_eq!(method.mandate_id.as_deref(), Some("mdt_pending"));
+}

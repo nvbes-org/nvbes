@@ -41,11 +41,13 @@ fn rollup_usage_filters_by_period_and_groups_meters() {
     let end = NaiveDate::from_ymd_opt(2025, 2, 1).unwrap();
     let inside = DateTime::from_timestamp(1_735_689_600, 0).unwrap();
     let outside = DateTime::from_timestamp(1_704_067_200, 0).unwrap();
+    let on_or_after_end = DateTime::from_timestamp(1_738_368_000, 0).unwrap(); // 2025-02-01
     let rollups = rollup_usage(
         &[
             usage_event("a", 5, inside),
             usage_event("b", 3, inside),
             usage_event("c", 99, outside),
+            usage_event("d", 7, on_or_after_end),
         ],
         start,
         end,

@@ -56,6 +56,18 @@ fn build_checkout_session_fields_adds_step_up_when_enforcement_requires_it() {
 }
 
 #[test]
+fn build_checkout_session_fields_skips_3ds_without_step_up_enforcement() {
+    let fraud = [("enforcement_action".to_string(), "monitor".to_string())];
+    let fields = build_checkout_session_fields(checkout_params(&fraud));
+    assert!(
+        !fields
+            .iter()
+            .any(|(key, _)| key == "payment_method_options[card][request_three_d_secure]"),
+        "monitor enforcement should not request 3DS challenge"
+    );
+}
+
+#[test]
 fn stripe_session_from_response_requires_id_and_url() {
     let err = stripe_session_from_response(serde_json::json!({ "url": "https://stripe.test" }))
         .unwrap_err();

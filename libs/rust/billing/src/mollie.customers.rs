@@ -82,4 +82,29 @@ mod tests {
         assert_eq!(customer.provider, ProviderCode::Mollie);
         assert_eq!(customer.provider_customer_id, "cst_123");
     }
+
+    #[test]
+    fn mollie_customer_payload_rejects_blank_tenant_and_defaults_name() {
+        let err = build_mollie_customer_payload(&ProviderCustomerInput {
+            tenant_id: "   ".to_string(),
+            email: None,
+            name: None,
+        })
+        .expect_err("blank tenant");
+        assert!(matches!(
+            err,
+            MollieProviderError::InvalidRequest {
+                code: "invalid_mollie_customer",
+                ..
+            }
+        ));
+
+        let payload = build_mollie_customer_payload(&ProviderCustomerInput {
+            tenant_id: "tenant_2".to_string(),
+            email: None,
+            name: None,
+        })
+        .expect("payload builds");
+        assert_eq!(payload["name"], "tenant_2");
+    }
 }

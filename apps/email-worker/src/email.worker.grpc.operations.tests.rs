@@ -166,12 +166,83 @@ async fn operations_api_rejects_wrong_callers_and_invalid_audit_context(pool: sq
         Code::PermissionDenied
     );
 
+    let mut missing_context = test_support::caller("backoffice-service");
+    missing_context.request_context = None;
+    assert_eq!(
+        service
+            .get_operations_snapshot(authorized(GetEmailOperationsSnapshotRequest {
+                caller: Some(missing_context),
+            }))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::PermissionDenied
+    );
+
     let mut invalid_operator = test_support::operator();
     invalid_operator.actor = "invalid".to_string();
     assert_eq!(
         service
             .apply_suppression(authorized(ApplyEmailSuppressionRequest {
                 operator: Some(invalid_operator),
+                email: "operator@example.com".to_string(),
+                scope: "all".to_string(),
+            }))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::InvalidArgument
+    );
+
+    let mut short_reason = test_support::operator();
+    short_reason.reason = "too-short".to_string();
+    assert_eq!(
+        service
+            .apply_suppression(authorized(ApplyEmailSuppressionRequest {
+                operator: Some(short_reason),
+                email: "operator@example.com".to_string(),
+                scope: "all".to_string(),
+            }))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::InvalidArgument
+    );
+
+    let mut newline_reason = test_support::operator();
+    newline_reason.reason = "ticket EMAIL-123\napproved".to_string();
+    assert_eq!(
+        service
+            .apply_suppression(authorized(ApplyEmailSuppressionRequest {
+                operator: Some(newline_reason),
+                email: "operator@example.com".to_string(),
+                scope: "all".to_string(),
+            }))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::InvalidArgument
+    );
+
+    let mut long_reason = test_support::operator();
+    long_reason.reason = "r".repeat(501);
+    assert_eq!(
+        service
+            .apply_suppression(authorized(ApplyEmailSuppressionRequest {
+                operator: Some(long_reason),
+                email: "operator@example.com".to_string(),
+                scope: "all".to_string(),
+            }))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::InvalidArgument
+    );
+
+    assert_eq!(
+        service
+            .apply_suppression(authorized(ApplyEmailSuppressionRequest {
+                operator: None,
                 email: "operator@example.com".to_string(),
                 scope: "all".to_string(),
             }))

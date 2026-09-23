@@ -90,6 +90,48 @@ mod database {
     }
 
     #[sqlx::test(migrations = "./migrations")]
+    async fn submit_labels_rejects_producers_without_label_permission(pool: sqlx::PgPool) {
+        let evaluation_id = seed_evaluation(&pool).await;
+        let mut config = grpc_test_support::config("postgres://trust-risk/test");
+        config
+            .producers
+            .get_mut("billing-checkout-fixture")
+            .expect("producer")
+            .can_label = false;
+        let state = crate::app::TrustRiskState::new(config, pool);
+        let service = LabelService::new(state);
+        let mut wire = label_wire(evaluation_id, Uuid::new_v4());
+        wire.source_class = pb::LabelSourceClass::VerifiedProduct.into();
+        wire.actor = None;
+        let mut request = Request::new(pb::SubmitLabelsRequest { labels: vec![wire] });
+        *request.metadata_mut() = grpc_test_support::producer_metadata();
+        let denied = service
+            .submit_labels(request)
+            .await
+            .expect_err("can_label false");
+        assert_eq!(denied.code(), Code::PermissionDenied);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn submit_labels_rejects_oversized_batches(pool: sqlx::PgPool) {
+        let service = LabelService::new(grpc_test_support::state(pool));
+        let labels = (0..129)
+            .map(|index| {
+                let mut wire = label_wire(Uuid::new_v4(), Uuid::new_v4());
+                wire.source_id = format!("review:overflow-{index}");
+                wire
+            })
+            .collect();
+        let mut request = Request::new(pb::SubmitLabelsRequest { labels });
+        *request.metadata_mut() = grpc_test_support::operator_metadata();
+        let overflow = service
+            .submit_labels(request)
+            .await
+            .expect_err("batch too large");
+        assert_eq!(overflow.code(), Code::InvalidArgument);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
     async fn submit_labels_accepts_verified_product_labels(pool: sqlx::PgPool) {
         let evaluation_id = seed_evaluation(&pool).await;
         let service = LabelService::new(grpc_test_support::state(pool));

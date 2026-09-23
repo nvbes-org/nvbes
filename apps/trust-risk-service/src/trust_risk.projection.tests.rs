@@ -111,6 +111,24 @@ proptest! {
 }
 
 #[test]
+fn derive_features_skips_future_and_stale_events() {
+    let watermark = Utc.timestamp_opt(1_787_590_000, 0).unwrap();
+    let future = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d401",
+        watermark.timestamp() + 60,
+        90,
+    );
+    let stale = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d402",
+        watermark.timestamp() - 90_000,
+        90,
+    );
+    let features = derive_features([future, stale].iter().collect::<Vec<_>>(), watermark);
+    assert_eq!(features["events_1h"], 0.0);
+    assert_eq!(features["events_24h"], 0.0);
+}
+
+#[test]
 fn derive_features_tracks_network_automation_and_tenant_subjects() {
     let watermark = Utc.timestamp_opt(1_787_590_000, 0).unwrap();
     let tenant_signal = RiskSignal::try_from(pb::RiskSignal {

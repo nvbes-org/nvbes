@@ -26,7 +26,8 @@
     "main_tests::deployment_bootstrap_serves_live_health_check": "TCP bind/connect for deployment bootstrap is blocked in micro-test sandbox",
     "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
     "main_tests::serve_stops_background_workers_without_process_signals": "TCP bind for serve shutdown smoke is blocked in micro-test sandbox",
-    "main_tests::runtime::": "PostgreSQL/TCP runtime paths require coverage lane or network syscalls blocked in micro-test sandbox"
+    "main_tests::runtime::": "PostgreSQL/TCP runtime paths require coverage lane or network syscalls blocked in micro-test sandbox",
+    "queue_trigger::tests::queue_trigger_reports_unavailable_": "Lazy pool connect attempt requires network syscalls blocked in micro-test sandbox"
   },
   "nvbes-observability": {
     "error_reporting::tests::init_with_dsn_enables_capture_path": "Sentry client init requires network syscalls blocked in micro-test sandbox",
@@ -85,6 +86,7 @@
   "nvbes-billing-worker": {
     "database::unit_tests::": "PostgreSQL connect/migrate requires network syscalls blocked in micro-test sandbox",
     "dispatcher::tests::": "PostgreSQL-backed dispatch paths require DATABASE_URL (coverage lane)",
+    "health::tests::readiness_reports_ready_when_database_is_available": "PostgreSQL readiness probe requires network syscalls blocked in micro-test sandbox",
     "state::tests::state_with_unreachable_email_endpoint_omits_email_client": "gRPC connect attempt requires network syscalls blocked in micro-test sandbox",
     "synthetic::tests::": "PostgreSQL synthetic smoke requires network syscalls blocked in micro-test sandbox",
     "main_tests::deployment_bootstrap_serves_live_health_check": "TCP bind/connect for deployment bootstrap is blocked in micro-test sandbox",
@@ -92,6 +94,7 @@
     "main_tests::run_without_arguments_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
     "main_tests::run_serve_alias_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
     "main_tests::serve_stops_background_workers_without_process_signals": "TCP bind for serve shutdown smoke is blocked in micro-test sandbox",
+    "main_tests::serve_without_local_dispatcher_shuts_down_cleanly": "TCP bind for serve shutdown smoke is blocked in micro-test sandbox",
     "main_tests::run_migrate_applies_schema_when_database_is_available": "PostgreSQL migrate requires network syscalls blocked in micro-test sandbox",
     "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
     "main_tests::run_synthetic_smoke_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",

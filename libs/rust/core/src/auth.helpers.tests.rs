@@ -1,10 +1,13 @@
 use super::birthdate::{date_in_region_at, validate_birthdate_on};
 use super::{
-    dummy_verify_password, hash_password, hash_password_with_pepper, validate_password,
+    Aal, dummy_verify_password, hash_password, hash_password_with_pepper, max_aal, parse_birthdate,
+    step_up_required_error, today_in_region, validate_birthdate, validate_password,
     verify_and_check_rehash, verify_password, verify_password_with_pepper,
+    workspace_switch_step_up_required_error,
 };
 use axum::http::StatusCode;
 use chrono::{NaiveDate, TimeZone, Utc};
+use std::str::FromStr;
 
 fn today() -> NaiveDate {
     NaiveDate::from_ymd_opt(2026, 9, 12).unwrap()
@@ -237,4 +240,105 @@ fn region_utc_unknown_falls_back_to_utc() {
         date_in_region_at(Some("XX"), instant),
         date_in_region_at(None, instant)
     );
+}
+
+#[test]
+fn aal_parses_and_orders_levels() {
+    assert_eq!(Aal::from_str("aal1").unwrap(), Aal::Aal1);
+    assert_eq!(Aal::from_str("").unwrap(), Aal::Aal1);
+    assert_eq!(Aal::from_str("aal2").unwrap(), Aal::Aal2);
+    assert_eq!(Aal::from_str("aal3").unwrap(), Aal::Aal3);
+    assert!(Aal::from_str("aal9").is_err());
+    assert_eq!(Aal::Aal1.as_str(), "aal1");
+    assert_eq!(Aal::Aal2.as_str(), "aal2");
+    assert_eq!(Aal::Aal3.as_str(), "aal3");
+    assert_eq!(max_aal(Aal::Aal1, Aal::Aal3), Aal::Aal3);
+    assert_eq!(max_aal(Aal::Aal3, Aal::Aal2), Aal::Aal3);
+}
+
+#[test]
+fn step_up_errors_use_unauthorized_contract() {
+    let err = step_up_required_error();
+    assert_eq!(err.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(err.code, "step_up_required");
+    let workspace = workspace_switch_step_up_required_error();
+    assert_eq!(workspace.status, StatusCode::UNAUTHORIZED);
+    assert!(workspace.message.contains("switching workspaces"));
+}
+
+#[test]
+fn parse_birthdate_covers_optional_and_invalid_shapes() {
+    assert_eq!(parse_birthdate(None).unwrap(), None);
+    assert_eq!(parse_birthdate(Some("   ")).unwrap(), None);
+    assert_eq!(
+        parse_birthdate(Some("2000-01-02T15:04:05Z"))
+            .unwrap()
+            .unwrap(),
+        NaiveDate::from_ymd_opt(2000, 1, 2).unwrap()
+    );
+    let too_long = parse_birthdate(Some(&"2".repeat(65))).expect_err("too long");
+    assert_eq!(too_long.code, "validation_failed");
+    let bad_chars = parse_birthdate(Some("2000-01-0\u{0001}")).expect_err("control");
+    assert_eq!(bad_chars.code, "validation_failed");
+    let bad_format = parse_birthdate(Some("02-01-2000")).expect_err("format");
+    assert_eq!(bad_format.code, "validation_failed");
+}
+
+#[test]
+fn birthdate_rejects_age_above_maximum() {
+    let ancient = NaiveDate::from_ymd_opt(1900, 1, 1).unwrap();
+    let today = NaiveDate::from_ymd_opt(2026, 9, 12).unwrap();
+    let err = validate_birthdate_on(ancient, today).expect_err("too old");
+    assert_eq!(err.code, "validation_failed");
+    assert!(err.message.contains("120"));
+}
+
+#[test]
+fn negative_region_offset_moves_local_date_backward() {
+    let instant = Utc.with_ymd_and_hms(2026, 9, 13, 2, 0, 0).unwrap();
+    assert_eq!(
+        date_in_region_at(Some("US"), instant),
+        NaiveDate::from_ymd_opt(2026, 9, 12).unwrap()
+    );
+    assert_eq!(
+        date_in_region_at(Some("MX"), instant),
+        NaiveDate::from_ymd_opt(2026, 9, 12).unwrap()
+    );
+}
+
+#[test]
+fn public_birthdate_helpers_delegate_to_region_calendar() {
+    let birthdate = NaiveDate::from_ymd_opt(2000, 1, 1).unwrap();
+    assert!(validate_birthdate(birthdate, Some("FR")).is_ok());
+    let _ = today_in_region(Some("FR"));
+}
+
+#[test]
+fn weak_argon2_version_requires_rehash() {
+    use argon2::password_hash::PasswordHasher;
+    use argon2::{Algorithm, Argon2, Params, Version};
+
+    let password = "SuperSecretPassword123!";
+    let params = Params::new(65536, 3, 4, None).expect("params");
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x10, params);
+    let legacy_version_hash = argon2
+        .hash_password(password.as_bytes())
+        .expect("legacy version hash")
+        .to_string();
+
+    let (valid, needs_rehash) =
+        verify_and_check_rehash(password, &legacy_version_hash, None).expect("verify");
+    assert!(valid);
+    assert!(needs_rehash, "non-v19 hashes must request rehash");
+}
+
+#[test]
+fn peppered_verify_rejects_wrong_password_without_legacy_match() {
+    let password = "SuperSecretPassword123!";
+    let pepper = b"kms_secret_pepper_key_2026";
+    let hash = hash_password_with_pepper(password, Some(pepper)).expect("hash");
+    let (valid, needs_rehash) =
+        verify_and_check_rehash("wrong-password", &hash, Some(pepper)).expect("verify");
+    assert!(!valid);
+    assert!(!needs_rehash);
 }

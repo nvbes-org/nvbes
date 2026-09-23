@@ -44,6 +44,29 @@ fn canonical_fingerprint_is_stable() {
 
 #[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
+async fn persistence_rejects_oversized_wire_payload(pool: sqlx::PgPool) {
+    let mut oversized = wire();
+    oversized.attributes.insert(
+        "blob".to_string(),
+        pb::AttributeValue {
+            value: Some(pb::attribute_value::Value::OpaqueValue(vec![
+                9_u8;
+                200 * 1024
+            ])),
+        },
+    );
+    // Bypass domain validation: keep a valid RiskSignal while bloating the wire payload.
+    let domain = RiskSignal::try_from(wire()).unwrap();
+    assert!(matches!(
+        persist_signal(&pool, &oversized, &domain, 30)
+            .await
+            .unwrap_err(),
+        PersistSignalError::PayloadTooLarge
+    ));
+}
+
+#[cfg(feature = "database-tests")]
+#[sqlx::test(migrations = "./migrations")]
 async fn persistence_is_idempotent_and_conflict_safe(pool: sqlx::PgPool) {
     let first_wire = wire();
     let first = RiskSignal::try_from(first_wire.clone()).unwrap();

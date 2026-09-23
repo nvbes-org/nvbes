@@ -165,6 +165,27 @@ mod tests {
     }
 
     #[test]
+    fn resolve_billing_redirect_url_accepts_staging_origin_and_rejects_scheme_mismatch() {
+        let url = resolve_billing_redirect_url(
+            Some("https://staging.example.com/billing/success"),
+            "https://app.example.com/billing/success",
+            "https://app.example.com",
+            Some("https://staging.example.com"),
+        )
+        .expect("staging origin should be accepted");
+        assert_eq!(url, "https://staging.example.com/billing/success");
+
+        let err = resolve_billing_redirect_url(
+            Some("http://app.example.com/billing/success"),
+            "https://app.example.com/billing/success",
+            "https://app.example.com",
+            None,
+        )
+        .expect_err("scheme mismatch should be rejected");
+        assert_eq!(err, BillingRedirectUrlError::InvalidOrigin);
+    }
+
+    #[test]
     fn subscription_status_requires_lock_blocks_degraded_states() {
         assert!(subscription_status_requires_lock("past_due"));
         assert!(subscription_status_requires_lock("canceled"));

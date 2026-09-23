@@ -76,3 +76,51 @@ async fn readiness_reports_not_ready_when_database_pool_is_closed() {
 
     assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
 }
+
+#[tokio::test]
+async fn readiness_reports_ready_when_database_is_available() {
+    if !postgres_reachable() {
+        return;
+    }
+    let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
+    });
+    let db = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&url)
+        .await
+        .expect("postgres");
+    let config = BillingWorkerConfig {
+        environment: "development".into(),
+        database_url: url,
+        http_bind_addr: "127.0.0.1:8080".parse().unwrap(),
+        app_url: "http://localhost:3000".into(),
+        email_grpc_endpoint: None,
+        email_token: None,
+        billing_grpc_endpoint: None,
+        billing_grpc_token: None,
+        metrics_token: None,
+        dispatch_mode: crate::config::DispatchMode::InMemory,
+        otlp_endpoint: None,
+        otlp_authorization_header: None,
+    };
+    let state = BillingWorkerState::new(config, db).await.expect("state");
+    let response = router(state)
+        .oneshot(
+            Request::builder()
+                .uri("/health/ready")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+fn postgres_reachable() -> bool {
+    std::net::TcpStream::connect_timeout(
+        &"127.0.0.1:5432".parse().unwrap(),
+        std::time::Duration::from_millis(200),
+    )
+    .is_ok()
+}

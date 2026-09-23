@@ -333,9 +333,50 @@ fn rejects_empty_policy_lists_and_bad_identifiers() {
         parse_producers("[]").unwrap_err(),
         ConfigError::Invalid("policy list")
     );
+    assert_eq!(
+        parse_operators("[]").unwrap_err(),
+        ConfigError::Invalid("policy list")
+    );
     let bad_id = format!(r#"[{{"producer":"ab","token":"{TOKEN}","signal_prefixes":[]}}]"#);
     assert_eq!(
         parse_producers(&bad_id).unwrap_err(),
         ConfigError::Invalid("policy identifier")
+    );
+    let duplicate_ops = format!(
+        r#"[{{"actor":"operator:ada","token":"{TOKEN}","permissions":[]}},{{"actor":"operator:ada","token":"{TOKEN}","permissions":[]}}]"#
+    );
+    assert_eq!(
+        parse_operators(&duplicate_ops).unwrap_err(),
+        ConfigError::DuplicatePolicy
+    );
+    let newline_token =
+        format!(r#"[{{"producer":"identity-service","token":"{TOKEN}\n","signal_prefixes":[]}}]"#);
+    assert_eq!(
+        parse_producers(&newline_token).unwrap_err(),
+        ConfigError::WeakToken
+    );
+}
+
+#[test]
+fn from_env_rejects_weak_metrics_token() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_ENVIRONMENT", "test");
+    guard.set("NVBES_TRUST_RISK_METRICS_TOKEN", "too-short-metrics-token");
+    assert_eq!(
+        TrustRiskConfig::from_env().unwrap_err(),
+        ConfigError::WeakToken
+    );
+    drop(guard);
+
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_ENVIRONMENT", "test");
+    guard.set(
+        "NVBES_TRUST_RISK_METRICS_TOKEN",
+        "metrics-token-with-at-least-32-characters\n",
+    );
+    assert_eq!(
+        TrustRiskConfig::from_env().unwrap_err(),
+        ConfigError::WeakToken
     );
 }

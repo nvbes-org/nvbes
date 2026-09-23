@@ -286,3 +286,103 @@ fn enabled_enforcement_holds_manual_review_and_blocks_block() {
         CheckoutFraudEnforcementAction::Block
     );
 }
+
+#[test]
+fn workspace_country_velocity_and_unknown_high_risk_networks_raise_score() {
+    let assessment = assess_checkout_fraud(CheckoutFraudInput {
+        policy: CheckoutFraudPolicy::default(),
+        network_kind: "unknown",
+        network_risk_score: 85,
+        network_labels: &[
+            "  High-Risk ".to_string(),
+            "".to_string(),
+            "---".to_string(),
+        ],
+        geo_country: Some("FR"),
+        billing_country: Some("FR"),
+        vat_number: None,
+        amount_minor: 1_000,
+        existing_provider_customer: true,
+        active_paid_customer: false,
+        recent_ip_checkouts: 0,
+        recent_ip_workspaces: 0,
+        recent_workspace_countries: 3,
+        recent_payment_methods: 0,
+        recent_payment_failures: 0,
+        trusted_checkout_assessments: 0,
+    });
+    assert!(
+        assessment
+            .reasons
+            .contains(&"workspace_country_velocity".to_string())
+    );
+    assert!(
+        assessment
+            .reasons
+            .contains(&"high_network_risk".to_string())
+    );
+    assert!(assessment.labels.contains(&"high_risk".to_string()));
+}
+
+#[test]
+fn elevated_unknown_network_risk_is_labelled() {
+    let assessment = assess_checkout_fraud(CheckoutFraudInput {
+        policy: CheckoutFraudPolicy::default(),
+        network_kind: "residential",
+        network_risk_score: 65,
+        network_labels: &["duplicate".to_string(), "duplicate".to_string()],
+        geo_country: Some("FR"),
+        billing_country: Some("FR"),
+        vat_number: None,
+        amount_minor: 1_000,
+        existing_provider_customer: true,
+        active_paid_customer: false,
+        recent_ip_checkouts: 0,
+        recent_ip_workspaces: 0,
+        recent_workspace_countries: 0,
+        recent_payment_methods: 0,
+        recent_payment_failures: 0,
+        trusted_checkout_assessments: 0,
+    });
+    assert!(
+        assessment
+            .reasons
+            .contains(&"elevated_network_risk".to_string())
+    );
+    assert_eq!(
+        assessment
+            .labels
+            .iter()
+            .filter(|label| *label == "duplicate")
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn checkout_fraud_policy_rejects_invalid_threshold_ordering() {
+    assert!(
+        CheckoutFraudPolicy {
+            step_up_threshold: 60,
+            manual_review_threshold: 75,
+            block_threshold: 90,
+        }
+        .is_valid()
+    );
+    assert!(
+        !CheckoutFraudPolicy {
+            step_up_threshold: 80,
+            manual_review_threshold: 70,
+            block_threshold: 90,
+        }
+        .is_valid()
+    );
+    assert!(
+        !CheckoutFraudPolicy {
+            step_up_threshold: 60,
+            manual_review_threshold: 75,
+            block_threshold: 101,
+        }
+        .is_valid()
+    );
+}

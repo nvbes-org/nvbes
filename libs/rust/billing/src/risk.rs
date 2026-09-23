@@ -355,5 +355,23 @@ mod tests {
             source_id: "".to_string(),
         };
         assert!(!crypto_ledger_entry_is_reporting_only(&blank));
+
+        let missing_asset = CryptoLedgerEntry {
+            asset_code: " ".to_string(),
+            amount_atomic: 10,
+            direction: CryptoLedgerDirection::Credit,
+            source_type: "x".to_string(),
+            source_id: "src".to_string(),
+        };
+        assert!(!crypto_ledger_entry_is_reporting_only(&missing_asset));
+
+        let missing_source = CryptoLedgerEntry {
+            asset_code: "BTC".to_string(),
+            amount_atomic: 10,
+            direction: CryptoLedgerDirection::Credit,
+            source_type: "x".to_string(),
+            source_id: "  ".to_string(),
+        };
+        assert!(!crypto_ledger_entry_is_reporting_only(&missing_source));
     }
 }

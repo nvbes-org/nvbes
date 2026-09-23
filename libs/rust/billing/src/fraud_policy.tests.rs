@@ -210,3 +210,24 @@ fn validate_accepts_well_formed_partial_overrides() {
         .is_ok()
     );
 }
+
+#[test]
+fn lower_specificity_override_does_not_replace_more_specific_match() {
+    let policy = resolve_checkout_fraud_policy(
+        CheckoutFraudPolicy::default(),
+        Some(
+            r#"[
+              {"provider":"stripe","country":"FR","block_threshold":88},
+              {"provider":"stripe","block_threshold":70}
+            ]"#,
+        ),
+        CheckoutFraudPolicyContext {
+            provider: Some("stripe"),
+            plan_code: "team",
+            country: Some("FR"),
+            amount_minor: 10_000,
+        },
+    )
+    .expect("more specific override wins");
+    assert_eq!(policy.block_threshold, 88);
+}

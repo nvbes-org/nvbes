@@ -154,6 +154,23 @@ mod tests {
     }
 
     #[test]
+    fn b2b_cross_border_without_vat_id_keeps_customer_country_vat() {
+        let result = calculate_eu_tax(
+            &TaxInput {
+                seller_country: "FR".to_string(),
+                customer_country: "DE".to_string(),
+                customer_vat_id: None,
+                customer_is_business: true,
+                amount_minor: 10_000,
+            },
+            2_000,
+        );
+        assert!(!result.reverse_charge);
+        assert_eq!(result.tax_minor, 2_000);
+        assert_eq!(result.decision_reason, "eu_customer_country_vat");
+    }
+
+    #[test]
     fn invoice_tax_snapshot_keeps_historical_rate_and_evidence() {
         let calculated_at = DateTime::from_timestamp(1_782_000_000, 0).unwrap();
         let input = TaxInput {

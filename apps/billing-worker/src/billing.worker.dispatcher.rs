@@ -202,12 +202,12 @@ async fn process_event(state: &BillingWorkerState, event: &OutboxRow) -> anyhow:
         match event.event_type.as_str() {
             "billing.invoice.paid.v1" => {
                 if let Some(notif) = receipt_notification_from_event(event) {
-                    let _ = deliver_billing_receipt(client, notif).await;
+                    deliver_billing_receipt(client, notif).await?;
                 }
             }
             "billing.invoice.payment_failed.v1" => {
                 if let Some(notif) = failure_notification_from_event(event, &state.config.app_url) {
-                    let _ = deliver_payment_failure(client, notif).await;
+                    deliver_payment_failure(client, notif).await?;
                 }
             }
             _ => {
@@ -266,6 +266,9 @@ pub async fn sweep_pending(state: &BillingWorkerState) -> anyhow::Result<usize> 
     Ok(count)
 }
 
+#[cfg(test)]
+#[path = "billing.worker.dispatcher.process.tests.rs"]
+mod process_tests;
 #[cfg(test)]
 #[path = "billing.worker.dispatcher.tests.rs"]
 mod tests;

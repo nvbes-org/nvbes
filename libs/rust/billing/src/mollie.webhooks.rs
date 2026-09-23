@@ -63,4 +63,12 @@ mod tests {
         assert_eq!(event.event_type, "payment.updated");
         assert!(event.signature_valid);
     }
+
+    #[test]
+    fn mollie_classic_webhook_accepts_json_payment_id_payload() {
+        let event = verify_mollie_classic_webhook(br#"{"id":"tr_json"}"#)
+            .expect("json webhook should parse");
+        assert_eq!(event.provider_event_id, "tr_json");
+        assert_eq!(event.payload_summary["payment_id"], "tr_json");
+    }
 }

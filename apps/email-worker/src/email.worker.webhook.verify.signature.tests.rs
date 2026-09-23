@@ -420,4 +420,34 @@ async fn certificate_fetch_loads_valid_pem_and_rejects_oversized_or_failed_respo
             .is_err()
     );
     body_server.abort();
+
+    // Chunked body without Content-Length reaches the post-download size guard.
+    let chunked = vec![b'C'; 65 * 1024];
+    let chunk_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let chunk_addr = chunk_listener.local_addr().unwrap();
+    let chunk_server = tokio::spawn(async move {
+        axum::serve(
+            chunk_listener,
+            Router::new().route(
+                "/cert.pem",
+                get(move || {
+                    let chunk = chunked.clone();
+                    async move {
+                        Body::from_stream(tokio_stream::once(Ok::<_, std::io::Error>(chunk)))
+                    }
+                }),
+            ),
+        )
+        .await
+        .unwrap();
+    });
+    let err = verifier
+        .fetch_certificate_for_tests(&format!("http://{chunk_addr}/cert.pem"))
+        .await
+        .expect_err("chunked oversized certificate");
+    assert!(
+        err.to_string().contains("too large") || err.to_string().contains("could not be loaded"),
+        "{err}"
+    );
+    chunk_server.abort();
 }

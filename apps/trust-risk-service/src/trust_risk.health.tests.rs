@@ -36,6 +36,19 @@ mod database {
     use crate::grpc_test_support;
 
     #[sqlx::test(migrations = "./migrations")]
+    async fn readiness_reports_not_ready_when_active_rules_are_missing(pool: sqlx::PgPool) {
+        sqlx::query("UPDATE trust_risk_rule_sets SET state = 'retired' WHERE state = 'active'")
+            .execute(&pool)
+            .await
+            .expect("retire rules");
+        let state = grpc_test_support::state(pool);
+        *state.projection_heartbeat.write().await = Some(Instant::now());
+        let (status, body) = ready(axum::extract::State(state)).await;
+        assert_eq!(status, axum::http::StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.0.status, "not_ready");
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
     async fn readiness_reports_ready_when_database_and_projection_are_current(pool: sqlx::PgPool) {
         let state = grpc_test_support::state(pool);
         *state.projection_heartbeat.write().await = Some(Instant::now());

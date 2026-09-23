@@ -146,6 +146,26 @@ mod database {
     }
 
     #[sqlx::test(migrations = "./migrations")]
+    async fn run_migrate_is_idempotent_on_ephemeral_database(pool: sqlx::PgPool) {
+        let db_name: String = sqlx::query_scalar("SELECT current_database()")
+            .fetch_one(&pool)
+            .await
+            .expect("current database");
+        let parent = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+        let database_url = match parent.rfind('/') {
+            Some(index) => format!("{}{db_name}", &parent[..=index]),
+            None => return,
+        };
+        let _lock = ENV_LOCK.lock().await;
+        let guard = EnvGuard::isolated();
+        guard.set("NVBES_ENVIRONMENT", "test");
+        guard.set("NVBES_TRUST_RISK_DATABASE_URL", &database_url);
+        super::run(vec!["migrate".into()])
+            .await
+            .expect("idempotent migrate");
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
     async fn build_router_exposes_live_health(pool: sqlx::PgPool) {
         let state = grpc_test_support::state(pool);
         let app = build_router(state).await.expect("router");
