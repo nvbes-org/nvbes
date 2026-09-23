@@ -118,19 +118,26 @@ fn synthetic_smoke_runs_when_database_is_available() {
 #[test]
 fn deployment_bootstrap_serves_live_health_check() {
     use std::io::{Read, Write};
-    use std::net::TcpStream;
+    use std::net::{TcpListener, TcpStream};
     use std::time::Duration;
 
-    let addr = "127.0.0.1:18082";
+    // Bind then release so the child can reuse an ephemeral free port.
+    let listener = TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
+    let addr = listener.local_addr().expect("local addr").to_string();
+    drop(listener);
+
     let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
         .env_clear()
         .arg("deployment-bootstrap")
-        .env("NVBES_BILLING_HTTP_BIND_ADDR", addr)
+        .env("NVBES_BILLING_HTTP_BIND_ADDR", &addr)
         .spawn()
         .expect("spawn bootstrap");
 
-    let response = (0..20).find_map(|_| {
+    let response = (0..40).find_map(|_| {
         std::thread::sleep(Duration::from_millis(50));
+        if let Some(status) = child.try_wait().ok().flatten() {
+            panic!("bootstrap exited early: {status}");
+        }
         TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
             .and_then(|mut stream| {
                 stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
