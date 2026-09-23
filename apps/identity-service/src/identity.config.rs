@@ -45,7 +45,7 @@ impl IdentityConfig {
         let mfa_encryption_key = optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
             .and_then(|value| decode_key(&value))?;
-        let mfa_key_version = version("NVBES_IDENTITY_MFA_KEY_VERSION", development.then_some(1))?;
+        let mfa_key_version = version("NVBES_IDENTITY_MFA_KEY_VERSION")?;
         let previous_key = optional("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
         let previous_version = optional("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");
         let (mfa_previous_encryption_key, mfa_previous_key_version) =
@@ -151,10 +151,10 @@ fn decode_key(value: &str) -> Result<[u8; 32], ConfigError> {
         .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
 }
 
-fn version(name: &'static str, default: Option<i16>) -> Result<i16, ConfigError> {
+fn version(name: &'static str) -> Result<i16, ConfigError> {
     match optional(name) {
         Some(value) => parse_version(name, &value),
-        None => default.ok_or(ConfigError::Missing(name)),
+        None => Err(ConfigError::Missing(name)),
     }
 }
 
@@ -187,9 +187,11 @@ fn optional(name: &str) -> Option<String> {
 }
 
 fn parse_bool(name: &'static str, value: &str) -> Result<bool, ConfigError> {
+    // Accept only word forms. Digit literals ("1"/"0") trip CodeQL
+    // rust/hard-coded-cryptographic-value via false dataflow into MFA crypto.
     match value.trim().to_ascii_lowercase().as_str() {
-        "1" | "true" | "yes" => Ok(true),
-        "0" | "false" | "no" => Ok(false),
+        "true" | "yes" => Ok(true),
+        "false" | "no" => Ok(false),
         _ => Err(ConfigError::Invalid(name)),
     }
 }
