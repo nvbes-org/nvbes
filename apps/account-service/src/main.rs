@@ -16,13 +16,10 @@ mod error;
 mod health;
 #[path = "account.metrics.rs"]
 mod metrics;
-<<<<<<< HEAD
-#[path = "account.outbox.rs"]
-mod outbox;
-=======
 #[path = "account.operator.rs"]
 mod operator;
->>>>>>> origin/cursor/ad5c9b80
+#[path = "account.outbox.rs"]
+mod outbox;
 #[path = "account.preferences.rs"]
 mod preferences;
 #[path = "account.privacy.rs"]
