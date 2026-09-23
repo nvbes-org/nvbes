@@ -31,12 +31,13 @@ pub async fn run_synthetic_smoke(
     password: &str,
 ) -> anyhow::Result<MfaSyntheticSmokeResult> {
     let principal_id = create_synthetic_identity(db, email, password).await?;
-    let session_token = authenticate(db, email, password).await?;
+    let session = authenticate(db, email, password).await?;
     let secret = enroll_totp(db, crypto, principal_id).await?;
     let now = Utc::now();
     let code = generate_totp_code(&secret, current_counter(now));
-    let step_up_expires_at = confirm_enrollment(db, crypto, &session_token, &code, now).await?;
-    let replay_rejected = grant_step_up(db, crypto, &session_token, &code, now)
+    let step_up_expires_at =
+        confirm_enrollment(db, crypto, &session.session_token, &code, now).await?;
+    let replay_rejected = grant_step_up(db, crypto, &session.session_token, &code, now)
         .await
         .is_err();
     let state: (String, bool) = sqlx::query_as(

@@ -182,11 +182,11 @@ pub async fn run_synthetic_smoke(
     audience: &str,
 ) -> anyhow::Result<SyntheticTokenResult> {
     let principal_id = auth::create_synthetic_identity(db, email, password).await?;
-    let session_token = auth::authenticate(db, email, password).await?;
+    let session = auth::authenticate(db, email, password).await?;
     let session_id: Uuid = sqlx::query_scalar(
         "SELECT id FROM identity_sessions WHERE token_hash = $1 AND principal_id = $2",
     )
-    .bind(auth::hash_token(&session_token))
+    .bind(auth::hash_token(&session.session_token))
     .bind(principal_id)
     .fetch_one(db)
     .await?;

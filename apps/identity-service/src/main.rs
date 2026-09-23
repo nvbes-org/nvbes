@@ -32,6 +32,8 @@ mod oauth;
 mod oauth_clients;
 #[path = "identity.refresh.rs"]
 mod refresh;
+#[path = "identity.session.rs"]
+mod session;
 #[path = "identity.synthetic.rs"]
 mod synthetic;
 #[path = "identity.tokens.rs"]
