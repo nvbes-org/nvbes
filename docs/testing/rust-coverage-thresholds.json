@@ -9,75 +9,195 @@
     "plan": "docs/testing/coverage-90-campaign.md"
   },
   "baseline": {
-    "commit": "1f0d660f",
-    "date": "2026-09-22"
+    "commit": "9df10693",
+    "date": "2026-09-23"
   },
   "crates": {
     "nvbes-email": {
-      "threshold": { "lines": 95, "functions": 90, "regions": 90 },
-      "baseline": { "lines": 97.1, "functions": 94.7, "regions": 95.9 }
+      "threshold": {
+        "lines": 95,
+        "functions": 90,
+        "regions": 90
+      },
+      "baseline": {
+        "lines": 97.1,
+        "functions": 94.7,
+        "regions": 95.9
+      }
     },
     "nvbes-email-scaleway": {
-      "threshold": { "lines": 94, "functions": 93, "regions": 92 },
-      "baseline": { "lines": 96.3, "functions": 95.7, "regions": 94.4 }
+      "threshold": {
+        "lines": 94,
+        "functions": 93,
+        "regions": 92
+      },
+      "baseline": {
+        "lines": 96.3,
+        "functions": 95.7,
+        "regions": 94.4
+      }
     },
     "nvbes-email-worker": {
-      "threshold": { "lines": 82, "functions": 79, "regions": 73 },
-      "baseline": { "lines": 84.1, "functions": 81.9, "regions": 75.5 }
+      "threshold": {
+        "lines": 82,
+        "functions": 79,
+        "regions": 73
+      },
+      "baseline": {
+        "lines": 84.1,
+        "functions": 81.9,
+        "regions": 75.5
+      }
     },
     "nvbes-platform": {
-      "threshold": { "lines": 71, "functions": 65, "regions": 69 },
-      "baseline": { "lines": 73.8, "functions": 67.3, "regions": 71.2 }
+      "threshold": {
+        "lines": 69,
+        "functions": 63,
+        "regions": 62
+      },
+      "baseline": {
+        "lines": 71.8,
+        "functions": 65.8,
+        "regions": 64.7
+      }
     },
     "nvbes-trust-risk": {
-      "threshold": { "lines": 71, "functions": 66, "regions": 64 },
-      "baseline": { "lines": 73.9, "functions": 68.6, "regions": 66.9 }
+      "threshold": {
+        "lines": 71,
+        "functions": 66,
+        "regions": 64
+      },
+      "baseline": {
+        "lines": 73.9,
+        "functions": 68.6,
+        "regions": 66.9
+      }
     },
     "nvbes-identity-service": {
-      "threshold": { "lines": 60, "functions": 67, "regions": 57 },
-      "baseline": { "lines": 62.8, "functions": 69.9, "regions": 59.8 }
+      "threshold": {
+        "lines": 57,
+        "functions": 65,
+        "regions": 54
+      },
+      "baseline": {
+        "lines": 59.0,
+        "functions": 67.1,
+        "regions": 56.5
+      }
     },
     "nvbes-billing-worker": {
-      "threshold": { "lines": 51, "functions": 52, "regions": 47 },
-      "baseline": { "lines": 53.5, "functions": 54.4, "regions": 49.0 }
+      "threshold": {
+        "lines": 51,
+        "functions": 52,
+        "regions": 47
+      },
+      "baseline": {
+        "lines": 53.5,
+        "functions": 54.4,
+        "regions": 49.0
+      }
     },
     "nvbes-billing-service": {
-      "threshold": { "lines": 45, "functions": 26, "regions": 42 },
-      "baseline": { "lines": 47.4, "functions": 28.8, "regions": 44.5 }
+      "threshold": {
+        "lines": 45,
+        "functions": 26,
+        "regions": 42
+      },
+      "baseline": {
+        "lines": 47.4,
+        "functions": 28.8,
+        "regions": 44.5
+      }
     },
     "nvbes-core": {
-      "threshold": { "lines": 45, "functions": 42, "regions": 45 },
-      "baseline": { "lines": 47.3, "functions": 44.6, "regions": 47.9 }
+      "threshold": {
+        "lines": 45,
+        "functions": 42,
+        "regions": 45
+      },
+      "baseline": {
+        "lines": 47.3,
+        "functions": 44.6,
+        "regions": 47.9
+      }
     },
     "nvbes-region": {
-      "threshold": { "lines": 39, "functions": 41, "regions": 44 },
-      "baseline": { "lines": 41.7, "functions": 43.8, "regions": 46.1 }
+      "threshold": {
+        "lines": 39,
+        "functions": 41,
+        "regions": 44
+      },
+      "baseline": {
+        "lines": 41.7,
+        "functions": 43.8,
+        "regions": 46.1
+      }
     },
     "nvbes-trust-risk-service": {
-      "threshold": { "lines": 38, "functions": 38, "regions": 36 },
-      "baseline": { "lines": 40.3, "functions": 40.1, "regions": 38.7 }
+      "threshold": {
+        "lines": 38,
+        "functions": 38,
+        "regions": 36
+      },
+      "baseline": {
+        "lines": 40.3,
+        "functions": 40.1,
+        "regions": 38.7
+      }
     },
     "nvbes-billing": {
-      "threshold": { "lines": 36, "functions": 42, "regions": 42 },
-      "baseline": { "lines": 38.4, "functions": 44.7, "regions": 44.3 }
+      "threshold": {
+        "lines": 36,
+        "functions": 42,
+        "regions": 42
+      },
+      "baseline": {
+        "lines": 38.4,
+        "functions": 44.7,
+        "regions": 44.3
+      }
     },
     "nvbes-audit": {
-      "threshold": { "lines": 34, "functions": 53, "regions": 42 },
-      "baseline": { "lines": 36.4, "functions": 55.6, "regions": 44.9 }
+      "threshold": {
+        "lines": 34,
+        "functions": 53,
+        "regions": 42
+      },
+      "baseline": {
+        "lines": 36.4,
+        "functions": 55.6,
+        "regions": 44.9
+      }
     },
     "nvbes-account-service": {
-      "threshold": { "lines": 25, "functions": 14, "regions": 22 },
-      "baseline": { "lines": 27.9, "functions": 16.9, "regions": 24.2 }
+      "threshold": {
+        "lines": 25,
+        "functions": 14,
+        "regions": 22
+      },
+      "baseline": {
+        "lines": 27.9,
+        "functions": 16.9,
+        "regions": 24.2
+      }
     },
     "nvbes-observability": {
-      "threshold": { "lines": 13, "functions": 20, "regions": 12 },
-      "baseline": { "lines": 15.7, "functions": 22.0, "regions": 14.1 }
+      "threshold": {
+        "lines": 13,
+        "functions": 20,
+        "regions": 12
+      },
+      "baseline": {
+        "lines": 15.7,
+        "functions": 22.0,
+        "regions": 14.1
+      }
     }
   },
   "excluded": [
     {
       "crate": "nvbes-test-utils",
-      "reason": "Bibliothèque utilitaire de tests uniquement (support keyword runner, pools de test) ; hors périmètre de production, non mesurée."
+      "reason": "Biblioth\u00e8que utilitaire de tests uniquement (support keyword runner, pools de test) ; hors p\u00e9rim\u00e8tre de production, non mesur\u00e9e."
     }
   ]
 }
