@@ -28,7 +28,7 @@ async fn operations_api_covers_authorized_queries_and_operator_lifecycle(pool: s
 
     let snapshot = service
         .get_operations_snapshot(authorized(GetEmailOperationsSnapshotRequest {
-            caller: Some(test_support::caller("backoffice-service")),
+            caller: Some(test_support::caller("platform-operations-service")),
         }))
         .await
         .unwrap()

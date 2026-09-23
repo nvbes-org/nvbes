@@ -50,7 +50,7 @@ where
     let old_session_active: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM identity_sessions WHERE token_hash = $1 AND revoked_at IS NULL)",
     )
-    .bind(hash_token(&first_session))
+    .bind(hash_token(&first_session.session_token))
     .fetch_one(db)
     .await?;
     let recovery_consumed: bool = sqlx::query_scalar(
@@ -67,7 +67,8 @@ where
 
     Ok(SyntheticSmokeResult {
         principal_id,
-        session_rotated: !old_session_active && first_session != second_session,
+        session_rotated: !old_session_active
+            && first_session.session_token != second_session.session_token,
         recovery_consumed,
         audit_events,
     })

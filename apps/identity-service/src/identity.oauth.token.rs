@@ -1,4 +1,4 @@
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Form, Json, extract::State, http::StatusCode};
 use uuid::Uuid;
 
 use crate::app::IdentityState;
@@ -12,7 +12,7 @@ use super::types::{TokenErrorResponse, TokenRequest, TokenResponse, validate_sco
 
 pub async fn token(
     State(state): State<IdentityState>,
-    Json(req): Json<TokenRequest>,
+    Form(req): Form<TokenRequest>,
 ) -> Result<(StatusCode, Json<TokenResponse>), (StatusCode, Json<TokenErrorResponse>)> {
     if req.scope.as_deref().is_some_and(|s| !validate_scope(s)) {
         return Err((

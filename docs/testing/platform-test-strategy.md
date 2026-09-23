@@ -74,17 +74,18 @@ Routes réelles :
 
 Suites du §3.2 de `03-documentation.md` | Commande réelle :
 
-| Suite ID            | Catégorie | Commande réelle                                           |
-| ------------------- | --------- | --------------------------------------------------------- |
-| TS-PLATFORM-COCKPIT | existence | `cargo test --package nvbes-platform platform.cockpit`    |
-| TS-PLATFORM-FINOPS  | existence | `cargo test --package nvbes-platform platform.finops`     |
-| TS-PLATFORM-AUDIT   | existence | `cargo test --package nvbes-platform platform.audit`      |
-| TS-PLATFORM-OPS     | security  | `cargo test --package nvbes-platform platform.operations` |
+| Suite ID            | Catégorie | Commande réelle                                                                  |
+| ------------------- | --------- | -------------------------------------------------------------------------------- |
+| TS-PLATFORM-COCKPIT | existence | `cargo test --package nvbes-platform platform.cockpit` (auth, server, ServiceId) |
+| TS-PLATFORM-FINOPS  | existence | `cargo test --package nvbes-platform platform.finops`                            |
+| TS-PLATFORM-AUDIT   | existence | `cargo test --package nvbes-platform platform.audit`                             |
+| TS-PLATFORM-OPS     | security  | `cargo test --package nvbes-platform platform.operations`                        |
 
-Test cases `TC-PLATFORM-<SUITE>-<NUM>` (template §4 de `03-documentation.md`). Le
-runner keyword-driven couvre : `infra.setup_db`, `infra.migrate`,
-`infra.start_service`, `infra.health_check`, `infra.cleanup` puis les mots-clés
-infra sur les destinations dereclassées (cockpit, degraded).
+Les anciens modules cockpit simulés (health aggregator, email/billing/finops
+panels, degraded dispatcher, actions métier) ont été retirés : l'API live ne
+sert que health, overview minimal, commands/cases/audits/costs, et 501 sur
+`/api/v1/actions`. Les procédures dégradées restent dans le runbook et les
+mots-clés `platform.degraded_procedure` du test-utils.
 
 ## Gates et acceptation
 

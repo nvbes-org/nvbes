@@ -56,9 +56,9 @@ test('container has shallow liveness and graceful shutdown', () => {
   assert.ok(healthSource.includes('sqlx::query_scalar::<_, i32>("SELECT 1")'));
 });
 
-test('runtime stays closed to public authentication', () => {
-  assert.equal(mainSource.includes('route("/auth/register"'), false);
-  assert.equal(mainSource.includes('route("/auth/login"'), false);
+test('runtime exposes gated signup and oauth login surface', () => {
+  assert.ok(mainSource.includes('http::router(&state)'));
+  assert.ok(mainSource.includes('oauth::router(&state)'));
   assert.ok(errorReportingSource.includes('init_error_reporting_with_config'));
   assert.ok(mainSource.includes('otlp_authorization_header'));
   assert.ok(mainSource.includes('action == "error-reporting-smoke"'));
@@ -94,15 +94,17 @@ test('production accepts canonical 32-byte MFA keys without UTF-8 assumptions', 
   assert.equal(Buffer.from(nonUtf8Key, 'base64').byteLength, 32);
 });
 
-test('deployment migrates before apply and proves public auth stays absent', () => {
+test('deployment migrates before apply and proves public signup stays gated', () => {
   const identitySection = deploymentWorkflow.slice(deploymentWorkflow.indexOf('deploy-identity:'));
   const migration = identitySection.indexOf('- name: Run database migrations');
   const apply = identitySection.indexOf('- name: Apply reviewed Identity runtime plan');
   assert.ok(migration >= 0);
   assert.ok(apply > migration);
   assert.ok(identitySection.includes('tools/deployment/prove-identity-public-runtime.sh'));
-  assert.ok(publicRuntimeProof.includes('/auth/register"'));
-  assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "404" ]]'));
+  assert.ok(publicRuntimeProof.includes('/api/v1/auth/register"'));
+  assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "403" ]]'));
+  assert.ok(publicRuntimeProof.includes('/api/v1/auth/login"'));
+  assert.ok(publicRuntimeProof.includes('/oauth/authorize?'));
 });
 
 test('deployment records bounded activation and access-control evidence', () => {

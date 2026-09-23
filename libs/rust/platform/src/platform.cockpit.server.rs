@@ -55,7 +55,8 @@ async fn overview(
         json!({"environment":state.environment,"operator":actor.operator_id,"role":actor.role,
         "services":state.context.snapshot().await, "cases":"/api/v1/cases", "audits":"/api/v1/audits",
         "commands":"/api/v1/commands", "costs":"/api/v1/costs?month=YYYY-MM-01",
-        "domain_mutations":"unavailable", "backup_restore":"not_verified"}),
+        "domain_mutations":"unavailable", "backup_restore":"not_verified",
+        "panels":"removed", "note":"Use case observations and owner APIs; simulated cockpit panels are not served"}),
     ))
 }
 
