@@ -39,14 +39,14 @@
     },
     "nvbes-email-worker": {
       "threshold": {
-        "lines": 85,
-        "functions": 84,
-        "regions": 77
+        "lines": 87,
+        "functions": 85,
+        "regions": 79
       },
       "baseline": {
-        "lines": 87.6,
-        "functions": 86.8,
-        "regions": 79.2
+        "lines": 89.9,
+        "functions": 87.8,
+        "regions": 81.7
       }
     },
     "nvbes-platform": {
@@ -75,14 +75,14 @@
     },
     "nvbes-identity-service": {
       "threshold": {
-        "lines": 82,
+        "lines": 84,
         "functions": 84,
-        "regions": 76
+        "regions": 77
       },
       "baseline": {
-        "lines": 84.5,
+        "lines": 86.3,
         "functions": 86.0,
-        "regions": 78.9
+        "regions": 79.5
       }
     },
     "nvbes-billing-worker": {
@@ -99,26 +99,26 @@
     },
     "nvbes-billing-service": {
       "threshold": {
-        "lines": 77,
-        "functions": 61,
-        "regions": 71
+        "lines": 89,
+        "functions": 73,
+        "regions": 84
       },
       "baseline": {
-        "lines": 79.2,
-        "functions": 63.6,
-        "regions": 73.2
+        "lines": 91.1,
+        "functions": 75.8,
+        "regions": 86.0
       }
     },
     "nvbes-core": {
       "threshold": {
-        "lines": 84,
-        "functions": 81,
-        "regions": 83
+        "lines": 88,
+        "functions": 84,
+        "regions": 88
       },
       "baseline": {
-        "lines": 86.9,
-        "functions": 83.5,
-        "regions": 85.7
+        "lines": 90.7,
+        "functions": 86.8,
+        "regions": 90.2
       }
     },
     "nvbes-region": {
@@ -147,14 +147,14 @@
     },
     "nvbes-billing": {
       "threshold": {
-        "lines": 87,
-        "functions": 85,
-        "regions": 84
+        "lines": 88,
+        "functions": 87,
+        "regions": 86
       },
       "baseline": {
-        "lines": 89.7,
-        "functions": 87.6,
-        "regions": 86.9
+        "lines": 90.9,
+        "functions": 89.5,
+        "regions": 88.0
       }
     },
     "nvbes-audit": {
