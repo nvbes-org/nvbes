@@ -37,11 +37,10 @@ seuil = baseline mesurée − 2 points (bruit run-to-run de llvm-cov), plancher 
 Chaque vague relève les seuils des crates qu'elle traite. Un seuil ne redescend
 jamais. `nvbes-email` conserve son seuil produit explicite 95/90/90.
 
-## État au commit `dccdc01d`
+## État au commit `04bdc8b5`
 
-Workspace : mesure llvm-cov post push (`90,9 %` lignes workspace).
-Crates encore &lt; 90 % lignes : `nvbes-billing-worker`, `nvbes-identity-service`,
-`nvbes-email-worker` (≈3 lignes).
+Workspace : mesure llvm-cov post push (`91,9 %` lignes workspace).
+Toutes les crates du cliquet sont ≥ 90 % lignes.
 
 | Crate                      | Lignes | Restant pour 90 % | Vague |
 | :------------------------- | -----: | ----------------: | :---- |
@@ -50,22 +49,22 @@ Crates encore &lt; 90 % lignes : `nvbes-billing-worker`, `nvbes-identity-service
 | `nvbes-audit`              |  100 % |           atteint | 1     |
 | `nvbes-observability`      | 97,7 % |           atteint | 2     |
 | `nvbes-trust-risk`         | 94,6 % |           atteint | 1     |
+| `nvbes-email-worker`       | 92,7 % |           atteint | 1     |
 | `nvbes-account-service`    | 92,1 % |           atteint | 2     |
+| `nvbes-billing-worker`     | 91,8 % |           atteint | 1     |
 | `nvbes-region`             | 91,4 % |           atteint | 3     |
 | `nvbes-billing-service`    | 91,1 % |           atteint | 3     |
 | `nvbes-billing`            | 90,9 % |           atteint | 5     |
-| `nvbes-core`               | 90,7 % |           atteint | 4     |
+| `nvbes-core`               | 90,8 % |           atteint | 4     |
+| `nvbes-identity-service`   | 90,5 % |           atteint | 2     |
 | `nvbes-platform`           | 90,3 % |           atteint | 1     |
 | `nvbes-trust-risk-service` | 90,1 % |           atteint | 3     |
-| `nvbes-email-worker`       | 89,9 % |                 3 | 1     |
-| `nvbes-identity-service`   | 86,3 % |                85 | 2     |
-| `nvbes-billing-worker`     | 78,5 % |                80 | 1     |
 
-Les vagues 1–5 et la purge Cloud orpheline sont livrées ; il reste à couvrir
-`main.rs` in-process (pas via sous-processus CLI) pour 3 crates, puis les
-lanes branches/mutation catalogue V1.
+Les vagues 1–5, la purge Cloud orpheline et la couverture in-process de
+`main.rs` sont livrées. Reste les lanes branches/mutation catalogue V1
+(≥ 90 % par unité de production).
 
-## Vagues## Vagues
+## Vagues
 
 ### Vague 0 — périmètre de mesure (faite)
 
