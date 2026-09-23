@@ -27,6 +27,9 @@ pub(crate) fn state() -> IdentityState {
             mfa_previous_key_version: None,
             token_issuer: "http://127.0.0.1:0".into(),
             platform_operator_principals: Default::default(),
+            public_signup_enabled: true,
+            login_url: String::new(),
+            session_cookie_secure: false,
         },
         db,
     )

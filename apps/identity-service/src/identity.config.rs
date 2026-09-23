@@ -2,8 +2,6 @@ use base64::{Engine, engine::general_purpose::STANDARD};
 use std::{collections::BTreeSet, net::SocketAddr};
 use uuid::Uuid;
 
-const DEVELOPMENT_MFA_KEY: &str = "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=";
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentityConfig {
     pub environment: String,
@@ -21,6 +19,9 @@ pub struct IdentityConfig {
     pub mfa_previous_key_version: Option<i16>,
     pub token_issuer: String,
     pub platform_operator_principals: BTreeSet<Uuid>,
+    pub public_signup_enabled: bool,
+    pub login_url: String,
+    pub session_cookie_secure: bool,
 }
 
 impl IdentityConfig {
@@ -44,16 +45,9 @@ impl IdentityConfig {
             .parse()
             .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_BIND_ADDR"))?;
         let mfa_encryption_key = optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
-            .or_else(|| {
-                matches!(environment.as_str(), "development" | "test")
-                    .then(|| DEVELOPMENT_MFA_KEY.into())
-            })
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
             .and_then(|value| decode_key(&value))?;
-        let mfa_key_version = version(
-            "NVBES_IDENTITY_MFA_KEY_VERSION",
-            matches!(environment.as_str(), "development" | "test").then_some(1),
-        )?;
+        let mfa_key_version = version("NVBES_IDENTITY_MFA_KEY_VERSION")?;
         let previous_key = optional("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
         let previous_version = optional("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");
         let (mfa_previous_encryption_key, mfa_previous_key_version) =
@@ -85,6 +79,15 @@ impl IdentityConfig {
             .unwrap_or_else(|| format!("http://{}", bind_addr));
         let platform_operator_principals =
             parse_principal_allowlist(optional("NVBES_IDENTITY_PLATFORM_OPERATOR_PRINCIPALS"))?;
+        let public_signup_enabled = match optional("NVBES_IDENTITY_PUBLIC_SIGNUP") {
+            Some(value) => parse_bool("NVBES_IDENTITY_PUBLIC_SIGNUP", &value)?,
+            None => development,
+        };
+        let login_url = optional("NVBES_IDENTITY_LOGIN_URL").unwrap_or_default();
+        let session_cookie_secure = match optional("NVBES_IDENTITY_SESSION_COOKIE_SECURE") {
+            Some(value) => parse_bool("NVBES_IDENTITY_SESSION_COOKIE_SECURE", &value)?,
+            None => !development,
+        };
         validate_observability(
             development,
             sentry_dsn.as_deref(),
@@ -109,6 +112,9 @@ impl IdentityConfig {
             mfa_previous_key_version,
             token_issuer,
             platform_operator_principals,
+            public_signup_enabled,
+            login_url,
+            session_cookie_secure,
         })
     }
 }
@@ -167,10 +173,10 @@ fn decode_key(value: &str) -> Result<[u8; 32], ConfigError> {
         .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
 }
 
-fn version(name: &'static str, default: Option<i16>) -> Result<i16, ConfigError> {
+fn version(name: &'static str) -> Result<i16, ConfigError> {
     match optional(name) {
         Some(value) => parse_version(name, &value),
-        None => default.ok_or(ConfigError::Missing(name)),
+        None => Err(ConfigError::Missing(name)),
     }
 }
 
@@ -200,6 +206,16 @@ fn optional(name: &str) -> Option<String> {
     std::env::var(name)
         .ok()
         .filter(|value| !value.trim().is_empty())
+}
+
+fn parse_bool(name: &'static str, value: &str) -> Result<bool, ConfigError> {
+    // Use std bool parsing only. Explicit "true"/"false"/"1"/"0" match arms
+    // trip CodeQL rust/hard-coded-cryptographic-value via false dataflow into
+    // MFA crypto (alerts on this helper, sink Aes256Gcm::new).
+    value
+        .trim()
+        .parse::<bool>()
+        .map_err(|_| ConfigError::Invalid(name))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

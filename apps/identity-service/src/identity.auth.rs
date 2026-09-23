@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
-const SESSION_TTL_HOURS: i64 = 1;
+pub(super) const SESSION_TTL_HOURS: i64 = 1;
 const RECOVERY_TTL_MINUTES: i64 = 15;
 
 #[derive(Debug, Clone)]
@@ -23,6 +23,15 @@ pub(super) async fn create_synthetic_identity(
     db: &PgPool,
     email: &str,
     password: &str,
+) -> anyhow::Result<Uuid> {
+    register_password_identity(db, email, password, "identity.synthetic_created").await
+}
+
+pub(super) async fn register_password_identity(
+    db: &PgPool,
+    email: &str,
+    password: &str,
+    audit_event: &str,
 ) -> anyhow::Result<Uuid> {
     let email = normalize_email(email)?;
     validate_password(password)?;
@@ -51,20 +60,26 @@ pub(super) async fn create_synthetic_identity(
     .bind(password_hash)
     .execute(&mut *tx)
     .await?;
-    audit(&mut tx, principal_id, "identity.synthetic_created").await?;
+    audit(&mut tx, principal_id, audit_event).await?;
     outbox(&mut tx, principal_id, "identity.principal.created.v1").await?;
     tx.commit().await?;
     Ok(principal_id)
+}
+
+#[derive(Debug, Clone)]
+pub struct AuthenticatedSession {
+    pub principal_id: Uuid,
+    pub session_token: String,
 }
 
 pub(super) async fn authenticate(
     db: &PgPool,
     email: &str,
     password: &str,
-) -> anyhow::Result<String> {
+) -> anyhow::Result<AuthenticatedSession> {
     let email = normalize_email(email)?;
     let credential = sqlx::query_as::<_, (Uuid, String)>(
-        "SELECT p.id, c.password_hash FROM identity_principals p JOIN identity_login_identifiers i ON i.principal_id = p.id JOIN identity_password_credentials c ON c.principal_id = p.id WHERE i.kind = 'email' AND i.normalized_value = $1 AND p.status = 'active'",
+        "SELECT p.id, c.password_hash FROM identity_principals p JOIN identity_login_identifiers i ON i.principal_id = p.id JOIN identity_password_credentials c ON c.principal_id = p.id WHERE i.kind = 'email' AND i.normalized_value = $1 AND i.verified_at IS NOT NULL AND p.status = 'active'",
     )
     .bind(email)
     .fetch_optional(db)
@@ -78,20 +93,45 @@ pub(super) async fn authenticate(
     if !password_valid {
         anyhow::bail!("authentication failed");
     }
-    let token = random_token();
+    let session_token = random_token();
     let mut tx = db.begin().await?;
     sqlx::query(
         "INSERT INTO identity_sessions (id, principal_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)",
     )
     .bind(Uuid::new_v4())
     .bind(principal_id)
-    .bind(hash_token(&token))
+    .bind(hash_token(&session_token))
     .bind(Utc::now() + Duration::hours(SESSION_TTL_HOURS))
     .execute(&mut *tx)
     .await?;
     audit(&mut tx, principal_id, "identity.authenticated").await?;
     tx.commit().await?;
-    Ok(token)
+    Ok(AuthenticatedSession {
+        principal_id,
+        session_token,
+    })
+}
+
+pub(super) async fn revoke_session_token(db: &PgPool, token: &str) -> anyhow::Result<bool> {
+    let mut tx = db.begin().await?;
+    let principal_id: Option<Uuid> = sqlx::query_scalar(
+        "SELECT principal_id FROM identity_sessions WHERE token_hash = $1 AND revoked_at IS NULL FOR UPDATE",
+    )
+    .bind(hash_token(token))
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some(principal_id) = principal_id else {
+        return Ok(false);
+    };
+    sqlx::query(
+        "UPDATE identity_sessions SET revoked_at = clock_timestamp() WHERE token_hash = $1 AND revoked_at IS NULL",
+    )
+    .bind(hash_token(token))
+    .execute(&mut *tx)
+    .await?;
+    audit(&mut tx, principal_id, "identity.session_revoked").await?;
+    tx.commit().await?;
+    Ok(true)
 }
 
 pub(super) async fn request_recovery(

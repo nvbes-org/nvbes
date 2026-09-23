@@ -114,6 +114,30 @@ async fn authorize_rejects_invalid_scope() {
 }
 
 #[tokio::test]
+async fn authorize_requires_authentication_with_return_to() {
+    let app = router(&state());
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/oauth/authorize?response_type=code&client_id=valid-client&redirect_uri=https://example.com/cb")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), axum::http::StatusCode::UNAUTHORIZED);
+    let body = axum::body::to_bytes(res.into_body(), 1024).await.unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["error"], "authentication_required");
+    assert!(
+        json["return_to"]
+            .as_str()
+            .unwrap()
+            .starts_with("/oauth/authorize?")
+    );
+}
+
+#[tokio::test]
 async fn token_rejects_unsupported_grant_type() {
     let app = router(&state());
     let res = app
@@ -121,8 +145,8 @@ async fn token_rejects_unsupported_grant_type() {
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
-                .body(Body::from(r#"{"grant_type":"password"}"#))
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("grant_type=password"))
                 .unwrap(),
         )
         .await
@@ -138,8 +162,8 @@ async fn token_rejects_missing_code_in_auth_code_grant() {
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
-                .body(Body::from(r#"{"grant_type":"authorization_code"}"#))
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("grant_type=authorization_code"))
                 .unwrap(),
         )
         .await
@@ -155,8 +179,8 @@ async fn token_rejects_missing_refresh_token_in_refresh_grant() {
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
-                .body(Body::from(r#"{"grant_type":"refresh_token"}"#))
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("grant_type=refresh_token"))
                 .unwrap(),
         )
         .await
