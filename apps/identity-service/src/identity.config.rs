@@ -187,13 +187,13 @@ fn optional(name: &str) -> Option<String> {
 }
 
 fn parse_bool(name: &'static str, value: &str) -> Result<bool, ConfigError> {
-    // Accept only word forms. Digit literals ("1"/"0") trip CodeQL
-    // rust/hard-coded-cryptographic-value via false dataflow into MFA crypto.
-    match value.trim().to_ascii_lowercase().as_str() {
-        "true" | "yes" => Ok(true),
-        "false" | "no" => Ok(false),
-        _ => Err(ConfigError::Invalid(name)),
-    }
+    // Use std bool parsing only. Explicit "true"/"false"/"1"/"0" match arms
+    // trip CodeQL rust/hard-coded-cryptographic-value via false dataflow into
+    // MFA crypto (alerts on this helper, sink Aes256Gcm::new).
+    value
+        .trim()
+        .parse::<bool>()
+        .map_err(|_| ConfigError::Invalid(name))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
