@@ -48,19 +48,21 @@ pub fn router(state: AccountState) -> Router {
         .with_state(state)
 }
 
+type OperatorProfileRow = (
+    Option<String>,
+    Option<String>,
+    String,
+    DateTime<Utc>,
+    Option<DateTime<Utc>>,
+);
+
 async fn get_operator_profile(
     State(state): State<AccountState>,
     headers: HeaderMap,
     Path(principal_id): Path<Uuid>,
 ) -> Result<Json<OperatorProfileResponse>, AccountError> {
     let operator = require_operator(&state, &headers)?;
-    let row: Option<(
-        Option<String>,
-        Option<String>,
-        String,
-        DateTime<Utc>,
-        Option<DateTime<Utc>>,
-    )> = sqlx::query_as(
+    let row: Option<OperatorProfileRow> = sqlx::query_as(
         "SELECT username, region, lifecycle_status, created_at, closed_at
          FROM account_profiles WHERE principal_id = $1",
     )

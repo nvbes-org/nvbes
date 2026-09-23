@@ -187,7 +187,8 @@ fn require_operator(
 }
 
 fn token_service(state: &IdentityState) -> Result<TokenService, OperatorError> {
-    let config = TokenConfig::from_env(&state.config.environment).map_err(|_| OperatorError::Internal)?;
+    let config =
+        TokenConfig::from_env(&state.config.environment).map_err(|_| OperatorError::Internal)?;
     TokenService::new(config).map_err(|_| OperatorError::Internal)
 }
 
@@ -204,13 +205,13 @@ enum OperatorError {
     Unauthorized,
     Forbidden,
     Invalid(&'static str),
-    Database(sqlx::Error),
+    Database,
     Internal,
 }
 
 impl From<sqlx::Error> for OperatorError {
-    fn from(value: sqlx::Error) -> Self {
-        Self::Database(value)
+    fn from(_: sqlx::Error) -> Self {
+        Self::Database
     }
 }
 
@@ -222,9 +223,13 @@ impl axum::response::IntoResponse for OperatorError {
                 "authentication_required",
                 "operator authentication required",
             ),
-            Self::Forbidden => (StatusCode::FORBIDDEN, "forbidden", "operator action forbidden"),
+            Self::Forbidden => (
+                StatusCode::FORBIDDEN,
+                "forbidden",
+                "operator action forbidden",
+            ),
             Self::Invalid(message) => (StatusCode::BAD_REQUEST, "invalid_request", message),
-            Self::Database(_) | Self::Internal => (
+            Self::Database | Self::Internal => (
                 StatusCode::SERVICE_UNAVAILABLE,
                 "unavailable",
                 "operator service unavailable",
