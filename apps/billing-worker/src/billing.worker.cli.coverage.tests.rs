@@ -28,6 +28,83 @@ fn apply_development_env(command: &mut Command) {
         .env("NVBES_APP_URL", "https://nvbes.test");
 }
 
+/// Spawn the worker bound to a free loopback port, retrying if another process
+/// steals the ephemeral port between release and child bind (parallel suites).
+fn spawn_on_ephemeral(
+    args: &[&str],
+    bind_env: &str,
+    extra_env: &[(&str, String)],
+) -> (std::process::Child, String) {
+    use std::io::Read;
+    use std::net::TcpListener;
+    use std::time::Duration;
+
+    let mut last_err = String::from("no attempts");
+    for _ in 0..8 {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
+        let addr = listener.local_addr().expect("local addr").to_string();
+        drop(listener);
+
+        let mut command = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"));
+        command
+            .env_clear()
+            .args(args)
+            .env(bind_env, &addr)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::piped());
+        for (key, value) in extra_env {
+            command.env(key, value);
+        }
+        let mut child = command.spawn().expect("spawn billing worker");
+        std::thread::sleep(Duration::from_millis(80));
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                let mut stderr = String::new();
+                if let Some(mut pipe) = child.stderr.take() {
+                    let _ = pipe.read_to_string(&mut stderr);
+                }
+                last_err = format!("exited {status}: {stderr}");
+            }
+            Ok(None) => return (child, addr),
+            Err(err) => {
+                last_err = err.to_string();
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        }
+    }
+    panic!("could not bind ephemeral health listener after retries: {last_err}");
+}
+
+fn await_live_health(child: &mut std::process::Child, addr: &str) -> String {
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+    use std::time::Duration;
+
+    let response = (0..100).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(100));
+        if let Some(status) = child.try_wait().ok().flatten() {
+            let mut stderr = String::new();
+            if let Some(mut pipe) = child.stderr.take() {
+                let _ = pipe.read_to_string(&mut stderr);
+            }
+            panic!("process exited early: {status}; stderr={stderr}");
+        }
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
+            .and_then(|mut stream| {
+                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
+                let mut buf = [0_u8; 256];
+                let read = stream.read(&mut buf)?;
+                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
+            })
+            .ok()
+    });
+
+    let _ = child.kill();
+    let _ = child.wait();
+    response.expect("health response")
+}
+
 #[test]
 fn migrate_requires_a_database_url() {
     let output = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
@@ -130,82 +207,17 @@ fn synthetic_smoke_runs_when_database_is_available() {
 
 #[test]
 fn deployment_bootstrap_serves_live_health_check() {
-    use std::io::{Read, Write};
-    use std::net::{TcpListener, TcpStream};
-    use std::time::Duration;
-
-    // Bind then release so the child can reuse an ephemeral free port.
-    let listener = TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
-    let addr = listener.local_addr().expect("local addr").to_string();
-    drop(listener);
-
-    let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
-        .env_clear()
-        .arg("deployment-bootstrap")
-        .env("NVBES_BILLING_HTTP_BIND_ADDR", &addr)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .expect("spawn bootstrap");
-
-    let response = (0..100).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(100));
-        if let Some(status) = child.try_wait().ok().flatten() {
-            panic!("bootstrap exited early: {status}");
-        }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
-            .and_then(|mut stream| {
-                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
-                let mut buf = [0_u8; 128];
-                let read = stream.read(&mut buf)?;
-                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
-            })
-            .ok()
-    });
-
-    let _ = child.kill();
-    let _ = child.wait();
-    let body = response.expect("health response");
+    let (mut child, addr) =
+        spawn_on_ephemeral(&["deployment-bootstrap"], "NVBES_BILLING_HTTP_BIND_ADDR", &[]);
+    let body = await_live_health(&mut child, &addr);
     assert!(body.contains("204") || body.contains("200"), "{body}");
 }
 
 #[test]
 fn deployment_bootstrap_accepts_legacy_bind_addr_env() {
-    use std::io::{Read, Write};
-    use std::net::{TcpListener, TcpStream};
-    use std::time::Duration;
-
-    let listener = TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
-    let addr = listener.local_addr().expect("local addr").to_string();
-    drop(listener);
-
-    let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
-        .env_clear()
-        .arg("deployment-bootstrap")
-        .env("NVBES_BILLING_BIND_ADDR", &addr)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .expect("spawn bootstrap");
-
-    let response = (0..100).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(100));
-        if let Some(status) = child.try_wait().ok().flatten() {
-            panic!("bootstrap exited early: {status}");
-        }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
-            .and_then(|mut stream| {
-                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
-                let mut buf = [0_u8; 128];
-                let read = stream.read(&mut buf)?;
-                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
-            })
-            .ok()
-    });
-
-    let _ = child.kill();
-    let _ = child.wait();
-    let body = response.expect("health response");
+    let (mut child, addr) =
+        spawn_on_ephemeral(&["deployment-bootstrap"], "NVBES_BILLING_BIND_ADDR", &[]);
+    let body = await_live_health(&mut child, &addr);
     assert!(body.contains("204") || body.contains("200"), "{body}");
 }
 
@@ -224,52 +236,23 @@ fn deployment_bootstrap_rejects_invalid_bind_address() {
 
 #[test]
 fn serve_alias_starts_http_health_when_database_is_available() {
-    use std::io::{Read, Write};
-    use std::net::{TcpListener, TcpStream};
-    use std::time::Duration;
-
     if !postgres_reachable() {
         eprintln!("skipping serve integration: postgres unavailable");
         return;
     }
 
-    let listener = TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
-    let addr = listener.local_addr().expect("local addr").to_string();
-    drop(listener);
-
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
         "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
     });
-
-    let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
-        .env_clear()
-        .arg("serve")
-        .env("NVBES_BILLING_DATABASE_URL", database_url)
-        .env("NVBES_APP_URL", "https://nvbes.test")
-        .env("NVBES_BILLING_HTTP_BIND_ADDR", &addr)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .expect("spawn serve");
-
-    let response = (0..100).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(100));
-        if let Some(status) = child.try_wait().ok().flatten() {
-            panic!("serve exited early: {status}");
-        }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
-            .and_then(|mut stream| {
-                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
-                let mut buf = [0_u8; 256];
-                let read = stream.read(&mut buf)?;
-                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
-            })
-            .ok()
-    });
-
-    let _ = child.kill();
-    let _ = child.wait();
-    let body = response.expect("health response");
+    let (mut child, addr) = spawn_on_ephemeral(
+        &["serve"],
+        "NVBES_BILLING_HTTP_BIND_ADDR",
+        &[
+            ("NVBES_BILLING_DATABASE_URL", database_url),
+            ("NVBES_APP_URL", "https://nvbes.test".into()),
+        ],
+    );
+    let body = await_live_health(&mut child, &addr);
     assert!(
         body.contains("200") || body.contains("alive") || body.contains("billing"),
         "{body}"
@@ -278,51 +261,23 @@ fn serve_alias_starts_http_health_when_database_is_available() {
 
 #[test]
 fn serve_without_arguments_starts_when_database_is_available() {
-    use std::io::{Read, Write};
-    use std::net::{TcpListener, TcpStream};
-    use std::time::Duration;
-
     if !postgres_reachable() {
         eprintln!("skipping default serve integration: postgres unavailable");
         return;
     }
 
-    let listener = TcpListener::bind("127.0.0.1:0").expect("ephemeral bind");
-    let addr = listener.local_addr().expect("local addr").to_string();
-    drop(listener);
-
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
         "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
     });
-
-    let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
-        .env_clear()
-        .env("NVBES_BILLING_DATABASE_URL", database_url)
-        .env("NVBES_APP_URL", "https://nvbes.test")
-        .env("NVBES_BILLING_HTTP_BIND_ADDR", &addr)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .expect("spawn default serve");
-
-    let response = (0..100).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(100));
-        if let Some(status) = child.try_wait().ok().flatten() {
-            panic!("default serve exited early: {status}");
-        }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
-            .and_then(|mut stream| {
-                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
-                let mut buf = [0_u8; 256];
-                let read = stream.read(&mut buf)?;
-                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
-            })
-            .ok()
-    });
-
-    let _ = child.kill();
-    let _ = child.wait();
-    let body = response.expect("health response");
+    let (mut child, addr) = spawn_on_ephemeral(
+        &[],
+        "NVBES_BILLING_HTTP_BIND_ADDR",
+        &[
+            ("NVBES_BILLING_DATABASE_URL", database_url),
+            ("NVBES_APP_URL", "https://nvbes.test".into()),
+        ],
+    );
+    let body = await_live_health(&mut child, &addr);
     assert!(body.contains("200") || body.contains("alive"), "{body}");
 }
 
