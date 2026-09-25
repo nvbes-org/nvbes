@@ -207,8 +207,11 @@ fn synthetic_smoke_runs_when_database_is_available() {
 
 #[test]
 fn deployment_bootstrap_serves_live_health_check() {
-    let (mut child, addr) =
-        spawn_on_ephemeral(&["deployment-bootstrap"], "NVBES_BILLING_HTTP_BIND_ADDR", &[]);
+    let (mut child, addr) = spawn_on_ephemeral(
+        &["deployment-bootstrap"],
+        "NVBES_BILLING_HTTP_BIND_ADDR",
+        &[],
+    );
     let body = await_live_health(&mut child, &addr);
     assert!(body.contains("204") || body.contains("200"), "{body}");
 }
