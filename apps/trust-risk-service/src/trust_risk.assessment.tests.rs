@@ -90,9 +90,10 @@ async fn assessment_persists_evidence_and_replays_original_result(pool: sqlx::Pg
     .fetch_one(&pool)
     .await
     .expect("reason count");
-    assert!(
-        reason_count > 0,
-        "persist_snapshot must write evaluation reasons"
+    assert_eq!(
+        reason_count as usize,
+        first.reasons.len(),
+        "persisted reasons must match the evaluation payload"
     );
 
     let duplicate = assess(&pool, &wire, &domain, 400, 30, 400).await.unwrap();
