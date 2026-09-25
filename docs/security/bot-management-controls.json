@@ -15,11 +15,18 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["normalize_email", "validate_password", "authenticate"]
+              "includes": [
+                "normalize_email",
+                "validate_password",
+                "authenticate"
+              ]
             },
             {
               "path": "apps/identity-service/src/identity.http.rs",
-              "includes": ["RegisterRequest", "LoginRequest"]
+              "includes": [
+                "RegisterRequest",
+                "LoginRequest"
+              ]
             }
           ]
         }
@@ -37,15 +44,36 @@
           "evidence": [
             {
               "path": "libs/rust/trust-risk/src/trust_risk.assessment.rs",
-              "includes": ["Assessment", "instantaneous_signals", "RiskSignal"]
+              "includes": [
+                "Assessment",
+                "instantaneous_signals",
+                "RiskSignal"
+              ]
             },
             {
               "path": "libs/rust/core/src/limiter.rs",
-              "includes": ["RateLimiter", "RateLimitRule", "check_rate_limit"]
+              "includes": [
+                "RateLimiter",
+                "RateLimitRule",
+                "check_rate_limit"
+              ],
+              "tests": [
+                "rate_limiter_blocks_after_limit"
+              ]
             },
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["authenticate", "hash_password"]
+              "includes": [
+                "authenticate",
+                "hash_password"
+              ]
+            },
+            {
+              "path": "libs/rust/core/src/limiter.postgres.tests.rs",
+              "tests": [
+                "concurrent_requests_share_a_single_limit",
+                "check_helpers_apply_multiple_rules"
+              ]
             }
           ]
         }
@@ -72,7 +100,10 @@
             },
             {
               "path": "apps/billing-service/src/billing.webhooks.rs",
-              "includes": ["stripe-signature", "stripe_webhook_handler"]
+              "includes": [
+                "stripe-signature",
+                "stripe_webhook_handler"
+              ]
             }
           ]
         }
@@ -90,11 +121,16 @@
           "evidence": [
             {
               "path": "libs/rust/trust-risk/src/trust_risk.signal.rs",
-              "includes": ["RiskSignal", "validated_name"]
+              "includes": [
+                "RiskSignal",
+                "validated_name"
+              ]
             },
             {
               "path": "libs/rust/core/src/http.client_ip.rs",
-              "includes": ["client_ip"]
+              "includes": [
+                "client_ip"
+              ]
             }
           ]
         }
@@ -112,11 +148,29 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.mfa.rs",
-              "includes": ["enroll_totp", "confirm_enrollment", "grant_step_up"]
+              "includes": [
+                "enroll_totp",
+                "confirm_enrollment",
+                "grant_step_up"
+              ]
             },
             {
               "path": "libs/rust/core/src/auth.rs",
-              "includes": ["step_up_required_error"]
+              "includes": [
+                "step_up_required_error"
+              ]
+            },
+            {
+              "path": "libs/rust/core/src/auth.helpers.tests.rs",
+              "tests": [
+                "step_up_errors_use_unauthorized_contract"
+              ]
+            },
+            {
+              "path": "libs/rust/core/src/authz.action.tests.rs",
+              "tests": [
+                "step_up_required_for_sensitive_mutations"
+              ]
             }
           ]
         }
@@ -134,11 +188,17 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["dummy_verify_password", "authentication failed"]
+              "includes": [
+                "dummy_verify_password",
+                "authentication failed"
+              ]
             },
             {
               "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": ["dummy_verify_password", "DUMMY_ARGON2ID_HASH"]
+              "includes": [
+                "dummy_verify_password",
+                "DUMMY_ARGON2ID_HASH"
+              ]
             }
           ]
         }
@@ -156,11 +216,21 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.tokens.rs",
-              "includes": ["AccessTokenClaims", "TokenService", "pub fn verify("]
+              "includes": [
+                "AccessTokenClaims",
+                "TokenService",
+                "pub fn verify("
+              ]
             },
             {
               "path": "libs/rust/core/src/idempotency.rs",
-              "includes": ["request_signature_includes_method_path_and_body_hash", "validate_key"]
+              "includes": [
+                "request_signature_includes_method_path_and_body_hash",
+                "validate_key"
+              ],
+              "tests": [
+                "request_signature_includes_method_path_and_body_hash"
+              ]
             }
           ]
         }
@@ -178,15 +248,26 @@
           "evidence": [
             {
               "path": "libs/rust/trust-risk/src/trust_risk.rules.rs",
-              "includes": ["RuleSet", "Recommendation", "RiskBand"]
+              "includes": [
+                "RuleSet",
+                "Recommendation",
+                "RiskBand"
+              ]
             },
             {
               "path": "libs/rust/core/src/limiter.rs",
-              "includes": ["ratelimit-limit", "ratelimit-remaining", "ratelimit-reset"]
+              "includes": [
+                "ratelimit-limit",
+                "ratelimit-remaining",
+                "ratelimit-reset"
+              ]
             },
             {
               "path": "libs/rust/core/src/http.error.rs",
-              "includes": ["too_many_requests", "rate_limit_info"]
+              "includes": [
+                "too_many_requests",
+                "rate_limit_info"
+              ]
             }
           ]
         }
@@ -204,11 +285,16 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["audit(&mut tx, principal_id, \"identity.authenticated\")"]
+              "includes": [
+                "audit(&mut tx, principal_id, \"identity.authenticated\")"
+              ]
             },
             {
               "path": "apps/trust-risk-service/src/trust_risk.audit.rs",
-              "includes": ["trust_risk_audit_events", "AuditEvent"]
+              "includes": [
+                "trust_risk_audit_events",
+                "AuditEvent"
+              ]
             }
           ]
         }
@@ -226,15 +312,37 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/limiter.rs",
-              "includes": ["RateLimiter", "check_rate_limit_pair", "rate_limited"]
+              "includes": [
+                "RateLimiter",
+                "check_rate_limit_pair",
+                "rate_limited"
+              ],
+              "tests": [
+                "rate_limiter_blocks_after_limit"
+              ]
             },
             {
               "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": ["hash_password", "verify_password", "argon2"]
+              "includes": [
+                "hash_password",
+                "verify_password",
+                "argon2"
+              ]
             },
             {
               "path": "libs/rust/core/src/auth.helpers.validation.rs",
-              "includes": ["validate_password", "MIN_PASSWORD_LENGTH", "MAX_PASSWORD_LENGTH"]
+              "includes": [
+                "validate_password",
+                "MIN_PASSWORD_LENGTH",
+                "MAX_PASSWORD_LENGTH"
+              ]
+            },
+            {
+              "path": "libs/rust/core/src/auth.helpers.tests.rs",
+              "tests": [
+                "validate_password_accepts_strong_password",
+                "validate_password_rejects_weak_passwords"
+              ]
             }
           ]
         }
