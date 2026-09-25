@@ -6,12 +6,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 # Serialize across concurrent agent pre-push / local runs on the same workspace.
-mkdir -p "$ROOT_DIR/target"
-exec 9>"$ROOT_DIR/target/coverage.lock"
-if ! flock -w 3600 9; then
-  printf 'error: timed out waiting for %s\n' "coverage.lock" >&2
-  exit 1
-fi
+# shellcheck source=lib/workspace-lock.sh
+source "$ROOT_DIR/scripts/lib/workspace-lock.sh"
+workspace_lock_acquire "$ROOT_DIR/target/coverage.lock" 3600
 
 COVERAGE_DIR=".temp/rust"
 COVERAGE_REPORT="$COVERAGE_DIR/coverage-workspace.json"
