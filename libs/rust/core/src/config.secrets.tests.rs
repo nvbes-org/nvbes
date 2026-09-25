@@ -199,20 +199,13 @@ fn apply_secret_values_covers_optional_secret_fields() {
 
 #[tokio::test]
 async fn resolve_requires_auth_token_when_secret_manager_enabled() {
-    let name_region = "NVBES_SECRET_MANAGER_REGION";
-    let name_secret = "NVBES_SECRET_MANAGER_SECRET_ID";
-    let name_auth = "NVBES_SECRET_MANAGER_AUTH_TOKEN";
-    let name_scw = "SCW_SECRET_KEY";
-    let saved_region = std::env::var_os(name_region);
-    let saved_secret = std::env::var_os(name_secret);
-    let saved_auth = std::env::var_os(name_auth);
-    let saved_scw = std::env::var_os(name_scw);
-    unsafe {
-        std::env::set_var(name_secret, "test-secret-id");
-        std::env::set_var(name_region, "fr-par");
-        std::env::remove_var(name_auth);
-        std::env::remove_var(name_scw);
-    }
+    // Must use SecretManagerEnv (global lock) — raw set_var races llvm-cov/nextest workers.
+    let _env = SecretManagerEnv::install(&[
+        ("NVBES_SECRET_MANAGER_SECRET_ID", Some("test-secret-id")),
+        ("NVBES_SECRET_MANAGER_REGION", Some("fr-par")),
+        ("NVBES_SECRET_MANAGER_AUTH_TOKEN", None),
+        ("SCW_SECRET_KEY", None),
+    ]);
 
     let mut config = AppConfig {
         secret_manager_enabled: true,
@@ -223,25 +216,6 @@ async fn resolve_requires_auth_token_when_secret_manager_enabled() {
         .await
         .expect_err("missing auth token");
     assert!(err.contains("NVBES_SECRET_MANAGER_AUTH_TOKEN"));
-
-    unsafe {
-        match saved_region {
-            Some(value) => std::env::set_var(name_region, value),
-            None => std::env::remove_var(name_region),
-        }
-        match saved_secret {
-            Some(value) => std::env::set_var(name_secret, value),
-            None => std::env::remove_var(name_secret),
-        }
-        match saved_auth {
-            Some(value) => std::env::set_var(name_auth, value),
-            None => std::env::remove_var(name_auth),
-        }
-        match saved_scw {
-            Some(value) => std::env::set_var(name_scw, value),
-            None => std::env::remove_var(name_scw),
-        }
-    }
 }
 
 fn development_config_ready_for_secret_apply() -> AppConfig {

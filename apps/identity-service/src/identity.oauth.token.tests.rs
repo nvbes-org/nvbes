@@ -41,9 +41,9 @@ async fn authorization_code_grant_issues_access_and_refresh_tokens(pool: PgPool)
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
+                .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from(format!(
-                    r#"{{"grant_type":"authorization_code","code":"{code}","client_id":"{client_id}","client_secret":"{client_secret}","redirect_uri":"{redirect_uri}"}}"#
+                    "grant_type=authorization_code&code={code}&client_id={client_id}&client_secret={client_secret}&redirect_uri={redirect_uri}"
                 )))
                 .unwrap(),
         )
@@ -95,9 +95,9 @@ async fn refresh_token_grant_rotates_and_reissues_access_token(pool: PgPool) {
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
+                .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from(format!(
-                    r#"{{"grant_type":"authorization_code","code":"{code}","client_id":"{client_id}","client_secret":"{client_secret}","redirect_uri":"{redirect_uri}"}}"#
+                    "grant_type=authorization_code&code={code}&client_id={client_id}&client_secret={client_secret}&redirect_uri={redirect_uri}"
                 )))
                 .unwrap(),
         )
@@ -122,9 +122,9 @@ async fn refresh_token_grant_rotates_and_reissues_access_token(pool: PgPool) {
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
+                .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from(format!(
-                    r#"{{"grant_type":"refresh_token","refresh_token":"{refresh}","client_id":"{client_id}"}}"#
+                    "grant_type=refresh_token&refresh_token={refresh}&client_id={client_id}"
                 )))
                 .unwrap(),
         )
@@ -171,9 +171,9 @@ async fn authorization_code_grant_rejects_invalid_client_secret(pool: PgPool) {
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
+                .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from(format!(
-                    r#"{{"grant_type":"authorization_code","code":"{code}","client_id":"{client_id}","client_secret":"wrong","redirect_uri":"{redirect_uri}"}}"#
+                    "grant_type=authorization_code&code={code}&client_id={client_id}&client_secret=wrong&redirect_uri={redirect_uri}"
                 )))
                 .unwrap(),
         )
@@ -210,9 +210,9 @@ async fn authorization_code_requires_client_secret_for_confidential_clients(pool
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
+                .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from(format!(
-                    r#"{{"grant_type":"authorization_code","code":"{code}","client_id":"{client_id}","redirect_uri":"{redirect_uri}"}}"#
+                    "grant_type=authorization_code&code={code}&client_id={client_id}&redirect_uri={redirect_uri}"
                 )))
                 .unwrap(),
         )
@@ -230,9 +230,9 @@ async fn authorization_code_rejects_unknown_client(pool: PgPool) {
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
+                .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from(
-                    r#"{"grant_type":"authorization_code","code":"abc","client_id":"missing-client","client_secret":"s","redirect_uri":"https://app.example.com/cb"}"#,
+                    "grant_type=authorization_code&code=abc&client_id=missing-client&client_secret=s&redirect_uri=https://app.example.com/cb",
                 ))
                 .unwrap(),
         )
@@ -271,9 +271,9 @@ async fn public_client_authorization_code_uses_default_audience_without_account_
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
+                .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from(format!(
-                    r#"{{"grant_type":"authorization_code","code":"{code}","client_id":"{client_id}","redirect_uri":"{redirect_uri}"}}"#
+                    "grant_type=authorization_code&code={code}&client_id={client_id}&redirect_uri={redirect_uri}"
                 )))
                 .unwrap(),
         )
@@ -302,9 +302,9 @@ async fn authorization_code_rejects_invalid_grant(pool: PgPool) {
             Request::builder()
                 .method("POST")
                 .uri("/oauth/token")
-                .header("content-type", "application/json")
+                .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from(format!(
-                    r#"{{"grant_type":"authorization_code","code":"not-a-real-code","client_id":"{client_id}","client_secret":"{client_secret}","redirect_uri":"{redirect_uri}"}}"#
+                    "grant_type=authorization_code&code=not-a-real-code&client_id={client_id}&client_secret={client_secret}&redirect_uri={redirect_uri}"
                 )))
                 .unwrap(),
         )
