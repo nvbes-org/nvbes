@@ -29,8 +29,28 @@ export function mutationRunPaths(name, directory) {
   return { report: `${directory}/mutation.json`, sandbox: `${directory}/sandbox` };
 }
 
+function gitEnvForFixture(root) {
+  // Pre-commit/lefthook inject GIT_* for the parent checkout. Nested fixture
+  // repos must bind explicitly to their own gitdir or they retarget (and can
+  // corrupt) the shared worktree config.
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith('GIT_')) delete env[key];
+  }
+  env.GIT_CONFIG_GLOBAL = '/dev/null';
+  env.GIT_CONFIG_SYSTEM = '/dev/null';
+  env.GIT_DIR = path.join(root, '.git');
+  env.GIT_WORK_TREE = root;
+  return env;
+}
+
 export function mutationCheckout(root) {
-  const git = (args) => execFileSync('git', args, { cwd: root, maxBuffer: 64 * 1024 * 1024 });
+  const git = (args) =>
+    execFileSync('git', args, {
+      cwd: root,
+      maxBuffer: 64 * 1024 * 1024,
+      env: gitEnvForFixture(root),
+    });
   const diff = git(['diff', '--no-ext-diff', '--no-textconv', '--binary', 'HEAD']);
   // Untracked tests and configuration can change execution without changing HEAD.
   // Persist only their digest, never file contents or environment values.

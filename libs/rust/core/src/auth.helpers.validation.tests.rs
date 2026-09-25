@@ -26,6 +26,14 @@ fn validate_email_rejects_malformed_addresses() {
 #[test]
 fn validate_email_accepts_simple_address() {
     validate_email("user@example.com").expect("valid email");
+    validate_email("a@b").expect("minimum length email with @");
+}
+
+#[test]
+fn validate_email_rejects_length_and_at_boundaries() {
+    assert!(validate_email("ab").is_err());
+    assert!(validate_email("a@").is_err());
+    assert!(validate_email("@b").is_err());
 }
 
 #[test]
@@ -57,4 +65,7 @@ fn validate_password_table_covers_length_and_entropy() {
             }
         }
     }
+
+    assert!(validate_password("abcdefg").is_err()); // 7 chars
+    assert!(validate_password(&"a".repeat(129)).is_err());
 }

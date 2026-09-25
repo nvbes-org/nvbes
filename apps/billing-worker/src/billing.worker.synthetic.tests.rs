@@ -7,12 +7,11 @@ async fn synthetic_run_exercises_outbox_lifecycle_when_postgres_is_available() {
     if !postgres_reachable() {
         return;
     }
-    let pool =
-        PgPool::connect(&std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-            "postgres://postgres:postgres@127.0.0.1:5432/nvbes_billing".into()
-        }))
-        .await
-        .expect("postgres");
+    let pool = PgPool::connect(&std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
+    }))
+    .await
+    .expect("postgres");
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
@@ -39,9 +38,5 @@ async fn synthetic_run_exercises_outbox_lifecycle_when_postgres_is_available() {
 }
 
 fn postgres_reachable() -> bool {
-    std::net::TcpStream::connect_timeout(
-        &"127.0.0.1:5432".parse().unwrap(),
-        std::time::Duration::from_millis(200),
-    )
-    .is_ok()
+    crate::test_support::postgres_reachable()
 }

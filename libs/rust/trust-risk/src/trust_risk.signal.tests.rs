@@ -183,9 +183,13 @@ fn subject_reference_rejects_bad_kind_namespace_and_tenant_scope() {
 fn subject_accessors_expose_parsed_fields() {
     let subject = SubjectReference::try_from(base_subject()).expect("valid subject");
     assert_eq!(subject.kind(), SubjectKind::Principal);
+    assert_eq!(subject.namespace(), "nvbes.identity");
     assert_eq!(subject.opaque_id(), "018f7f2d-fc7d-7b7a-9f72-3abddda8d001");
     assert_eq!(subject.scope(), DataScope::Regional);
-    assert!(subject.tenant_id().is_some());
+    assert_eq!(
+        subject.tenant_id(),
+        Some(uuid::Uuid::parse_str("018f7f2d-fc7d-7b7a-9f72-3abddda8d001").unwrap())
+    );
 }
 
 #[test]
@@ -251,6 +255,43 @@ fn rejects_partition_subject_and_namespace_boundary_violations() {
         SubjectReference::try_from(subject).unwrap_err(),
         SignalError::InvalidSubject
     );
+}
+
+#[test]
+fn accepts_exact_partition_and_subject_limits() {
+    let mut signal = base_signal();
+    signal.partition_key = "abc".to_string();
+    RiskSignal::try_from(signal).expect("partition key length 3 must be accepted");
+
+    let mut signal = base_signal();
+    signal.partition_key = format!("pk{}", "a".repeat(198));
+    assert_eq!(signal.partition_key.len(), 200);
+    RiskSignal::try_from(signal).expect("partition key length 200 must be accepted");
+
+    let mut signal = base_signal();
+    signal.subjects = (0..16).map(|_| base_subject()).collect();
+    RiskSignal::try_from(signal).expect("16 subjects must be accepted");
+}
+
+#[test]
+fn accepts_exact_namespace_and_opaque_id_limits() {
+    let mut subject = base_subject();
+    subject.namespace = "abc".to_string();
+    SubjectReference::try_from(subject).expect("namespace length 3 must be accepted");
+
+    let mut subject = base_subject();
+    subject.namespace = "n".repeat(80);
+    assert_eq!(subject.namespace.len(), 80);
+    SubjectReference::try_from(subject).expect("namespace length 80 must be accepted");
+
+    let mut subject = base_subject();
+    subject.opaque_id = "12345678".to_string();
+    SubjectReference::try_from(subject).expect("opaque id length 8 must be accepted");
+
+    let mut subject = base_subject();
+    subject.opaque_id = "i".repeat(200);
+    assert_eq!(subject.opaque_id.len(), 200);
+    SubjectReference::try_from(subject).expect("opaque id length 200 must be accepted");
 }
 
 #[test]

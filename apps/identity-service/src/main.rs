@@ -30,8 +30,12 @@ mod mfa_rotation;
 mod oauth;
 #[path = "identity.oauth_clients.rs"]
 mod oauth_clients;
+#[path = "identity.operator.rs"]
+mod operator;
 #[path = "identity.refresh.rs"]
 mod refresh;
+#[path = "identity.session.rs"]
+mod session;
 #[path = "identity.synthetic.rs"]
 mod synthetic;
 #[path = "identity.tokens.rs"]
@@ -77,11 +81,11 @@ async fn run(command: Vec<String>) -> anyhow::Result<()> {
     }
 
     if matches!(command.as_slice(), [action] if action == "synthetic-auth-email-smoke") {
-        let runtime = config::IdentityConfig::from_env()?;
         let email_address = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL")?;
         let initial_password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
         let recovered_password = required_secret("NVBES_IDENTITY_SYNTHETIC_RECOVERED_PASSWORD")?;
         let recovery_base_url = required_secret("NVBES_IDENTITY_RECOVERY_BASE_URL")?;
+        let runtime = config::IdentityConfig::from_env()?;
         let email_config = nvbes_email::EmailClientConfig::from_env(&runtime.environment)?;
         let email_client = nvbes_email::EmailClient::connect(email_config).await?;
         let pool = database::connect(&runtime.database_url, 2).await?;
@@ -98,9 +102,9 @@ async fn run(command: Vec<String>) -> anyhow::Result<()> {
     }
 
     if matches!(command.as_slice(), [action] if action == "synthetic-mfa-smoke") {
-        let runtime = config::IdentityConfig::from_env()?;
         let email = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL")?;
         let password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
+        let runtime = config::IdentityConfig::from_env()?;
         let pool = database::connect(&runtime.database_url, 2).await?;
         let crypto = mfa_crypto::MfaCrypto::with_rotation(
             runtime.mfa_key_version,
@@ -115,10 +119,10 @@ async fn run(command: Vec<String>) -> anyhow::Result<()> {
     }
 
     if matches!(command.as_slice(), [action] if action == "synthetic-token-smoke") {
-        let runtime = config::IdentityConfig::from_env()?;
         let email = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL")?;
         let password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
         let audience = required_secret("NVBES_IDENTITY_SYNTHETIC_TOKEN_AUDIENCE")?;
+        let runtime = config::IdentityConfig::from_env()?;
         let token_config = tokens_config::TokenConfig::from_env(&runtime.environment)?;
         let token_service = tokens::TokenService::new(token_config)?;
         let pool = database::connect(&runtime.database_url, 2).await?;
@@ -144,8 +148,8 @@ async fn run(command: Vec<String>) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let config = config::IdentityConfig::from_env()?;
     if matches!(command.as_slice(), [action] if action == "validate-runtime") {
+        let config = config::IdentityConfig::from_env()?;
         database::connect_lazy(&config.database_url, config.database_max_connections)?;
         println!("identity runtime configuration is valid");
         return Ok(());
@@ -156,6 +160,7 @@ async fn run(command: Vec<String>) -> anyhow::Result<()> {
         );
     }
 
+    let config = config::IdentityConfig::from_env()?;
     nvbes_observability::install_safe_panic_hook();
     let _error_reporting_guard = nvbes_observability::init_error_reporting_with_config(
         nvbes_observability::ErrorReportingConfig {
@@ -195,6 +200,7 @@ async fn serve(
         .merge(metrics::router(&state))
         .merge(http::router(&state))
         .merge(oauth::router(&state))
+        .merge(operator::router(&state))
         .merge(authz::router(&state))
         .merge(discovery::router(&state))
         .layer(axum::middleware::from_fn_with_state(

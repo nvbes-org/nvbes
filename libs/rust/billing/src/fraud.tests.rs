@@ -1,7 +1,23 @@
 use super::{
     CheckoutFraudDecision, CheckoutFraudEnforcementAction, CheckoutFraudInput, CheckoutFraudPolicy,
-    assess_checkout_fraud, checkout_fraud_enforcement_action,
+    NetworkThreatLevel, assess_checkout_fraud, checkout_fraud_enforcement_action,
 };
+
+#[test]
+fn fraud_label_helpers_are_stable() {
+    assert_eq!(NetworkThreatLevel::Low.as_str(), "low");
+    assert_eq!(NetworkThreatLevel::Elevated.as_str(), "elevated");
+    assert_eq!(NetworkThreatLevel::High.as_str(), "high");
+    assert_eq!(NetworkThreatLevel::Critical.as_str(), "critical");
+    assert_eq!(CheckoutFraudDecision::Allow.as_str(), "allow");
+    assert_eq!(CheckoutFraudDecision::Monitor.as_str(), "monitor");
+    assert_eq!(CheckoutFraudDecision::StepUp.as_str(), "step_up");
+    assert_eq!(
+        CheckoutFraudDecision::ManualReview.as_str(),
+        "manual_review"
+    );
+    assert_eq!(CheckoutFraudDecision::Block.as_str(), "block");
+}
 
 #[test]
 fn mismatched_tor_checkout_blocks() {

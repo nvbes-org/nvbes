@@ -18,6 +18,11 @@ fn run_development(action: &str, database_url: &str) -> Output {
         .arg(action)
         .env("NVBES_ENVIRONMENT", "development")
         .env("NVBES_IDENTITY_DATABASE_URL", database_url)
+        .env(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        )
+        .env("NVBES_IDENTITY_MFA_KEY_VERSION", "1")
         .output()
         .expect("Identity binary runs")
 }

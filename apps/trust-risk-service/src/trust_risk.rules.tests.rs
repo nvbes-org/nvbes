@@ -1,4 +1,4 @@
-use super::{RuleOperationError, validate_operator_input};
+use super::{RuleOperationError, operator_input_is_valid, validate_operator_input};
 #[cfg(feature = "database-tests")]
 use super::{activate, rollback, stage};
 
@@ -25,6 +25,15 @@ fn operator_mutations_require_actor_and_reason() {
         validate_operator_input("operator:ada", &long_reason),
         Err(RuleOperationError::InvalidInput)
     ));
+}
+
+#[test]
+fn operator_input_accepts_exact_length_boundaries() {
+    assert!(operator_input_is_valid("abc", "why"));
+    assert!(operator_input_is_valid("abc", &"r".repeat(300)));
+    assert!(!operator_input_is_valid("ab", "why"));
+    assert!(!operator_input_is_valid("abc", "xy"));
+    assert!(!operator_input_is_valid("abc", &"r".repeat(301)));
 }
 
 #[cfg(feature = "database-tests")]

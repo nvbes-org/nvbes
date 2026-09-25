@@ -83,7 +83,7 @@ async fn readiness_reports_ready_when_database_is_available() {
         return;
     }
     let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
+        "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
     });
     let db = sqlx::postgres::PgPoolOptions::new()
         .max_connections(2)
@@ -118,9 +118,5 @@ async fn readiness_reports_ready_when_database_is_available() {
 }
 
 fn postgres_reachable() -> bool {
-    std::net::TcpStream::connect_timeout(
-        &"127.0.0.1:5432".parse().unwrap(),
-        std::time::Duration::from_millis(200),
-    )
-    .is_ok()
+    crate::test_support::postgres_reachable()
 }

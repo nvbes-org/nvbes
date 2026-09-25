@@ -3,6 +3,7 @@ name = "nvbes-billing-service"
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish.workspace = true
 
 [features]
 database-tests = []
@@ -48,3 +49,6 @@ wiremock = "0.6"
 [[test]]
 name = "cli-coverage"
 path = "src/billing.cli.coverage.tests.rs"
+
+[lints]
+workspace = true

@@ -117,6 +117,10 @@ pub fn identity_state(pool: PgPool) -> IdentityState {
             mfa_previous_encryption_key: None,
             mfa_previous_key_version: None,
             token_issuer: "http://identity.test".into(),
+            platform_operator_principals: Default::default(),
+            public_signup_enabled: true,
+            login_url: String::new(),
+            session_cookie_secure: false,
         },
         pool,
     )

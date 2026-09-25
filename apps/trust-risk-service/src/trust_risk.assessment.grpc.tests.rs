@@ -1,3 +1,71 @@
+use nvbes_trust_risk::types::Recommendation;
+use tonic::Code;
+
+use super::{
+    MAX_ASSESSMENT_REQUEST_BYTES, assessment_request_exceeds_budget, map_error, recommendation_name,
+};
+use crate::{
+    assessment_error::AssessmentPersistenceError, grpc_test_support, ingress_db::PersistSignalError,
+};
+
+#[test]
+fn assessment_request_budget_is_256_kib() {
+    assert_eq!(MAX_ASSESSMENT_REQUEST_BYTES, 262_144);
+    assert!(!assessment_request_exceeds_budget(
+        MAX_ASSESSMENT_REQUEST_BYTES
+    ));
+    assert!(assessment_request_exceeds_budget(
+        MAX_ASSESSMENT_REQUEST_BYTES + 1
+    ));
+    assert!(!assessment_request_exceeds_budget(
+        MAX_ASSESSMENT_REQUEST_BYTES - 1
+    ));
+}
+
+#[test]
+fn recommendation_name_covers_all_variants() {
+    assert_eq!(recommendation_name(Recommendation::Allow), "allow");
+    assert_eq!(recommendation_name(Recommendation::Challenge), "challenge");
+    assert_eq!(recommendation_name(Recommendation::Review), "review");
+    assert_eq!(recommendation_name(Recommendation::Deny), "deny");
+}
+
+#[tokio::test]
+async fn map_error_preserves_specialized_grpc_codes() {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://localhost/unused")
+        .expect("lazy pool");
+    let state = grpc_test_support::state(pool);
+    assert_eq!(
+        map_error(&state, AssessmentPersistenceError::Conflict).code(),
+        Code::AlreadyExists
+    );
+    assert_eq!(
+        map_error(&state, AssessmentPersistenceError::NoActiveRules).code(),
+        Code::FailedPrecondition
+    );
+    assert_eq!(
+        map_error(&state, AssessmentPersistenceError::InvalidRules).code(),
+        Code::FailedPrecondition
+    );
+    assert_eq!(
+        map_error(
+            &state,
+            AssessmentPersistenceError::Signal(PersistSignalError::Conflict)
+        )
+        .code(),
+        Code::AlreadyExists
+    );
+    assert_eq!(
+        map_error(
+            &state,
+            AssessmentPersistenceError::Signal(PersistSignalError::PayloadTooLarge)
+        )
+        .code(),
+        Code::ResourceExhausted
+    );
+}
+
 #[cfg(feature = "database-tests")]
 mod database {
     use std::collections::HashMap;

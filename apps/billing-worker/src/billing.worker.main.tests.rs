@@ -51,6 +51,13 @@ impl EnvGuard {
     fn set(&self, name: &str, value: impl AsRef<std::ffi::OsStr>) {
         unsafe { std::env::set_var(name, value) };
     }
+
+    fn saved(&self, name: &str) -> Option<String> {
+        self.saved
+            .iter()
+            .find(|(key, _)| *key == name)
+            .and_then(|(_, value)| value.as_ref().map(|raw| raw.to_string_lossy().into_owned()))
+    }
 }
 
 impl Drop for EnvGuard {
@@ -66,21 +73,18 @@ impl Drop for EnvGuard {
 
 fn apply_development_defaults(guard: &EnvGuard) {
     guard.set("NVBES_ENVIRONMENT", "development");
-    guard.set(
-        "NVBES_BILLING_DATABASE_URL",
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-            "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
-        }),
-    );
+    let database_url = guard
+        .saved("DATABASE_URL")
+        .or_else(|| guard.saved("NVBES_BILLING_DATABASE_URL"))
+        .unwrap_or_else(|| {
+            "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
+        });
+    guard.set("NVBES_BILLING_DATABASE_URL", database_url);
     guard.set("NVBES_APP_URL", "https://nvbes.test");
 }
 
 fn postgres_reachable() -> bool {
-    std::net::TcpStream::connect_timeout(
-        &"127.0.0.1:5432".parse().unwrap(),
-        Duration::from_millis(200),
-    )
-    .is_ok()
+    crate::test_support::postgres_reachable()
 }
 
 #[tokio::test]
@@ -276,6 +280,9 @@ async fn run_synthetic_smoke_succeeds_when_database_is_available() {
     let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
+    run(vec!["migrate".into()])
+        .await
+        .expect("migrate before smoke");
     run(vec!["synthetic-smoke".into()])
         .await
         .expect("synthetic-smoke");

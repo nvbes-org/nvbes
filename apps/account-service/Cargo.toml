@@ -3,6 +3,7 @@ name = "nvbes-account-service"
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish.workspace = true
 
 [features]
 database-tests = []
@@ -34,3 +35,6 @@ uuid.workspace = true
 [dev-dependencies]
 openssl.workspace = true
 tower = "0.5"
+
+[lints]
+workspace = true

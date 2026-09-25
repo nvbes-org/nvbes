@@ -1,8 +1,37 @@
 use openssl::{hash::MessageDigest, sign::Signer};
 
-use super::{SnsMessage, WebhookVerifier, canonical_message, validated_url};
+use super::{
+    MAX_MESSAGE_AGE, SnsMessage, WebhookVerifier, canonical_message, sns_timestamp_within_window,
+    validated_url,
+};
 use crate::config::WebhookTrustConfig;
 use crate::webhook_verify_fixtures::{certificate_authority, leaf_certificate};
+
+#[test]
+fn sns_timestamp_window_accepts_exact_bounds_and_rejects_beyond() {
+    let now = chrono::Utc::now();
+    assert!(sns_timestamp_within_window(now, now, MAX_MESSAGE_AGE));
+    assert!(sns_timestamp_within_window(
+        now - MAX_MESSAGE_AGE,
+        now,
+        MAX_MESSAGE_AGE
+    ));
+    assert!(sns_timestamp_within_window(
+        now + MAX_MESSAGE_AGE,
+        now,
+        MAX_MESSAGE_AGE
+    ));
+    assert!(!sns_timestamp_within_window(
+        now - MAX_MESSAGE_AGE - chrono::Duration::nanoseconds(1),
+        now,
+        MAX_MESSAGE_AGE
+    ));
+    assert!(!sns_timestamp_within_window(
+        now + MAX_MESSAGE_AGE + chrono::Duration::nanoseconds(1),
+        now,
+        MAX_MESSAGE_AGE
+    ));
+}
 
 #[test]
 fn webhook_verifier_rejects_an_empty_ca_bundle() {
@@ -121,7 +150,23 @@ fn subscription_envelope_and_confirmation_url_are_strictly_validated() {
     message.message_type = "SubscriptionConfirmation".into();
     message.timestamp = (chrono::Utc::now() - chrono::Duration::minutes(6)).to_rfc3339();
     assert!(verifier.validate_envelope(&message).is_err());
+    // Live-clock checks stay slightly inside the window to avoid race flakes.
+    message.timestamp = (chrono::Utc::now() - chrono::Duration::minutes(5)
+        + chrono::Duration::milliseconds(250))
+    .to_rfc3339();
+    assert!(verifier.validate_envelope(&message).is_ok());
+    message.timestamp = (chrono::Utc::now() + chrono::Duration::minutes(5)
+        - chrono::Duration::milliseconds(250))
+    .to_rfc3339();
+    assert!(verifier.validate_envelope(&message).is_ok());
     message.timestamp = chrono::Utc::now().to_rfc3339();
+    message.subscribe_url = Some(format!(
+        "https://user:secret@sns.mnq.fr-par.scaleway.com/?Action=ConfirmSubscription&TopicArn={topic}&Token={token}"
+    ));
+    assert!(
+        verifier.confirmation_url(&message).is_err(),
+        "confirmation URLs with credentials must be rejected"
+    );
     message.subscribe_url = None;
     assert!(verifier.confirmation_url(&message).is_err());
     assert!(canonical_message(&message).is_err());

@@ -160,5 +160,8 @@ async fn profile_http_get_and_update(pool: PgPool) {
     assert_eq!(update.status(), StatusCode::OK);
 }
 
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "type-only HeaderMap import anchor for profile test helpers"
+)]
 fn _headers(_: HeaderMap) {}

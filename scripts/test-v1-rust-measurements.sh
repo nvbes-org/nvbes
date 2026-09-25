@@ -63,9 +63,12 @@ package_args=()
 for package in "${packages[@]}"; do
   package_args+=(--package "$package")
 done
+# Isolate mutant builds from the llvm-cov target dir (see test-workspace-mutation.sh).
+unset CARGO_TARGET_DIR
 set +e
 cargo mutants \
   "${package_args[@]}" \
+  --all-features \
   --timeout "${NVBES_MUTATION_TIMEOUT:-600}" \
   --jobs "${NVBES_MUTATION_JOBS:-4}" \
   --no-times \

@@ -111,6 +111,18 @@ fn smoke_and_heartbeat_are_safe_when_error_reporting_is_disabled() {
         "nvbes-observability-error-reporting-smoke"
     );
 
+    let forced = capture_error_reporting_smoke("nvbes-observability", "test", "unit", true);
+    assert_eq!(
+        forced.status, "sent",
+        "configured=true must force smoke even when DSN is absent (`||` not `&&`)"
+    );
+    assert!(forced.configured);
+    // Without a DSN, flush must fail: `configured && flush` stays false (not `||`).
+    assert!(
+        !forced.flushed,
+        "flushed must require both configured and a successful flush"
+    );
+
     let schedule = WorkerMonitorSchedule {
         interval_minutes: 10,
         checkin_margin_minutes: 2,
@@ -152,6 +164,31 @@ fn smoke_and_heartbeat_send_when_error_reporting_is_configured() {
 }
 
 #[test]
+fn send_monitor_check_in_returns_true_when_client_is_bound() {
+    let _lock = error_reporting_test_lock();
+    let _guard = init_error_reporting_with_config(ErrorReportingConfig {
+        app_name: "nvbes-observability-tests",
+        service_name: "nvbes-observability-tests",
+        environment: "test",
+        dsn: Some("https://public@127.0.0.1/1"),
+        traces_sample_rate: 0.0,
+    });
+
+    let sent = send_monitor_check_in(
+        "test",
+        "nvbes-observability-with-client",
+        MonitorCheckInStatus::Ok,
+        Uuid::new_v4(),
+        None,
+        None,
+    );
+    assert!(
+        sent,
+        "configured hub with a client must send the envelope (`!configured` early-return)"
+    );
+}
+
+#[test]
 fn send_monitor_check_in_returns_false_when_hub_has_no_client() {
     let _lock = error_reporting_test_lock();
     let _guard = init_error_reporting_with_config(ErrorReportingConfig {
@@ -169,6 +206,28 @@ fn send_monitor_check_in_returns_false_when_hub_has_no_client() {
     let sent = send_monitor_check_in(
         "test",
         "nvbes-observability-no-client",
+        MonitorCheckInStatus::Ok,
+        Uuid::new_v4(),
+        None,
+        None,
+    );
+    assert!(!sent);
+}
+
+#[test]
+fn send_monitor_check_in_returns_false_when_error_reporting_is_disabled() {
+    let _lock = error_reporting_test_lock();
+    let _disabled = init_error_reporting_with_config(ErrorReportingConfig {
+        app_name: "nvbes-observability-tests",
+        service_name: "nvbes-observability-tests",
+        environment: "test",
+        dsn: None,
+        traces_sample_rate: 0.0,
+    });
+
+    let sent = send_monitor_check_in(
+        "test",
+        "nvbes-observability-disabled",
         MonitorCheckInStatus::Ok,
         Uuid::new_v4(),
         None,

@@ -91,6 +91,21 @@ fn rejects_duplicate_policies_and_weak_tokens() {
 }
 
 #[test]
+fn producer_token_accepts_exact_thirty_two_characters() {
+    let exact = "01234567890123456789012345678901";
+    assert_eq!(exact.len(), 32);
+    let value = format!(
+        r#"[{{"producer":"identity-service","token":"{exact}","signal_prefixes":["identity."]}}]"#
+    );
+    assert!(parse_producers(&value).is_ok());
+    let short = format!(
+        r#"[{{"producer":"identity-service","token":"{}","signal_prefixes":["identity."]}}]"#,
+        &exact[..31]
+    );
+    assert_eq!(parse_producers(&short).unwrap_err(), ConfigError::WeakToken);
+}
+
+#[test]
 fn operator_permissions_are_explicit() {
     let value = format!(
         r#"[{{"actor":"operator:ada","token":"{TOKEN}","permissions":["evaluation:read"]}}]"#
@@ -195,6 +210,17 @@ fn production_requires_sentry_and_authenticated_https_otlp() {
     assert_eq!(
         validate("production", &short_auth).unwrap_err(),
         ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER")
+    );
+
+    let mut exact_auth = valid.clone();
+    exact_auth.otlp_authorization_header = Some("Basic 0123456789".to_string());
+    assert_eq!(
+        exact_auth.otlp_authorization_header.as_ref().unwrap().len(),
+        16
+    );
+    assert!(
+        validate("production", &exact_auth).is_ok(),
+        "exactly 16 characters must remain accepted (`<` not `<=`)"
     );
 
     let mut bearer_auth = valid.clone();
@@ -366,6 +392,18 @@ fn from_env_rejects_weak_metrics_token() {
     assert_eq!(
         TrustRiskConfig::from_env().unwrap_err(),
         ConfigError::WeakToken
+    );
+    drop(guard);
+
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_ENVIRONMENT", "test");
+    guard.set(
+        "NVBES_TRUST_RISK_METRICS_TOKEN",
+        "01234567890123456789012345678901",
+    );
+    assert!(
+        TrustRiskConfig::from_env().is_ok(),
+        "exactly 32 characters must remain accepted (`<` not `<=`)"
     );
     drop(guard);
 

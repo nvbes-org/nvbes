@@ -3,22 +3,24 @@
 Runtime actif propriétaire des credentials, sessions, mécanismes de récupération,
 MFA, step-up et émission de tokens du socle V1.
 
-Le premier incrément fournit uniquement le socle opérationnel fermé :
+## Surface HTTP active
 
-- configuration stricte hors développement ;
-- base PostgreSQL indépendante et migrations explicites ;
-- probes HTTP peu coûteuses ;
-- liveness superficielle, readiness dépendante de PostgreSQL et métriques
-  Prometheus protégées ;
-- traces OTLP authentifiées et remontée Sentry obligatoires en production ;
-- tables minimales pour principals, identifiants, credentials, audit et outbox.
-- smoke interne couvrant création synthétique, authentification, rotation de
-  session et récupération de mot de passe à usage unique.
-- TOTP chiffré par AES-256-GCM, compteur anti-rejeu et grant de step-up borné.
+- `POST /api/v1/auth/register` — inscription email/mot de passe, **fermée par
+  défaut hors développement** (`NVBES_IDENTITY_PUBLIC_SIGNUP`)
+- `POST /api/v1/auth/login` — session navigateur (`nvbes_sid`) + reprise OAuth
+  via `return_to`
+- `POST /api/v1/auth/logout` — révocation de session et cookie
+- `GET /oauth/authorize` — Authorization Code + PKCE ; sans session, 401 avec
+  `return_to` ou redirection vers `NVBES_IDENTITY_LOGIN_URL`
+- `POST /oauth/token` — `application/x-www-form-urlencoded` (`authorization_code`,
+  `refresh_token`)
+- `POST /oauth/introspect`, `POST /api/v1/authz/decision`
+- `GET /.well-known/openid-configuration`, `GET /.well-known/jwks.json`
+- probes `/health/live`, `/health/ready`, `/metrics` (Bearer)
 
-Aucune route d'inscription ou d'authentification publique n'est exposée par cet
-incrément. Elles seront ajoutées par parcours verticaux complets. Cela maintient
-les inscriptions publiques fermées jusqu'au GO explicite.
+Les inscriptions publiques restent désactivées jusqu'au GO explicite. Le login
+et OAuth 2.1 restent disponibles pour les clients internes et les comptes
+synthétiques.
 
 ## Commandes
 
@@ -37,8 +39,8 @@ Le smoke exige en plus `NVBES_IDENTITY_SYNTHETIC_EMAIL`,
 secrets ni les tokens éphémères.
 
 `synthetic-mfa-smoke` exige aussi `NVBES_IDENTITY_MFA_ENCRYPTION_KEY`, clé de
-32 octets encodée en base64. Hors développement, le runtime refuse de démarrer
-sans cette clé. Le smoke ne restitue jamais le secret TOTP.
+32 octets encodée en base64. Le runtime exige toujours cette clé, y compris en
+développement. Le smoke ne restitue jamais le secret TOTP.
 
 La rotation utilise `NVBES_IDENTITY_MFA_KEY_VERSION` pour la clé active et la
 paire optionnelle `NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY` /

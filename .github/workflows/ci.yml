@@ -57,7 +57,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "merge_group" ]]; then
+            printf '%s\n' 'trusted=true' >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
             printf '%s\n' 'trusted=false' >> "$GITHUB_OUTPUT"
           elif [[ -f trusted-base/tools/ci/authorize-pr-cache.mjs ]]; then
             node trusted-base/tools/ci/authorize-pr-cache.mjs

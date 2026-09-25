@@ -5,7 +5,7 @@ use super::{
     ClaimResult, ClaimedEmail, claim_message, complete_failure, complete_success,
     expire_claim_if_due, suppress_due_messages,
 };
-use crate::{crypto::EmailCrypto, database, test_support};
+use crate::{crypto::EmailCrypto, database, dispatch_attempt::finish_attempt, test_support};
 
 async fn accept(pool: &PgPool, key: &str, email: &str) -> uuid::Uuid {
     let command = test_support::command(key, email);
@@ -46,6 +46,14 @@ async fn dispatch_attempts_cover_success_retry_expiry_and_stale_leases(pool: PgP
     )
     .await
     .unwrap();
+    let deferred_attempt: String = sqlx::query_scalar(
+        "SELECT outcome::text FROM email_delivery_attempts WHERE lease_token = $1",
+    )
+    .bind(first.lease_token)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(deferred_attempt, "transient_failure");
     let state: String = sqlx::query_scalar("SELECT state::text FROM email_messages WHERE id = $1")
         .bind(first_id)
         .fetch_one(&pool)
@@ -78,6 +86,14 @@ async fn dispatch_attempts_cover_success_retry_expiry_and_stale_leases(pool: PgP
         .await
         .unwrap();
     assert!(expire_claim_if_due(&pool, &expiring).await.unwrap());
+    let expired_outcome: String = sqlx::query_scalar(
+        "SELECT outcome::text FROM email_delivery_attempts WHERE lease_token = $1",
+    )
+    .bind(expiring.lease_token)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(expired_outcome, "expired");
 
     let stale_id = accept(&pool, "dispatch-stale", "stale@example.com").await;
     let stale = claim(&pool, stale_id).await;
@@ -99,6 +115,39 @@ async fn dispatch_attempts_cover_success_retry_expiry_and_stale_leases(pool: PgP
     complete_success(&pool, &reclaimed, "provider-success")
         .await
         .unwrap();
+    let success_outcome: (String, Option<String>) = sqlx::query_as(
+        "SELECT outcome::text, provider_message_id FROM email_delivery_attempts WHERE lease_token = $1",
+    )
+    .bind(reclaimed.lease_token)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(success_outcome.0, "provider_accepted");
+    assert_eq!(success_outcome.1.as_deref(), Some("provider-success"));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn finish_attempt_persists_provider_outcome(pool: PgPool) {
+    let id = accept(&pool, "finish-attempt", "finish@example.com").await;
+    let claimed = claim(&pool, id).await;
+    finish_attempt(
+        &pool,
+        claimed.lease_token,
+        "provider_accepted",
+        Some("provider-message-1"),
+        None,
+    )
+    .await
+    .unwrap();
+    let (outcome, provider_message_id): (String, Option<String>) = sqlx::query_as(
+        "SELECT outcome::text, provider_message_id FROM email_delivery_attempts WHERE lease_token = $1",
+    )
+    .bind(claimed.lease_token)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(outcome, "provider_accepted");
+    assert_eq!(provider_message_id.as_deref(), Some("provider-message-1"));
 }
 
 #[sqlx::test(migrations = "./migrations")]

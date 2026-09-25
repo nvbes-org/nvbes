@@ -223,3 +223,117 @@ fn rejects_non_monotonic_mid_thresholds() {
         Err(RuleSetError::Thresholds)
     ));
 }
+
+#[test]
+fn comparison_operators_use_strict_boundaries() {
+    let document = serde_json::json!({
+      "version":"bounds-v1",
+      "feature_version":"features-v1",
+      "thresholds":{"challenge":40,"review":70,"deny":90},
+      "rules":[
+        {"code":"gt-only","predicate":{"op":"gt","feature":"a","value":5.0},"score_delta":10,"reasons":["gt"],"minimum_recommendation":null},
+        {"code":"gte-only","predicate":{"op":"gte","feature":"b","value":5.0},"score_delta":10,"reasons":["gte"],"minimum_recommendation":null},
+        {"code":"lt-only","predicate":{"op":"lt","feature":"c","value":5.0},"score_delta":10,"reasons":["lt"],"minimum_recommendation":null},
+        {"code":"lte-only","predicate":{"op":"lte","feature":"d","value":5.0},"score_delta":10,"reasons":["lte"],"minimum_recommendation":null},
+        {"code":"eq-only","predicate":{"op":"eq","feature":"e","value":5.0},"score_delta":10,"reasons":["eq"],"minimum_recommendation":null}
+      ]
+    });
+    let rules = RuleSet::from_json(&serde_json::to_vec(&document).unwrap()).unwrap();
+    let on_boundary = BTreeMap::from([
+        ("a".to_string(), 5.0),
+        ("b".to_string(), 5.0),
+        ("c".to_string(), 5.0),
+        ("d".to_string(), 5.0),
+        ("e".to_string(), 5.0),
+    ]);
+    let result = evaluate(&rules, &on_boundary);
+    assert_eq!(result.score, 30);
+    assert_eq!(
+        result.reason_codes,
+        vec!["gte".to_string(), "lte".to_string(), "eq".to_string()]
+    );
+}
+
+#[test]
+fn validate_key_rejects_empty_overlong_and_charset() {
+    for version in ["", &"a".repeat(81), "BadCase", "space key", "emoji😀"] {
+        let mut document = base_ruleset();
+        document["version"] = serde_json::json!(version);
+        assert!(
+            matches!(
+                RuleSet::from_json(&serde_json::to_vec(&document).unwrap()),
+                Err(RuleSetError::InvalidKey)
+            ),
+            "version {version:?} must be rejected"
+        );
+    }
+
+    let mut document = base_ruleset();
+    document["version"] = serde_json::json!("a".repeat(80));
+    RuleSet::from_json(&serde_json::to_vec(&document).unwrap())
+        .expect("version length 80 must be accepted");
+}
+
+#[test]
+fn predicate_depth_allows_max_and_rejects_one_past() {
+    // Root validate(1); leaf at depth 8 is allowed, depth 9 is not.
+    fn nest(depth: usize) -> serde_json::Value {
+        let mut predicate = serde_json::json!({
+            "op": "gte",
+            "feature": "events_1h",
+            "value": 10
+        });
+        for _ in 0..depth {
+            predicate = serde_json::json!({"op": "not", "predicate": predicate});
+        }
+        serde_json::json!({
+            "version":"depth-v1",
+            "feature_version":"features-v1",
+            "thresholds":{"challenge":40,"review":70,"deny":90},
+            "rules":[{
+                "code":"depth",
+                "predicate":predicate,
+                "score_delta":1,
+                "reasons":["depth"],
+                "minimum_recommendation":null
+            }]
+        })
+    }
+
+    assert!(RuleSet::from_json(&serde_json::to_vec(&nest(7)).unwrap()).is_ok());
+    assert!(matches!(
+        RuleSet::from_json(&serde_json::to_vec(&nest(8)).unwrap()),
+        Err(RuleSetError::PredicateDepth)
+    ));
+}
+
+#[test]
+fn deep_all_combinator_hits_predicate_depth() {
+    let mut predicate = serde_json::json!({
+        "op": "gte",
+        "feature": "events_1h",
+        "value": 10
+    });
+    for _ in 0..8 {
+        predicate = serde_json::json!({
+            "op": "all",
+            "predicates": [predicate]
+        });
+    }
+    let document = serde_json::json!({
+        "version":"deep-all-v1",
+        "feature_version":"features-v1",
+        "thresholds":{"challenge":40,"review":70,"deny":90},
+        "rules":[{
+            "code":"deep-all",
+            "predicate":predicate,
+            "score_delta":1,
+            "reasons":["deep_all"],
+            "minimum_recommendation":null
+        }]
+    });
+    assert!(matches!(
+        RuleSet::from_json(&serde_json::to_vec(&document).unwrap()),
+        Err(RuleSetError::PredicateDepth)
+    ));
+}

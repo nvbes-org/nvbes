@@ -22,6 +22,7 @@
   "cargoManifests": ["Cargo.toml"],
   "sharedCargoPackages": ["nvbes-audit", "nvbes-billing", "nvbes-region"],
   "typescriptExclusions": {
-    "@nvbes/identity-sdk-core": "OpenAPI and generated declarations only; contract tests remain mandatory."
+    "@nvbes/identity-sdk-core": "OpenAPI and generated declarations only; contract tests remain mandatory.",
+    "@nvbes/account-sdk-core": "OpenAPI and generated declarations only; contract tests remain mandatory."
   }
 }

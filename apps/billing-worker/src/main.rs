@@ -21,6 +21,10 @@ mod state;
 #[path = "billing.worker.synthetic.rs"]
 mod synthetic;
 
+#[cfg(test)]
+#[path = "billing.worker.test_support.rs"]
+mod test_support;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     run(std::env::args().skip(1).collect()).await

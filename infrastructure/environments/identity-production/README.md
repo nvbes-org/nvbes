@@ -12,10 +12,11 @@ Its remote state key is fixed to `production/identity/terraform.tfstate` and is
 already reserved by the production bootstrap. No other stack may own these
 resources.
 
-The HTTP endpoint intentionally exposes only shallow liveness, database-backed
-readiness and bearer-protected metrics. Registration, login, invited accounts and
-product traffic remain closed. `privacy = "public"` is required for Scaleway
-health probes and does not imply a public authentication API.
+The HTTP endpoint exposes health, bearer-protected metrics, OAuth 2.1
+authorize/token, and gated authentication APIs. Public signup stays closed
+(`NVBES_IDENTITY_PUBLIC_SIGNUP` defaults to false outside development). Login
+and OAuth remain available for internal clients. `privacy = "public"` is required
+for Scaleway health probes and does not open public registration.
 
 ## Protected GitHub environment
 

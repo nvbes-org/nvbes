@@ -2,9 +2,17 @@ use std::collections::HashMap;
 
 use nvbes_trust_risk::{proto::nvbes::trust_risk::v1 as pb, signal::RiskSignal};
 
-use super::fingerprint;
+use super::{MAX_SIGNAL_PAYLOAD_BYTES, fingerprint, signal_payload_exceeds_budget};
 #[cfg(feature = "database-tests")]
 use super::{PersistSignalError, persist_signal};
+
+#[test]
+fn signal_payload_budget_is_192_kib() {
+    assert_eq!(MAX_SIGNAL_PAYLOAD_BYTES, 196_608);
+    assert!(!signal_payload_exceeds_budget(MAX_SIGNAL_PAYLOAD_BYTES));
+    assert!(signal_payload_exceeds_budget(MAX_SIGNAL_PAYLOAD_BYTES + 1));
+    assert!(!signal_payload_exceeds_budget(MAX_SIGNAL_PAYLOAD_BYTES - 1));
+}
 
 fn wire() -> pb::RiskSignal {
     pb::RiskSignal {
@@ -74,6 +82,17 @@ async fn persistence_is_idempotent_and_conflict_safe(pool: sqlx::PgPool) {
         .await
         .unwrap();
     assert!(!accepted.duplicate);
+    let subject_count = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM trust_risk_signal_subjects WHERE signal_id = $1",
+    )
+    .bind(accepted.id)
+    .fetch_one(&pool)
+    .await
+    .expect("subject count");
+    assert!(
+        subject_count > 0,
+        "insert_subjects must persist signal subjects"
+    );
 
     let duplicate = persist_signal(&pool, &first_wire, &first, 30)
         .await

@@ -151,14 +151,13 @@ async fn dispatch_acknowledges_custom_event_without_email_client() {
     if !postgres_reachable() {
         return;
     }
-    let pool =
-        sqlx::postgres::PgPoolOptions::new()
-            .max_connections(2)
-            .connect(&std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-                "postgres://postgres:postgres@127.0.0.1:5432/nvbes_billing".into()
-            }))
-            .await
-            .expect("postgres");
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
+        }))
+        .await
+        .expect("postgres");
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
@@ -196,11 +195,7 @@ async fn dispatch_acknowledges_custom_event_without_email_client() {
 }
 
 fn postgres_reachable() -> bool {
-    std::net::TcpStream::connect_timeout(
-        &"127.0.0.1:5432".parse().unwrap(),
-        std::time::Duration::from_millis(200),
-    )
-    .is_ok()
+    crate::test_support::postgres_reachable()
 }
 
 #[cfg(feature = "database-tests")]

@@ -55,15 +55,27 @@ mod tests {
             .metadata_mut()
             .insert("authorization", format!("Bearer {TOKEN}").parse().unwrap());
 
+        // Same length as TOKEN so length-mismatch short-circuit cannot hide
+        // a broken constant-time accumulator (e.g. `|` mutated to `&`).
+        const OTHER_TOKEN: &str = "email-worker-internal-token-xx-value";
+        assert_eq!(TOKEN.len(), OTHER_TOKEN.len());
+
         let tokens = HashMap::from([
             ("identity-service".to_string(), TOKEN.to_string()),
-            (
-                "billing-worker".to_string(),
-                "different-email-worker-token-32-value".to_string(),
-            ),
+            ("billing-worker".to_string(), OTHER_TOKEN.to_string()),
         ]);
         assert!(authenticate_producer(&request, &tokens, "identity-service").is_ok());
         assert!(authenticate_producer(&request, &tokens, "billing-worker").is_err());
         assert!(authenticate_producer(&request, &tokens, "unknown-service").is_err());
+    }
+
+    #[test]
+    fn constant_time_eq_rejects_same_length_mismatches() {
+        assert!(super::constant_time_eq(b"abcd", b"abcd"));
+        assert!(!super::constant_time_eq(b"abcd", b"abce"));
+        assert!(!super::constant_time_eq(b"abcd", b"abc"));
+        assert!(!super::constant_time_eq(b"ab", b"abcd"));
+        // Two differing bytes that cancel under XOR must still reject (kills `|`→`^`).
+        assert!(!super::constant_time_eq(&[1, 1], &[0, 0]));
     }
 }

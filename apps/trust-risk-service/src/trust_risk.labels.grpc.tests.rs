@@ -1,3 +1,28 @@
+#[test]
+fn label_request_budget_uses_strict_byte_ceiling() {
+    assert_eq!(super::MAX_LABEL_REQUEST_BYTES, 262_144);
+    assert!(!super::label_request_exceeds_budget(
+        super::MAX_LABEL_REQUEST_BYTES
+    ));
+    assert!(super::label_request_exceeds_budget(
+        super::MAX_LABEL_REQUEST_BYTES + 1
+    ));
+    assert!(!super::label_request_exceeds_budget(
+        super::MAX_LABEL_REQUEST_BYTES - 1
+    ));
+}
+
+#[test]
+fn label_timestamp_preserves_seconds_and_nanos() {
+    let value = chrono::DateTime::parse_from_rfc3339("2026-09-24T12:34:56.789012345Z")
+        .expect("fixture")
+        .with_timezone(&chrono::Utc);
+    let wire = super::timestamp(value);
+    assert_eq!(wire.seconds, value.timestamp());
+    assert_eq!(wire.nanos, value.timestamp_subsec_nanos() as i32);
+    assert_ne!(wire, prost_types::Timestamp::default());
+}
+
 #[cfg(feature = "database-tests")]
 mod database {
     use nvbes_trust_risk::proto::nvbes::trust_risk::v1::{

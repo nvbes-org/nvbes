@@ -207,6 +207,8 @@ mod tests {
         assert!(
             formatted.contains("X-Nvbes-Email-Job-Id: 00000000-0000-0000-0000-000000000001\r\n")
         );
+        assert!(formatted.contains("Subject: Delivery contract"));
+        assert!(formatted.contains("plain text") || formatted.contains("<p>html</p>"));
     }
 
     #[test]

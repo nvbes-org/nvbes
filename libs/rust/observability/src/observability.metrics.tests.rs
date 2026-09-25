@@ -10,27 +10,76 @@ use super::{HttpMetrics, log_metrics_listener_stop, metrics_handler, start_metri
 fn http_metrics_records_request_lifecycle_and_domain_operations() {
     let metrics = HttpMetrics::new();
     metrics.start_request();
-    metrics.finish_request("GET", "/health", 200, Duration::from_millis(12));
-    metrics.finish_request("POST", "/api/v1/items", 500, Duration::from_millis(40));
+    let after_start = metrics.render();
+    assert!(
+        after_start.contains("http_active_requests") && after_start.contains('1'),
+        "start_request must increment the active gauge"
+    );
 
-    metrics.record_postgres_pool("identity", "test", 5, 2);
-    metrics.record_upload_operation("put", "ok", Some(1024), Duration::from_millis(8));
-    metrics.record_upload_operation("put", "error", None, Duration::from_millis(3));
-    metrics.record_download_operation("get", "ok", Some(2048), Duration::from_millis(9));
-    metrics.record_download_operation("get", "miss", None, Duration::from_millis(1));
-    metrics.record_billing_operation("checkout", "ok", Duration::from_millis(25));
-    metrics.record_billing_webhook("stripe", "invoice.paid", "ok", Duration::from_millis(15));
-    metrics.record_worker_queue_job("email.send", "ok", Duration::from_millis(30));
-    metrics.record_worker_queue_recovery("email.send", "requeued");
-    metrics.record_worker_heartbeat("email-worker");
-    metrics.record_worker_queue_depth("email", "pending", 7, Some(12.5));
-    metrics.record_worker_queue_depth("email", "failed", 1, None);
-    metrics.record_object_storage_operation("delete", "ok", 3, Duration::from_millis(5));
+    metrics.finish_request(
+        "GET",
+        "/health-mutation-unique",
+        200,
+        Duration::from_millis(12),
+    );
+    metrics.finish_request(
+        "POST",
+        "/api/v1/items-mutation-unique",
+        500,
+        Duration::from_millis(40),
+    );
+
+    metrics.record_postgres_pool("identity-mutation", "test", 5, 2);
+    metrics.record_upload_operation("put-mutation", "ok", Some(1024), Duration::from_millis(8));
+    metrics.record_upload_operation("put-mutation", "error", None, Duration::from_millis(3));
+    metrics.record_download_operation("get-mutation", "ok", Some(2048), Duration::from_millis(9));
+    metrics.record_download_operation("get-mutation", "miss", None, Duration::from_millis(1));
+    metrics.record_billing_operation("checkout-mutation", "ok", Duration::from_millis(25));
+    metrics.record_billing_webhook(
+        "stripe-mutation",
+        "invoice.paid",
+        "ok",
+        Duration::from_millis(15),
+    );
+    metrics.record_worker_queue_job("email.send-mutation", "ok", Duration::from_millis(30));
+    metrics.record_worker_queue_recovery("email.send-mutation", "requeued");
+    metrics.record_worker_heartbeat("email-worker-mutation");
+    metrics.record_worker_queue_depth("email-mutation", "pending", 7, Some(12.5));
+    metrics.record_worker_queue_depth("email-mutation", "failed", 1, None);
+    metrics.record_object_storage_operation("delete-mutation", "ok", 3, Duration::from_millis(5));
 
     let rendered = metrics.render();
-    assert!(rendered.contains("http_requests_total") || rendered.contains("#"));
-    let defaults = HttpMetrics::default();
-    assert!(!defaults.render().is_empty() || defaults.render().is_empty());
+    for needle in [
+        "http_requests_total",
+        "http_request_duration_seconds",
+        "http_active_requests",
+        "/health-mutation-unique",
+        "/api/v1/items-mutation-unique",
+        "postgres_pool_size",
+        "identity-mutation",
+        "upload_operations_total",
+        "put-mutation",
+        "download_operations_total",
+        "get-mutation",
+        "billing_operations_total",
+        "checkout-mutation",
+        "billing_webhooks_total",
+        "stripe-mutation",
+        "worker_queue_jobs_total",
+        "email.send-mutation",
+        "worker_queue_recovered_jobs_total",
+        "worker_heartbeat_timestamp_seconds",
+        "email-worker-mutation",
+        "worker_queue_depth",
+        "email-mutation",
+        "object_storage_operations_total",
+        "delete-mutation",
+    ] {
+        assert!(
+            rendered.contains(needle),
+            "expected prometheus payload to contain `{needle}`"
+        );
+    }
 }
 
 #[tokio::test]

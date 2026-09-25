@@ -169,6 +169,22 @@ mod tests {
     }
 
     #[test]
+    fn finance_kpis_exclude_break_even_tenants_from_negative_margin() {
+        let kpis = calculate_finance_kpis(
+            &[],
+            &[TenantMarginInput {
+                tenant_id: "break-even".to_string(),
+                revenue_minor: 5_000,
+                cost_minor: 5_000,
+            }],
+        );
+        assert!(
+            kpis.negative_margin_tenant_ids.is_empty(),
+            "cost == revenue must stay non-negative (`>` not `>=`)"
+        );
+    }
+
+    #[test]
     fn negative_margin_tenants_are_identified() {
         let kpis = calculate_finance_kpis(
             &[],

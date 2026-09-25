@@ -124,8 +124,16 @@ fn scores_stay_within_their_declared_range() {
     use pb::attribute_value::Value;
 
     assert_eq!(
+        convert("network", "risk_score", Value::UnsignedValue(100)),
+        Ok(Attribute::Unsigned(100))
+    );
+    assert_eq!(
         convert("network", "risk_score", Value::UnsignedValue(101)),
         Err(SignalError::InvalidAttribute)
+    );
+    assert_eq!(
+        convert("payment", "provider_risk_score", Value::DecimalValue(100.0)),
+        Ok(Attribute::Decimal(100.0))
     );
     assert_eq!(
         convert("identity", "risk_score", Value::SignedValue(-1)),

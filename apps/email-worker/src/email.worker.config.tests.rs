@@ -246,6 +246,20 @@ fn environment_configuration_covers_supported_providers_and_guardrails() {
     assert!(development.webhook.is_none());
     assert_eq!(development.retention.payload_days, 30);
 
+    environment.remove("NVBES_EMAIL_PROVIDER");
+    assert_eq!(
+        EmailWorkerConfig::from_env().unwrap().provider.label(),
+        "smtp",
+        "development must default to smtp when provider is unset"
+    );
+    environment.set("NVBES_EMAIL_PROVIDER", "mock");
+    environment.set("NVBES_EMAIL_RUNTIME_ROLE", "all");
+    assert_eq!(
+        EmailWorkerConfig::from_env().unwrap().runtime_role,
+        crate::config::RuntimeRole::All
+    );
+    environment.remove("NVBES_EMAIL_RUNTIME_ROLE");
+
     environment.set("NVBES_EMAIL_HTTP_BIND_ADDR", "not-an-address");
     assert!(EmailWorkerConfig::from_env().is_err());
     environment.remove("NVBES_EMAIL_HTTP_BIND_ADDR");
@@ -286,7 +300,7 @@ fn environment_configuration_covers_supported_providers_and_guardrails() {
     );
     environment.set(
         "NVBES_EMAIL_PRODUCER_TOKENS",
-        "identity-service=01234567890123456789012345678901,backoffice-service=abcdefghijklmnopqrstuvwxyzABCDEF",
+        "identity-service=01234567890123456789012345678901,platform-operations-service=abcdefghijklmnopqrstuvwxyzABCDEF",
     );
     environment.set("NVBES_EMAIL_DATA_ENCRYPTION_KEY", DEVELOPMENT_DATA_KEY);
     environment.set("NVBES_EMAIL_RECIPIENT_HMAC_KEY", DEVELOPMENT_HMAC_KEY);
@@ -305,6 +319,13 @@ fn environment_configuration_covers_supported_providers_and_guardrails() {
     environment.set("NVBES_EMAIL_QUEUE_URL", "https://sqs.example.test/queue");
     environment.set("NVBES_EMAIL_QUEUE_ACCESS_KEY", "access");
     environment.set("NVBES_EMAIL_QUEUE_SECRET_KEY", "secret");
+    assert!(
+        EmailWorkerConfig::from_env()
+            .unwrap_err()
+            .to_string()
+            .contains("SNS_TOPIC_ARN"),
+        "production without SNS trust config must fail before CA is configured"
+    );
     environment.set("NVBES_EMAIL_SNS_TOPIC_ARN", "arn:scw:sns:fr-par:test:topic");
     assert!(EmailWorkerConfig::from_env().is_err());
     let ca_path: PathBuf = std::env::temp_dir().join(format!(
@@ -316,6 +337,33 @@ fn environment_configuration_covers_supported_providers_and_guardrails() {
     let production = EmailWorkerConfig::from_env().unwrap();
     assert_eq!(production.provider.label(), "scaleway");
     assert_eq!(production.webhook.unwrap().ca_bundle_pem, b"test-ca");
+
+    environment.set("NVBES_EMAIL_PROVIDER", "mock");
+    assert!(
+        EmailWorkerConfig::from_env()
+            .unwrap_err()
+            .to_string()
+            .contains("mock"),
+        "mock must stay forbidden once production prerequisites are otherwise complete"
+    );
+    environment.set("NVBES_EMAIL_PROVIDER", "test-capture");
+    assert!(
+        EmailWorkerConfig::from_env()
+            .unwrap_err()
+            .to_string()
+            .contains("test-capture")
+    );
+    environment.set("NVBES_EMAIL_RUNTIME_ROLE", "all");
+    environment.set("NVBES_EMAIL_PROVIDER", "scaleway");
+    assert!(
+        EmailWorkerConfig::from_env()
+            .unwrap_err()
+            .to_string()
+            .contains("must be ingress or dispatch"),
+        "runtime role all must stay forbidden outside development/test"
+    );
+    environment.set("NVBES_EMAIL_RUNTIME_ROLE", "ingress");
+    environment.set("NVBES_EMAIL_PROVIDER", "scaleway");
 
     let empty_ca = std::env::temp_dir().join(format!(
         "nvbes-email-worker-empty-ca-{}.pem",

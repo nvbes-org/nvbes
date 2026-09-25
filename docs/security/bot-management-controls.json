@@ -14,17 +14,12 @@
           "description": "Protect account creation and login flows with password strength validation, normalized identifiers, and audit logging.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.http.rs",
-              "includes": [
-                "normalize_email",
-                "validate_password",
-                "RegisterRequest",
-                "LoginRequest"
-              ]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": ["normalize_email", "validate_password", "authenticate"]
             },
             {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["authenticate", "dummy_verify_password"]
+              "path": "apps/identity-service/src/identity.http.rs",
+              "includes": ["RegisterRequest", "LoginRequest"]
             }
           ]
         }

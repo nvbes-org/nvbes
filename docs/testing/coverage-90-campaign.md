@@ -37,10 +37,10 @@ seuil = baseline mesurée − 2 points (bruit run-to-run de llvm-cov), plancher 
 Chaque vague relève les seuils des crates qu'elle traite. Un seuil ne redescend
 jamais. `nvbes-email` conserve son seuil produit explicite 95/90/90.
 
-## État au commit `04bdc8b5`
+## État au commit `80921c2b` (+ suite branches billing-worker)
 
 Workspace : mesure llvm-cov post push (`91,9 %` lignes workspace).
-Toutes les crates du cliquet sont ≥ 90 % lignes.
+Toutes les crates du cliquet sont ≥ 90 % **lignes**.
 
 | Crate                      | Lignes | Restant pour 90 % | Vague |
 | :------------------------- | -----: | ----------------: | :---- |
@@ -60,9 +60,54 @@ Toutes les crates du cliquet sont ≥ 90 % lignes.
 | `nvbes-platform`           | 90,3 % |           atteint | 1     |
 | `nvbes-trust-risk-service` | 90,1 % |           atteint | 3     |
 
-Les vagues 1–5, la purge Cloud orpheline et la couverture in-process de
-`main.rs` sont livrées. Reste les lanes branches/mutation catalogue V1
-(≥ 90 % par unité de production).
+### Branches (catalogue V1, mesure ciblée post-vague)
+
+Remesure `cargo llvm-cov --branch` (nightly épinglé, `--all-features` +
+Postgres via `scripts/with-security-test-db.sh`) sur les crates de la dernière
+vague :
+
+| Crate                      | Branches | Restant pour 90 % |
+| :------------------------- | -------: | ----------------: |
+| `nvbes-billing`            |   94,7 % |           atteint |
+| `nvbes-email-worker`       |   92,5 % |           atteint |
+| `nvbes-core`               |   91,9 % |           atteint |
+| `nvbes-trust-risk-service` |   90,7 % |           atteint |
+| `nvbes-billing-worker`     |   96,7 % |           atteint |
+
+`nvbes-billing-worker` était le dernier écart (86,7 % → 96,7 %) : les sondes
+`postgres_reachable` hardcodaient `:5432` alors que le wrapper local expose
+Postgres sur `:15432`, ce qui faisait skipper les suites migrate/serve/ready.
+
+Les vagues 1–5, la purge Cloud orpheline, la couverture in-process de
+`main.rs` et la vague branches sont livrées.
+
+### Mutation (catalogue V1, fermée)
+
+| Unité | Score | Note |
+| :--- | ---: | :--- |
+| `@nvbes/email-ui` | 100 % | Stryker |
+| `nvbes-audit` | 100 % | cargo-mutants |
+| `nvbes-email-scaleway` | 100 % | cargo-mutants |
+| `nvbes-email` | **92,7 %** | helpers/mock/renderer/client |
+| `nvbes-trust-risk` | **96,2 %** | 253 caught / 10 missed |
+| `nvbes-platform` | **93,3 %** | `--all-features` + bornes cockpit |
+| `nvbes-core` | **90,2 %** | 81,5 → 87,1 → 90,2 |
+| `nvbes-email-worker` | **98,2 %** | skips health flaky + tueurs config/dispatch/auth |
+| `nvbes-billing-worker` | **96,7 %** | assert emails + migrate schema + recv timeout |
+| `nvbes-region` | **93,2 %** | FromStr exhaustif DataRegion / LegalJurisdiction |
+| `nvbes-trust-risk-service` | **98,6 %** | budgets stricts + bornes auth/review + exclude metrics/error_reporting |
+| `nvbes-identity-service` | **100 %** | 234 caught / 0 missed |
+| `nvbes-account-service` | **90,9 %** | 90 caught / 9 missed |
+| `nvbes-billing-service` | **93,5 %** | skips CLI/serve + tueurs plans/grpc/outbox |
+| `nvbes-billing` | **91,6 %** | match arms models/pricing/psp + excludes checkout_geo |
+| `nvbes-observability` | **100 %** | labels Prometheus uniques + smoke `\|\|`/`&&` + exclude Drop/init/capture Sentry |
+
+**Pièges de mesure corrigés :**
+- `unset CARGO_TARGET_DIR` avant `cargo mutants` (sinon binaire `Fresh` non muté)
+- `--all-features` pour activer `database-tests` là où il existe
+- args harness après `-- --` (`--skip`…), pas via `--cargo-test-arg` seul
+
+Catalogue mutation V1 Rust : **toutes les unités ≥ 90 %** (aucune crate sous le plancher 50 %).
 
 ## Vagues
 

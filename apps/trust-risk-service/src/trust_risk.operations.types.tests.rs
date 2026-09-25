@@ -88,6 +88,22 @@ fn builds_evaluation_and_review_messages() {
 
     let row = review_case_row((Uuid::new_v4(), id, "in_review".into(), None, now, now));
     assert_eq!(row.state, i32::from(pb::ReviewCaseState::InReview));
+    assert_eq!(
+        review_case_row((Uuid::new_v4(), id, "open".into(), None, now, now)).state,
+        i32::from(pb::ReviewCaseState::Open)
+    );
+    assert_eq!(
+        review_case_row((Uuid::new_v4(), id, "resolved".into(), None, now, now)).state,
+        i32::from(pb::ReviewCaseState::Resolved)
+    );
+    assert_eq!(
+        review_case_row((Uuid::new_v4(), id, "inconclusive".into(), None, now, now)).state,
+        i32::from(pb::ReviewCaseState::Inconclusive)
+    );
+    assert_eq!(
+        review_case_row((Uuid::new_v4(), id, "unknown".into(), None, now, now)).state,
+        i32::from(pb::ReviewCaseState::Unspecified)
+    );
 
     let receipt = rule_receipt(RuleSetReceipt {
         version: "v2".into(),

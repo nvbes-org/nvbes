@@ -101,6 +101,17 @@ fn rejects_empty_subjects_and_too_many_signals() {
 }
 
 #[test]
+fn accepts_exact_subject_and_signal_limits() {
+    let mut value = request();
+    value.subjects = (0..16).map(|_| subject()).collect();
+    Assessment::try_from(value).expect("16 subjects must be accepted");
+
+    let mut value = request();
+    value.instantaneous_signals = (0..16).map(|_| signal("billing-checkout")).collect();
+    Assessment::try_from(value).expect("16 instantaneous signals must be accepted");
+}
+
+#[test]
 fn rejects_producer_mismatch_on_instantaneous_signals() {
     let mut value = request();
     value.instantaneous_signals = vec![signal("other-producer")];

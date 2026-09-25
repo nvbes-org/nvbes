@@ -149,6 +149,26 @@ mod tests {
     }
 
     #[test]
+    fn regional_price_selection_covers_all_pricing_regions() {
+        let cases = [
+            ("US", "north_america"),
+            ("BR", "latam"),
+            ("FR", "western_europe"),
+            ("PL", "eastern_europe"),
+            ("AE", "mena"),
+            ("IN", "south_asia"),
+            ("TH", "southeast_asia"),
+            ("JP", "apac"),
+            ("ZA", "africa"),
+        ];
+        for (country, region) in cases {
+            let selection = regional_price_selection(Some(country));
+            assert_eq!(selection.country_code.as_deref(), Some(country));
+            assert_eq!(selection.pricing_region.as_deref(), Some(region));
+        }
+    }
+
+    #[test]
     fn preserve_historical_price_ignores_current_price_changes() {
         let invoice_price = PriceVersion {
             id: Uuid::nil(),

@@ -61,7 +61,9 @@ for (const [failBaseline, failMicro, failClippy] of [
         .map(JSON.parse);
       assert.ok(
         calls.some((args) =>
-          args.join(' ').includes('clippy --workspace --all-targets --locked -- -D warnings'),
+          args
+            .join(' ')
+            .includes('clippy --workspace --all-targets --all-features --locked -- -D warnings'),
         ),
       );
       if (failMicro || failClippy) {
@@ -79,8 +81,8 @@ for (const [failBaseline, failMicro, failClippy] of [
       assert.deepEqual(
         calls.filter((args) => args[0] === 'nextest'),
         [
-          ['nextest', 'run', '--locked', '--package', 'a'],
-          ['nextest', 'run', '--workspace', '--locked'],
+          ['nextest', 'run', '--locked', '--no-fail-fast', '--package', 'a'],
+          ['nextest', 'run', '--workspace', '--locked', '--no-fail-fast'],
         ],
       );
       const evidence = JSON.parse(result.stdout.match(/CI_RUST_EVIDENCE (.+)/u)[1]);

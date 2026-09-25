@@ -89,4 +89,26 @@ mod tests {
             .is_empty()
         );
     }
+
+    #[test]
+    fn recognize_evenly_spreads_remainder_on_first_month() {
+        let schedule = recognize_evenly(
+            10_000,
+            3,
+            NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
+            "EUR",
+        );
+        assert_eq!(schedule.len(), 3);
+        assert_eq!(schedule[0].amount_minor, 3_334);
+        assert_eq!(schedule[1].amount_minor, 3_333);
+        assert_eq!(schedule[2].amount_minor, 3_333);
+        assert_eq!(
+            schedule[1].recognition_date,
+            NaiveDate::from_ymd_opt(2026, 1, 1).unwrap() + chrono::Duration::days(31)
+        );
+        assert_eq!(
+            schedule.iter().map(|line| line.amount_minor).sum::<i64>(),
+            10_000
+        );
+    }
 }

@@ -55,7 +55,7 @@ pub(crate) fn account_config() -> AccountConfig {
         database_max_connections: 1,
         bind_addr: "127.0.0.1:0".parse().unwrap(),
         token_issuer: "http://identity.local".into(),
-        token_audience: "nvbes-account".into(),
+        token_audience: "nvbes-account-service".into(),
         token_key_id: "identity-key-1".into(),
         token_public_key_pem: test_keys().public_pem.clone(),
         metrics_token: "development-account-metrics-token-value".into(),
@@ -82,7 +82,7 @@ pub(crate) fn access_token(principal_id: Uuid, scopes: &str, step_up: bool) -> S
         scope: scopes.into(),
         amr,
         iss: "http://identity.local".into(),
-        aud: "nvbes-account".into(),
+        aud: "nvbes-account-service".into(),
         exp: now + 600,
         iat: now,
         nbf: now,
@@ -96,7 +96,10 @@ pub(crate) fn access_token(principal_id: Uuid, scopes: &str, step_up: bool) -> S
     encode(&header, &claims, &key).unwrap()
 }
 
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "shared JWT verifier helper for cross-module account tests"
+)]
 pub(crate) fn verifier() -> TokenVerifier {
     TokenVerifier::new(&account_config()).unwrap()
 }

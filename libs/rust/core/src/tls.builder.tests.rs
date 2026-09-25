@@ -20,6 +20,25 @@ fn ensure_crypto_provider() {
 fn write_self_signed_material(dir: &Path) -> (PathBuf, PathBuf) {
     let key = dir.join("server.key");
     let cert = dir.join("server.crt");
+    let config = dir.join("openssl.cnf");
+    // rustls/webpki trust anchors require a v3 CA certificate. OpenSSL 3.x
+    // `req -x509` without explicit CA extensions can produce leaf material that
+    // fails RootCertStore::add / ServerConfig with UnsupportedCertVersion.
+    fs::write(
+        &config,
+        "[req]\n\
+         distinguished_name=req_dn\n\
+         x509_extensions=v3_ca\n\
+         prompt=no\n\
+         [req_dn]\n\
+         CN=nvbes-test-mtls\n\
+         [v3_ca]\n\
+         basicConstraints=critical,CA:TRUE\n\
+         keyUsage=critical,keyCertSign,digitalSignature,keyEncipherment\n\
+         subjectKeyIdentifier=hash\n\
+         authorityKeyIdentifier=keyid:always,issuer\n",
+    )
+    .expect("openssl config");
     let output = Command::new("openssl")
         .args([
             "req",
@@ -34,8 +53,8 @@ fn write_self_signed_material(dir: &Path) -> (PathBuf, PathBuf) {
             cert.to_str().unwrap(),
             "-days",
             "1",
-            "-subj",
-            "/CN=nvbes-test-mtls",
+            "-config",
+            config.to_str().unwrap(),
         ])
         .output()
         .expect("openssl available");

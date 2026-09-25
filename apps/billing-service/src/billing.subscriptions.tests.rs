@@ -72,3 +72,60 @@ async fn applies_subscription_created_and_skips_stale_events(pool: PgPool) {
             .expect("outbox");
     assert!(outbox >= 1);
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn subscription_deleted_maps_to_canceled_status(pool: PgPool) {
+    let account_id = Uuid::new_v4();
+    let customer_id = format!("cus_{}", Uuid::new_v4().simple());
+    let sub_id = format!("sub_{}", Uuid::new_v4().simple());
+
+    sqlx::query(
+        "INSERT INTO billing_customers (account_id, account_type, stripe_customer_id, email)
+         VALUES ($1, 'team', $2, 'sub@t.test')",
+    )
+    .bind(account_id)
+    .bind(&customer_id)
+    .execute(&pool)
+    .await
+    .expect("customer");
+
+    apply_subscription_event(
+        &pool,
+        "evt_create",
+        "customer.subscription.created",
+        Utc::now(),
+        &json!({
+            "id": sub_id,
+            "customer": customer_id,
+            "status": "active",
+            "metadata": { "plan_code": "standard_monthly" },
+            "cancel_at_period_end": false
+        }),
+    )
+    .await
+    .expect("create");
+
+    apply_subscription_event(
+        &pool,
+        "evt_delete",
+        "customer.subscription.deleted",
+        Utc::now() + chrono::Duration::seconds(1),
+        &json!({
+            "id": sub_id,
+            "customer": customer_id,
+            "status": "active",
+            "metadata": { "plan_code": "standard_monthly" }
+        }),
+    )
+    .await
+    .expect("delete");
+
+    let status: String = sqlx::query_scalar(
+        "SELECT status FROM billing_subscriptions WHERE stripe_subscription_id = $1",
+    )
+    .bind(&sub_id)
+    .fetch_one(&pool)
+    .await
+    .expect("status");
+    assert_eq!(status, "canceled");
+}

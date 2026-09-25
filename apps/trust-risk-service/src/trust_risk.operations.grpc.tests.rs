@@ -237,6 +237,22 @@ async fn transition_review_lists_and_rule_rollback_paths(pool: sqlx::PgPool) {
         .expect_err("oversized");
     assert_eq!(oversized.code(), Code::ResourceExhausted);
 
+    let at_budget = service
+        .stage_rule_set(operator_request(pb::StageRuleSetRequest {
+            version: "at-budget".into(),
+            canonical_json: vec![0_u8; 256 * 1024],
+            operator: Some(grpc_test_support::operator_context()),
+        }))
+        .await;
+    assert!(
+        at_budget
+            .as_ref()
+            .err()
+            .map(|status| status.code() != Code::ResourceExhausted)
+            .unwrap_or(true),
+        "exact budget must remain accepted (`>` not `>=`)"
+    );
+
     let v1 = br#"{
             "version":"ops-rollback-v1","feature_version":"features-v1",
             "thresholds":{"challenge":30,"review":60,"deny":85},

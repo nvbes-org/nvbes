@@ -72,10 +72,18 @@ fn apply_development_defaults(guard: &EnvGuard) {
     guard.set("NVBES_ENVIRONMENT", "development");
     guard.set(
         "NVBES_IDENTITY_DATABASE_URL",
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-            "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
-        }),
+        std::env::var("DATABASE_URL")
+            .or_else(|_| std::env::var("NVBES_SECURITY_TEST_DATABASE_URL"))
+            .unwrap_or_else(|_| {
+                "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
+            }),
     );
+    // MFA is required in every environment after main's identity MFA gate.
+    guard.set(
+        "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+        "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+    );
+    guard.set("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
 }
 
 fn postgres_reachable() -> bool {

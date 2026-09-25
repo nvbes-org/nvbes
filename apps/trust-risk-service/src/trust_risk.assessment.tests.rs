@@ -67,6 +67,33 @@ async fn assessment_persists_evidence_and_replays_original_result(pool: sqlx::Pg
     let first = assess(&pool, &wire, &domain, 400, 30, 400).await.unwrap();
     assert!(!first.duplicate);
     assert_eq!(first.rule_set_version, "baseline-v1");
+    assert_eq!(
+        first.expires_at,
+        first.evaluated_at + chrono::Duration::days(400),
+        "evaluation retention must add days (`+` not `-`)"
+    );
+    let feature_count = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM trust_risk_evaluation_features WHERE evaluation_id = $1",
+    )
+    .bind(first.id)
+    .fetch_one(&pool)
+    .await
+    .expect("feature count");
+    assert!(
+        feature_count > 0,
+        "persist_snapshot must write evaluation features"
+    );
+    let reason_count = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM trust_risk_evaluation_reasons WHERE evaluation_id = $1",
+    )
+    .bind(first.id)
+    .fetch_one(&pool)
+    .await
+    .expect("reason count");
+    assert!(
+        reason_count > 0,
+        "persist_snapshot must write evaluation reasons"
+    );
 
     let duplicate = assess(&pool, &wire, &domain, 400, 30, 400).await.unwrap();
     assert!(duplicate.duplicate);
@@ -152,4 +179,62 @@ async fn assessment_rejects_feature_version_mismatch_and_opens_review(pool: sqlx
             .await
             .expect("review case");
     assert_eq!(review_cases, 1);
+}
+
+#[test]
+fn parse_band_and_recommendation_cover_all_ledger_values() {
+    use nvbes_trust_risk::types::{Recommendation, RiskBand};
+
+    assert_eq!(super::parse_band("low").unwrap(), RiskBand::Low);
+    assert_eq!(super::parse_band("elevated").unwrap(), RiskBand::Elevated);
+    assert_eq!(super::parse_band("high").unwrap(), RiskBand::High);
+    assert_eq!(super::parse_band("critical").unwrap(), RiskBand::Critical);
+    assert!(super::parse_band("nope").is_err());
+
+    assert_eq!(
+        super::parse_recommendation("allow").unwrap(),
+        Recommendation::Allow
+    );
+    assert_eq!(
+        super::parse_recommendation("challenge").unwrap(),
+        Recommendation::Challenge
+    );
+    assert_eq!(
+        super::parse_recommendation("review").unwrap(),
+        Recommendation::Review
+    );
+    assert_eq!(
+        super::parse_recommendation("deny").unwrap(),
+        Recommendation::Deny
+    );
+    assert!(super::parse_recommendation("nope").is_err());
+}
+
+#[test]
+fn evaluation_expiry_adds_retention_days() {
+    let evaluated_at = chrono::Utc::now();
+    let expires = super::evaluation_expires_at(evaluated_at, 400);
+    assert_eq!(expires, evaluated_at + chrono::Duration::days(400));
+}
+
+#[test]
+fn combine_instantaneous_merges_max_and_sums_counters() {
+    use nvbes_trust_risk::rules::FeatureMap;
+
+    let mut features = FeatureMap::new();
+    features.insert("events_1h".to_string(), 2.0);
+    features.insert("network_risk_score_max_1h".to_string(), 40.0);
+    features.insert("negative_labels".to_string(), 1.0);
+
+    let mut instantaneous = FeatureMap::new();
+    instantaneous.insert("events_1h".to_string(), 3.0);
+    instantaneous.insert("network_risk_score_max_1h".to_string(), 70.0);
+    instantaneous.insert("negative_labels".to_string(), 9.0);
+    instantaneous.insert("positive_labels".to_string(), 4.0);
+
+    super::combine_instantaneous(&mut features, instantaneous);
+    assert_eq!(features["events_1h"], 5.0);
+    assert_eq!(features["network_risk_score_max_1h"], 70.0);
+    assert_eq!(features["negative_labels"], 1.0);
+    assert_eq!(features["positive_labels"], 0.0);
 }

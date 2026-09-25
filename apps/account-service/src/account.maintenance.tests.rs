@@ -22,7 +22,12 @@ fn run(action: &str, database_url: Option<&str>) -> Output {
 
 #[test]
 fn maintenance_requires_an_explicit_database_url() {
-    for action in ["migrate", "synthetic-account-smoke", "process-privacy-jobs"] {
+    for action in [
+        "migrate",
+        "synthetic-account-smoke",
+        "process-privacy-jobs",
+        "publish-outbox",
+    ] {
         for url in [None, Some("  ")] {
             let output = run(action, url);
             assert!(!output.status.success());
@@ -37,7 +42,12 @@ fn maintenance_requires_an_explicit_database_url() {
 
 #[test]
 fn maintenance_reaches_database_validation_without_http_configuration() {
-    for action in ["migrate", "synthetic-account-smoke", "process-privacy-jobs"] {
+    for action in [
+        "migrate",
+        "synthetic-account-smoke",
+        "process-privacy-jobs",
+        "publish-outbox",
+    ] {
         let output = run(action, Some("invalid-database-url"));
         assert!(!output.status.success());
         let error = String::from_utf8_lossy(&output.stderr);

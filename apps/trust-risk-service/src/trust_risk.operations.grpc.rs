@@ -168,7 +168,7 @@ impl TrustRiskOperationsService for OperationsService {
             request.operator.as_ref(),
             "rules:write",
         )?;
-        if request.canonical_json.len() > 256 * 1024 {
+        if rule_set_exceeds_budget(request.canonical_json.len()) {
             return Err(Status::resource_exhausted("rule set exceeds size budget"));
         }
         rules_db::stage(
@@ -245,15 +245,24 @@ fn authorize<'a>(
     permission: &str,
 ) -> Result<&'a pb::OperatorContext, Status> {
     let value = value.ok_or_else(|| Status::invalid_argument("operator context is required"))?;
-    if value.caller.len() < 3
-        || value.actor.len() < 3
-        || value.reason.trim().len() < 3
-        || value.reason.len() > 300
-    {
+    if !operator_context_is_valid(value) {
         return Err(Status::invalid_argument("operator context is invalid"));
     }
     auth::operator(metadata, &state.config, &value.actor, permission)?;
     Ok(value)
+}
+
+pub(crate) const MAX_RULE_SET_BYTES: usize = 256 * 1024;
+
+pub(crate) fn rule_set_exceeds_budget(len: usize) -> bool {
+    len > MAX_RULE_SET_BYTES
+}
+
+pub(crate) fn operator_context_is_valid(value: &pb::OperatorContext) -> bool {
+    value.caller.len() >= 3
+        && value.actor.len() >= 3
+        && value.reason.trim().len() >= 3
+        && value.reason.len() <= 300
 }
 
 #[cfg(test)]

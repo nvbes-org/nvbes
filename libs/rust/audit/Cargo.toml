@@ -3,8 +3,12 @@ name = "nvbes-audit"
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish.workspace = true
 
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
+
+[lints]
+workspace = true

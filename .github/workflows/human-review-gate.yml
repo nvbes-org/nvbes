@@ -1,0 +1,51 @@
+name: human review gate
+run-name: human-review-gate ${{ github.run_id }}
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  pull_request_review:
+    types: [submitted, dismissed]
+  workflow_dispatch:
+concurrency:
+  group: human-review-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+jobs:
+  human-review-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name != 'pull_request_review' || github.event.pull_request.base.ref == 'main'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/human-review-gate.yml
+      - name: Enforce human reprise on protected paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          NVBES_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [[ -n "${NVBES_PR_NUMBER:-}" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            export NVBES_PR_LABELS
+            NVBES_PR_LABELS="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${NVBES_PR_NUMBER}/labels" --jq '[.[].name]|join(",")')"
+            export NVBES_PR_REVIEWS_JSON
+            NVBES_PR_REVIEWS_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${NVBES_PR_NUMBER}/reviews" --jq '[.[]|{user:.user.login,state:.state}]')"
+          else
+            BASE_SHA="$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD~1)"
+            HEAD_SHA="$(git rev-parse HEAD)"
+            export NVBES_PR_LABELS=""
+            export NVBES_PR_REVIEWS_JSON='[]'
+          fi
+          node tools/ci/check-human-review-gate.mjs --base "$BASE_SHA" --head "$HEAD_SHA"

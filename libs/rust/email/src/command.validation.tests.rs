@@ -281,6 +281,12 @@ fn code_money_optional_urls_and_reminders_reject_invalid_values() {
         reminder.validate(now()).unwrap_err().field_name(),
         "deliver_before"
     );
+
+    let mut reminder_at_limit = command(templates().remove(6));
+    reminder_at_limit.deliver_before = now() + Duration::hours(24);
+    reminder_at_limit
+        .validate(now())
+        .expect("exactly 24h remains accepted");
 }
 
 #[test]
@@ -299,5 +305,87 @@ fn operational_readiness_is_bounded_and_uses_safe_identifiers() {
     assert_eq!(
         long_lived.validate(now()).unwrap_err().field_name(),
         "deliver_before"
+    );
+
+    let mut at_limit = command(templates().remove(7));
+    at_limit.deliver_before = now() + Duration::minutes(30);
+    at_limit
+        .validate(now())
+        .expect("exactly 30 minutes remains accepted");
+}
+
+#[test]
+fn validation_helpers_pin_length_and_money_boundaries() {
+    use super::validation::{
+        validate_email, validate_https_url, validate_money, validate_optional_email,
+        validate_optional_text, validate_text,
+    };
+
+    // Longest practical lettre-valid address (~260) stays under MAX_EMAIL_LENGTH (320).
+    let long_valid = format!(
+        "{}@{}.{}.{}.com",
+        "a".repeat(64),
+        "b".repeat(63),
+        "c".repeat(63),
+        "d".repeat(63)
+    );
+    assert!(long_valid.len() < 320);
+    validate_email(&long_valid).expect("long valid email");
+    let email_over = format!("{}@example.com", "a".repeat(309));
+    assert!(email_over.len() > 320);
+    assert!(validate_email(&email_over).is_err());
+    assert!(validate_email("not-an-email").is_err());
+
+    validate_optional_email("template.affected_email", None).expect("absent optional email");
+    validate_optional_email("template.affected_email", Some(long_valid.as_str()))
+        .expect("long optional email");
+    assert!(validate_optional_email("template.affected_email", Some("bad")).is_err());
+    assert!(validate_optional_email("template.affected_email", Some(email_over.as_str())).is_err());
+
+    // MAX_TEXT_FIELD_LENGTH = 200.
+    validate_text("recipient.name", &"a".repeat(200)).expect("max text");
+    assert!(validate_text("recipient.name", &"a".repeat(201)).is_err());
+    assert!(validate_text("recipient.name", "").is_err());
+    assert!(validate_text("recipient.name", " ").is_err());
+    assert!(validate_text("recipient.name", "line\nbreak").is_err());
+    validate_optional_text("recipient.name", None).expect("absent optional text");
+    assert!(validate_optional_text("recipient.name", Some("")).is_err());
+
+    validate_money(0, "EUR").expect("zero amount");
+    assert!(validate_money(-1, "EUR").is_err());
+    assert!(validate_money(1, "EU").is_err());
+    assert!(validate_money(1, "EURO").is_err());
+    assert!(validate_money(1, "E1R").is_err());
+    assert!(validate_money(1, "eu!").is_err());
+
+    validate_https_url("template.url", "https://example.com/path").expect("https");
+    validate_https_url("template.url", "http://127.0.0.1/reset").expect("loopback http");
+    assert!(validate_https_url("template.url", "http://example.com").is_err());
+    assert!(validate_https_url("template.url", "ftp://example.com").is_err());
+    let url_over = format!("https://example.com/{}", "a".repeat(4096));
+    assert!(url_over.len() > 4096);
+    assert!(validate_https_url("template.url", &url_over).is_err());
+}
+
+#[test]
+fn validate_rejects_stale_deadline_and_category_mismatch() {
+    let mut stale = command(templates().remove(0));
+    stale.deliver_before = now();
+    assert_eq!(
+        stale
+            .validate(now())
+            .expect_err("equal deadline")
+            .field_name(),
+        "deliver_before"
+    );
+
+    let mut mismatched = command(templates().remove(0));
+    mismatched.category = super::EmailCategory::Billing;
+    assert_eq!(
+        mismatched
+            .validate(now())
+            .expect_err("category mismatch")
+            .field_name(),
+        "category"
     );
 }

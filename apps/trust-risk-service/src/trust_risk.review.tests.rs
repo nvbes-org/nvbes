@@ -22,6 +22,39 @@ fn review_state_labels_are_stable() {
     assert_eq!(ReviewState::Inconclusive.as_str(), "inconclusive");
 }
 
+#[test]
+fn review_state_parse_covers_all_persisted_labels() {
+    assert_eq!(ReviewState::parse("open").unwrap(), ReviewState::Open);
+    assert_eq!(
+        ReviewState::parse("in_review").unwrap(),
+        ReviewState::InReview
+    );
+    assert_eq!(
+        ReviewState::parse("resolved").unwrap(),
+        ReviewState::Resolved
+    );
+    assert_eq!(
+        ReviewState::parse("inconclusive").unwrap(),
+        ReviewState::Inconclusive
+    );
+    assert!(ReviewState::parse("nope").is_err());
+}
+
+#[test]
+fn review_transition_input_accepts_exact_boundaries() {
+    assert!(super::review_transition_input_is_valid("abc", "why"));
+    assert!(super::review_transition_input_is_valid(
+        "abc",
+        &"r".repeat(300)
+    ));
+    assert!(!super::review_transition_input_is_valid("ab", "why"));
+    assert!(!super::review_transition_input_is_valid("abc", "  "));
+    assert!(!super::review_transition_input_is_valid(
+        "abc",
+        &"r".repeat(301)
+    ));
+}
+
 #[cfg(feature = "database-tests")]
 mod database {
     use uuid::Uuid;

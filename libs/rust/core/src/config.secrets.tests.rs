@@ -1,7 +1,15 @@
 use base64::Engine;
 use serde_json::{Map, Value, json};
+use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use super::{AppConfig, assign_optional, assign_required, decoded_secret_object, required_env};
+
+fn secret_manager_env_lock() -> MutexGuard<'static, ()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 #[test]
 fn resolve_is_noop_when_secret_manager_disabled() {
@@ -263,11 +271,13 @@ fn development_config_ready_for_secret_apply() -> AppConfig {
 }
 
 struct SecretManagerEnv {
+    _guard: MutexGuard<'static, ()>,
     saved: Vec<(&'static str, Option<std::ffi::OsString>)>,
 }
 
 impl SecretManagerEnv {
     fn install(pairs: &[(&str, Option<&str>)]) -> Self {
+        let guard = secret_manager_env_lock();
         let names = [
             "NVBES_SECRET_MANAGER_SECRET_ID",
             "NVBES_SECRET_MANAGER_REGION",
@@ -280,15 +290,20 @@ impl SecretManagerEnv {
             .map(|name| (name, std::env::var_os(name)))
             .collect();
         for name in names {
+            // SAFETY: serialized by `secret_manager_env_lock` for test-only env mutation.
             unsafe { std::env::remove_var(name) };
         }
         for (name, value) in pairs {
             match value {
+                // SAFETY: serialized by `secret_manager_env_lock` for test-only env mutation.
                 Some(value) => unsafe { std::env::set_var(name, value) },
                 None => unsafe { std::env::remove_var(name) },
             }
         }
-        Self { saved }
+        Self {
+            _guard: guard,
+            saved,
+        }
     }
 }
 

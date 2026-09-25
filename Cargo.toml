@@ -23,6 +23,7 @@ resolver = "2"
 edition = "2024"
 license = "AGPL-3.0-only"
 version = "0.1.0"
+publish = false
 
 [workspace.dependencies]
 anyhow = "1.0.103"
@@ -94,3 +95,11 @@ lto = "thin"
 codegen-units = 1
 panic = "abort"
 strip = "symbols"
+
+[workspace.lints.rust]
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"

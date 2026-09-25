@@ -27,9 +27,14 @@ fn data_region_from_str_and_hosting_strategy() {
     for (raw, region) in [
         ("eu", DataRegion::Eu),
         ("us", DataRegion::Us),
+        ("ch", DataRegion::Ch),
+        ("apac", DataRegion::Apac),
+        ("uk", DataRegion::Uk),
+        ("latam", DataRegion::Latam),
         ("me_africa", DataRegion::MeAfrica),
     ] {
         assert_eq!(DataRegion::from_str(raw), Ok(region));
+        assert_eq!(DataRegion::from_str(&raw.to_ascii_uppercase()), Ok(region));
         assert_eq!(region.as_str(), raw);
     }
     assert_eq!(
@@ -37,26 +42,62 @@ fn data_region_from_str_and_hosting_strategy() {
         Err(RegionParseError::UnsupportedDataRegion)
     );
     assert!(DataRegion::Eu.is_european_exclusive());
+    assert!(DataRegion::Uk.is_european_exclusive());
+    assert!(DataRegion::Ch.is_european_exclusive());
     assert!(!DataRegion::Us.is_european_exclusive());
+    assert!(!DataRegion::Apac.is_european_exclusive());
+    assert!(!DataRegion::Latam.is_european_exclusive());
+    assert!(!DataRegion::MeAfrica.is_european_exclusive());
+    assert!(!DataRegion::Eu.is_global_multicloud());
+    assert!(!DataRegion::Uk.is_global_multicloud());
+    assert!(!DataRegion::Ch.is_global_multicloud());
+    assert!(DataRegion::Us.is_global_multicloud());
+    assert!(DataRegion::Apac.is_global_multicloud());
     assert_eq!(DataRegion::Us.hosting_strategy(), "global_multicloud");
     assert_eq!(DataRegion::Ch.hosting_strategy(), "exclusive_eu_sovereign");
 }
 
 #[test]
-fn legal_jurisdiction_from_str_covers_common_codes() {
-    assert_eq!(
-        LegalJurisdiction::from_str("gdpr"),
-        Ok(LegalJurisdiction::Gdpr)
-    );
-    assert_eq!(
-        LegalJurisdiction::from_str("UK_GDPR"),
-        Ok(LegalJurisdiction::UkGdpr)
-    );
+fn legal_jurisdiction_from_str_covers_all_codes() {
+    for (raw, jurisdiction) in [
+        ("gdpr", LegalJurisdiction::Gdpr),
+        ("ccpa", LegalJurisdiction::Ccpa),
+        ("nfdap", LegalJurisdiction::Nfdap),
+        ("uk_gdpr", LegalJurisdiction::UkGdpr),
+        ("lgpd", LegalJurisdiction::Lgpd),
+        ("pipeda", LegalJurisdiction::Pipeda),
+        ("popia", LegalJurisdiction::Popia),
+        ("app", LegalJurisdiction::App),
+        ("pdpa", LegalJurisdiction::Pdpa),
+        ("pipl", LegalJurisdiction::Pipl),
+        ("global", LegalJurisdiction::Global),
+        ("ndpa", LegalJurisdiction::Ndpa),
+        ("appi", LegalJurisdiction::Appi),
+        ("pipa", LegalJurisdiction::Pipa),
+        ("nzpa", LegalJurisdiction::Nzpa),
+        ("cndp", LegalJurisdiction::Cndp),
+        ("inpdp", LegalJurisdiction::Inpdp),
+        ("edpl", LegalJurisdiction::Edpl),
+        ("kdpa", LegalJurisdiction::Kdpa),
+        ("apdp", LegalJurisdiction::Apdp),
+    ] {
+        assert_eq!(LegalJurisdiction::from_str(raw), Ok(jurisdiction));
+        assert_eq!(
+            LegalJurisdiction::from_str(&raw.to_ascii_uppercase()),
+            Ok(jurisdiction)
+        );
+        assert_eq!(jurisdiction.as_str(), raw);
+    }
     assert_eq!(
         LegalJurisdiction::from_str("unknown"),
         Err(RegionParseError::UnsupportedLegalJurisdiction)
     );
-    assert_eq!(LegalJurisdiction::Pipl.as_str(), "pipl");
+}
+
+#[test]
+fn timezone_display_writes_iana_name() {
+    assert_eq!(format!("{}", TZ_EUROPE_MADRID), "Europe/Madrid");
+    assert_eq!(TZ_EUROPE_MADRID.to_string(), "Europe/Madrid");
 }
 
 #[test]

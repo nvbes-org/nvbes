@@ -90,3 +90,33 @@ fn reports_field_validation_failures() {
             .any(|f| f.contains("billing_interval"))
     );
 }
+
+#[test]
+fn stripe_mapping_boundaries_keep_zero_amount_and_strict_currency() {
+    let zero = evaluate_stripe_mappings(&[StripeMappingRow {
+        amount_cents: 0,
+        ..valid_row("free", "price_free")
+    }]);
+    assert!(
+        zero.failures.iter().all(|f| !f.contains("negative")),
+        "amount_cents == 0 must remain accepted (`<` not `<=`)"
+    );
+
+    let mixed_case = evaluate_stripe_mappings(&[StripeMappingRow {
+        currency: "Eur".into(),
+        ..valid_row("starter", "price_starter")
+    }]);
+    assert!(
+        mixed_case.failures.iter().any(|f| f.contains("currency")),
+        "len==3 mixed-case must fail (`||` not `&&`)"
+    );
+
+    let monthly = evaluate_stripe_mappings(&[valid_row("starter", "price_starter")]);
+    assert!(
+        monthly
+            .failures
+            .iter()
+            .all(|f| !f.contains("billing_interval")),
+        "\"month\" must remain accepted (`!=` not `==`)"
+    );
+}

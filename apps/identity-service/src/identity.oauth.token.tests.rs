@@ -18,7 +18,7 @@ async fn authorization_code_grant_issues_access_and_refresh_tokens(pool: PgPool)
     let client_id = "db-test-oauth-client";
     let client_secret = "db-test-client-secret-value-12345";
     let redirect_uri = "https://app.example.com/oauth/callback";
-    seed_confidential_oauth_client(&state.db, &client_id, client_secret, redirect_uri).await;
+    seed_confidential_oauth_client(&state.db, client_id, client_secret, redirect_uri).await;
     let (principal_id, session_id, _) = seed_principal_and_session(&state.db).await;
     let code = create_authorization_code(
         &state.db,

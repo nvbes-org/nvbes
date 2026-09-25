@@ -258,13 +258,34 @@ test('retains a failed campaign artifact without promoting its status', () => {
 
 test('checkout fingerprint detects tracked edits, untracked tests and commits', (t) => {
   const root = fixture(t);
-  const git = (args) => execFileSync('git', args, { cwd: root, stdio: 'pipe' });
-  git(['init']);
-  git(['config', 'user.name', 'Synthetic Test']);
-  git(['config', 'user.email', 'synthetic@example.test']);
+  // Drop every GIT_* override from the parent hook, then bind the fixture repo
+  // explicitly so nested git(1) cannot retarget/corrupt the shared worktree.
+  const bootEnv = { ...process.env };
+  for (const key of Object.keys(bootEnv)) {
+    if (key.startsWith('GIT_')) delete bootEnv[key];
+  }
+  bootEnv.GIT_CONFIG_GLOBAL = '/dev/null';
+  bootEnv.GIT_CONFIG_SYSTEM = '/dev/null';
+  execFileSync('git', ['init', '-b', 'main'], { cwd: root, stdio: 'pipe', env: bootEnv });
+  const gitEnv = {
+    ...bootEnv,
+    GIT_DIR: path.join(root, '.git'),
+    GIT_WORK_TREE: root,
+  };
+  const git = (args) => execFileSync('git', args, { cwd: root, stdio: 'pipe', env: gitEnv });
   writeFileSync(path.join(root, 'tracked.txt'), 'first');
   git(['add', 'tracked.txt']);
-  git(['-c', 'commit.gpgsign=false', 'commit', '-m', 'fixture']);
+  git([
+    '-c',
+    'user.name=Synthetic Test',
+    '-c',
+    'user.email=synthetic@example.test',
+    '-c',
+    'commit.gpgsign=false',
+    'commit',
+    '-m',
+    'fixture',
+  ]);
   const before = mutationCheckout(root);
   writeFileSync(path.join(root, 'tracked.txt'), 'second');
   assert.notEqual(mutationCheckout(root).checkoutSha256, before.checkoutSha256);
@@ -274,6 +295,16 @@ test('checkout fingerprint detects tracked edits, untracked tests and commits', 
   writeFileSync(path.join(root, 'libs/ts/example/src/new.test.ts'), 'test');
   assert.notEqual(mutationCheckout(root).checkoutSha256, before.checkoutSha256);
   git(['add', '.']);
-  git(['-c', 'commit.gpgsign=false', 'commit', '-m', 'new test']);
+  git([
+    '-c',
+    'user.name=Synthetic Test',
+    '-c',
+    'user.email=synthetic@example.test',
+    '-c',
+    'commit.gpgsign=false',
+    'commit',
+    '-m',
+    'new test',
+  ]);
   assert.notEqual(mutationCheckout(root).sha, before.sha);
 });

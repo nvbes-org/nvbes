@@ -64,11 +64,22 @@ fn validate_add_note_and_observation_branches() {
     });
     assert!(matches!(validate(&note), Err(OperationsError::Invalid(_))));
 
+    let now = Utc::now();
+    let present = base_command(Action::RecordObservation {
+        case_id: Uuid::new_v4(),
+        expected_version: 1,
+        service: ServiceId::Email,
+        observed_at: now,
+        api_reference: "Email operations receipt".into(),
+        summary: "Delivery investigated without copying content".into(),
+    });
+    assert!(validate(&present).is_ok());
+
     let future = base_command(Action::RecordObservation {
         case_id: Uuid::new_v4(),
         expected_version: 1,
         service: ServiceId::Email,
-        observed_at: Utc::now() + chrono::Duration::hours(2),
+        observed_at: now + chrono::Duration::hours(2),
         api_reference: "Email operations receipt".into(),
         summary: "Delivery investigated without copying content".into(),
     });
@@ -76,6 +87,68 @@ fn validate_add_note_and_observation_branches() {
         validate(&future),
         Err(OperationsError::Invalid(_))
     ));
+}
+
+#[test]
+fn action_case_id_exposes_only_case_scoped_variants() {
+    let case_id = Uuid::new_v4();
+    assert_eq!(
+        Action::Transition {
+            case_id,
+            expected_version: 1,
+            status: CaseStatus::Investigating,
+            evidence: "API receipt and user notification verified".into(),
+        }
+        .case_id(),
+        Some(case_id)
+    );
+    assert_eq!(
+        Action::AddNote {
+            case_id,
+            expected_version: 1,
+            note: "Investigating synthetic support request".into(),
+            evidence: "Operator verified ticket timeline".into(),
+        }
+        .case_id(),
+        Some(case_id)
+    );
+    assert_eq!(
+        Action::RecordObservation {
+            case_id,
+            expected_version: 1,
+            service: ServiceId::Email,
+            observed_at: Utc::now(),
+            api_reference: "Email operations receipt".into(),
+            summary: "Delivery investigated without copying content".into(),
+        }
+        .case_id(),
+        Some(case_id)
+    );
+    assert_eq!(
+        Action::OpenCase {
+            category: CaseCategory::Support,
+            owner: ServiceId::Account,
+            subject_id: Uuid::new_v4(),
+            source: "ticket".into(),
+            summary: "Need help with account access".into(),
+            related_case_id: None,
+        }
+        .case_id(),
+        None
+    );
+    assert_eq!(
+        Action::RecordCost {
+            month: chrono::NaiveDate::from_ymd_opt(2026, 9, 1).unwrap(),
+            provider: "Scaleway".into(),
+            category: "compute".into(),
+            actual_cents: 100,
+            forecast_cents: 150,
+            evidence: "synthetic invoice reference".into(),
+            replaces: None,
+        }
+        .case_id(),
+        None
+    );
 }
 
 #[test]

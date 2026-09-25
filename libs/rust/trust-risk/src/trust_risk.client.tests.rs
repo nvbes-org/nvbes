@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{TrustRiskClientConfig, TrustRiskClientError, map_status};
+use super::{MIN_TOKEN_LENGTH, TrustRiskClientConfig, TrustRiskClientError, map_status};
 
 const TOKEN: &str = "trust-risk-internal-token-at-least-32-characters";
 
@@ -21,6 +21,10 @@ fn production_requires_https() {
 fn configuration_requires_strong_metadata_safe_token_and_timeout() {
     for (token, timeout) in [
         ("short", Duration::from_millis(100)),
+        (
+            &"x".repeat(MIN_TOKEN_LENGTH - 1),
+            Duration::from_millis(100),
+        ),
         (TOKEN, Duration::ZERO),
         (
             "trust-risk-token-at-least-32-characters\nunsafe",
@@ -37,6 +41,14 @@ fn configuration_requires_strong_metadata_safe_token_and_timeout() {
             .is_err()
         );
     }
+
+    TrustRiskClientConfig::from_values(
+        "development",
+        "http://127.0.0.1:3050".to_string(),
+        "x".repeat(MIN_TOKEN_LENGTH),
+        Duration::from_millis(100),
+    )
+    .expect("exact minimum token length must be accepted");
 }
 
 #[test]

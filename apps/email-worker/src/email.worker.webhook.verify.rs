@@ -186,8 +186,7 @@ impl WebhookVerifier {
             anyhow::bail!("unsupported SNS message type");
         }
         let timestamp = DateTime::parse_from_rfc3339(&message.timestamp)?.with_timezone(&Utc);
-        let age = Utc::now() - timestamp;
-        if age < -MAX_MESSAGE_AGE || age > MAX_MESSAGE_AGE {
+        if !sns_timestamp_within_window(timestamp, Utc::now(), MAX_MESSAGE_AGE) {
             anyhow::bail!("SNS message timestamp is stale");
         }
         Ok(())
@@ -265,6 +264,16 @@ impl WebhookVerifier {
     pub async fn fetch_certificate_for_tests(&self, url: &str) -> anyhow::Result<X509> {
         self.certificate(&Url::parse(url)?).await
     }
+}
+
+/// Inclusive window: exact ±`max_age` bounds stay accepted (`>` / `<`, not `>=` / `<=`).
+fn sns_timestamp_within_window(
+    timestamp: DateTime<Utc>,
+    now: DateTime<Utc>,
+    max_age: chrono::Duration,
+) -> bool {
+    let age = now - timestamp;
+    !(age < -max_age || age > max_age)
 }
 
 fn validated_url(value: &str, expected_host: &str, path_prefix: &str) -> anyhow::Result<Url> {

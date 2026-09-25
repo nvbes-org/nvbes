@@ -13,6 +13,45 @@ fn retention_classes_remain_independent() {
     assert!(policy.evaluations_days < policy.audit_days);
 }
 
+#[test]
+fn erasure_input_accepts_exact_length_boundaries() {
+    assert!(super::erasure_input_is_valid(
+        1, "abc", "12345678", "abc", "why"
+    ));
+    assert!(!super::erasure_input_is_valid(
+        0, "abc", "12345678", "abc", "why"
+    ));
+    assert!(!super::erasure_input_is_valid(
+        1, "ab", "12345678", "abc", "why"
+    ));
+    assert!(!super::erasure_input_is_valid(
+        1, "abc", "1234567", "abc", "why"
+    ));
+    assert!(!super::erasure_input_is_valid(
+        1, "abc", "12345678", "ab", "why"
+    ));
+    assert!(!super::erasure_input_is_valid(
+        1, "abc", "12345678", "abc", "  "
+    ));
+}
+
+#[tokio::test]
+async fn retention_worker_exits_when_shutdown_is_signaled() {
+    use crate::grpc_test_support;
+
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://localhost/nvbes_trust_risk_unused")
+        .expect("lazy pool");
+    let state = grpc_test_support::state(pool);
+    let (tx, rx) = tokio::sync::watch::channel(false);
+    let worker = tokio::spawn(super::run(state, rx));
+    tx.send(true).expect("shutdown");
+    tokio::time::timeout(std::time::Duration::from_secs(2), worker)
+        .await
+        .expect("retention worker should exit on shutdown")
+        .expect("join");
+}
+
 #[tokio::test]
 async fn erase_subject_rejects_each_invalid_input_arm_without_database() {
     use super::{ErasureError, erase_subject};

@@ -45,7 +45,7 @@ fn development_config_loads_with_defaults() {
     let config = AccountConfig::from_env().expect("development defaults");
     assert_eq!(config.environment, "development");
     assert_eq!(config.database_max_connections, 5);
-    assert_eq!(config.token_audience, "nvbes-account");
+    assert_eq!(config.token_audience, "nvbes-account-service");
     assert!(config.metrics_token.len() >= 32);
     clear();
 }
@@ -104,7 +104,7 @@ fn token_contract_rejects_insecure_issuer_and_bad_identifiers() {
         );
         std::env::set_var("NVBES_ACCOUNT_DATABASE_MAX_CONNECTIONS", "5");
         std::env::set_var("NVBES_IDENTITY_TOKEN_ISSUER", "http://identity.test");
-        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account");
+        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account-service");
         std::env::set_var(
             "NVBES_ACCOUNT_METRICS_TOKEN",
             "production-account-metrics-token-value",
@@ -128,7 +128,7 @@ fn token_contract_rejects_insecure_issuer_and_bad_identifiers() {
     ));
 
     unsafe {
-        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account");
+        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account-service");
         std::env::set_var("NVBES_IDENTITY_TOKEN_KEY_ID", "bad key!");
     }
     assert!(matches!(
@@ -199,7 +199,7 @@ fn production_requires_https_observability() {
         );
         std::env::set_var("NVBES_ACCOUNT_DATABASE_MAX_CONNECTIONS", "5");
         std::env::set_var("NVBES_IDENTITY_TOKEN_ISSUER", "https://identity.test");
-        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account");
+        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account-service");
         std::env::set_var(
             "NVBES_ACCOUNT_METRICS_TOKEN",
             "production-account-metrics-token-value",
@@ -251,7 +251,7 @@ fn production_config_loads_when_complete() {
         );
         std::env::set_var("NVBES_ACCOUNT_DATABASE_MAX_CONNECTIONS", "8");
         std::env::set_var("NVBES_IDENTITY_TOKEN_ISSUER", "https://identity.test/");
-        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account");
+        std::env::set_var("NVBES_ACCOUNT_TOKEN_AUDIENCE", "nvbes-account-service");
         std::env::set_var(
             "NVBES_ACCOUNT_METRICS_TOKEN",
             "production-account-metrics-token-value",

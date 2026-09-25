@@ -1,0 +1,812 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "nvbes Account Service",
+    "description": "Resource server for Account profiles, preferences, legal acceptances, teams and privacy lifecycle",
+    "contact": {
+      "name": "nvbes",
+      "url": "https://nvbes.fr"
+    },
+    "license": {
+      "name": "AGPL-3.0-only"
+    },
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "https://account.nvbes.fr",
+      "description": "Production"
+    },
+    {
+      "url": "http://127.0.0.1:3070",
+      "description": "Development"
+    }
+  ],
+  "paths": {
+    "/api/v1/profile": {
+      "get": {
+        "tags": ["profile"],
+        "operationId": "getAccountProfile",
+        "security": [{ "identityBearer": ["account:read"] }],
+        "responses": {
+          "200": {
+            "description": "Profile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProfileEnvelope" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "put": {
+        "tags": ["profile"],
+        "operationId": "updateAccountProfile",
+        "security": [{ "identityBearer": ["account:write"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateProfileInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated profile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProfileEnvelope" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/preferences": {
+      "get": {
+        "tags": ["settings"],
+        "operationId": "getAccountPreferences",
+        "security": [{ "identityBearer": ["account:read"] }],
+        "responses": {
+          "200": {
+            "description": "Preferences",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Preferences" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "put": {
+        "tags": ["settings"],
+        "operationId": "updateAccountPreferences",
+        "security": [{ "identityBearer": ["account:write"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Preferences" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated preferences",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Preferences" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "tags": ["settings"],
+        "operationId": "getAccountNotifications",
+        "security": [{ "identityBearer": ["account:read"] }],
+        "responses": {
+          "200": {
+            "description": "Notification preferences",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Notifications" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "put": {
+        "tags": ["settings"],
+        "operationId": "updateAccountNotifications",
+        "security": [{ "identityBearer": ["account:write"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Notifications" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated notification preferences",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Notifications" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/consents": {
+      "get": {
+        "tags": ["privacy"],
+        "operationId": "listAccountConsents",
+        "security": [{ "identityBearer": ["account:read"] }],
+        "responses": {
+          "200": {
+            "description": "Consent history",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConsentsEnvelope" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["privacy"],
+        "operationId": "grantAccountConsent",
+        "security": [{ "identityBearer": ["account:write"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ConsentInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Consent granted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Consent" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      },
+      "delete": {
+        "tags": ["privacy"],
+        "operationId": "revokeAccountConsent",
+        "security": [{ "identityBearer": ["account:write"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ConsentInput" }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Consent revoked" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/teams": {
+      "get": {
+        "tags": ["teams"],
+        "operationId": "listAccountTeams",
+        "security": [{ "identityBearer": ["account:read"] }],
+        "responses": {
+          "200": {
+            "description": "Teams for the principal",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TeamsEnvelope" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["teams"],
+        "operationId": "createAccountTeam",
+        "security": [{ "identityBearer": ["account:write"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateTeamInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Team created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreatedTeam" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/teams/join": {
+      "post": {
+        "tags": ["teams"],
+        "operationId": "joinAccountTeam",
+        "security": [{ "identityBearer": ["account:write"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JoinTeamInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Joined team",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Team" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/teams/{teamId}": {
+      "get": {
+        "tags": ["teams"],
+        "operationId": "getAccountTeam",
+        "security": [{ "identityBearer": ["account:read"] }],
+        "parameters": [{ "$ref": "#/components/parameters/TeamId" }],
+        "responses": {
+          "200": {
+            "description": "Team detail",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Team" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/teams/{teamId}/members": {
+      "get": {
+        "tags": ["teams"],
+        "operationId": "listAccountTeamMembers",
+        "security": [{ "identityBearer": ["account:read"] }],
+        "parameters": [{ "$ref": "#/components/parameters/TeamId" }],
+        "responses": {
+          "200": {
+            "description": "Team members",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MembersEnvelope" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/teams/{teamId}/members/{principalId}": {
+      "delete": {
+        "tags": ["teams"],
+        "operationId": "removeAccountTeamMember",
+        "security": [{ "identityBearer": ["account:write"] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamId" },
+          { "$ref": "#/components/parameters/PrincipalId" }
+        ],
+        "responses": {
+          "204": { "description": "Member removed" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/teams/{teamId}/leave": {
+      "post": {
+        "tags": ["teams"],
+        "operationId": "leaveAccountTeam",
+        "security": [{ "identityBearer": ["account:write"] }],
+        "parameters": [{ "$ref": "#/components/parameters/TeamId" }],
+        "responses": {
+          "204": { "description": "Left team" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/privacy/exports": {
+      "post": {
+        "tags": ["privacy"],
+        "operationId": "requestAccountPrivacyExport",
+        "security": [{ "identityBearer": ["account:export"] }],
+        "responses": {
+          "202": {
+            "description": "Export requested",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExportRequest" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/privacy/exports/latest": {
+      "get": {
+        "tags": ["privacy"],
+        "operationId": "getLatestAccountPrivacyExport",
+        "security": [{ "identityBearer": ["account:export"] }],
+        "responses": {
+          "200": {
+            "description": "Latest export status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExportStatus" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/privacy/exports/{exportId}/document": {
+      "get": {
+        "tags": ["privacy"],
+        "operationId": "downloadAccountPrivacyExport",
+        "security": [{ "identityBearer": ["account:export"] }],
+        "parameters": [{ "$ref": "#/components/parameters/ExportId" }],
+        "responses": {
+          "200": {
+            "description": "Export document",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "additionalProperties": true }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/closure": {
+      "get": {
+        "tags": ["closure"],
+        "operationId": "getAccountClosure",
+        "security": [{ "identityBearer": ["account:close"] }],
+        "responses": {
+          "200": {
+            "description": "Closure status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClosureStatus" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "tags": ["closure"],
+        "operationId": "requestAccountClosure",
+        "security": [{ "identityBearer": ["account:close"] }],
+        "responses": {
+          "202": {
+            "description": "Closure requested",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClosureRequest" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/closure/cancel": {
+      "post": {
+        "tags": ["closure"],
+        "operationId": "cancelAccountClosure",
+        "security": [{ "identityBearer": ["account:close"] }],
+        "responses": {
+          "200": {
+            "description": "Closure cancelled",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClosureStatus" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TeamId": {
+        "name": "teamId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "PrincipalId": {
+        "name": "principalId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "ExportId": {
+        "name": "exportId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorBody" }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorBody" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient scope or step-up",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorBody" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorBody" }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "State conflict",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorBody" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorBody": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "Profile": {
+        "type": "object",
+        "required": ["id", "display_name", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "display_name": { "type": "string" },
+          "firstname": { "type": ["string", "null"] },
+          "lastname": { "type": ["string", "null"] },
+          "username": { "type": ["string", "null"] },
+          "birthdate": { "type": ["string", "null"], "format": "date" },
+          "region": { "type": ["string", "null"] },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ProfileEnvelope": {
+        "type": "object",
+        "required": ["user"],
+        "properties": {
+          "user": { "$ref": "#/components/schemas/Profile" }
+        },
+        "additionalProperties": false
+      },
+      "UpdateProfileInput": {
+        "type": "object",
+        "properties": {
+          "firstname": { "type": ["string", "null"] },
+          "lastname": { "type": ["string", "null"] },
+          "username": { "type": ["string", "null"] },
+          "birthdate": { "type": ["string", "null"], "format": "date" },
+          "region": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      },
+      "Preferences": {
+        "type": "object",
+        "required": ["theme", "language"],
+        "properties": {
+          "theme": { "type": "string", "enum": ["system", "light", "dark"] },
+          "language": { "type": "string", "enum": ["fr", "en"] }
+        },
+        "additionalProperties": false
+      },
+      "Notifications": {
+        "type": "object",
+        "required": ["email", "push", "in_app", "marketing_email"],
+        "properties": {
+          "email": { "type": "boolean" },
+          "push": { "type": "boolean" },
+          "in_app": { "type": "boolean" },
+          "marketing_email": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      },
+      "Consent": {
+        "type": "object",
+        "required": ["id", "consent_type", "document_version", "granted_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "consent_type": { "type": "string" },
+          "document_version": { "type": "string" },
+          "granted_at": { "type": "string", "format": "date-time" },
+          "revoked_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "ConsentsEnvelope": {
+        "type": "object",
+        "required": ["consents"],
+        "properties": {
+          "consents": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Consent" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConsentInput": {
+        "type": "object",
+        "required": ["consent_type", "document_version"],
+        "properties": {
+          "consent_type": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "document_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "Team": {
+        "type": "object",
+        "required": ["id", "name", "role", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "role": { "type": "string", "enum": ["owner", "member"] },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TeamsEnvelope": {
+        "type": "object",
+        "required": ["teams"],
+        "properties": {
+          "teams": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Team" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateTeamInput": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 100 }
+        },
+        "additionalProperties": false
+      },
+      "CreatedTeam": {
+        "type": "object",
+        "required": ["id", "name", "role", "join_code", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "role": { "type": "string", "const": "owner" },
+          "join_code": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "JoinTeamInput": {
+        "type": "object",
+        "required": ["join_code"],
+        "properties": {
+          "join_code": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "TeamMember": {
+        "type": "object",
+        "required": ["principal_id", "role", "created_at"],
+        "properties": {
+          "principal_id": { "type": "string", "format": "uuid" },
+          "role": { "type": "string", "enum": ["owner", "member"] },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "MembersEnvelope": {
+        "type": "object",
+        "required": ["members"],
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TeamMember" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExportRequest": {
+        "type": "object",
+        "required": ["export_id", "status", "requested_at"],
+        "properties": {
+          "export_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "requested_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ExportStatus": {
+        "type": "object",
+        "required": ["export_id", "status", "requested_at", "updated_at", "participants"],
+        "properties": {
+          "export_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "requested_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "completed_at": { "type": ["string", "null"], "format": "date-time" },
+          "expires_at": { "type": ["string", "null"], "format": "date-time" },
+          "last_error": { "type": ["string", "null"] },
+          "participants": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ParticipantStatus" }
+          }
+        }
+      },
+      "ClosureRequest": {
+        "type": "object",
+        "required": ["saga_id", "status", "requested_at"],
+        "properties": {
+          "saga_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "requested_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ClosureStatus": {
+        "type": "object",
+        "required": ["saga_id", "status", "requested_at", "updated_at", "participants"],
+        "properties": {
+          "saga_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "requested_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "completed_at": { "type": ["string", "null"], "format": "date-time" },
+          "last_error": { "type": ["string", "null"] },
+          "participants": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ParticipantStatus" }
+          }
+        }
+      },
+      "ParticipantStatus": {
+        "type": "object",
+        "required": ["participant", "status", "attempts"],
+        "properties": {
+          "participant": { "type": "string" },
+          "status": { "type": "string" },
+          "attempts": { "type": "integer", "minimum": 0 },
+          "completed_at": { "type": ["string", "null"], "format": "date-time" },
+          "last_error": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "securitySchemes": {
+      "identityBearer": {
+        "type": "oauth2",
+        "description": "Identity authorization-code access token with audience `nvbes-account-service`.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://identity.nvbes.fr/oauth/authorize",
+            "tokenUrl": "https://identity.nvbes.fr/oauth/token",
+            "refreshUrl": "https://identity.nvbes.fr/oauth/token",
+            "scopes": {
+              "account:read": "Read Account profile, preferences, teams and consents.",
+              "account:write": "Mutate Account profile, preferences, teams and consents.",
+              "account:export": "Request and download Account privacy exports.",
+              "account:close": "Request or cancel Account closure."
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "profile", "description": "Account profile" },
+    { "name": "settings", "description": "Preferences and notifications" },
+    { "name": "privacy", "description": "Consents and privacy export" },
+    { "name": "teams", "description": "Teams and memberships" },
+    { "name": "closure", "description": "Account closure" }
+  ]
+}

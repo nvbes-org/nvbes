@@ -56,12 +56,7 @@ pub async fn erase_subject(
     reason: &str,
     retention: RetentionConfig,
 ) -> Result<Uuid, ErasureError> {
-    if !(1..=6).contains(&kind)
-        || namespace.len() < 3
-        || opaque_id.len() < 8
-        || actor.len() < 3
-        || reason.trim().len() < 3
-    {
+    if !erasure_input_is_valid(kind, namespace, opaque_id, actor, reason) {
         return Err(ErasureError::InvalidInput);
     }
     let request_id = Uuid::new_v4();
@@ -136,6 +131,20 @@ pub enum ErasureError {
     LegalHold,
     #[error("erasure persistence failed")]
     Database(#[from] sqlx::Error),
+}
+
+pub(crate) fn erasure_input_is_valid(
+    kind: i16,
+    namespace: &str,
+    opaque_id: &str,
+    actor: &str,
+    reason: &str,
+) -> bool {
+    (1..=6).contains(&kind)
+        && namespace.len() >= 3
+        && opaque_id.len() >= 8
+        && actor.len() >= 3
+        && reason.trim().len() >= 3
 }
 
 pub async fn run(state: TrustRiskState, mut shutdown: watch::Receiver<bool>) {

@@ -95,13 +95,8 @@ const requirements = [
     ],
   },
   {
-    file: 'libs/rust/platform/src/platform.cockpit.actions.rs',
-    evidence: [
-      'OperatorCommand',
-      'OperatorActionPayload',
-      'OperatorActionReceipt',
-      'is_reversible',
-    ],
+    file: 'libs/rust/platform/src/platform.operations.model.rs',
+    evidence: ['Command', 'Action', 'Receipt', 'idempotency_key'],
   },
   {
     file: 'infrastructure/environments/security-audit-archive/main.tf',

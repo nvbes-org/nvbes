@@ -35,7 +35,10 @@ async fn state_without_optional_clients_still_enqueues_locally() {
         .take_local_dispatch_receiver()
         .await
         .expect("local receiver");
-    assert_eq!(rx.recv().await.as_deref(), Some("evt_local"));
+    let received = tokio::time::timeout(std::time::Duration::from_millis(200), rx.recv())
+        .await
+        .expect("enqueue must deliver without hanging");
+    assert_eq!(received.as_deref(), Some("evt_local"));
     assert!(state.take_local_dispatch_receiver().await.is_none());
 }
 

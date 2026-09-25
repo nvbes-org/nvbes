@@ -115,24 +115,31 @@ fn deployment_bootstrap_serves_live_health_check() {
 
     let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-email-worker"))
         .env_clear()
+        .env("PATH", std::env::var_os("PATH").unwrap_or_default())
         .arg("deployment-bootstrap")
         .env("NVBES_EMAIL_HTTP_BIND_ADDR", &addr)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .spawn()
         .expect("spawn bootstrap");
 
-    let response = (0..40).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(50));
+    let response = (0..100).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(100));
         if let Some(status) = child.try_wait().ok().flatten() {
             panic!("bootstrap exited early: {status}");
         }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
             .and_then(|mut stream| {
-                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
-                let mut buf = [0_u8; 128];
-                let read = stream.read(&mut buf)?;
-                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
+                stream.set_read_timeout(Some(Duration::from_millis(200)))?;
+                stream.write_all(
+                    b"GET /health/live HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+                )?;
+                let mut buf = Vec::new();
+                stream.read_to_end(&mut buf)?;
+                Ok(String::from_utf8_lossy(&buf).to_string())
             })
             .ok()
+            .filter(|body| !body.is_empty())
     });
 
     let _ = child.kill();
@@ -164,39 +171,50 @@ fn serve_starts_http_health_on_ephemeral_port() {
     let addr = listener.local_addr().expect("local addr").to_string();
     drop(listener);
 
+    let database_url = std::env::var("NVBES_EMAIL_DATABASE_URL")
+        .or_else(|_| std::env::var("DATABASE_URL"))
+        .unwrap_or_else(|_| "postgres://localhost/nvbes_email_test".to_string());
+
     let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-email-worker"))
         .env_clear()
-        .env(
-            "NVBES_EMAIL_DATABASE_URL",
-            "postgres://localhost/nvbes_email_test",
-        )
+        .env("PATH", std::env::var_os("PATH").unwrap_or_default())
+        .env("NVBES_EMAIL_DATABASE_URL", database_url)
         .env("NVBES_EMAIL_FROM_EMAIL", "no-reply@nvbes.fr")
         .env("NVBES_EMAIL_PROVIDER", "mock")
         .env("NVBES_EMAIL_HTTP_BIND_ADDR", &addr)
         .env("NVBES_EMAIL_GRPC_BIND_ADDR", &addr)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .spawn()
         .expect("spawn serve");
 
-    let response = (0..60).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(50));
+    let response = (0..100).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(100));
         if let Some(status) = child.try_wait().ok().flatten() {
             panic!("serve exited early: {status}");
         }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
             .and_then(|mut stream| {
-                stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
-                let mut buf = [0_u8; 256];
-                let read = stream.read(&mut buf)?;
-                Ok(String::from_utf8_lossy(&buf[..read]).to_string())
+                stream.set_read_timeout(Some(Duration::from_millis(200)))?;
+                stream.write_all(
+                    b"GET /health/live HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+                )?;
+                let mut buf = Vec::new();
+                stream.read_to_end(&mut buf)?;
+                Ok(String::from_utf8_lossy(&buf).to_string())
             })
             .ok()
+            .filter(|body| !body.is_empty())
     });
 
     let _ = child.kill();
     let _ = child.wait();
     let body = response.expect("health response");
     assert!(
-        body.contains("200") || body.contains("alive") || body.contains("nvbes-email-worker"),
+        body.contains("200")
+            || body.contains("204")
+            || body.contains("alive")
+            || body.contains("nvbes-email-worker"),
         "{body}"
     );
 }

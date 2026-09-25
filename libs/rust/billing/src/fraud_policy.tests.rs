@@ -94,6 +94,30 @@ fn threshold_above_100_is_rejected_during_override_validation() {
 }
 
 #[test]
+fn threshold_exactly_100_remains_accepted() {
+    assert!(
+        validate_checkout_fraud_policy_overrides(
+            CheckoutFraudPolicy::default(),
+            Some(r#"[{"block_threshold":100}]"#),
+        )
+        .is_ok(),
+        "threshold == 100 must remain accepted (`>` not `>=`)"
+    );
+}
+
+#[test]
+fn equal_min_and_max_amount_range_remains_accepted() {
+    assert!(
+        validate_checkout_fraud_policy_overrides(
+            CheckoutFraudPolicy::default(),
+            Some(r#"[{"min_amount_minor":1000,"max_amount_minor":1000}]"#),
+        )
+        .is_ok(),
+        "min == max must remain accepted (`>` not `>=`)"
+    );
+}
+
+#[test]
 fn invalid_effective_thresholds_are_rejected() {
     let error = validate_checkout_fraud_policy_overrides(
         CheckoutFraudPolicy::default(),

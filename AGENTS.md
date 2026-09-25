@@ -30,6 +30,20 @@ sur les anciens PRD, blueprints et plans :
 - Utiliser ripgrep pour toute recherche locale : `rg` pour rechercher du contenu et
   `rg --files` pour découvrir des fichiers. N'utiliser `grep` ou `find` qu'en
   solution de repli si `rg` est indisponible ou inadapté.
+- Tout commit LLM doit porter le trailer `AI-Assisted: <agent-or-model>`.
+- Le workflow est **100% LLM** : un agent peut modifier n'importe quel fichier,
+  y compris les gates. Si une zone protégée est touchée, ajouter aussi
+  `Human-Review-Required: protected-paths` ; la reprise humaine est la revue
+  CODEOWNERS / job CI `human-review-gate` (label `human-gate-approved` en secours).
+- Zones protégées (reprise humaine au merge) : `lefthook.yml`, `tools/ci/**`,
+  `tools/security/**`, `docs/testing/*thresholds*`, `deny.toml`, `.github/**`,
+  `commitlint.config.cjs`, `AGENTS.md`.
+- Ne jamais abaisser un seuil de couverture / mutation / condition ni exclure un crate
+  du gate (`pnpm check:thresholds-monotone`) — hard-block anti-Goodhart.
+- Préférer `matches!` / `assert_eq!` aux `assert!(….is_err())` / `assert!(….is_ok())`
+  dans les diffs nouveaux (`pnpm check:weak-assertions`).
+- Pas de nouveau `.unwrap()` / `.expect()` hors tests (`pnpm check:unwrap-ratchet`).
+- Pas de nouveau `sqlx::query(` runtime : viser `query!` (`pnpm check:sqlx-ratchet`).
 
 ## Stack
 

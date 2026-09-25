@@ -200,6 +200,32 @@ mod tests {
     }
 
     #[test]
+    fn next_invoice_number_is_zero_padded() {
+        assert_eq!(next_invoice_number("NVBES", 2026, 42), "NVBES-2026-000042");
+    }
+
+    #[test]
+    fn invoice_pdf_escapes_backslash_in_customer_name() {
+        let lines = vec![invoice_line("plan", "Team", 1, 3_900, 780)];
+        let document = InvoiceDocument {
+            invoice_number: "NVBES-2026-000001".to_string(),
+            issue_date: "2026-06-21".to_string(),
+            seller_name: "nvbes".to_string(),
+            customer_name: r"Acme\Corp".to_string(),
+            customer_vat_id: None,
+            totals: calculate_invoice_totals(&lines),
+            lines,
+            currency: "EUR".to_string(),
+        };
+        let pdf = invoice_document_pdf_bytes(&document);
+        let text = String::from_utf8_lossy(&pdf);
+        assert!(
+            text.contains(r"Acme\\Corp"),
+            "backslash must be escaped in PDF text"
+        );
+    }
+
+    #[test]
     fn invoice_document_is_regenerable_from_canonical_data() {
         let lines = vec![invoice_line("plan", "Team", 1, 3_900, 780)];
         let document = InvoiceDocument {

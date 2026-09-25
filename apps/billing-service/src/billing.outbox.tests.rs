@@ -48,12 +48,17 @@ impl EmailDeliveryService for CapturingEmailService {
     }
 }
 
-async fn connected_email_client() -> (EmailClient, tokio::task::JoinHandle<()>) {
+async fn connected_email_client() -> (
+    EmailClient,
+    Arc<Mutex<Vec<String>>>,
+    tokio::task::JoinHandle<()>,
+) {
     let listener = TcpListener::bind(("127.0.0.1", 0))
         .await
         .expect("bind email mock");
     let address = listener.local_addr().expect("addr");
     let service = CapturingEmailService::default();
+    let requests = service.requests.clone();
     let handle = tokio::spawn(async move {
         Server::builder()
             .add_service(EmailDeliveryServiceServer::new(service))
@@ -72,7 +77,7 @@ async fn connected_email_client() -> (EmailClient, tokio::task::JoinHandle<()>) 
     )
     .await
     .expect("email connect");
-    (client, handle)
+    (client, requests, handle)
 }
 
 #[sqlx::test(migrations = "./migrations")]
@@ -137,7 +142,7 @@ async fn publishes_invoice_notification_event_types(pool: PgPool) {
 
 #[sqlx::test(migrations = "./migrations")]
 async fn publishes_invoice_events_through_email_client(pool: PgPool) {
-    let (client, server) = connected_email_client().await;
+    let (client, requests, server) = connected_email_client().await;
     let account_id = Uuid::new_v4();
 
     for (event_type, payload) in [
@@ -188,5 +193,16 @@ async fn publishes_invoice_events_through_email_client(pool: PgPool) {
             .await
             .expect("count");
     assert_eq!(pending, 0);
+    let captured = requests.lock().expect("lock").clone();
+    assert_eq!(
+        captured.len(),
+        2,
+        "paid and payment_failed arms must each deliver when recipient_email is present"
+    );
+    assert!(
+        captured
+            .iter()
+            .all(|producer| producer == "billing-service")
+    );
     server.abort();
 }

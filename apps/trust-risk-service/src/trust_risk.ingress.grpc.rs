@@ -14,7 +14,11 @@ use crate::{
     ingress_db::{PersistSignalError, persist_signal},
 };
 
-const MAX_TRANSPORT_BYTES: usize = 256 * 1024;
+pub(crate) const MAX_TRANSPORT_BYTES: usize = 256 * 1024;
+
+pub(crate) fn transport_exceeds_budget(encoded_len: usize) -> bool {
+    encoded_len > MAX_TRANSPORT_BYTES
+}
 
 #[derive(Clone)]
 pub struct SignalService {
@@ -33,7 +37,7 @@ impl TrustRiskSignalService for SignalService {
         &self,
         request: Request<pb::SubmitSignalsRequest>,
     ) -> Result<Response<pb::SubmitSignalsResponse>, Status> {
-        if request.get_ref().encoded_len() > MAX_TRANSPORT_BYTES {
+        if transport_exceeds_budget(request.get_ref().encoded_len()) {
             return Err(Status::resource_exhausted("request exceeds size budget"));
         }
         let metadata = request.metadata().clone();

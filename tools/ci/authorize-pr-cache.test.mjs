@@ -37,9 +37,7 @@ function fixture(signature = '-----BEGIN SSH SIGNATURE-----\nvalid\n-----END SSH
 test('recognizes valid GitHub-verified SSH and OpenPGP commits', () => {
   assert.equal(isVerifiedCryptographicCommit(fixture().commits[0]), true);
   assert.equal(
-    isVerifiedCryptographicCommit(
-      fixture('-----BEGIN PGP SIGNATURE-----\nvalid').commits[0],
-    ),
+    isVerifiedCryptographicCommit(fixture('-----BEGIN PGP SIGNATURE-----\nvalid').commits[0]),
     true,
   );
   assert.equal(

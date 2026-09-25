@@ -17,7 +17,7 @@ fn state() -> AccountState {
             database_max_connections: 1,
             bind_addr: "127.0.0.1:0".parse().unwrap(),
             token_issuer: "http://identity.local".into(),
-            token_audience: "nvbes-account".into(),
+            token_audience: "nvbes-account-service".into(),
             token_key_id: "identity-key-1".into(),
             token_public_key_pem: "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwEKbtGra6bWscKp5s8i3\njvE0mUrZV54vaDWEfYxnjJYc6TNPBUuHlNUOv44eePZ+TxLQ9wPYSwuhSJIPAX7c\nAkDDdzVJy36lUVTjKGND7PZtgv6ItPQb6yM7YNyM7+QHZXL0fvB5q7O1AasgT+sF\ns0ffePjSyi9QpOww8TqcgePyXN3anUmB8pwoaJQfJOOLE1sJ3zsfw+n3nG+31Lpg\nDQBwYQWrKRRH/R7aYRFoZu1ZRFINfYXVmOGUuehcYkAprNs1dte6szKyyc2zhUJi\nTUez2NsFzgzx1Q1ssxYOMbQcVqNjux5l2aC9i5VcPi7gRHWGKiN77sSjnz90vqSu\nYwIDAQAB\n-----END PUBLIC KEY-----\n".into(),
             metrics_token: "development-account-metrics-token-value".into(),

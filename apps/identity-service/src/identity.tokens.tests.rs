@@ -5,7 +5,10 @@ use uuid::Uuid;
 
 use crate::tokens_config::TokenConfig;
 
-use super::{ACCESS_TOKEN_TTL_SECONDS, AccessTokenClaims, TokenService, validate_scope};
+use super::{
+    ACCESS_TOKEN_TTL_SECONDS, AccessTokenClaims, OPERATOR_AUDIENCE, OPERATOR_ROLE, TokenService,
+    validate_scope,
+};
 
 fn key_material() -> (String, String, EncodingKey) {
     let private = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
@@ -23,7 +26,7 @@ fn service_from(private_pem: &str, public_pem: &str) -> TokenService {
             "identity-key-1".into(),
             private_pem.into(),
             public_pem.into(),
-            "nvbes-account-service".into(),
+            format!("nvbes-account-service,{OPERATOR_AUDIENCE}"),
         )
         .unwrap(),
     )
@@ -194,6 +197,29 @@ fn validate_scope_rejects_oversized_and_non_ascii_tokens() {
     assert!(validate_scope("account:read").is_ok());
     assert!(validate_scope("caf\u{e9}").is_err());
     assert!(validate_scope("ok@bad").is_err());
+}
+
+#[test]
+fn operator_token_is_role_bound_mfa_and_audience_locked() {
+    let service = service();
+    let principal = Uuid::new_v4();
+    let auth_time = chrono::Utc::now().timestamp();
+    assert!(
+        service
+            .issue_operator(principal, vec!["pwd".into()], auth_time)
+            .is_err()
+    );
+    let token = service
+        .issue_operator(principal, vec!["totp".into()], auth_time)
+        .unwrap();
+    let header = decode_header(&token).unwrap();
+    assert_eq!(header.typ.as_deref(), Some("operator+jwt"));
+    let claims = service.verify_operator(&token).unwrap();
+    assert_eq!(claims.sub, principal.to_string());
+    assert_eq!(claims.role, OPERATOR_ROLE);
+    assert_eq!(claims.aud, OPERATOR_AUDIENCE);
+    assert_eq!(claims.auth_time, auth_time);
+    assert!(service.verify(&token, "nvbes-account-service").is_err());
 }
 
 #[cfg(feature = "database-tests")]

@@ -1,3 +1,12 @@
+#[test]
+fn projection_error_codes_are_stable() {
+    use super::ProjectionError;
+
+    assert_eq!(ProjectionError::InvalidPayload.code(), "invalid_payload");
+    assert_ne!(ProjectionError::InvalidPayload.code(), "");
+    assert_ne!(ProjectionError::InvalidPayload.code(), "xyzzy");
+}
+
 #[cfg(feature = "database-tests")]
 mod database {
     use std::collections::HashMap;

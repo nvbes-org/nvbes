@@ -20,6 +20,10 @@ use crate::{
 
 pub const MAX_GRPC_DECODE_BYTES: usize = 256 * 1024;
 
+pub(crate) fn missing_required_pair(left: &str, right: &str) -> bool {
+    left.is_empty() || right.is_empty()
+}
+
 // ── Server constructors ───────────────────────────────────────────────────────
 
 #[derive(Clone)]
@@ -175,7 +179,7 @@ impl BillingDeliveryService for BillingDeliveryGrpcService {
         let workspace_id = parse_uuid(&req.workspace_id)?;
         tracing::Span::current().record("workspace_id", workspace_id.to_string());
 
-        if req.plan_code.is_empty() || req.success_url.is_empty() {
+        if missing_required_pair(&req.plan_code, &req.success_url) {
             return Err(Status::invalid_argument(
                 "plan_code and success_url are required",
             ));
@@ -293,7 +297,7 @@ impl BillingDeliveryService for BillingDeliveryGrpcService {
         let aggregate_id = parse_uuid(&req.aggregate_id)?;
         tracing::Span::current().record("event_type", &req.event_type);
 
-        if req.event_type.is_empty() || req.payload_json.is_empty() {
+        if missing_required_pair(&req.event_type, &req.payload_json) {
             return Err(Status::invalid_argument(
                 "event_type and payload_json are required",
             ));
@@ -417,6 +421,35 @@ fn chrono_to_proto_ts(dt: chrono::DateTime<chrono::Utc>) -> Timestamp {
     Timestamp {
         seconds: dt.timestamp(),
         nanos: dt.timestamp_subsec_nanos() as i32,
+    }
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::{MAX_GRPC_DECODE_BYTES, chrono_to_proto_ts, missing_required_pair};
+
+    #[test]
+    fn grpc_decode_budget_is_256_kib() {
+        assert_eq!(MAX_GRPC_DECODE_BYTES, 262_144);
+    }
+
+    #[test]
+    fn missing_required_pair_rejects_either_side_empty() {
+        assert!(missing_required_pair("", "ok"));
+        assert!(missing_required_pair("ok", ""));
+        assert!(missing_required_pair("", ""));
+        assert!(!missing_required_pair("ok", "ok"));
+    }
+
+    #[test]
+    fn chrono_to_proto_ts_preserves_seconds_and_nanos() {
+        let value = chrono::DateTime::parse_from_rfc3339("2026-09-24T12:34:56.789012345Z")
+            .expect("fixture")
+            .with_timezone(&chrono::Utc);
+        let wire = chrono_to_proto_ts(value);
+        assert_eq!(wire.seconds, value.timestamp());
+        assert_eq!(wire.nanos, value.timestamp_subsec_nanos() as i32);
+        assert_ne!(wire, prost_types::Timestamp::default());
     }
 }
 

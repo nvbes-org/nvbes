@@ -76,6 +76,37 @@ fn lateness_retry_and_quarantine_are_bounded() {
     let id = Uuid::parse_str("018f7f2d-fc7d-7b7a-9f72-3abddda8d201").unwrap();
     assert!(retry_delay(1, id).is_some());
     assert!(retry_delay(MAX_PROJECTION_ATTEMPTS, id).is_none());
+    let delay = retry_delay(1, id).expect("attempt 1 retries");
+    let byte = u64::from(id.as_bytes()[0]);
+    let expected = (1 + byte % 2).min(60);
+    assert_eq!(delay.as_secs(), expected);
+}
+
+#[test]
+fn projection_windows_include_exact_age_boundaries() {
+    let watermark = Utc.timestamp_opt(1_787_590_000, 0).unwrap();
+    let at_watermark = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d210",
+        watermark.timestamp(),
+        10,
+    );
+    let at_24h = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d211",
+        watermark.timestamp() - 86_400,
+        10,
+    );
+    let future = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d212",
+        watermark.timestamp() + 1,
+        10,
+    );
+    let too_old = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d213",
+        watermark.timestamp() - 86_401,
+        10,
+    );
+    let features = derive_features([&at_watermark, &at_24h, &future, &too_old], watermark);
+    assert_eq!(features["events_24h"], 2.0);
 }
 
 proptest! {

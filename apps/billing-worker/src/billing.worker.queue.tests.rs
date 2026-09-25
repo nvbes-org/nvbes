@@ -10,7 +10,10 @@ async fn in_memory_queue_enqueues_and_receives() {
         .enqueue("evt_123")
         .await
         .expect("enqueue should succeed");
-    let received = rx.recv().await.expect("must receive event");
+    let received = tokio::time::timeout(std::time::Duration::from_millis(200), rx.recv())
+        .await
+        .expect("enqueue must deliver without hanging")
+        .expect("must receive event");
     assert_eq!(received, "evt_123");
 }
 

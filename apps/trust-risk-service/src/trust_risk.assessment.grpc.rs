@@ -15,6 +15,12 @@ use crate::{
     auth,
 };
 
+pub const MAX_ASSESSMENT_REQUEST_BYTES: usize = 256 * 1024;
+
+pub(crate) fn assessment_request_exceeds_budget(encoded_len: usize) -> bool {
+    encoded_len > MAX_ASSESSMENT_REQUEST_BYTES
+}
+
 #[derive(Clone)]
 pub struct AssessmentService {
     state: TrustRiskState,
@@ -33,7 +39,7 @@ impl TrustRiskAssessmentService for AssessmentService {
         request: Request<pb::AssessRiskRequest>,
     ) -> Result<Response<pb::RiskEvaluation>, Status> {
         let started = std::time::Instant::now();
-        if request.get_ref().encoded_len() > 256 * 1024 {
+        if assessment_request_exceeds_budget(request.get_ref().encoded_len()) {
             return Err(Status::resource_exhausted("request exceeds size budget"));
         }
         let metadata = request.metadata().clone();

@@ -6,6 +6,8 @@ mod audit;
 mod auth;
 #[path = "account.config.rs"]
 mod config;
+#[path = "account.consents.rs"]
+mod consents;
 #[path = "account.database.rs"]
 mod database;
 #[path = "account.error.rs"]
@@ -14,6 +16,10 @@ mod error;
 mod health;
 #[path = "account.metrics.rs"]
 mod metrics;
+#[path = "account.operator.rs"]
+mod operator;
+#[path = "account.outbox.rs"]
+mod outbox;
 #[path = "account.preferences.rs"]
 mod preferences;
 #[path = "account.privacy.rs"]
@@ -28,7 +34,10 @@ mod synthetic;
 mod teams;
 
 #[cfg(test)]
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "test harness helpers referenced across account test modules"
+)]
 #[path = "account.test_support.rs"]
 mod test_support;
 
@@ -61,9 +70,16 @@ async fn run(command: Vec<String>) -> anyhow::Result<()> {
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
+    if matches!(command.as_slice(), [action] if action == "publish-outbox") {
+        let database_url = config::required_database_url()?;
+        let pool = database::connect(&database_url, 2).await?;
+        let published = outbox::publish_pending(&pool, 100).await?;
+        println!("published {published} outbox events");
+        return Ok(());
+    }
 
-    let config = config::AccountConfig::from_env()?;
     if matches!(command.as_slice(), [action] if action == "validate-runtime") {
+        let config = config::AccountConfig::from_env()?;
         database::connect_lazy(&config.database_url, config.database_max_connections)?;
         auth::TokenVerifier::new(&config)?;
         println!("account runtime configuration is valid");
@@ -71,10 +87,11 @@ async fn run(command: Vec<String>) -> anyhow::Result<()> {
     }
     if !command.is_empty() {
         anyhow::bail!(
-            "usage: nvbes-account-service [migrate|validate-runtime|synthetic-account-smoke|process-privacy-jobs]"
+            "usage: nvbes-account-service [migrate|validate-runtime|synthetic-account-smoke|process-privacy-jobs|publish-outbox]"
         );
     }
 
+    let config = config::AccountConfig::from_env()?;
     nvbes_observability::install_safe_panic_hook();
     let _error_guard = nvbes_observability::init_error_reporting_with_config(
         nvbes_observability::ErrorReportingConfig {
@@ -108,6 +125,14 @@ async fn serve(
 ) -> anyhow::Result<()> {
     let bind_addr = listener.local_addr()?;
     let environment = state.config.environment.clone();
+    let outbox_db = db.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
+        loop {
+            interval.tick().await;
+            let _ = outbox::publish_pending(&outbox_db, 50).await;
+        }
+    });
     let http_metrics = nvbes_observability::metrics::HttpMetrics {
         handle: state.metrics.clone(),
     };

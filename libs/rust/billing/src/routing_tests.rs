@@ -21,6 +21,20 @@ fn stripe_is_not_default_when_external_fallback_is_disabled() {
         external_provider_status: ProviderOperationalStatus::Available,
     });
     assert_eq!(error, Err(ProviderRoutingError::NoCompliantProvider));
+    assert_eq!(
+        ProviderRoutingError::NoCompliantProvider.as_str(),
+        "no_compliant_billing_provider"
+    );
+}
+
+#[test]
+fn provider_operational_status_labels_are_stable() {
+    assert_eq!(ProviderOperationalStatus::Available.as_str(), "available");
+    assert_eq!(ProviderOperationalStatus::Degraded.as_str(), "degraded");
+    assert_eq!(
+        ProviderOperationalStatus::Unavailable.as_str(),
+        "unavailable"
+    );
 }
 
 #[test]

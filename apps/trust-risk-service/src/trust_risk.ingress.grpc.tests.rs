@@ -1,3 +1,15 @@
+#[test]
+fn transport_budget_is_256_kib() {
+    assert_eq!(super::MAX_TRANSPORT_BYTES, 262_144);
+    assert!(!super::transport_exceeds_budget(super::MAX_TRANSPORT_BYTES));
+    assert!(super::transport_exceeds_budget(
+        super::MAX_TRANSPORT_BYTES + 1
+    ));
+    assert!(!super::transport_exceeds_budget(
+        super::MAX_TRANSPORT_BYTES - 1
+    ));
+}
+
 #[cfg(feature = "database-tests")]
 mod database {
     use std::collections::HashMap;
@@ -12,7 +24,7 @@ mod database {
 
     fn signal_wire() -> pb::RiskSignal {
         pb::RiskSignal {
-            signal_id: "018f7f2d-fc7d-7b7a-9f72-3abddda8d501".to_string(),
+            signal_id: uuid::Uuid::new_v4().to_string(),
             schema_version: 1,
             producer: "billing-checkout-fixture".to_string(),
             signal_kind: "network.reputation".to_string(),
@@ -20,11 +32,11 @@ mod database {
                 seconds: chrono::Utc::now().timestamp(),
                 nanos: 0,
             }),
-            partition_key: "regional:eu-west:network:grpc".to_string(),
+            partition_key: format!("regional:eu-west:network:{}", uuid::Uuid::new_v4()),
             subjects: vec![pb::SubjectReference {
                 kind: pb::SubjectKind::Network.into(),
                 namespace: "nvbes.network".to_string(),
-                opaque_id: "network:018f7f2d-grpc".to_string(),
+                opaque_id: format!("network:{}", uuid::Uuid::new_v4()),
                 scope: pb::DataScope::Regional.into(),
                 tenant_id: None,
             }],
@@ -42,15 +54,16 @@ mod database {
     #[sqlx::test(migrations = "./migrations")]
     async fn submit_signals_persists_and_replays(pool: sqlx::PgPool) {
         let service = SignalService::new(grpc_test_support::state(pool));
+        let signal = signal_wire();
         let mut request = Request::new(pb::SubmitSignalsRequest {
-            signals: vec![signal_wire()],
+            signals: vec![signal.clone()],
         });
         *request.metadata_mut() = grpc_test_support::producer_metadata();
         let first = service.submit_signals(request).await.expect("submit");
         assert!(!first.get_ref().receipts[0].duplicate);
 
         let mut replay = Request::new(pb::SubmitSignalsRequest {
-            signals: vec![signal_wire()],
+            signals: vec![signal],
         });
         *replay.metadata_mut() = grpc_test_support::producer_metadata();
         let second = service.submit_signals(replay).await.expect("replay");

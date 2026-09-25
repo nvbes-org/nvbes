@@ -28,7 +28,7 @@ async fn operations_api_covers_authorized_queries_and_operator_lifecycle(pool: s
 
     let snapshot = service
         .get_operations_snapshot(authorized(GetEmailOperationsSnapshotRequest {
-            caller: Some(test_support::caller("backoffice-service")),
+            caller: Some(test_support::caller("platform-operations-service")),
         }))
         .await
         .unwrap()
@@ -237,6 +237,38 @@ async fn operations_api_rejects_wrong_callers_and_invalid_audit_context(pool: sq
             .unwrap_err()
             .code(),
         Code::InvalidArgument
+    );
+
+    let mut min_reason = test_support::operator();
+    min_reason.reason = "123456789012".to_string(); // exactly 12
+    assert_eq!(
+        service
+            .apply_suppression(authorized(ApplyEmailSuppressionRequest {
+                operator: Some(min_reason),
+                email: "boundary-min@example.com".to_string(),
+                scope: "all".to_string(),
+            }))
+            .await
+            .unwrap()
+            .into_inner()
+            .status,
+        "applied"
+    );
+
+    let mut max_reason = test_support::operator();
+    max_reason.reason = "r".repeat(500);
+    assert_eq!(
+        service
+            .apply_suppression(authorized(ApplyEmailSuppressionRequest {
+                operator: Some(max_reason),
+                email: "boundary-max@example.com".to_string(),
+                scope: "all".to_string(),
+            }))
+            .await
+            .unwrap()
+            .into_inner()
+            .status,
+        "applied"
     );
 
     assert_eq!(

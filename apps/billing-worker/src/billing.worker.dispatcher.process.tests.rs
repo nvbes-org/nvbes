@@ -34,6 +34,7 @@ use super::{DispatchOutcome, dispatch_message, run_local};
 #[derive(Clone)]
 struct MockEmailService {
     fail: Arc<Mutex<bool>>,
+    submissions: Arc<Mutex<Vec<String>>>,
 }
 
 #[cfg(feature = "database-tests")]
@@ -41,11 +42,15 @@ struct MockEmailService {
 impl EmailDeliveryService for MockEmailService {
     async fn submit_email(
         &self,
-        _request: Request<SubmitEmailRequest>,
+        request: Request<SubmitEmailRequest>,
     ) -> Result<Response<ProtoEmailReceipt>, Status> {
         if *self.fail.lock().expect("lock") {
             return Err(Status::unavailable("email mock forced failure"));
         }
+        self.submissions
+            .lock()
+            .expect("lock")
+            .push(request.into_inner().idempotency_key);
         let accepted_at = Utc::now();
         let deliver_before = accepted_at + chrono::Duration::hours(24);
         Ok(Response::new(ProtoEmailReceipt {
@@ -64,13 +69,21 @@ impl EmailDeliveryService for MockEmailService {
 }
 
 #[cfg(feature = "database-tests")]
-async fn connected_email_client(fail: bool) -> (EmailClient, tokio::task::JoinHandle<()>) {
+async fn connected_email_client(
+    fail: bool,
+) -> (
+    EmailClient,
+    tokio::task::JoinHandle<()>,
+    Arc<Mutex<Vec<String>>>,
+) {
     let listener = TcpListener::bind(("127.0.0.1", 0))
         .await
         .expect("bind email mock");
     let address = listener.local_addr().expect("addr");
+    let submissions = Arc::new(Mutex::new(Vec::new()));
     let service = MockEmailService {
         fail: Arc::new(Mutex::new(fail)),
+        submissions: submissions.clone(),
     };
     let handle = tokio::spawn(async move {
         Server::builder()
@@ -90,7 +103,7 @@ async fn connected_email_client(fail: bool) -> (EmailClient, tokio::task::JoinHa
     )
     .await
     .expect("email connect");
-    (client, handle)
+    (client, handle, submissions)
 }
 
 fn base_config() -> BillingWorkerConfig {
@@ -138,7 +151,7 @@ async fn insert_outbox(pool: &sqlx::PgPool, event_type: &str, payload: serde_jso
 #[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn process_event_delivers_receipt_and_failure_through_email_client(pool: sqlx::PgPool) {
-    let (client, server) = connected_email_client(false).await;
+    let (client, server, submissions) = connected_email_client(false).await;
     let state = state_with_email(client, pool.clone()).await;
 
     let paid = insert_outbox(
@@ -173,6 +186,18 @@ async fn process_event_delivers_receipt_and_failure_through_email_client(pool: s
             .await
             .expect("failed"),
         DispatchOutcome::Acknowledged
+    );
+
+    let keys = submissions.lock().expect("lock").clone();
+    assert!(
+        keys.iter()
+            .any(|key| key.contains("billing:receipt:in_paid_email")),
+        "paid event must deliver a receipt email: {keys:?}"
+    );
+    assert!(
+        keys.iter()
+            .any(|key| key.contains("billing:payment_failed:in_fail_email")),
+        "payment_failed event must deliver a failure email: {keys:?}"
     );
 
     let sparse_paid = insert_outbox(
@@ -210,7 +235,7 @@ async fn process_event_delivers_receipt_and_failure_through_email_client(pool: s
 #[cfg(feature = "database-tests")]
 #[sqlx::test(migrations = "./migrations")]
 async fn process_event_email_failure_signals_retry(pool: sqlx::PgPool) {
-    let (client, server) = connected_email_client(true).await;
+    let (client, server, _) = connected_email_client(true).await;
     let state = state_with_email(client, pool.clone()).await;
     let event = insert_outbox(
         &pool,

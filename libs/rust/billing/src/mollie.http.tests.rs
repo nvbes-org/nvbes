@@ -31,6 +31,40 @@ fn mollie_error_falls_back_to_http_status() {
     ));
 }
 
+#[test]
+fn mollie_provider_error_helpers_cover_all_variants() {
+    let invalid = MollieProviderError::InvalidRequest {
+        code: "bad_request",
+        message: "nope",
+    };
+    assert_eq!(invalid.code(), "bad_request");
+    assert_eq!(invalid.message(), "nope");
+    assert!(invalid.is_bad_request());
+
+    let not_configured = MollieProviderError::NotConfigured;
+    assert_eq!(not_configured.code(), "mollie_not_configured");
+    assert!(not_configured.message().contains("NVBES_MOLLIE_API_KEY"));
+    assert!(!not_configured.is_bad_request());
+
+    let failed = MollieProviderError::RequestFailed("timeout".into());
+    assert_eq!(failed.code(), "mollie_request_failed");
+    assert_eq!(failed.message(), "timeout");
+    assert!(!failed.is_bad_request());
+
+    let rejected = MollieProviderError::RequestRejected {
+        status: 422,
+        message: "invalid".into(),
+    };
+    assert_eq!(rejected.code(), "mollie_request_rejected");
+    assert!(rejected.is_bad_request());
+
+    let rejected_500 = MollieProviderError::RequestRejected {
+        status: 500,
+        message: "boom".into(),
+    };
+    assert!(!rejected_500.is_bad_request());
+}
+
 #[tokio::test]
 async fn mollie_post_json_requires_api_key() {
     let config = AppConfig {

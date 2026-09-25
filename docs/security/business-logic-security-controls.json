@@ -135,7 +135,7 @@
           "description": "Validate email semantics and length boundaries server-side before execution.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.http.rs",
+              "path": "apps/identity-service/src/identity.auth.rs",
               "includes": ["normalize_email", "validate_password"]
             },
             {

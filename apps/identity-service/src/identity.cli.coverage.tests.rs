@@ -11,12 +11,21 @@ fn run(args: &[&str], database_url: Option<&str>) -> Output {
 }
 
 fn apply_development_env(command: &mut Command) {
-    command.env("NVBES_ENVIRONMENT", "development").env(
-        "NVBES_IDENTITY_DATABASE_URL",
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-            "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
-        }),
-    );
+    command
+        .env("NVBES_ENVIRONMENT", "development")
+        .env(
+            "NVBES_IDENTITY_DATABASE_URL",
+            std::env::var("DATABASE_URL")
+                .or_else(|_| std::env::var("NVBES_SECURITY_TEST_DATABASE_URL"))
+                .unwrap_or_else(|_| {
+                    "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
+                }),
+        )
+        .env(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        )
+        .env("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
 }
 
 fn postgres_reachable() -> bool {
@@ -136,18 +145,29 @@ fn bootstrap_serves_live_health_check_then_stops() {
         .env("NVBES_ENVIRONMENT", "development")
         .env(
             "NVBES_IDENTITY_DATABASE_URL",
-            "postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity",
+            std::env::var("DATABASE_URL")
+                .or_else(|_| std::env::var("NVBES_SECURITY_TEST_DATABASE_URL"))
+                .unwrap_or_else(|_| {
+                    "postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity".into()
+                }),
         )
+        .env(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        )
+        .env("NVBES_IDENTITY_MFA_KEY_VERSION", "1")
         .env("NVBES_IDENTITY_BIND_ADDR", &addr)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .spawn()
         .expect("spawn identity bootstrap");
 
-    let response = (0..40).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(50));
+    let response = (0..100).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(100));
         if let Some(status) = child.try_wait().ok().flatten() {
             panic!("identity bootstrap exited early: {status}");
         }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
             .and_then(|mut stream| {
                 stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
                 let mut buf = [0_u8; 256];

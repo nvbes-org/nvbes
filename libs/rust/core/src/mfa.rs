@@ -108,11 +108,18 @@ mod tests {
     #[test]
     fn totp_round_trip_accepts_window_and_rejects_bad_codes() {
         let secret = generate_totp_secret();
+        assert!(secret.len() >= 20);
         let now = Utc.with_ymd_and_hms(2026, 9, 23, 12, 0, 0).unwrap();
         let counter = super::current_counter(now);
+        assert_eq!(counter, now.timestamp() as u64 / 30);
         let code = generate_totp_code(&secret, counter);
         assert_eq!(code.len(), 6);
         assert_eq!(verify_totp_code(&secret, &code, now, 1), Some(counter));
+        let previous = generate_totp_code(&secret, counter - 1);
+        assert_eq!(
+            verify_totp_code(&secret, &previous, now, 1),
+            Some(counter - 1)
+        );
         assert_eq!(
             verify_totp_code(&secret, &format!(" {code} "), now, 1),
             Some(counter)
@@ -121,7 +128,37 @@ mod tests {
         assert!(verify_totp_code(&secret, "000000", now, 1).is_none());
         assert!(generate_totp_code("!!!", 0).is_empty());
         assert_eq!(normalize_code("12-34 56"), "123456");
-        assert!(!random_recovery_code().is_empty());
+        let recovery = random_recovery_code();
+        assert!(!recovery.is_empty());
+        assert_ne!(recovery, "xyzzy");
+    }
+
+    #[test]
+    fn generate_totp_code_matches_rfc_6238_sha1_6_digit_vector() {
+        // ASCII secret "12345678901234567890" as BASE32.
+        let secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+        assert_eq!(generate_totp_code(secret, 1), "287082");
+        assert_eq!(generate_totp_code(secret, 0), "755224");
+    }
+
+    #[test]
+    fn current_counter_divides_unix_seconds_by_period() {
+        assert_eq!(
+            super::current_counter(Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap()),
+            0
+        );
+        assert_eq!(
+            super::current_counter(Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 29).unwrap()),
+            0
+        );
+        assert_eq!(
+            super::current_counter(Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 30).unwrap()),
+            1
+        );
+        assert_eq!(
+            super::current_counter(Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 0).unwrap()),
+            2
+        );
     }
 
     #[test]

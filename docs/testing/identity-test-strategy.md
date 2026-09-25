@@ -1,9 +1,10 @@
 # Stratégie de test Identity
 
-> **Statut : socle V1 actif.** L'identity-service est un runtime fermé : il n'expose
-> aucune route HTTP publique d'auth. Auth, sessions, MFA et tokens sont des fonctions
-> internes prouvées par les commandes `synthetic-*-smoke` et par les tests unitaires,
-> conformément à la [direction produit](../product/nvbes-product-strategy.md).
+> **Statut : socle V1 actif.** L'identity-service expose login/OAuth 2.1 et une
+> inscription **gated** (`NVBES_IDENTITY_PUBLIC_SIGNUP`, fermée hors développement).
+> Auth, sessions, MFA et tokens sont aussi prouvés par les commandes
+> `synthetic-*-smoke` et les tests unitaires, conformément à la
+> [direction produit](../product/nvbes-product-strategy.md).
 
 ## Portée et statut de preuve
 
@@ -14,18 +15,23 @@ manifeste machine-readable par domaine pour Identity : chaque catégorie est
 renseignée ici avec son lane et sa preuve réelle, et une catégorie sans harness
 est marquée explicitement plutôt que présumée couverte.
 
-L'interface externe réelle est volontairement réduite :
+L'interface HTTP active :
 
-| Route HTTP          | Rôle                        |
-| ------------------- | --------------------------- |
-| `GET /health/live`  | liveness sans dépendance    |
-| `GET /health/ready` | readiness (DB + migrations) |
-| `GET /metrics`      | Prometheus (Bearer token)   |
+| Route HTTP                   | Rôle                                     |
+| ---------------------------- | ---------------------------------------- |
+| `POST /api/v1/auth/register` | inscription (403 si signup fermé)        |
+| `POST /api/v1/auth/login`    | session cookie + `return_to` OAuth       |
+| `POST /api/v1/auth/logout`   | révocation session                       |
+| `GET /oauth/authorize`       | Authorization Code + PKCE                |
+| `POST /oauth/token`          | échange code / refresh (form-urlencoded) |
+| `GET /health/live`           | liveness sans dépendance                 |
+| `GET /health/ready`          | readiness (DB + migrations)              |
+| `GET /metrics`               | Prometheus (Bearer token)                |
 
-Le test de contrat conteneur (`tests/container-contract.test.mjs`) **exige l'absence**
-des routes publiques d'auth (`assert.equal(mainSource.includes('route("/auth/register"'), false)`).
-Identité, sessions, TOTP, JWT et recovery passent par des fonctions internes et par
-les commandes CLI `synthetic-*` avant démarrage.
+Le test de contrat conteneur (`tests/container-contract.test.mjs`) exige que le
+runtime exposé reste **gated** pour l'inscription publique et que login/OAuth
+restent présents. Identité, sessions, TOTP, JWT et recovery passent aussi par
+les commandes CLI `synthetic-*`.
 
 ## État d'automatisation réel
 
@@ -45,9 +51,8 @@ révocation, audience). Un échec d'une commande smoke fait échouer le job, jam
 
 ### Limites explicites
 
-- Aucune route HTTP publique d'auth n'existe ni ne doit exister : le test de contrat
-  conteneur l'assure. Un futur frontend s'appuie sur l'identity-sdk-backend et les
-  fonctions internes, pas sur des endpoints API REST d'auth.
+- L'inscription publique reste gated ; le contrat de déploiement exige HTTP 403
+  sur `/api/v1/auth/register` hors GO explicite.
 - Les tests `identity.mfa.crypto` couvrent le scellement AES-256-GCM et la rotation de
   clé; des menaces physiques (extraction de clé, timing) restent hors périmètre V1.
 - MFA/TOTP n'a pas encore de campagne Playwright : le socle V1 est CLI/API, pas UI.
@@ -55,6 +60,8 @@ révocation, audience). Un échec d'une commande smoke fait échouer le job, jam
   `synthetic-auth-smoke`; elle n'a pas de matrice de volume.
 - `database-tests` est feature-gated et ne tourne que dans la lane `database`;
   un cargo test nu ne prouve pas l'intégration DB.
+- La vérification email transactionnelle à l'inscription n'est pas encore branchée
+  sur le runtime HTTP ; l'ouverture publique devra l'exiger avant GO.
 
 ## Fiabilité et sécurité du harness
 
@@ -106,7 +113,8 @@ cases YAML en infra (`infra.setup_db`, `infra.migrate`, `infra.health_check`,
 
 ## Principes de qualité
 
-- Pas de route publique d'auth ajoutée sans mise à jour du contrat conteneur.
+- Pas de route d'inscription ouverte sans mise à jour du contrat conteneur et du
+  gate `NVBES_IDENTITY_PUBLIC_SIGNUP`.
 - Pas de skip d'infrastructure, de schéma ou de provider devenu vert.
 - Aucun retry ne transforme un échec en succès.
 - Les tests DB refusent les cibles non-loopback/non-test.

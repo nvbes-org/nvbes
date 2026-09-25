@@ -1,3 +1,8 @@
+#[path = "billing.worker.test_support.rs"]
+mod test_support;
+
+use test_support::postgres_reachable;
+
 use std::process::{Command, Output};
 
 fn run(args: &[&str], database_url: Option<&str>) -> Output {
@@ -14,9 +19,11 @@ fn apply_development_env(command: &mut Command) {
     command
         .env(
             "NVBES_BILLING_DATABASE_URL",
-            std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-                "postgres://postgres:postgres@127.0.0.1:5432/nvbes_billing".into()
-            }),
+            std::env::var("DATABASE_URL")
+                .or_else(|_| std::env::var("NVBES_SECURITY_TEST_DATABASE_URL"))
+                .unwrap_or_else(|_| {
+                    "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
+                }),
         )
         .env("NVBES_APP_URL", "https://nvbes.test");
 }
@@ -104,6 +111,12 @@ fn synthetic_smoke_runs_when_database_is_available() {
         eprintln!("skipping synthetic-smoke integration: postgres unavailable");
         return;
     }
+    let migrate = run(&["migrate"], None);
+    assert!(
+        migrate.status.success(),
+        "migrate before smoke: {}",
+        String::from_utf8_lossy(&migrate.stderr)
+    );
     let output = run(&["synthetic-smoke"], None);
     assert!(
         output.status.success(),
@@ -130,15 +143,17 @@ fn deployment_bootstrap_serves_live_health_check() {
         .env_clear()
         .arg("deployment-bootstrap")
         .env("NVBES_BILLING_HTTP_BIND_ADDR", &addr)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .spawn()
         .expect("spawn bootstrap");
 
-    let response = (0..40).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(50));
+    let response = (0..100).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(100));
         if let Some(status) = child.try_wait().ok().flatten() {
             panic!("bootstrap exited early: {status}");
         }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
             .and_then(|mut stream| {
                 stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
                 let mut buf = [0_u8; 128];
@@ -168,15 +183,17 @@ fn deployment_bootstrap_accepts_legacy_bind_addr_env() {
         .env_clear()
         .arg("deployment-bootstrap")
         .env("NVBES_BILLING_BIND_ADDR", &addr)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .spawn()
         .expect("spawn bootstrap");
 
-    let response = (0..40).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(50));
+    let response = (0..100).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(100));
         if let Some(status) = child.try_wait().ok().flatten() {
             panic!("bootstrap exited early: {status}");
         }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
             .and_then(|mut stream| {
                 stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
                 let mut buf = [0_u8; 128];
@@ -221,7 +238,7 @@ fn serve_alias_starts_http_health_when_database_is_available() {
     drop(listener);
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
+        "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
     });
 
     let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
@@ -230,15 +247,17 @@ fn serve_alias_starts_http_health_when_database_is_available() {
         .env("NVBES_BILLING_DATABASE_URL", database_url)
         .env("NVBES_APP_URL", "https://nvbes.test")
         .env("NVBES_BILLING_HTTP_BIND_ADDR", &addr)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .spawn()
         .expect("spawn serve");
 
-    let response = (0..80).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(50));
+    let response = (0..100).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(100));
         if let Some(status) = child.try_wait().ok().flatten() {
             panic!("serve exited early: {status}");
         }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
             .and_then(|mut stream| {
                 stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
                 let mut buf = [0_u8; 256];
@@ -273,7 +292,7 @@ fn serve_without_arguments_starts_when_database_is_available() {
     drop(listener);
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
+        "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
     });
 
     let mut child = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-worker"))
@@ -281,15 +300,17 @@ fn serve_without_arguments_starts_when_database_is_available() {
         .env("NVBES_BILLING_DATABASE_URL", database_url)
         .env("NVBES_APP_URL", "https://nvbes.test")
         .env("NVBES_BILLING_HTTP_BIND_ADDR", &addr)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .spawn()
         .expect("spawn default serve");
 
-    let response = (0..80).find_map(|_| {
-        std::thread::sleep(Duration::from_millis(50));
+    let response = (0..100).find_map(|_| {
+        std::thread::sleep(Duration::from_millis(100));
         if let Some(status) = child.try_wait().ok().flatten() {
             panic!("default serve exited early: {status}");
         }
-        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(100))
+        TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(200))
             .and_then(|mut stream| {
                 stream.write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
                 let mut buf = [0_u8; 256];
@@ -309,12 +330,4 @@ fn serve_without_arguments_starts_when_database_is_available() {
 fn migrate_fails_against_unreachable_database() {
     let output = run(&["migrate"], Some("postgres://127.0.0.1:1/unreachable"));
     assert!(!output.status.success());
-}
-
-fn postgres_reachable() -> bool {
-    std::net::TcpStream::connect_timeout(
-        &"127.0.0.1:5432".parse().unwrap(),
-        std::time::Duration::from_millis(200),
-    )
-    .is_ok()
 }

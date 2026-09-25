@@ -84,6 +84,18 @@ mod tests {
     }
 
     #[test]
+    fn export_filename_encodes_type_and_period() {
+        assert_eq!(
+            export_filename(FinanceExportType::Invoices, "2026-09"),
+            "billing-invoices-2026-09.csv"
+        );
+        assert_eq!(
+            export_filename(FinanceExportType::Ledger, "2026-Q3"),
+            "billing-ledger-2026-Q3.csv"
+        );
+    }
+
+    #[test]
     fn dashboard_projection_does_not_read_sensitive_payloads() {
         assert!(export_projection_excludes_sensitive_payloads(&[
             "tenant_id",

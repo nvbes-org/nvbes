@@ -3,6 +3,7 @@ name = "nvbes-billing-worker"
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish.workspace = true
 
 [features]
 database-tests = []
@@ -48,3 +49,6 @@ prost-types = "0.14"
 tokio-stream = { version = "0.1.18", features = ["net"] }
 tonic.workspace = true
 tower.workspace = true
+
+[lints]
+workspace = true

@@ -14,6 +14,12 @@ use crate::{
     labels_db::{LabelPersistenceError, persist_label},
 };
 
+pub(crate) const MAX_LABEL_REQUEST_BYTES: usize = 256 * 1024;
+
+pub(crate) fn label_request_exceeds_budget(encoded_len: usize) -> bool {
+    encoded_len > MAX_LABEL_REQUEST_BYTES
+}
+
 #[derive(Clone)]
 pub struct LabelService {
     state: TrustRiskState,
@@ -31,7 +37,7 @@ impl TrustRiskLabelService for LabelService {
         &self,
         request: Request<pb::SubmitLabelsRequest>,
     ) -> Result<Response<pb::SubmitLabelsResponse>, Status> {
-        if request.get_ref().encoded_len() > 256 * 1024 {
+        if label_request_exceeds_budget(request.get_ref().encoded_len()) {
             return Err(Status::resource_exhausted("request exceeds size budget"));
         }
         let metadata = request.metadata().clone();
@@ -82,7 +88,7 @@ fn authorize(
     Ok(())
 }
 
-fn timestamp(value: chrono::DateTime<chrono::Utc>) -> prost_types::Timestamp {
+pub(crate) fn timestamp(value: chrono::DateTime<chrono::Utc>) -> prost_types::Timestamp {
     prost_types::Timestamp {
         seconds: value.timestamp(),
         nanos: value.timestamp_subsec_nanos() as i32,

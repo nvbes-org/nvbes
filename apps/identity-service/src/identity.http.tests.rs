@@ -1,50 +1,12 @@
-#![allow(unused_imports)]
 use axum::{
     body::Body,
     http::{Request, StatusCode},
     response::IntoResponse,
 };
-use sqlx::PgPool;
 use tower::ServiceExt;
 
-use super::{HttpError, normalize_email, router, validate_password};
+use super::{HttpError, router};
 use crate::health::tests::state as lazy_state;
-
-#[test]
-fn normalize_email_accepts_and_lowercases_valid_addresses() {
-    assert_eq!(
-        normalize_email(" Person@Example.COM ").unwrap(),
-        "person@example.com"
-    );
-}
-
-#[test]
-fn normalize_email_rejects_invalid_shapes() {
-    for email in [
-        "",
-        "plain",
-        "@missing-local.com",
-        "local@",
-        "a@b",
-        "@.",
-        "user@",
-    ] {
-        assert!(
-            matches!(normalize_email(email), Err(HttpError::BadRequest(_))),
-            "{email}"
-        );
-    }
-    assert!(normalize_email(&format!("{}@example.com", "a".repeat(320))).is_err());
-}
-
-#[test]
-fn validate_password_enforces_length_bounds() {
-    assert!(validate_password("short").is_err());
-    assert!(validate_password("long-enough-password").is_ok());
-    assert!(validate_password(&"x".repeat(12)).is_ok());
-    assert!(validate_password(&"x".repeat(1024)).is_ok());
-    assert!(validate_password(&"x".repeat(1025)).is_err());
-}
 
 #[test]
 fn http_error_maps_to_expected_status_codes() {
@@ -54,8 +16,38 @@ fn http_error_maps_to_expected_status_codes() {
     let unauthorized = HttpError::Unauthorized("nope".into()).into_response();
     assert_eq!(unauthorized.status(), StatusCode::UNAUTHORIZED);
 
+    let forbidden = HttpError::Forbidden("closed".into()).into_response();
+    assert_eq!(forbidden.status(), StatusCode::FORBIDDEN);
+
+    let conflict = HttpError::Conflict("taken".into()).into_response();
+    assert_eq!(conflict.status(), StatusCode::CONFLICT);
+
     let internal = HttpError::InternalServerError("boom".into()).into_response();
     assert_eq!(internal.status(), StatusCode::INTERNAL_SERVER_ERROR);
+}
+
+#[tokio::test]
+async fn register_is_forbidden_when_public_signup_is_closed() {
+    let mut state = lazy_state();
+    let mut config = (*state.config).clone();
+    config.public_signup_enabled = false;
+    state.config = std::sync::Arc::new(config);
+
+    let response = router(&state)
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/auth/register")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"email":"user@example.com","password":"password-123456"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
 }
 
 #[tokio::test]
@@ -91,80 +83,38 @@ async fn register_rejects_invalid_json_payloads_without_database() {
     assert_eq!(bad_email.status(), StatusCode::BAD_REQUEST);
 }
 
-#[cfg(feature = "database-tests")]
-#[sqlx::test(migrations = "./migrations")]
-async fn register_and_login_round_trip(pool: PgPool) {
-    use crate::{app::IdentityState, config::IdentityConfig};
-
-    let state = IdentityState::new(
-        IdentityConfig {
-            environment: "test".into(),
-            sentry_dsn: None,
-            sentry_traces_sample_rate: 0.1,
-            otlp_endpoint: None,
-            otlp_authorization_header: None,
-            metrics_token: "identity-metrics-test-token-32-characters".into(),
-            database_url: "postgres://unused".into(),
-            database_max_connections: 1,
-            bind_addr: "127.0.0.1:0".parse().unwrap(),
-            mfa_encryption_key: [2; 32],
-            mfa_key_version: 1,
-            mfa_previous_encryption_key: None,
-            mfa_previous_key_version: None,
-            token_issuer: "http://127.0.0.1:0".into(),
-        },
-        pool,
-    );
-    let app = router(&state);
-    let email = format!("user-{}@example.com", uuid::Uuid::new_v4().simple());
-    let password = "long-enough-password";
-
-    let register = app
-        .clone()
+#[tokio::test]
+async fn register_rejects_short_password() {
+    let app = router(&lazy_state());
+    let response = app
         .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/auth/register")
                 .header("content-type", "application/json")
-                .body(Body::from(format!(
-                    r#"{{"email":"{email}","password":"{password}"}}"#
-                )))
+                .body(Body::from(
+                    r#"{"email":"ok@example.com","password":"short"}"#,
+                ))
                 .unwrap(),
         )
         .await
         .unwrap();
-    assert_eq!(register.status(), StatusCode::CREATED);
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
 
-    let login = app
-        .clone()
+#[tokio::test]
+async fn login_route_is_present() {
+    let response = router(&lazy_state())
         .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/auth/login")
-                .header("content-type", "application/json")
-                .body(Body::from(format!(
-                    r#"{{"email":"{email}","password":"{password}"}}"#
-                )))
+                .body(Body::empty())
                 .unwrap(),
         )
         .await
         .unwrap();
-    assert_eq!(login.status(), StatusCode::OK);
-
-    let bad_login = app
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/api/v1/auth/login")
-                .header("content-type", "application/json")
-                .body(Body::from(format!(
-                    r#"{{"email":"{email}","password":"wrong-password-xx"}}"#
-                )))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(bad_login.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
 }
 
 #[tokio::test]
@@ -187,20 +137,16 @@ async fn login_rejects_invalid_email_shape_without_database() {
 }
 
 #[tokio::test]
-async fn register_rejects_short_password() {
-    let app = router(&lazy_state());
-    let response = app
+async fn logout_route_is_present() {
+    let response = router(&lazy_state())
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/auth/register")
-                .header("content-type", "application/json")
-                .body(Body::from(
-                    r#"{"email":"ok@example.com","password":"short"}"#,
-                ))
+                .uri("/api/v1/auth/logout")
+                .body(Body::empty())
                 .unwrap(),
         )
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
 }

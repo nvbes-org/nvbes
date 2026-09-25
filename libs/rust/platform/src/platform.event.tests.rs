@@ -48,6 +48,10 @@ fn rejects_uppercase_and_hyphen_event_type_segments() {
         DomainEventEnvelope::new(input).expect_err("hyphen must fail"),
         DomainEventError::InvalidEventType
     );
+
+    let mut input = valid_input();
+    input.event_type = "identity.user_created.v1".to_string();
+    DomainEventEnvelope::new(input).expect("underscore segments must be accepted");
 }
 
 #[test]
