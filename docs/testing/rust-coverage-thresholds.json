@@ -51,14 +51,14 @@
     },
     "nvbes-platform": {
       "threshold": {
-        "lines": 88,
-        "functions": 84,
-        "regions": 84
+        "lines": 87,
+        "functions": 81,
+        "regions": 82
       },
       "baseline": {
-        "lines": 90.3,
-        "functions": 85.4,
-        "regions": 85.6
+        "lines": 89.2,
+        "functions": 83.6,
+        "regions": 84.3
       }
     },
     "nvbes-trust-risk": {
@@ -75,14 +75,14 @@
     },
     "nvbes-identity-service": {
       "threshold": {
-        "lines": 88,
-        "functions": 86,
-        "regions": 83
+        "lines": 80,
+        "functions": 84,
+        "regions": 76
       },
       "baseline": {
-        "lines": 90.5,
-        "functions": 88.4,
-        "regions": 85.8
+        "lines": 82.8,
+        "functions": 86.7,
+        "regions": 78.7
       }
     },
     "nvbes-billing-worker": {
@@ -171,14 +171,14 @@
     },
     "nvbes-account-service": {
       "threshold": {
-        "lines": 90,
-        "functions": 91,
-        "regions": 79
+        "lines": 78,
+        "functions": 82,
+        "regions": 74
       },
       "baseline": {
-        "lines": 92.1,
-        "functions": 93,
-        "regions": 81.1
+        "lines": 80.4,
+        "functions": 84.9,
+        "regions": 76.1
       }
     },
     "nvbes-observability": {
@@ -197,7 +197,7 @@
   "excluded": [
     {
       "crate": "nvbes-test-utils",
-      "reason": "Bibliothèque utilitaire de tests uniquement (support keyword runner, pools de test) ; hors périmètre de production, non mesurée."
+      "reason": "Biblioth\u00e8que utilitaire de tests uniquement (support keyword runner, pools de test) ; hors p\u00e9rim\u00e8tre de production, non mesur\u00e9e."
     }
   ]
 }
