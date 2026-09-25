@@ -119,14 +119,13 @@ fn required_env_reports_missing_variable() {
 
 #[tokio::test]
 async fn resolve_rejects_invalid_secret_manager_region_without_network() {
-    let name_region = "NVBES_SECRET_MANAGER_REGION";
-    let name_secret = "NVBES_SECRET_MANAGER_SECRET_ID";
-    let saved_region = std::env::var_os(name_region);
-    let saved_secret = std::env::var_os(name_secret);
-    unsafe {
-        std::env::set_var(name_secret, "test-secret-id");
-        std::env::set_var(name_region, "invalid-region");
-    }
+    // Must use SecretManagerEnv (global lock) — raw set_var races llvm-cov/nextest workers.
+    let _env = SecretManagerEnv::install(&[
+        ("NVBES_SECRET_MANAGER_SECRET_ID", Some("test-secret-id")),
+        ("NVBES_SECRET_MANAGER_REGION", Some("invalid-region")),
+        ("NVBES_SECRET_MANAGER_AUTH_TOKEN", None),
+        ("SCW_SECRET_KEY", None),
+    ]);
 
     let mut config = AppConfig {
         secret_manager_enabled: true,
@@ -136,18 +135,10 @@ async fn resolve_rejects_invalid_secret_manager_region_without_network() {
         .resolve_from_secret_manager()
         .await
         .expect_err("invalid region");
-    assert!(err.contains("NVBES_SECRET_MANAGER_REGION"));
-
-    unsafe {
-        match saved_region {
-            Some(value) => std::env::set_var(name_region, value),
-            None => std::env::remove_var(name_region),
-        }
-        match saved_secret {
-            Some(value) => std::env::set_var(name_secret, value),
-            None => std::env::remove_var(name_secret),
-        }
-    }
+    assert!(
+        err.contains("NVBES_SECRET_MANAGER_REGION"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
