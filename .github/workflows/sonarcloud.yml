@@ -25,22 +25,30 @@ jobs:
     name: SonarCloud Strict Quality Analysis
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 75
+    env:
+      SQLX_OFFLINE: 'true'
+      SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
+      SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
+      SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: CI/CD security gate
-        run: node tools/security/check-ci-cd-security.mjs
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/sonarcloud.yml
+      - uses: ./.github/actions/ci-setup
         with:
-          node-version: 24
-      - name: Install locked workspace dependencies
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.18.0 --activate
-          pnpm install --frozen-lockfile --prefer-offline
+          node: 'true'
+          rust: 'true'
+          coverage: 'true'
+          terraform: 'false'
+          caches: pnpm cargo
+          cache-key: ${{ secrets.SCW_CI_CACHE_ACCESS_KEY }}
+          cache-secret: ${{ secrets.SCW_CI_CACHE_SECRET_KEY }}
+      - name: Start isolated security PostgreSQL
+        run: node tools/ci/test-security-database.mjs
       - name: Prepare SonarCloud analysis reports
         run: bash scripts/prepare-sonar-reports.sh
       - name: Verify SonarCloud credentials
@@ -56,3 +64,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Stop security PostgreSQL
+        if: always()
+        run: node tools/ci/test-security-database.mjs stop

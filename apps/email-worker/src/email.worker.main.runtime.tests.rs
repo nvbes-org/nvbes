@@ -115,7 +115,7 @@ async fn run_migrate_applies_schema_when_database_is_available() {
         }
     };
 
-    let create = std::process::Command::new("psql")
+    let create = tokio::process::Command::new("psql")
         .args([
             &admin,
             "-v",
@@ -124,6 +124,7 @@ async fn run_migrate_applies_schema_when_database_is_available() {
             &format!("CREATE DATABASE {db_name} TEMPLATE template0"),
         ])
         .output()
+        .await
         .expect("create disposable database");
     if !create.status.success() {
         eprintln!(
@@ -136,7 +137,7 @@ async fn run_migrate_applies_schema_when_database_is_available() {
     guard.set("NVBES_EMAIL_DATABASE_URL", &disposable_url);
     let migrate_result = run(vec!["migrate".into()]).await;
 
-    let _ = std::process::Command::new("psql")
+    let _ = tokio::process::Command::new("psql")
         .args([
             &admin,
             "-v",
@@ -144,7 +145,8 @@ async fn run_migrate_applies_schema_when_database_is_available() {
             "-c",
             &format!("DROP DATABASE IF EXISTS {db_name}"),
         ])
-        .output();
+        .output()
+        .await;
 
     migrate_result.expect("migrate");
 }
