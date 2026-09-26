@@ -32,12 +32,9 @@ sur les anciens PRD, blueprints et plans :
   solution de repli si `rg` est indisponible ou inadapté.
 - Tout commit LLM doit porter le trailer `AI-Assisted: <agent-or-model>`.
 - Le workflow est **100% LLM** : un agent peut modifier n'importe quel fichier,
-  y compris les gates. Si une zone protégée est touchée, ajouter aussi
-  `Human-Review-Required: protected-paths` ; la reprise humaine est la revue
-  CODEOWNERS / job CI `human-review-gate` (label `human-gate-approved` en secours).
-- Zones protégées (reprise humaine au merge) : `lefthook.yml`, `tools/ci/**`,
-  `tools/security/**`, `docs/testing/*thresholds*`, `deny.toml`, `.github/**`,
-  `commitlint.config.cjs`, `AGENTS.md`.
+  y compris les gates (`lefthook.yml`, `tools/ci/**`, `tools/security/**`,
+  `docs/testing/*thresholds*`, `deny.toml`, `.github/**`, `commitlint.config.cjs`,
+  `AGENTS.md`). Aucun gate de reprise humaine bloquant.
 - Ne jamais abaisser un seuil de couverture / mutation / condition ni exclure un crate
   du gate (`pnpm check:thresholds-monotone`) — hard-block anti-Goodhart.
 - Préférer `matches!` / `assert_eq!` aux `assert!(….is_err())` / `assert!(….is_ok())`

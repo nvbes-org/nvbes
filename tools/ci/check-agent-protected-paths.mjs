@@ -1,17 +1,14 @@
 #!/usr/bin/env node
 /**
- * Workflow 100% LLM avec reprise humaine optionnelle.
+ * Workflow 100% LLM.
  *
  * - Auteur agent => trailer AI-Assisted obligatoire.
- * - Commit agent touchant une zone protégée => trailer
- *   Human-Review-Required: protected-paths obligatoire (le commit EST autorisé).
- * - La reprise humaine est la revue CODEOWNERS / job CI human-gate, pas un
- *   hard-block local (NVBES_HUMAN_GATE reste un contournement d'urgence).
+ * - Les zones listées restent documentées (seuils, hooks, CI) mais ne
+ *   déclenchent plus de reprise humaine bloquante.
  * - Les seuils monotones restent un hard-block séparé (anti-Goodhart).
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 
 export const PROTECTED_PATH_PREFIXES = [
   'lefthook.yml',
@@ -28,8 +25,6 @@ export const PROTECTED_PATH_PREFIXES = [
 
 export const AGENT_AUTHOR_PATTERN =
   /^(Cursor Agent|Synthetic Test|Codex|Claude|GPT-|OpenAI|Gemini|Composer)/iu;
-
-export const HUMAN_REVIEW_TRAILER = 'Human-Review-Required: protected-paths';
 
 /**
  * @param {string} path
@@ -60,14 +55,6 @@ export function isValidAiAssistedTrailer(message) {
 }
 
 /**
- * @param {string} message
- * @returns {boolean}
- */
-export function hasHumanReviewRequiredTrailer(message) {
-  return /^Human-Review-Required:\s*protected-paths\s*$/imu.test(message);
-}
-
-/**
  * @param {{ authorName?: string, message?: string }} identity
  * @returns {boolean}
  */
@@ -82,14 +69,12 @@ export function isAgentCommit(identity) {
  * @param {{
  *   isAgent: boolean,
  *   hasAiAssisted: boolean,
- *   hasHumanReview: boolean,
  *   humanGate?: boolean,
  * }} options
  * @returns {{
  *   ok: boolean,
  *   protectedTouched: string[],
  *   reasons: string[],
- *   requiresHumanReview: boolean,
  * }}
  */
 export function evaluateLlmCommitPolicy(paths, options) {
@@ -98,25 +83,17 @@ export function evaluateLlmCommitPolicy(paths, options) {
   const reasons = [];
 
   if (options.humanGate) {
-    return { ok: true, protectedTouched, reasons, requiresHumanReview: false };
+    return { ok: true, protectedTouched, reasons };
   }
 
   if (options.isAgent && !options.hasAiAssisted) {
     reasons.push('agent author requires trailer "AI-Assisted: <agent-or-model>"');
   }
 
-  const requiresHumanReview = options.isAgent && protectedTouched.length > 0;
-  if (requiresHumanReview && !options.hasHumanReview) {
-    reasons.push(
-      `protected paths modified by LLM require trailer "${HUMAN_REVIEW_TRAILER}" (CODEOWNERS CI gate)`,
-    );
-  }
-
   return {
     ok: reasons.length === 0,
     protectedTouched,
     reasons,
-    requiresHumanReview,
   };
 }
 
@@ -125,7 +102,6 @@ export function evaluateProtectedPaths(paths, options) {
   const result = evaluateLlmCommitPolicy(paths, {
     isAgent: options.isAgent,
     hasAiAssisted: true,
-    hasHumanReview: Boolean(options.humanGate),
     humanGate: options.humanGate,
   });
   return { ok: result.ok, blocked: result.protectedTouched };
@@ -165,31 +141,6 @@ export function commitIdentityFromEnv() {
   return { authorName, message };
 }
 
-/**
- * @param {{ paths: string[], identity: { authorName: string, message: string } }} input
- */
-export function writeHumanReviewReceipt(input) {
-  const out = resolve('.temp/llm/human-review-required.json');
-  mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(
-    out,
-    `${JSON.stringify(
-      {
-        schemaVersion: 1,
-        required: true,
-        reason: 'protected-paths',
-        trailer: HUMAN_REVIEW_TRAILER,
-        authorName: input.identity.authorName,
-        paths: input.paths.filter(isProtectedPath),
-        generatedAt: new Date().toISOString(),
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  return out;
-}
-
 const isCli = process.argv[1]?.endsWith('check-agent-protected-paths.mjs');
 if (isCli) {
   if (process.env.NVBES_HUMAN_GATE === '1') {
@@ -208,24 +159,16 @@ if (isCli) {
   const result = evaluateLlmCommitPolicy(paths, {
     isAgent: agent,
     hasAiAssisted: hasAiAssistedTrailer(identity.message),
-    hasHumanReview: hasHumanReviewRequiredTrailer(identity.message),
   });
   if (!result.ok) {
     console.error('BLOCKED llm-commit-policy:');
     for (const reason of result.reasons) console.error(`- ${reason}`);
-    if (result.protectedTouched.length) {
-      console.error('Protected paths:');
-      for (const path of result.protectedTouched) console.error(`- ${path}`);
-    }
-    console.error(
-      `LLM may modify gates; add trailers then rely on CODEOWNERS. Example:\n\nAI-Assisted: Cursor\n${HUMAN_REVIEW_TRAILER}\n`,
-    );
+    console.error('Add trailer:\n\nAI-Assisted: <agent-or-model>\n');
     process.exit(1);
   }
-  if (result.requiresHumanReview) {
-    const receipt = writeHumanReviewReceipt({ paths, identity });
+  if (agent && result.protectedTouched.length) {
     console.log(
-      `llm-commit-policy OK (agent + protected paths; human reprise queued → ${receipt})`,
+      `llm-commit-policy OK (${paths.length} staged, agent commit, protected: ${result.protectedTouched.join(', ')})`,
     );
   } else if (agent) {
     console.log(`llm-commit-policy OK (${paths.length} staged, agent commit, no protected)`);

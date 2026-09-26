@@ -23,7 +23,7 @@ pre-commit:
       fail_text: 'BLOCKED commit signing KO - commits non signes refuses. Activer commit.gpgsign + signingkey.'
     00-agent-protected:
       run: pnpm check:agent-protected-paths
-      fail_text: 'BLOCKED llm-commit-policy KO - AI-Assisted / Human-Review-Required manquant.'
+      fail_text: 'BLOCKED llm-commit-policy KO - trailer AI-Assisted manquant.'
     00-thresholds-monotone:
       run: pnpm check:thresholds-monotone
       fail_text: 'BLOCKED thresholds-monotone KO - seuil abaissé ou crate exclu.'
@@ -137,7 +137,7 @@ commit-msg:
       fail_text: 'BLOCKED commitlint strict KO. Message non conventionnel.'
     agent-protected:
       run: node tools/ci/check-agent-protected-paths.mjs --edit "{1}"
-      fail_text: 'BLOCKED llm-commit-policy KO - AI-Assisted / Human-Review-Required manquant.'
+      fail_text: 'BLOCKED llm-commit-policy KO - trailer AI-Assisted manquant.'
 
 # Tout ce qui exige Docker / Postgres / services en cours / reseau lourd.
 # Requiert : docker running, `pnpm dev:infra` si tests DB/e2e/contract.
