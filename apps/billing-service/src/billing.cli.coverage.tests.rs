@@ -1,5 +1,16 @@
 use std::process::{Command, Output};
 
+fn billing_database_url() -> String {
+    // Prefer the dedicated billing test DB (migrated in the database lane) over
+    // the schema-empty coverage mother DB that CI often exports as DATABASE_URL.
+    std::env::var("NVBES_BILLING_DATABASE_URL")
+        .or_else(|_| std::env::var("DATABASE_URL"))
+        .or_else(|_| std::env::var("NVBES_SECURITY_TEST_DATABASE_URL"))
+        .unwrap_or_else(|_| {
+            "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
+        })
+}
+
 fn run(args: &[&str], database_url: Option<&str>) -> Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-service"));
     command.env_clear().args(args);
@@ -12,23 +23,24 @@ fn run(args: &[&str], database_url: Option<&str>) -> Output {
 
 fn apply_development_env(command: &mut Command) {
     command
-        .env(
-            "NVBES_BILLING_DATABASE_URL",
-            std::env::var("DATABASE_URL")
-                .or_else(|_| std::env::var("NVBES_SECURITY_TEST_DATABASE_URL"))
-                .unwrap_or_else(|_| {
-                    "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
-                }),
-        )
+        .env("NVBES_BILLING_DATABASE_URL", billing_database_url())
         .env("NVBES_STRIPE_SECRET_KEY", "sk_test_dummy_key_for_testing")
         .env("NVBES_STRIPE_WEBHOOK_SECRET", "whsec_test_dummy_secret")
         .env("NVBES_APP_URL", "https://nvbes.test");
 }
 
+/// Idempotent schema bootstrap for CLI tests that hit SQL tables.
+fn ensure_billing_schema() {
+    let output = run(&["migrate"], None);
+    assert!(
+        output.status.success(),
+        "billing migrate required before CLI coverage: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 fn postgres_reachable() -> bool {
-    let candidate = std::env::var("DATABASE_URL")
-        .or_else(|_| std::env::var("NVBES_SECURITY_TEST_DATABASE_URL"))
-        .unwrap_or_else(|_| "postgres://127.0.0.1:15432/postgres".into());
+    let candidate = billing_database_url();
     let Some(without_scheme) = candidate.split("://").nth(1) else {
         return false;
     };
@@ -181,8 +193,14 @@ fn check_stripe_mappings_emits_json_report() {
         eprintln!("skipping check-stripe-mappings: postgres unavailable");
         return;
     }
+    ensure_billing_schema();
     let output = run(&["check-stripe-mappings"], None);
     let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.trim().is_empty(),
+        "check-stripe-mappings produced empty stdout; stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let report: serde_json::Value = serde_json::from_str(stdout.trim()).expect("json report");
     assert!(report.get("plans_checked").is_some());
     if report["failures"].as_array().is_some_and(|f| f.is_empty()) {
@@ -198,6 +216,7 @@ fn synthetic_billing_smoke_runs_end_to_end() {
         eprintln!("skipping synthetic-billing-smoke: postgres unavailable");
         return;
     }
+    ensure_billing_schema();
     let output = run(&["synthetic-billing-smoke"], None);
     assert!(
         output.status.success(),
@@ -215,6 +234,7 @@ fn publish_outbox_reports_zero_when_empty() {
         eprintln!("skipping publish-outbox: postgres unavailable");
         return;
     }
+    ensure_billing_schema();
     let output = run(&["publish-outbox"], None);
     assert!(
         output.status.success(),
@@ -231,6 +251,7 @@ fn publish_outbox_rejects_invalid_email_client_config() {
         eprintln!("skipping publish-outbox email config: postgres unavailable");
         return;
     }
+    ensure_billing_schema();
     let mut command = Command::new(env!("CARGO_BIN_EXE_nvbes-billing-service"));
     command.env_clear().arg("publish-outbox");
     apply_development_env(&mut command);
