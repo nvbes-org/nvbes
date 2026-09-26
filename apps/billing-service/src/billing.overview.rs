@@ -21,26 +21,14 @@ pub async fn fetch_account_billing_overview(
     db: &PgPool,
     account_id: Uuid,
 ) -> BillingResult<Option<AccountBillingOverview>> {
-    let row = sqlx::query_as::<
-        _,
-        (
-            String,
-            String,
-            String,
-            i64,
-            Option<String>,
-            Option<String>,
-            bool,
-            Option<DateTime<Utc>>,
-        ),
-    >(
+    let row = sqlx::query!(
         r#"
         SELECT
           s.plan_code,
           s.status,
           COALESCE(p.currency, 'eur') AS currency,
           COALESCE(NULLIF(s.monthly_price_cents, 0), p.amount_cents, 0) AS monthly_price_cents,
-          c.email,
+          c.email AS customer_email,
           s.stripe_customer_id,
           s.cancel_at_period_end,
           s.current_period_end
@@ -53,32 +41,21 @@ pub async fn fetch_account_billing_overview(
         ORDER BY s.updated_at DESC
         LIMIT 1
         "#,
+        account_id
     )
-    .bind(account_id)
     .fetch_optional(db)
     .await?;
 
-    Ok(row.map(
-        |(
-            plan_code,
-            status,
-            currency,
-            monthly_price_cents,
-            customer_email,
-            stripe_customer_id,
-            cancel_at_period_end,
-            current_period_end,
-        )| AccountBillingOverview {
-            plan_code,
-            status,
-            currency,
-            monthly_price_cents,
-            customer_email,
-            stripe_customer_id,
-            cancel_at_period_end,
-            current_period_end,
-        },
-    ))
+    Ok(row.map(|r| AccountBillingOverview {
+        plan_code: r.plan_code,
+        status: r.status,
+        currency: r.currency.unwrap_or_else(|| "eur".to_string()),
+        monthly_price_cents: r.monthly_price_cents.unwrap_or(0),
+        customer_email: r.customer_email,
+        stripe_customer_id: Some(r.stripe_customer_id),
+        cancel_at_period_end: r.cancel_at_period_end,
+        current_period_end: r.current_period_end,
+    }))
 }
 
 #[cfg(all(test, feature = "database-tests"))]

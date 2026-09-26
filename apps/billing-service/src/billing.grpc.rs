@@ -336,40 +336,46 @@ impl BillingOperationsService for BillingOperationsGrpcService {
     ) -> Result<Response<BillingOperationsSnapshot>, Status> {
         require_grpc_token(&request, &self.state.config)?;
 
-        let active: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM billing_subscriptions WHERE status = 'active'",
+        let active = sqlx::query_scalar!(
+            "SELECT count(*) AS count FROM billing_subscriptions WHERE status = 'active'"
         )
         .fetch_one(&self.state.db)
         .await
-        .map_err(|_| Status::internal("db error"))?;
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
 
-        let past_due: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM billing_subscriptions WHERE status = 'past_due'",
+        let past_due = sqlx::query_scalar!(
+            "SELECT count(*) AS count FROM billing_subscriptions WHERE status = 'past_due'"
         )
         .fetch_one(&self.state.db)
         .await
-        .map_err(|_| Status::internal("db error"))?;
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
 
-        let pending_outbox: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM billing_outbox WHERE published_at IS NULL")
-                .fetch_one(&self.state.db)
-                .await
-                .map_err(|_| Status::internal("db error"))?;
-
-        let unresolved: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM billing_reconciliation_items WHERE status = 'pending'",
+        let pending_outbox = sqlx::query_scalar!(
+            "SELECT count(*) AS count FROM billing_outbox WHERE published_at IS NULL"
         )
         .fetch_one(&self.state.db)
         .await
-        .map_err(|_| Status::internal("db error"))?;
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
 
-        let mrr: i64 = sqlx::query_scalar(
-            "SELECT coalesce(sum(monthly_price_cents), 0)::bigint \
-             FROM billing_subscriptions WHERE status = 'active'",
+        let unresolved = sqlx::query_scalar!(
+            "SELECT count(*) AS count FROM billing_reconciliation_items WHERE status = 'pending'"
         )
         .fetch_one(&self.state.db)
         .await
-        .map_err(|_| Status::internal("db error"))?;
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
+
+        let mrr = sqlx::query_scalar!(
+            "SELECT coalesce(sum(monthly_price_cents), 0)::bigint AS mrr \
+             FROM billing_subscriptions WHERE status = 'active'"
+        )
+        .fetch_one(&self.state.db)
+        .await
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
 
         Ok(Response::new(BillingOperationsSnapshot {
             active_subscriptions_count: active,
@@ -394,11 +400,11 @@ impl BillingOperationsService for BillingOperationsGrpcService {
         let workspace_id = parse_uuid(&request.get_ref().workspace_id)?;
         tracing::Span::current().record("workspace_id", workspace_id.to_string());
 
-        let status: Option<String> = sqlx::query_scalar(
+        let status = sqlx::query_scalar!(
             "SELECT status FROM billing_subscriptions WHERE account_id = $1 \
              ORDER BY updated_at DESC LIMIT 1",
+            workspace_id
         )
-        .bind(workspace_id)
         .fetch_optional(&self.state.db)
         .await
         .map_err(|_| Status::internal("db error"))?;

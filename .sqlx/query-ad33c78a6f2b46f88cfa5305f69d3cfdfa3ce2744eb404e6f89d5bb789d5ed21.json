@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT checkout_url, stripe_session_id FROM billing_checkout_sessions WHERE idempotency_key = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "checkout_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "stripe_session_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "ad33c78a6f2b46f88cfa5305f69d3cfdfa3ce2744eb404e6f89d5bb789d5ed21"
+}

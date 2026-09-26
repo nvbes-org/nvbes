@@ -51,25 +51,27 @@ pub async fn apply_subscription_event_on_connection(
         }
     };
 
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
-        .bind(sub_id)
-        .execute(&mut *db)
-        .await?;
+    sqlx::query_scalar!(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        sub_id
+    )
+    .fetch_one(&mut *db)
+    .await?;
 
     let customer_id = data
         .get("customer")
         .and_then(Value::as_str)
         .ok_or(BillingError::Invalid("missing_customer_id"))?;
 
-    let account_info: Option<(Uuid, String, Option<String>)> = sqlx::query_as(
+    let account_info = sqlx::query!(
         "SELECT account_id, account_type, email FROM billing_customers WHERE stripe_customer_id = $1",
+        customer_id
     )
-    .bind(customer_id)
     .fetch_optional(&mut *db)
     .await?;
 
     let (account_id, account_type, customer_email_db) = match account_info {
-        Some(info) => info,
+        Some(info) => (info.account_id, info.account_type, info.email),
         None => {
             // Check metadata in object
             let meta_acc = data
@@ -83,14 +85,15 @@ pub async fn apply_subscription_event_on_connection(
         }
     };
 
-    let existing: Option<(Option<DateTime<Utc>>, String)> = sqlx::query_as(
+    let existing = sqlx::query!(
         "SELECT last_event_created, status FROM billing_subscriptions WHERE stripe_subscription_id = $1",
+        sub_id
     )
-    .bind(sub_id)
     .fetch_optional(&mut *db)
     .await?;
 
-    if let Some((Some(last_created), _)) = existing
+    if let Some(row) = existing.as_ref()
+        && let Some(last_created) = row.last_event_created
         && last_created >= event_created
     {
         // Out of order: existing record was updated by a newer event, skip updating state
@@ -131,7 +134,7 @@ pub async fn apply_subscription_event_on_connection(
         .and_then(Value::as_bool)
         .unwrap_or(false);
 
-    sqlx::query(
+    sqlx::query!(
         r#"
         INSERT INTO billing_subscriptions (
             account_id, account_type, stripe_subscription_id, stripe_customer_id,
@@ -149,18 +152,18 @@ pub async fn apply_subscription_event_on_connection(
             last_event_created = EXCLUDED.last_event_created,
             updated_at = clock_timestamp()
         "#,
+        account_id,
+        &account_type,
+        sub_id,
+        customer_id,
+        plan_code,
+        mapped_status,
+        period_start,
+        period_end,
+        cancel_at_end,
+        event_id,
+        event_created
     )
-    .bind(account_id)
-    .bind(&account_type)
-    .bind(sub_id)
-    .bind(customer_id)
-    .bind(plan_code)
-    .bind(mapped_status)
-    .bind(period_start)
-    .bind(period_end)
-    .bind(cancel_at_end)
-    .bind(event_id)
-    .bind(event_created)
     .execute(&mut *db)
     .await?;
 

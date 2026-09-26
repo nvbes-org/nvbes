@@ -56,28 +56,30 @@ pub async fn dispatch_message(
 
     let event = match lookup {
         Lookup::Uuid(uuid_val) => {
-            sqlx::query_as::<_, OutboxRow>(
+            sqlx::query_as!(
+                OutboxRow,
                 r#"
                 SELECT id, event_uuid, event_type, aggregate_id, payload, published_at, created_at
                 FROM billing_outbox
                 WHERE event_uuid = $1
                 FOR UPDATE SKIP LOCKED
                 "#,
+                uuid_val
             )
-            .bind(uuid_val)
             .fetch_optional(&mut *tx)
             .await?
         }
         Lookup::Id(id_val) => {
-            sqlx::query_as::<_, OutboxRow>(
+            sqlx::query_as!(
+                OutboxRow,
                 r#"
                 SELECT id, event_uuid, event_type, aggregate_id, payload, published_at, created_at
                 FROM billing_outbox
                 WHERE id = $1
                 FOR UPDATE SKIP LOCKED
                 "#,
+                id_val
             )
-            .bind(id_val)
             .fetch_optional(&mut *tx)
             .await?
         }
@@ -98,10 +100,12 @@ pub async fn dispatch_message(
         return Ok(DispatchOutcome::Retry);
     }
 
-    sqlx::query("UPDATE billing_outbox SET published_at = clock_timestamp() WHERE id = $1")
-        .bind(event.id)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query!(
+        "UPDATE billing_outbox SET published_at = clock_timestamp() WHERE id = $1",
+        event.id
+    )
+    .execute(&mut *tx)
+    .await?;
 
     tx.commit().await?;
 
@@ -247,14 +251,15 @@ pub async fn run_local(
 }
 
 pub async fn sweep_pending(state: &BillingWorkerState) -> anyhow::Result<usize> {
-    let rows = sqlx::query_as::<_, OutboxRow>(
+    let rows = sqlx::query_as!(
+        OutboxRow,
         r#"
         SELECT id, event_uuid, event_type, aggregate_id, payload, published_at, created_at
         FROM billing_outbox
         WHERE published_at IS NULL
         ORDER BY id ASC
         LIMIT 50
-        "#,
+        "#
     )
     .fetch_all(&state.db)
     .await?;

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE billing_checkout_sessions SET status = 'completed', completed_at = clock_timestamp() WHERE stripe_session_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "899a3cc7ca2acb76ffdfbfd379e74d5de78764499ddf03f71a03fd5b737fced8"
+}

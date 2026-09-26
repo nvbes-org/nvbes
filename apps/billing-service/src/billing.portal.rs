@@ -68,29 +68,33 @@ pub async fn get_overview_handler(
 ) -> BillingResult<Json<BillingOverviewResponse>> {
     principal.require_scope("billing:read")?;
 
-    let customer: Option<String> = sqlx::query_scalar(
+    let customer = sqlx::query_scalar!(
         "SELECT stripe_customer_id FROM billing_customers WHERE account_id = $1",
+        workspace_id
     )
-    .bind(workspace_id)
     .fetch_optional(&state.db)
     .await?;
 
-    let subscription: Option<(String, String, Option<chrono::DateTime<chrono::Utc>>, bool)> =
-        sqlx::query_as(
-            r#"
+    let subscription = sqlx::query!(
+        r#"
         SELECT plan_code, status, current_period_end, cancel_at_period_end
         FROM billing_subscriptions
         WHERE account_id = $1
         ORDER BY updated_at DESC
         LIMIT 1
         "#,
-        )
-        .bind(workspace_id)
-        .fetch_optional(&state.db)
-        .await?;
+        workspace_id
+    )
+    .fetch_optional(&state.db)
+    .await?;
 
     let (plan_code, status, current_period_end, cancel_at_period_end) = match subscription {
-        Some((plan, st, end, cancel)) => (plan, st, end, cancel),
+        Some(s) => (
+            s.plan_code,
+            s.status,
+            s.current_period_end,
+            s.cancel_at_period_end,
+        ),
         None => ("free".to_string(), "active".to_string(), None, false),
     };
 

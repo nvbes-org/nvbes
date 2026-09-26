@@ -7,7 +7,6 @@ use axum::{
 };
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::{Value, json};
-use uuid::Uuid;
 
 use crate::{
     app::BillingState, audit::record_audit_event, error::BillingError,
@@ -56,13 +55,18 @@ pub async fn stripe_webhook_handler(
     // Serialize duplicate deliveries and commit effects with the receipt.
     // A failed transaction rolls back all effects, allowing Stripe to retry.
     let mut transaction = state.db.begin().await?;
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
-        .bind(&event.id)
-        .execute(&mut *transaction)
-        .await?;
-    let completed: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM billing_webhook_events WHERE event_id = $1 AND processed_at IS NOT NULL AND status IN ('processed', 'ignored'))"
-    ).bind(&event.id).fetch_one(&mut *transaction).await?;
+    sqlx::query_scalar!(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        &event.id
+    )
+    .fetch_one(&mut *transaction)
+    .await?;
+    let completed = sqlx::query_scalar!(
+        "SELECT EXISTS(SELECT 1 FROM billing_webhook_events WHERE event_id = $1 AND processed_at IS NOT NULL AND status IN ('processed', 'ignored')) AS \"exists!\"",
+        &event.id
+    )
+    .fetch_one(&mut *transaction)
+    .await?;
     if completed {
         transaction.commit().await?;
         return Ok((
@@ -70,18 +74,18 @@ pub async fn stripe_webhook_handler(
             Json(json!({ "received": true, "idempotent": true })),
         ));
     }
-    let inserted: Option<String> = sqlx::query_scalar(
+    let inserted = sqlx::query_scalar!(
         r#"
         INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status)
         VALUES ($1, $2, $3, $4, 'processed')
         ON CONFLICT (event_id) DO UPDATE SET status = 'processed', error_message = NULL, processed_at = NULL
         RETURNING event_id
         "#,
+        &event.id,
+        &event.event_type,
+        event_created,
+        &raw_json
     )
-    .bind(&event.id)
-    .bind(&event.event_type)
-    .bind(event_created)
-    .bind(&raw_json)
     .fetch_optional(&mut *transaction)
     .await?;
 
@@ -104,10 +108,12 @@ pub async fn stripe_webhook_handler(
     .await
     {
         Ok(_) => {
-            sqlx::query("UPDATE billing_webhook_events SET processed_at = clock_timestamp() WHERE event_id = $1")
-                .bind(&event.id)
-                .execute(&mut *transaction)
-                .await?;
+            sqlx::query!(
+                "UPDATE billing_webhook_events SET processed_at = clock_timestamp() WHERE event_id = $1",
+                &event.id
+            )
+            .execute(&mut *transaction)
+            .await?;
             transaction.commit().await?;
 
             let _ = crate::outbox::publish_pending_outbox_events(
@@ -124,14 +130,21 @@ pub async fn stripe_webhook_handler(
             transaction.rollback().await?;
             // Record failure in dead-letter / reconciliation queue
             let error_msg = err.to_string();
-            let _ = sqlx::query("INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status, error_message) VALUES ($1, $3, $4, $5, 'failed', $2) ON CONFLICT (event_id) DO NOTHING")
-                .bind(&event.id)
-                .bind(&error_msg)
-                .bind(&event.event_type)
-                .bind(event_created)
-                .bind(&raw_json)
-                .execute(&state.db)
-                .await;
+            let _ = sqlx::query!(
+                r#"
+                INSERT INTO billing_webhook_events
+                  (event_id, event_type, stripe_created_at, payload, status, error_message)
+                VALUES ($1, $2, $3, $4, 'failed', $5)
+                ON CONFLICT (event_id) DO NOTHING
+                "#,
+                &event.id,
+                &event.event_type,
+                event_created,
+                &raw_json,
+                &error_msg
+            )
+            .execute(&state.db)
+            .await;
 
             let _ = record_reconciliation_item(
                 &state.db,
@@ -157,15 +170,17 @@ async fn process_stripe_event(
     match event_type {
         "checkout.session.completed" => {
             if let Some(session_id) = data.get("id").and_then(Value::as_str) {
-                sqlx::query("UPDATE billing_checkout_sessions SET status = 'completed', completed_at = clock_timestamp() WHERE stripe_session_id = $1")
-                    .bind(session_id)
-                    .execute(&mut *db)
-                    .await?;
-
-                let account_id: Option<Uuid> = sqlx::query_scalar(
-                    "SELECT account_id FROM billing_checkout_sessions WHERE stripe_session_id = $1",
+                sqlx::query!(
+                    "UPDATE billing_checkout_sessions SET status = 'completed', completed_at = clock_timestamp() WHERE stripe_session_id = $1",
+                    session_id
                 )
-                .bind(session_id)
+                .execute(&mut *db)
+                .await?;
+
+                let account_id = sqlx::query_scalar!(
+                    "SELECT account_id FROM billing_checkout_sessions WHERE stripe_session_id = $1",
+                    session_id
+                )
                 .fetch_optional(&mut *db)
                 .await?;
 

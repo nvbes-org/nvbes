@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO billing_outbox (event_uuid, event_type, aggregate_id, payload)\n        VALUES ($1, 'billing.invoice.paid.v1', $2, $3)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "10709faa3a30d566b273d214b75abfa83a8f859210357ec90fdf6a069e42d333"
+}

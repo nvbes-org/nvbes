@@ -17,13 +17,14 @@ pub struct BillingPlanResponse {
 pub async fn list_plans_handler(
     State(state): State<BillingState>,
 ) -> BillingResult<Json<Vec<BillingPlanResponse>>> {
-    let plans = sqlx::query_as::<_, BillingPlanResponse>(
+    let plans = sqlx::query_as!(
+        BillingPlanResponse,
         r#"
         SELECT plan_code, name, stripe_price_id, currency, amount_cents, billing_interval
         FROM billing_plans
         WHERE is_active = true
         ORDER BY amount_cents ASC
-        "#,
+        "#
     )
     .fetch_all(&state.db)
     .await?;
@@ -55,12 +56,13 @@ pub struct StripeMappingsReport {
 /// non-negative, currency a 3-letter code, interval `month` or `year`,
 /// and at least one plan active.
 pub async fn check_stripe_mappings(pool: &PgPool) -> anyhow::Result<StripeMappingsReport> {
-    let rows = sqlx::query_as::<_, StripeMappingRow>(
+    let rows = sqlx::query_as!(
+        StripeMappingRow,
         r#"
         SELECT plan_code, stripe_price_id, currency, amount_cents, billing_interval, is_active
         FROM billing_plans
         ORDER BY plan_code ASC
-        "#,
+        "#
     )
     .fetch_all(pool)
     .await?;

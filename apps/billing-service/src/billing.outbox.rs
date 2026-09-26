@@ -30,15 +30,15 @@ pub async fn record_outbox_event(
     aggregate_id: Uuid,
     payload: &Value,
 ) -> BillingResult<()> {
-    sqlx::query(
+    sqlx::query!(
         r#"
         INSERT INTO billing_outbox (event_type, aggregate_id, payload)
         VALUES ($1, $2, $3)
         "#,
+        event_type,
+        aggregate_id,
+        payload
     )
-    .bind(event_type)
-    .bind(aggregate_id)
-    .bind(payload)
     .execute(db)
     .await?;
 
@@ -53,7 +53,8 @@ pub async fn publish_pending_outbox_events(
 ) -> BillingResult<usize> {
     let mut tx = pool.begin().await?;
 
-    let events = sqlx::query_as::<_, OutboxEvent>(
+    let events = sqlx::query_as!(
+        OutboxEvent,
         r#"
         SELECT id, event_uuid, event_type, aggregate_id, payload, published_at, created_at
         FROM billing_outbox
@@ -62,8 +63,8 @@ pub async fn publish_pending_outbox_events(
         LIMIT $1
         FOR UPDATE SKIP LOCKED
         "#,
+        limit
     )
-    .bind(limit)
     .fetch_all(&mut *tx)
     .await?;
 
@@ -153,10 +154,12 @@ pub async fn publish_pending_outbox_events(
             }
         }
 
-        sqlx::query("UPDATE billing_outbox SET published_at = clock_timestamp() WHERE id = $1")
-            .bind(event.id)
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query!(
+            "UPDATE billing_outbox SET published_at = clock_timestamp() WHERE id = $1",
+            event.id
+        )
+        .execute(&mut *tx)
+        .await?;
     }
 
     tx.commit().await?;

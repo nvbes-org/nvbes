@@ -22,21 +22,21 @@ pub async fn run(
     let event_uuid = Uuid::new_v4();
     let account_id = Uuid::new_v4();
 
-    sqlx::query(
+    sqlx::query!(
         r#"
         INSERT INTO billing_outbox (event_uuid, event_type, aggregate_id, payload)
         VALUES ($1, 'billing.invoice.paid.v1', $2, $3)
         "#,
+        event_uuid,
+        account_id,
+        json!({
+            "recipient_email": "synthetic-worker@nvbes.test",
+            "customer_name": "Synthetic Worker",
+            "amount_minor": 1500,
+            "currency": "EUR",
+            "invoice_id": format!("in_worker_test_{}", Uuid::new_v4().simple())
+        })
     )
-    .bind(event_uuid)
-    .bind(account_id)
-    .bind(json!({
-        "recipient_email": "synthetic-worker@nvbes.test",
-        "customer_name": "Synthetic Worker",
-        "amount_minor": 1500,
-        "currency": "EUR",
-        "invoice_id": format!("in_worker_test_{}", Uuid::new_v4().simple())
-    }))
     .execute(db)
     .await?;
 
@@ -53,11 +53,12 @@ pub async fn run(
             .await;
     }
 
-    let published_at: Option<chrono::DateTime<chrono::Utc>> =
-        sqlx::query_scalar("SELECT published_at FROM billing_outbox WHERE event_uuid = $1")
-            .bind(event_uuid)
-            .fetch_one(db)
-            .await?;
+    let published_at = sqlx::query_scalar!(
+        "SELECT published_at FROM billing_outbox WHERE event_uuid = $1",
+        event_uuid
+    )
+    .fetch_one(db)
+    .await?;
     let outbox_marked_published = published_at.is_some();
 
     // Test idempotent reprocessing

@@ -22,7 +22,7 @@ async fn live() -> Json<HealthResponse> {
 async fn ready(State(state): State<BillingState>) -> (StatusCode, Json<HealthResponse>) {
     let ready = tokio::time::timeout(
         std::time::Duration::from_millis(250),
-        sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&state.db),
+        sqlx::query_scalar!("SELECT 1 AS one").fetch_one(&state.db),
     )
     .await
     .ok()

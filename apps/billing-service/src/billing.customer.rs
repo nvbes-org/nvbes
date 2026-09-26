@@ -13,11 +13,11 @@ pub async fn get_or_create_customer(
     account_type: &str,
     email: Option<&str>,
 ) -> BillingResult<String> {
-    let existing: Option<String> = sqlx::query_scalar(
+    let existing = sqlx::query_scalar!(
         "SELECT stripe_customer_id FROM billing_customers WHERE account_id = $1 AND account_type = $2",
+        account_id,
+        account_type
     )
-    .bind(account_id)
-    .bind(account_type)
     .fetch_optional(db)
     .await?;
 
@@ -32,18 +32,18 @@ pub async fn get_or_create_customer(
         create_stripe_test_customer(config, account_id, account_type, email).await?
     };
 
-    let stripe_customer_id: String = sqlx::query_scalar(
+    let stripe_customer_id = sqlx::query_scalar!(
         r#"
         INSERT INTO billing_customers (account_id, account_type, stripe_customer_id, email)
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (account_id, account_type) DO UPDATE SET updated_at = clock_timestamp()
         RETURNING stripe_customer_id
         "#,
+        account_id,
+        account_type,
+        &stripe_customer_id,
+        email
     )
-    .bind(account_id)
-    .bind(account_type)
-    .bind(&stripe_customer_id)
-    .bind(email)
     .fetch_one(db)
     .await?;
 
