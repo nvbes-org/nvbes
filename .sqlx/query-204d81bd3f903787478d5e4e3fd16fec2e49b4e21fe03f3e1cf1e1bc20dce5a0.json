@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE identity_sessions SET revoked_at = clock_timestamp() WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "204d81bd3f903787478d5e4e3fd16fec2e49b4e21fe03f3e1cf1e1bc20dce5a0"
+}

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH updated AS (\n            UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp()\n            WHERE principal_id = $1 AND revoked_at IS NULL\n            RETURNING 1\n         ) SELECT count(*) AS count FROM updated",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "c4078b708aca209244f44cd85367c0d6250a93e9f016288e0d7bb67abf8e9f9f"
+}

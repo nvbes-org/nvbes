@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO identity_principals (id, kind, status) VALUES ($1, 'human', 'active')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0d6bc25fec31e9bfa28eb13e95821b7d9c8b2d43d50d6b958dad70e9c6766198"
+}

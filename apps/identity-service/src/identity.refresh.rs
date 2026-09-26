@@ -29,18 +29,18 @@ pub async fn create_refresh_token(
 
     let mut tx = db.begin().await?;
 
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO identity_refresh_tokens (id, family_id, principal_id, session_id, token_hash, client_id, scope, expires_at) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        Uuid::new_v4(),
+        family_id,
+        principal_id,
+        session_id,
+        hash_token(&token),
+        client_id,
+        scope,
+        expires_at
     )
-    .bind(Uuid::new_v4())
-    .bind(family_id)
-    .bind(principal_id)
-    .bind(session_id)
-    .bind(hash_token(&token))
-    .bind(client_id)
-    .bind(scope)
-    .bind(expires_at)
     .execute(&mut *tx)
     .await?;
 
@@ -62,52 +62,50 @@ pub async fn rotate_refresh_token(
     let old_token_hash = hash_token(old_token);
     let mut tx = db.begin().await?;
 
-    let row = sqlx::query_as::<_, (Uuid, Uuid, String)>(
+    let row = sqlx::query!(
         "SELECT id, family_id, client_id 
          FROM identity_refresh_tokens 
          WHERE token_hash = $1",
+        &old_token_hash
     )
-    .bind(&old_token_hash)
     .fetch_optional(&mut *tx)
     .await?;
 
-    let (id, family_id, stored_client_id) = match row {
-        Some(r) => r,
-        None => anyhow::bail!("Invalid refresh token"),
+    let Some(row) = row else {
+        anyhow::bail!("Invalid refresh token");
     };
 
-    if stored_client_id != client_id {
+    if row.client_id != client_id {
         anyhow::bail!("Client mismatch for refresh token");
     }
 
+    let id = row.id;
+    let family_id = row.family_id;
+
     // Lock all tokens in the family in a consistent order to prevent deadlocks
-    let family_tokens = sqlx::query_as::<
-        _,
-        (
-            Uuid,
-            Uuid,
-            Uuid,
-            String,
-            Option<chrono::DateTime<Utc>>,
-            chrono::DateTime<Utc>,
-        ),
-    >(
+    let family_tokens = sqlx::query!(
         "SELECT id, principal_id, session_id, scope, revoked_at, expires_at 
          FROM identity_refresh_tokens 
          WHERE family_id = $1 
          ORDER BY id 
          FOR UPDATE",
+        family_id
     )
-    .bind(family_id)
     .fetch_all(&mut *tx)
     .await?;
 
     let target = family_tokens
         .into_iter()
-        .find(|t| t.0 == id)
+        .find(|t| t.id == id)
         .ok_or_else(|| anyhow::anyhow!("Invalid refresh token"))?;
 
-    let (_, principal_id, session_id, scope, revoked_at, expires_at) = target;
+    let principal_id = target.principal_id;
+    let session_id = target
+        .session_id
+        .ok_or_else(|| anyhow::anyhow!("Refresh token missing session_id"))?;
+    let scope = target.scope;
+    let revoked_at = target.revoked_at;
+    let expires_at = target.expires_at;
 
     if revoked_at.is_some() {
         revoke_token_family(&mut tx, family_id).await?;
@@ -119,28 +117,28 @@ pub async fn rotate_refresh_token(
         anyhow::bail!("Refresh token expired");
     }
 
-    sqlx::query(
+    sqlx::query!(
         "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp(), last_used_at = clock_timestamp() WHERE id = $1",
+        id
     )
-    .bind(id)
     .execute(&mut *tx)
     .await?;
 
     let new_token = random_token();
     let new_expires_at = Utc::now() + Duration::days(REFRESH_TOKEN_TTL_DAYS);
 
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO identity_refresh_tokens (id, family_id, principal_id, session_id, token_hash, client_id, scope, expires_at) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        Uuid::new_v4(),
+        family_id,
+        principal_id,
+        session_id,
+        hash_token(&new_token),
+        client_id,
+        &scope,
+        new_expires_at
     )
-    .bind(Uuid::new_v4())
-    .bind(family_id)
-    .bind(principal_id)
-    .bind(session_id)
-    .bind(hash_token(&new_token))
-    .bind(client_id)
-    .bind(&scope)
-    .bind(new_expires_at)
     .execute(&mut *tx)
     .await?;
 
@@ -158,10 +156,10 @@ async fn revoke_token_family(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     family_id: Uuid,
 ) -> anyhow::Result<()> {
-    sqlx::query(
+    sqlx::query!(
         "UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp() WHERE family_id = $1 AND revoked_at IS NULL",
+        family_id
     )
-    .bind(family_id)
     .execute(&mut **tx)
     .await?;
     Ok(())

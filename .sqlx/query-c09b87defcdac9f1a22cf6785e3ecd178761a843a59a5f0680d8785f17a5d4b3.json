@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.id, s.principal_id FROM identity_sessions s\n         JOIN identity_principals p ON p.id = s.principal_id\n         WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > $2\n           AND s.step_up_expires_at IS NOT NULL AND s.step_up_expires_at > $2\n           AND p.status = 'active'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "principal_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "c09b87defcdac9f1a22cf6785e3ecd178761a843a59a5f0680d8785f17a5d4b3"
+}
