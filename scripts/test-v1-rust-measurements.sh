@@ -37,10 +37,22 @@ if [[ "${#packages[@]}" -eq 0 ]]; then
 fi
 
 mkdir -p "$output_root"
+export CARGO_TARGET_DIR="${workspace_root}/target/v1-rust"
+
+for variable in NVBES_SECURITY_TEST_DATABASE_URL DATABASE_URL; do
+  if [[ -z "${!variable:-}" ]]; then
+    printf 'error: missing required environment variable: %s\n' "$variable" >&2
+    printf 'hint: provision via tools/ci/test-security-database.mjs or scripts/with-security-test-db.sh\n' >&2
+    exit 1
+  fi
+done
+
 rustup run "$toolchain" -- cargo llvm-cov clean --workspace
+# Same denominator as the coverage campaign: all-features + Postgres.
 rustup run "$toolchain" -- cargo llvm-cov \
   --workspace \
   --all-targets \
+  --all-features \
   --branch \
   --locked \
   --ignore-filename-regex '(\.tests\.rs|\.test_support\.rs)$' \
@@ -51,9 +63,12 @@ package_args=()
 for package in "${packages[@]}"; do
   package_args+=(--package "$package")
 done
+# Isolate mutant builds from the llvm-cov target dir (see test-workspace-mutation.sh).
+unset CARGO_TARGET_DIR
 set +e
 cargo mutants \
   "${package_args[@]}" \
+  --all-features \
   --timeout "${NVBES_MUTATION_TIMEOUT:-600}" \
   --jobs "${NVBES_MUTATION_JOBS:-4}" \
   --no-times \

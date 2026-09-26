@@ -195,3 +195,7 @@ pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(),
     geo::validate_ip_intelligence(config, strict_mode)?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "config.validation.tests.rs"]
+mod integration_tests;

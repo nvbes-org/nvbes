@@ -53,7 +53,7 @@ test('container has shallow liveness and graceful shutdown', () => {
   assert.ok(dockerfile.includes('STOPSIGNAL SIGTERM'));
   assert.ok(mainSource.includes('action == "migrate"'));
   assert.ok(mainSource.includes('SignalKind::terminate()'));
-  assert.ok(healthSource.includes('sqlx::query_scalar::<_, i32>("SELECT 1")'));
+  assert.ok(healthSource.includes('sqlx::query_scalar!("SELECT 1 AS one")'));
 });
 
 test('runtime exposes gated signup and oauth login surface', () => {

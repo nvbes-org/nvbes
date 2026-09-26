@@ -70,8 +70,15 @@ pub async fn import_latest_maxmind_geolite(
     pool: &PgPool,
     config: MaxMindGeoLiteConfig,
 ) -> Result<MaxMindGeoLiteImportReport, MaxMindGeoLiteImportError> {
+    import_latest_maxmind_geolite_with_client(pool, config, Client::new()).await
+}
+
+pub(crate) async fn import_latest_maxmind_geolite_with_client(
+    pool: &PgPool,
+    config: MaxMindGeoLiteConfig,
+    client: Client,
+) -> Result<MaxMindGeoLiteImportReport, MaxMindGeoLiteImportError> {
     let config = config.enabled()?;
-    let client = Client::new();
     let country_archive =
         download_csv_archive(&client, &config, GEOLITE_COUNTRY_CSV_EDITION).await?;
     let city_archive = download_csv_archive(&client, &config, GEOLITE_CITY_CSV_EDITION).await?;
@@ -80,14 +87,21 @@ pub async fn import_latest_maxmind_geolite(
     let city_files = unzip_archive(&city_archive)?;
     let asn_files = unzip_archive(&asn_archive)?;
     let ranges = parse_geolite_csv_archives(&country_files, &city_files, &asn_files)?;
-    let country_ranges = count_ranges(&ranges, MAXMIND_GEOLITE_COUNTRY_SOURCE_CODE);
-    let city_ranges = count_ranges(&ranges, MAXMIND_GEOLITE_CITY_SOURCE_CODE);
-    let asn_ranges = count_ranges(&ranges, MAXMIND_GEOLITE_ASN_SOURCE_CODE);
+    import_maxmind_geolite_ranges(pool, &ranges).await
+}
+
+async fn import_maxmind_geolite_ranges(
+    pool: &PgPool,
+    ranges: &[MaxMindGeoLiteRange],
+) -> Result<MaxMindGeoLiteImportReport, MaxMindGeoLiteImportError> {
+    let country_ranges = count_ranges(ranges, MAXMIND_GEOLITE_COUNTRY_SOURCE_CODE);
+    let city_ranges = count_ranges(ranges, MAXMIND_GEOLITE_CITY_SOURCE_CODE);
+    let asn_ranges = count_ranges(ranges, MAXMIND_GEOLITE_ASN_SOURCE_CODE);
 
     let mut tx = pool.begin().await?;
     ensure_geolite_source_tx(&mut tx).await?;
     create_import_table_tx(&mut tx).await?;
-    insert_import_rows_tx(&mut tx, &ranges).await?;
+    insert_import_rows_tx(&mut tx, ranges).await?;
     let imported_ranges = upsert_imported_ranges_tx(&mut tx).await?;
     let expired_ranges = expire_missing_ranges_tx(&mut tx).await?;
     tx.commit().await?;
@@ -296,3 +310,7 @@ async fn expire_missing_ranges_tx(tx: &mut Transaction<'_, Postgres>) -> Result<
 fn relation_key(range: &MaxMindGeoLiteRange) -> String {
     format!("{}:{}", range.source_code, range.network)
 }
+
+#[cfg(test)]
+#[path = "region.geo.maxmind.import.tests.rs"]
+mod tests;

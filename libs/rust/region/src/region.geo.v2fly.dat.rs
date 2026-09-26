@@ -118,73 +118,23 @@ fn cidr_to_ipnet(cidr: Cidr) -> Result<IpNet, V2flyGeoIpDatError> {
 }
 
 #[cfg(test)]
-mod tests {
-    use prost::Message;
-
-    use super::{Cidr, GeoIp, GeoIpList, parse_v2fly_geoip_dat, parse_v2fly_geoip_dat_entries};
-
-    #[test]
-    fn parses_country_cidrs_and_skips_non_country_entries() {
-        let dat = GeoIpList {
-            entry: vec![
-                GeoIp {
-                    country_code: "fr".to_string(),
-                    cidr: vec![Cidr {
-                        ip: vec![203, 0, 113, 0],
-                        prefix: 24,
-                    }],
-                },
-                GeoIp {
-                    country_code: "private".to_string(),
-                    cidr: vec![Cidr {
-                        ip: vec![10, 0, 0, 0],
-                        prefix: 8,
-                    }],
-                },
-            ],
-        }
-        .encode_to_vec();
-
-        let ranges = parse_v2fly_geoip_dat(&dat).unwrap();
-
-        assert_eq!(ranges.len(), 1);
-        assert_eq!(ranges[0].country_code, "FR");
-        assert_eq!(ranges[0].network.to_string(), "203.0.113.0/24");
-    }
-
-    #[test]
-    fn parses_all_categories_for_enriched_sources() {
-        let dat = GeoIpList {
-            entry: vec![GeoIp {
-                country_code: "tor".to_string(),
-                cidr: vec![Cidr {
-                    ip: vec![198, 51, 100, 0],
-                    prefix: 24,
-                }],
+pub fn test_encode_country_dat(country_code: &str, network: IpNet) -> Vec<u8> {
+    let (ip, prefix) = match network {
+        IpNet::V4(net) => (net.addr().octets().to_vec(), net.prefix_len()),
+        IpNet::V6(net) => (net.addr().octets().to_vec(), net.prefix_len()),
+    };
+    GeoIpList {
+        entry: vec![GeoIp {
+            country_code: country_code.to_string(),
+            cidr: vec![Cidr {
+                ip,
+                prefix: u32::from(prefix),
             }],
-        }
-        .encode_to_vec();
-
-        let ranges = parse_v2fly_geoip_dat_entries(&dat).unwrap();
-
-        assert_eq!(ranges.len(), 1);
-        assert_eq!(ranges[0].code, "tor");
-        assert_eq!(ranges[0].network.to_string(), "198.51.100.0/24");
+        }],
     }
-
-    #[test]
-    fn rejects_invalid_cidr_bytes() {
-        let dat = GeoIpList {
-            entry: vec![GeoIp {
-                country_code: "US".to_string(),
-                cidr: vec![Cidr {
-                    ip: vec![127],
-                    prefix: 8,
-                }],
-            }],
-        }
-        .encode_to_vec();
-
-        assert!(parse_v2fly_geoip_dat(&dat).is_err());
-    }
+    .encode_to_vec()
 }
+
+#[cfg(test)]
+#[path = "region.geo.v2fly.dat.tests.rs"]
+mod tests;

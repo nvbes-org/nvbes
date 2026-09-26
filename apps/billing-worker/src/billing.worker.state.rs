@@ -78,3 +78,7 @@ impl BillingWorkerState {
         self.local_dispatch_rx.lock().await.take()
     }
 }
+
+#[cfg(test)]
+#[path = "billing.worker.state.tests.rs"]
+mod tests;

@@ -3,6 +3,7 @@ name = "nvbes-core"
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish.workspace = true
 
 [dependencies]
 axum.workspace = true
@@ -39,3 +40,6 @@ utoipa = { workspace = true }
 [dev-dependencies]
 nvbes-test-utils = { path = "../test-utils" }
 proptest.workspace = true
+
+[lints]
+workspace = true

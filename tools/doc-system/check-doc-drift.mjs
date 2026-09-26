@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,7 +13,7 @@ function readJson(filePath) {
   if (!existsSync(filePath)) return null;
   try {
     return JSON.parse(readFileSync(filePath, 'utf8'));
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -24,7 +24,12 @@ function walkDir(dir, filterFn, results = []) {
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name !== 'node_modules' && entry.name !== 'dist' && entry.name !== 'target' && !entry.name.startsWith('.')) {
+      if (
+        entry.name !== 'node_modules' &&
+        entry.name !== 'dist' &&
+        entry.name !== 'target' &&
+        !entry.name.startsWith('.')
+      ) {
         walkDir(fullPath, filterFn, results);
       }
     } else if (filterFn(fullPath)) {
@@ -39,7 +44,9 @@ export function checkDocumentationDrift() {
 
   const irPath = join(REPO_ROOT, '.docgen/workspace-ir.json');
   if (!existsSync(irPath)) {
-    driftErrors.push('Missing workspace IR (.docgen/workspace-ir.json). Run "pnpm doc:extract" first.');
+    driftErrors.push(
+      'Missing workspace IR (.docgen/workspace-ir.json). Run "pnpm doc:extract" first.',
+    );
     reportResults();
     return;
   }
@@ -53,7 +60,9 @@ export function checkDocumentationDrift() {
     if (pData && pData.name) {
       const knownProject = ir.projects.find((p) => p.name === pData.name);
       if (!knownProject) {
-        driftErrors.push(`New Nx project detected but missing in doc IR: "${pData.name}" (${relative(REPO_ROOT, pFile)})`);
+        driftErrors.push(
+          `New Nx project detected but missing in doc IR: "${pData.name}" (${relative(REPO_ROOT, pFile)})`,
+        );
       }
     }
   }
@@ -75,7 +84,10 @@ export function checkDocumentationDrift() {
   }
 
   // 3. Check for unindexed OpenAPI specs
-  const currentOpenApiFiles = walkDir(REPO_ROOT, (f) => f.endsWith('openapi.json') || f.endsWith('.openapi.json'));
+  const currentOpenApiFiles = walkDir(
+    REPO_ROOT,
+    (f) => f.endsWith('openapi.json') || f.endsWith('.openapi.json'),
+  );
   for (const oFile of currentOpenApiFiles) {
     const rel = relative(REPO_ROOT, oFile);
     const knownSpec = ir.openapiServices.find((o) => o.filePath === rel);
@@ -103,7 +115,9 @@ function reportResults() {
     for (const err of driftErrors) {
       console.error(`  - ${err}`);
     }
-    console.error('\n💡 To resolve, run: "pnpm doc:extract && pnpm doc:generate" to synchronize the documentation.\n');
+    console.error(
+      '\n💡 To resolve, run: "pnpm doc:extract && pnpm doc:generate" to synchronize the documentation.\n',
+    );
     process.exit(1);
   }
 

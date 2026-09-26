@@ -21,10 +21,16 @@ mod state;
 #[path = "billing.worker.synthetic.rs"]
 mod synthetic;
 
+#[cfg(test)]
+#[path = "billing.worker.test_support.rs"]
+mod test_support;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let command: Vec<String> = std::env::args().skip(1).collect();
+    run(std::env::args().skip(1).collect()).await
+}
 
+async fn run(command: Vec<String>) -> anyhow::Result<()> {
     if matches!(command.as_slice(), [action] if action == "deployment-bootstrap") {
         return run_deployment_bootstrap().await;
     }
@@ -72,7 +78,17 @@ async fn main() -> anyhow::Result<()> {
 
     let db = database::connect(&config.database_url, 5).await?;
     let state = state::BillingWorkerState::new(config.clone(), db.clone()).await?;
+    let listener = tokio::net::TcpListener::bind(state.config.http_bind_addr).await?;
+    serve(state, db, listener, process_shutdown_signal()).await
+}
 
+async fn serve(
+    state: state::BillingWorkerState,
+    db: sqlx::PgPool,
+    listener: tokio::net::TcpListener,
+    shutdown_signal: impl std::future::Future<Output = ()>,
+) -> anyhow::Result<()> {
+    let bind_addr = listener.local_addr()?;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let local_receiver = state.take_local_dispatch_receiver().await;
     let local_dispatcher = local_receiver.map(|receiver| {
@@ -88,9 +104,8 @@ async fn main() -> anyhow::Result<()> {
         .merge(metrics::router(state.clone()))
         .merge(queue_trigger::router(state.clone()));
 
-    let listener = tokio::net::TcpListener::bind(state.config.http_bind_addr).await?;
     tracing::info!(
-        bind_addr = %state.config.http_bind_addr,
+        %bind_addr,
         environment = %state.config.environment,
         dispatch_mode = ?state.config.dispatch_mode,
         "starting nvbes billing worker"
@@ -101,7 +116,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         result = server => result?,
-        _ = process_shutdown_signal() => {},
+        _ = shutdown_signal => {},
     }
 
     let _ = shutdown_tx.send(true);
@@ -152,3 +167,7 @@ async fn process_shutdown_signal() {
     #[cfg(not(unix))]
     let _ = tokio::signal::ctrl_c().await;
 }
+
+#[cfg(test)]
+#[path = "billing.worker.main.tests.rs"]
+mod main_tests;

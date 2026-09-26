@@ -36,3 +36,81 @@ fn audiences_are_deduplicated_and_exact() {
     .unwrap();
     assert_eq!(config.allowed_audiences.len(), 2);
 }
+
+#[test]
+fn issuer_trailing_slash_is_trimmed_in_test_mode() {
+    let config = TokenConfig::from_values(
+        "test",
+        "http://identity.test/".into(),
+        "identity-key-1".into(),
+        "private".into(),
+        "public".into(),
+        "nvbes-account-service".into(),
+    )
+    .unwrap();
+    assert_eq!(config.issuer, "http://identity.test");
+}
+
+#[test]
+fn key_id_and_audience_identifiers_are_validated() {
+    assert!(
+        TokenConfig::from_values(
+            "test",
+            "http://identity.test".into(),
+            "ab".into(),
+            "private".into(),
+            "public".into(),
+            "nvbes-account-service".into(),
+        )
+        .is_err()
+    );
+    assert!(
+        TokenConfig::from_values(
+            "test",
+            "http://identity.test".into(),
+            "identity key".into(),
+            "private".into(),
+            "public".into(),
+            "nvbes-account-service".into(),
+        )
+        .is_err()
+    );
+    assert!(
+        TokenConfig::from_values(
+            "test",
+            "http://identity.test".into(),
+            "identity-key-1".into(),
+            "private".into(),
+            "public".into(),
+            "bad audience".into(),
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn from_env_requires_explicit_key_material() {
+    let _lock = crate::database::database_test_support::test_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let previous = [
+        "NVBES_IDENTITY_TOKEN_KEY_ID",
+        "NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM",
+        "NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM",
+        "NVBES_IDENTITY_TOKEN_AUDIENCES",
+    ]
+    .into_iter()
+    .map(|name| (name, std::env::var(name).ok()))
+    .collect::<Vec<_>>();
+    for (name, _) in &previous {
+        // SAFETY: serialized by `test_env_lock` for test-only env mutation.
+        unsafe { std::env::remove_var(name) };
+    }
+    assert!(TokenConfig::from_env("test").is_err());
+    for (name, value) in previous {
+        match value {
+            Some(value) => unsafe { std::env::set_var(name, value) },
+            None => unsafe { std::env::remove_var(name) },
+        }
+    }
+}

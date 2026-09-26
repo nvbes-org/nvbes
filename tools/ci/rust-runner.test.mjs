@@ -61,7 +61,9 @@ for (const [failBaseline, failMicro, failClippy] of [
         .map(JSON.parse);
       assert.ok(
         calls.some((args) =>
-          args.join(' ').includes('clippy --workspace --all-targets --locked -- -D warnings'),
+          args
+            .join(' ')
+            .includes('clippy --workspace --all-targets --all-features --locked -- -D warnings'),
         ),
       );
       if (failMicro || failClippy) {

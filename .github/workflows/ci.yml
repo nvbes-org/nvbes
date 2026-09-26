@@ -228,6 +228,8 @@ jobs:
     timeout-minutes: 45
     env:
       NVBES_ENV: test
+      # Empty coverage DB has no identity/billing schema; query! uses committed `.sqlx/`.
+      SQLX_OFFLINE: 'true'
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
       SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}

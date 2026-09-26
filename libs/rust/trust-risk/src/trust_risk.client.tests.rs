@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{TrustRiskClientConfig, TrustRiskClientError, map_status};
+use super::{MIN_TOKEN_LENGTH, TrustRiskClientConfig, TrustRiskClientError, map_status};
 
 const TOKEN: &str = "trust-risk-internal-token-at-least-32-characters";
 
@@ -21,6 +21,10 @@ fn production_requires_https() {
 fn configuration_requires_strong_metadata_safe_token_and_timeout() {
     for (token, timeout) in [
         ("short", Duration::from_millis(100)),
+        (
+            &"x".repeat(MIN_TOKEN_LENGTH - 1),
+            Duration::from_millis(100),
+        ),
         (TOKEN, Duration::ZERO),
         (
             "trust-risk-token-at-least-32-characters\nunsafe",
@@ -37,6 +41,14 @@ fn configuration_requires_strong_metadata_safe_token_and_timeout() {
             .is_err()
         );
     }
+
+    TrustRiskClientConfig::from_values(
+        "development",
+        "http://127.0.0.1:3050".to_string(),
+        "x".repeat(MIN_TOKEN_LENGTH),
+        Duration::from_millis(100),
+    )
+    .expect("exact minimum token length must be accepted");
 }
 
 #[test]
@@ -64,7 +76,15 @@ fn remote_statuses_map_to_stable_errors() {
         TrustRiskClientError::Conflict
     ));
     assert!(matches!(
+        map_status(tonic::Status::failed_precondition("hidden")),
+        TrustRiskClientError::Conflict
+    ));
+    assert!(matches!(
         map_status(tonic::Status::permission_denied("hidden")),
+        TrustRiskClientError::Unauthorized
+    ));
+    assert!(matches!(
+        map_status(tonic::Status::unauthenticated("hidden")),
         TrustRiskClientError::Unauthorized
     ));
     assert!(matches!(
@@ -72,7 +92,47 @@ fn remote_statuses_map_to_stable_errors() {
         TrustRiskClientError::Unavailable
     ));
     assert!(matches!(
+        map_status(tonic::Status::unavailable("hidden")),
+        TrustRiskClientError::Unavailable
+    ));
+    assert!(matches!(
+        map_status(tonic::Status::resource_exhausted("hidden")),
+        TrustRiskClientError::Unavailable
+    ));
+    assert!(matches!(
+        map_status(tonic::Status::invalid_argument("hidden")),
+        TrustRiskClientError::Invalid
+    ));
+    assert!(matches!(
         map_status(tonic::Status::internal("hidden")),
         TrustRiskClientError::Protocol
     ));
+}
+
+#[test]
+fn invalid_endpoint_uri_is_rejected() {
+    let error = TrustRiskClientConfig::from_values(
+        "development",
+        "not a uri".to_string(),
+        TOKEN.to_string(),
+        Duration::from_millis(100),
+    )
+    .unwrap_err();
+    assert!(matches!(error, TrustRiskClientError::Configuration(_)));
+}
+
+#[test]
+fn production_accepts_https_and_configures_tls() {
+    let config = TrustRiskClientConfig::from_values(
+        "production",
+        "https://trust-risk.example.invalid:443".to_string(),
+        TOKEN.to_string(),
+        Duration::from_millis(100),
+    )
+    .expect("https is required and accepted in production");
+    assert_eq!(config.assessment_timeout, Duration::from_millis(100));
+    assert_eq!(
+        config.authorization.to_str().unwrap(),
+        format!("Bearer {TOKEN}")
+    );
 }

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE identity_password_credentials SET password_hash = $1, changed_at = clock_timestamp(), compromised_at = NULL WHERE principal_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "95e870717b149d025efa9a507c7004cdfdceed6166ef73db5e72dd81d6abbe95"
+}

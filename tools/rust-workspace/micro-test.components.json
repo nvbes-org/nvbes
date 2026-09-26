@@ -1,7 +1,10 @@
 {
   "nvbes-core": {
     "limiter::tests::rate_limiter_blocks_after_limit": "PostgreSQL persistence",
-    "limiter::postgres_tests::": "PostgreSQL persistence and concurrency"
+    "limiter::postgres_tests::": "PostgreSQL persistence and concurrency",
+    "postgres_runtime::integration_tests::": "PostgreSQL pool integration requires NVBES_SECURITY_TEST_DATABASE_URL",
+    "http::keep_alive::tests::bind_listener_with_keepalive_accepts_ephemeral_ipv4_port": "TCP bind blocked in micro-test sandbox",
+    "config::secrets::tests::resolve_fetches_": "HTTP loopback Secret Manager requires network syscalls blocked in micro-test sandbox"
   },
   "nvbes-email": {
     "client::integration_tests::": "gRPC loopback transport",
@@ -13,6 +16,109 @@
     "tests::adapter_": "HTTP adapter against a loopback server"
   },
   "nvbes-email-worker": {
-    "grpc_service::limits_tests::grpc_transport_rejects_messages_above_the_worker_budget": "gRPC loopback transport"
+    "grpc_service::limits_tests::grpc_transport_rejects_messages_above_the_worker_budget": "gRPC loopback transport",
+    "webhook_verify::tests::verification_rejects_a_valid_signature_when_certificate_fetch_fails": "SNS certificate fetch requires network syscalls blocked in micro-test sandbox",
+    "webhook_verify::signature_tests::certificate_fetch_": "SNS certificate HTTP fetch requires network syscalls blocked in micro-test sandbox",
+    "webhook_verify::signature_tests::confirm_accepts_": "SNS confirmation HTTP requires network syscalls blocked in micro-test sandbox",
+    "webhook_verify::signature_tests::seeded_certificate_": "SNS certificate seed path may perform an initial network fetch blocked in micro-test sandbox",
+    "synthetic_smoke::tests::wait_for_signed_delivery_": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "synthetic_smoke::tests::submit_after_cold_start_": "gRPC loopback transport requires network syscalls blocked in micro-test sandbox",
+    "main_tests::deployment_bootstrap_serves_live_health_check": "TCP bind/connect for deployment bootstrap is blocked in micro-test sandbox",
+    "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
+    "main_tests::serve_stops_background_workers_without_process_signals": "TCP bind for serve shutdown smoke is blocked in micro-test sandbox",
+    "main_tests::runtime::": "PostgreSQL/TCP runtime paths require coverage lane or network syscalls blocked in micro-test sandbox",
+    "queue_trigger::tests::queue_trigger_reports_unavailable_": "Lazy pool connect attempt requires network syscalls blocked in micro-test sandbox"
+  },
+  "nvbes-observability": {
+    "error_reporting::tests::init_with_dsn_enables_capture_path": "Sentry client init requires network syscalls blocked in micro-test sandbox",
+    "metrics::tests::start_metrics_server_binds_and_serves_in_development": "TCP bind/connect blocked in micro-test sandbox",
+    "worker_error_reporting::capture::tests::capture_paths_run_when_error_reporting_is_configured": "Sentry client init requires network syscalls blocked in micro-test sandbox",
+    "worker_error_reporting::monitor::tests::smoke_and_heartbeat_send_when_error_reporting_is_configured": "Sentry client init requires network syscalls blocked in micro-test sandbox"
+  },
+  "nvbes-platform": {
+    "operations_context::tests::snapshot_marks_ready_and_unavailable_endpoints": "HTTP readiness probes require network syscalls blocked in micro-test sandbox"
+  },
+  "nvbes-billing": {
+    "action_rate_limits::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "schema_v1_tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "checkout_geo::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "stripe::http::tests::": "HTTP mock / connection failure paths require network syscalls",
+    "stripe::customer::tests::": "HTTP/provider calls require network syscalls blocked in micro-test sandbox",
+    "mollie::http::tests::": "HTTP mock / connection failure paths require network syscalls",
+    "mollie::payments::tests::": "HTTP mock payment flows require network syscalls",
+    "mollie::subscriptions::tests::": "HTTP/provider subscription calls require network syscalls",
+    "portal_sessions::tests::": "HTTP/provider portal calls require network syscalls",
+    "client::tests::": "gRPC/HTTP client paths require network syscalls"
+  },
+  "nvbes-region": {
+    "geo::cache::tests::cached_remote_lookup_returns_rdap_lookup": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::cache::tests::resolve_cached_geo_uses_personal_and_cached_relations": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::cache::tests::cached_remote_lookup_covers_miss_and_invalid_country": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::intelligence::tests::caches_ip_intelligence_lookup": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::intelligence_http::tests::": "HTTP provider fetches require network syscalls blocked in micro-test sandbox",
+    "geo::loyalsoldier_download::tests::download_verified_geoip_reads_local_fixtures_from_mock_server": "wiremock HTTP requires network syscalls blocked in micro-test sandbox",
+    "geo::loyalsoldier_import::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::maxmind_download::tests::download_csv_archive_reads_zip_bytes_from_mock_server": "wiremock HTTP requires network syscalls blocked in micro-test sandbox",
+    "geo::maxmind_import::tests::": "PostgreSQL sqlx::test / HTTP fixtures require coverage lane",
+    "geo::maxmind_web::tests::": "HTTP MaxMind client requires network syscalls blocked in micro-test sandbox",
+    "geo::maintenance::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::persistence::tests::": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::personal::tests::upserts_lists_and_disables_personal_ranges": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::personal::tests::upsert_updates_existing_network": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::rdap::tests::lookup_": "RDAP HTTP client requires network syscalls blocked in micro-test sandbox",
+    "geo::v2fly_import::tests::upserts_v2fly_geoip_ranges": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::v2fly_import::tests::scheduled_v2fly_import_skips_when_fresh": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
+    "geo::v2fly_import::tests::import_latest_downloads_fixture_from_mock_server": "wiremock HTTP requires network syscalls blocked in micro-test sandbox"
+  },
+  "nvbes-identity-service": {
+    "oauth::tests::authorize_requires_session_before_issuing_code": "Authorize path resolves clients via PostgreSQL",
+    "oauth::tests::token_authorization_code_returns_server_error_without_database": "Token exchange touches PostgreSQL",
+    "oauth::tests::token_refresh_rejects_unknown_token_without_database": "Refresh path touches PostgreSQL",
+    "database::unit_tests::connect_succeeds_when_postgres_is_available": "PostgreSQL connect requires network syscalls blocked in micro-test sandbox",
+    "error_reporting::tests::smoke_returns_structured_result_in_development_without_network": "Sentry client init requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_without_arguments_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
+    "main_tests::serve_exposes_live_health_until_stopped": "TCP bind/connect for serve health smoke is blocked in micro-test sandbox",
+    "main_tests::run_migrate_applies_schema_when_database_is_available": "PostgreSQL migrate requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_rotate_mfa_key_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_rotate_mfa_key_accepts_previous_key_pair_before_db_failure": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox"
+  },
+  "nvbes-billing-worker": {
+    "database::unit_tests::": "PostgreSQL connect/migrate requires network syscalls blocked in micro-test sandbox",
+    "dispatcher::tests::": "PostgreSQL-backed dispatch paths require DATABASE_URL (coverage lane)",
+    "health::tests::readiness_reports_ready_when_database_is_available": "PostgreSQL readiness probe requires network syscalls blocked in micro-test sandbox",
+    "state::tests::state_with_unreachable_email_endpoint_omits_email_client": "gRPC connect attempt requires network syscalls blocked in micro-test sandbox",
+    "synthetic::tests::": "PostgreSQL synthetic smoke requires network syscalls blocked in micro-test sandbox",
+    "main_tests::deployment_bootstrap_serves_live_health_check": "TCP bind/connect for deployment bootstrap is blocked in micro-test sandbox",
+    "main_tests::deployment_bootstrap_accepts_legacy_bind_addr_env": "TCP bind/connect for deployment bootstrap is blocked in micro-test sandbox",
+    "main_tests::run_without_arguments_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
+    "main_tests::run_serve_alias_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
+    "main_tests::serve_stops_background_workers_without_process_signals": "TCP bind for serve shutdown smoke is blocked in micro-test sandbox",
+    "main_tests::serve_without_local_dispatcher_shuts_down_cleanly": "TCP bind for serve shutdown smoke is blocked in micro-test sandbox",
+    "main_tests::run_migrate_applies_schema_when_database_is_available": "PostgreSQL migrate requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_synthetic_smoke_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_synthetic_smoke_succeeds_when_database_is_available": "PostgreSQL synthetic smoke requires network syscalls blocked in micro-test sandbox"
+  },
+  "nvbes-trust-risk-service": {
+    "risk_metrics::tests::otlp_init_with_endpoint_configures_provider": "OTLP exporter init requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_without_arguments_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox"
+  },
+  "nvbes-billing-service": {
+    "main_tests::deployment_bootstrap_serves_live_health_check": "TCP bind/connect for deployment bootstrap is blocked in micro-test sandbox",
+    "main_tests::run_without_arguments_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
+    "main_tests::run_migrate_applies_schema_when_database_is_available": "PostgreSQL migrate requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_serve_alias_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
+    "main_tests::run_serve_attempts_email_client_connect_when_configured": "gRPC connect attempt requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_serve_swallows_invalid_email_client_config": "Serve bootstrap path may touch network before invalid email client config is swallowed",
+    "main_tests::commands::": "CLI command paths that need PostgreSQL, TCP, or gRPC are blocked in micro-test sandbox"
+  },
+  "nvbes-account-service": {
+    "main_tests::run_without_arguments_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
+    "main_tests::serve_exposes_live_health_until_stopped": "TCP bind/connect for serve health smoke is blocked in micro-test sandbox",
+    "main_tests::run_migrate_applies_schema_when_database_is_available": "PostgreSQL migrate requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
+    "main_tests::run_process_privacy_jobs_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox"
   }
 }

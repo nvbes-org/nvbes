@@ -139,3 +139,7 @@ pub fn action_requires_independent_approval(action: WorkspaceAction) -> bool {
             | WorkspaceAction::DeleteWorkspace
     )
 }
+
+#[cfg(test)]
+#[path = "authz.action.tests.rs"]
+mod tests;

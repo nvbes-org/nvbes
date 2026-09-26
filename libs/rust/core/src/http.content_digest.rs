@@ -88,5 +88,9 @@ pub fn content_digest_header_value(bytes: &[u8]) -> String {
 }
 
 #[cfg(test)]
+#[path = "http.content_digest.tests.rs"]
+mod tests;
+
+#[cfg(test)]
 #[path = "http.content_digest.property.tests.rs"]
 mod property_tests;

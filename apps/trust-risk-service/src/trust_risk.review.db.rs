@@ -20,7 +20,7 @@ impl ReviewState {
         }
     }
 
-    fn parse(value: &str) -> Result<Self, ReviewError> {
+    pub(crate) fn parse(value: &str) -> Result<Self, ReviewError> {
         match value {
             "open" => Ok(Self::Open),
             "in_review" => Ok(Self::InReview),
@@ -90,7 +90,7 @@ pub async fn transition(
     actor: &str,
     reason: &str,
 ) -> Result<ReviewCase, ReviewError> {
-    if actor.len() < 3 || reason.trim().len() < 3 || reason.len() > 300 {
+    if !review_transition_input_is_valid(actor, reason) {
         return Err(ReviewError::InvalidInput);
     }
     let mut tx = pool.begin().await?;
@@ -147,6 +147,10 @@ pub enum ReviewError {
     CorruptState,
     #[error("review persistence failed")]
     Database(#[from] sqlx::Error),
+}
+
+pub(crate) fn review_transition_input_is_valid(actor: &str, reason: &str) -> bool {
+    actor.len() >= 3 && reason.trim().len() >= 3 && reason.len() <= 300
 }
 
 #[cfg(test)]

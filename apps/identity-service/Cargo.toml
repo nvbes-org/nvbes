@@ -3,6 +3,7 @@ name = "nvbes-identity-service"
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish.workspace = true
 
 [features]
 database-tests = []
@@ -10,6 +11,14 @@ database-tests = []
 [[bin]]
 name = "nvbes-identity-service"
 path = "src/main.rs"
+
+[[test]]
+name = "maintenance-cli"
+path = "src/identity.maintenance.tests.rs"
+
+[[test]]
+name = "cli-coverage"
+path = "src/identity.cli.coverage.tests.rs"
 
 [dependencies]
 anyhow.workspace = true
@@ -41,3 +50,6 @@ prost-types = "0.14"
 tokio-stream = { version = "0.1.18", features = ["net"] }
 tonic.workspace = true
 tower = "0.5"
+
+[lints]
+workspace = true

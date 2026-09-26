@@ -35,3 +35,7 @@ pub fn build_customer_fields(record: &BillingStateRecord) -> Vec<(String, String
         ),
     ]
 }
+
+#[cfg(test)]
+#[path = "stripe.customer.tests.rs"]
+mod tests;

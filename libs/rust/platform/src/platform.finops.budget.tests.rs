@@ -23,6 +23,14 @@ fn rejects_zero_or_unordered_thresholds() {
         Err(BudgetPolicyError::ZeroThreshold)
     );
     assert_eq!(
+        BudgetThresholds::try_new(2_500, 0, 3_000),
+        Err(BudgetPolicyError::ZeroThreshold)
+    );
+    assert_eq!(
+        BudgetThresholds::try_new(2_500, 2_800, 0),
+        Err(BudgetPolicyError::ZeroThreshold)
+    );
+    assert_eq!(
         BudgetThresholds::try_new(2_800, 2_800, 3_000),
         Err(BudgetPolicyError::UnorderedThresholds)
     );

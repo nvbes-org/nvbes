@@ -47,6 +47,20 @@ async fn snapshot_projects_redacted_failures_and_linked_or_orphan_events(pool: s
     assert_eq!(snapshot.recent_failures[0].recipient_email, "redacted");
     assert_eq!(snapshot.recent_unprocessed_events.len(), 2);
     assert!(
+        !snapshot.status_distribution.is_empty(),
+        "status distribution must reflect persisted messages"
+    );
+    assert!(
+        snapshot
+            .status_distribution
+            .iter()
+            .any(|row| row.status == "failed" && row.message_count >= 1)
+    );
+    assert!(
+        !snapshot.business_type_distribution.is_empty(),
+        "business-type distribution must reflect persisted templates"
+    );
+    assert!(
         snapshot
             .recent_unprocessed_events
             .iter()

@@ -58,6 +58,15 @@ pub fn form_encode(fields: Vec<(String, String)>) -> String {
         .join("&")
 }
 
+/// HTTPS uses the pinned TLS client; loopback HTTP is reserved for local fixtures
+/// (wiremock). Non-loopback cleartext bases are rejected by the caller contract.
+pub(crate) fn provider_http_client(base_url: &str) -> reqwest::Client {
+    if base_url.starts_with("https://") {
+        return nvbes_core::security::pinned_http_client();
+    }
+    reqwest::Client::new()
+}
+
 pub fn percent_encode(value: &str) -> String {
     let mut encoded = String::new();
     for byte in value.bytes() {
@@ -125,7 +134,8 @@ fn url_matches_allowed_origin(candidate: &Url, allowed: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        BillingRedirectUrlError, resolve_billing_redirect_url, subscription_status_requires_lock,
+        BillingRedirectUrlError, api_key_limit, div_ceil, hex_encode, parse_uuid,
+        resolve_billing_redirect_url, subscription_status_requires_lock, validate_plan_code,
     };
 
     #[test]
@@ -155,6 +165,27 @@ mod tests {
     }
 
     #[test]
+    fn resolve_billing_redirect_url_accepts_staging_origin_and_rejects_scheme_mismatch() {
+        let url = resolve_billing_redirect_url(
+            Some("https://staging.example.com/billing/success"),
+            "https://app.example.com/billing/success",
+            "https://app.example.com",
+            Some("https://staging.example.com"),
+        )
+        .expect("staging origin should be accepted");
+        assert_eq!(url, "https://staging.example.com/billing/success");
+
+        let err = resolve_billing_redirect_url(
+            Some("http://app.example.com/billing/success"),
+            "https://app.example.com/billing/success",
+            "https://app.example.com",
+            None,
+        )
+        .expect_err("scheme mismatch should be rejected");
+        assert_eq!(err, BillingRedirectUrlError::InvalidOrigin);
+    }
+
+    #[test]
     fn subscription_status_requires_lock_blocks_degraded_states() {
         assert!(subscription_status_requires_lock("past_due"));
         assert!(subscription_status_requires_lock("canceled"));
@@ -162,5 +193,17 @@ mod tests {
         assert!(subscription_status_requires_lock("incomplete"));
         assert!(!subscription_status_requires_lock("active"));
         assert!(!subscription_status_requires_lock("trialing"));
+    }
+
+    #[test]
+    fn plan_helpers_and_encoding() {
+        assert_eq!(api_key_limit("team"), 5);
+        assert_eq!(api_key_limit("unknown"), 0);
+        assert_eq!(validate_plan_code(" team "), Some("team".into()));
+        assert_eq!(validate_plan_code("cloud"), None);
+        assert_eq!(div_ceil(10, 3), 4);
+        assert_eq!(div_ceil(0, 3), 0);
+        assert_eq!(hex_encode(&[0x0a, 0xff]), "0aff");
+        assert!(parse_uuid("not-a-uuid").is_none());
     }
 }

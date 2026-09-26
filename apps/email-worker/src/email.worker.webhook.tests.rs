@@ -56,6 +56,31 @@ async fn notification_processing_handles_valid_incomplete_and_duplicate_payloads
     let state = test_support::state(pool);
     let incomplete = message(r#"{"id":"","email_id":"","type":""}"#);
     assert!(apply_notification(&state, &incomplete).await.is_err());
+    // Each required field must independently fail the incomplete check (`||`, not `&&`).
+    assert!(
+        apply_notification(
+            &state,
+            &message(r#"{"id":"","email_id":"provider","type":"delivery"}"#)
+        )
+        .await
+        .is_err()
+    );
+    assert!(
+        apply_notification(
+            &state,
+            &message(r#"{"id":"event","email_id":"","type":"delivery"}"#)
+        )
+        .await
+        .is_err()
+    );
+    assert!(
+        apply_notification(
+            &state,
+            &message(r#"{"id":"event","email_id":"provider","type":""}"#)
+        )
+        .await
+        .is_err()
+    );
 
     let valid = message(
         r#"{"id":"provider-event-1","email_id":"unknown-provider-id","type":"future_event","status":"stored"}"#,

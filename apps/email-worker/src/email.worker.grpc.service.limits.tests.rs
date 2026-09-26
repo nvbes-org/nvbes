@@ -1,6 +1,7 @@
 use nvbes_email::proto::nvbes::email::v1::{
     SubmitEmailRequest, email_delivery_service_client::EmailDeliveryServiceClient,
 };
+use prost::Message;
 use tonic::Code;
 
 use super::{
@@ -10,15 +11,31 @@ use super::{
 
 #[test]
 fn persistence_budget_rejects_oversized_commands_before_database_access() {
-    let request = SubmitEmailRequest {
+    assert_eq!(MAX_GRPC_DECODE_BYTES, 262_144);
+    assert_eq!(MAX_PERSISTED_COMMAND_BYTES, 196_608);
+
+    let oversized = SubmitEmailRequest {
         producer: "a".repeat(MAX_PERSISTED_COMMAND_BYTES + 1),
         ..Default::default()
     };
-
     assert_eq!(
-        validate_submission_size(&request).unwrap_err().code(),
+        validate_submission_size(&oversized).unwrap_err().code(),
         Code::InvalidArgument
     );
+
+    // Exact budget must remain accepted (`>` not `>=`).
+    let mut exact = SubmitEmailRequest::default();
+    let overhead = exact.encoded_len();
+    exact.producer = "b".repeat(MAX_PERSISTED_COMMAND_BYTES.saturating_sub(overhead));
+    // Trim/pad to land exactly on the budget once prost field tags are accounted for.
+    while exact.encoded_len() < MAX_PERSISTED_COMMAND_BYTES {
+        exact.producer.push('b');
+    }
+    while exact.encoded_len() > MAX_PERSISTED_COMMAND_BYTES {
+        exact.producer.pop();
+    }
+    assert_eq!(exact.encoded_len(), MAX_PERSISTED_COMMAND_BYTES);
+    assert!(validate_submission_size(&exact).is_ok());
 }
 
 #[tokio::test]

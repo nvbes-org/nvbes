@@ -5,7 +5,6 @@ use axum::{
     response::{IntoResponse, Redirect},
     routing::{get, post},
 };
-use uuid::Uuid;
 
 use crate::app::IdentityState;
 use crate::auth::hash_token;
@@ -96,15 +95,15 @@ async fn authorize(
     }
 
     let token_hash = hash_token(&session_token);
-    let (principal_id, session_id) = match sqlx::query_as::<_, (Uuid, Uuid)>(
+    let (principal_id, session_id) = match sqlx::query!(
         "SELECT principal_id, id FROM identity_sessions 
              WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > clock_timestamp()",
+        &token_hash
     )
-    .bind(&token_hash)
     .fetch_optional(&state.db)
     .await
     {
-        Ok(Some(row)) => row,
+        Ok(Some(row)) => (row.principal_id, row.id),
         Ok(None) => return Ok(unauthenticated_authorize_response(&state, &uri)),
         Err(e) => {
             return Err((

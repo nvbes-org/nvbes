@@ -198,3 +198,7 @@ pub fn map_rule(error: rules_db::RuleOperationError) -> Status {
         _ => Status::unavailable("rule storage unavailable"),
     }
 }
+
+#[cfg(test)]
+#[path = "trust_risk.operations.types.tests.rs"]
+mod tests;

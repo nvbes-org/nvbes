@@ -180,6 +180,66 @@ mod tests {
     }
 
     #[test]
+    fn cb_service_kind_as_str_covers_all_variants() {
+        assert_eq!(CbServiceKind::SafeR.as_str(), "safe_r");
+        assert_eq!(CbServiceKind::UpdatR.as_str(), "updat_r");
+        assert_eq!(CbServiceKind::FastR.as_str(), "fast_r");
+    }
+
+    #[test]
+    fn fast_r_is_eligible_for_customer_initiated_french_card() {
+        let decision = evaluate_cb_capability(CbServiceKind::FastR, &french_cit_context());
+        assert!(decision.eligible);
+        assert_eq!(decision.reason, "eligible");
+    }
+
+    #[test]
+    fn safe_r_requires_customer_initiated_when_card_context_ok() {
+        let merchant_initiated = CbPaymentContext {
+            customer_initiated: false,
+            ..french_cit_context()
+        };
+        let rejected = evaluate_cb_capability(CbServiceKind::SafeR, &merchant_initiated);
+        assert!(!rejected.eligible);
+        assert_eq!(rejected.reason, "customer_initiated_required");
+    }
+
+    #[test]
+    fn non_french_card_or_merchant_blocks_cb_capability() {
+        let foreign_card = CbPaymentContext {
+            card_country: Some("DE".to_string()),
+            ..french_cit_context()
+        };
+        let rejected = evaluate_cb_capability(CbServiceKind::SafeR, &foreign_card);
+        assert!(!rejected.eligible);
+        assert_eq!(rejected.reason, "cb_card_context_required");
+
+        let foreign_merchant = CbPaymentContext {
+            merchant_country: Some("BE".to_string()),
+            ..french_cit_context()
+        };
+        let rejected = evaluate_cb_capability(CbServiceKind::FastR, &foreign_merchant);
+        assert!(!rejected.eligible);
+        assert_eq!(rejected.reason, "cb_card_context_required");
+
+        let missing_card = CbPaymentContext {
+            card_country: None,
+            ..french_cit_context()
+        };
+        assert!(!evaluate_cb_capability(CbServiceKind::UpdatR, &missing_card).eligible);
+    }
+
+    #[test]
+    fn merchant_country_none_is_allowed_for_french_cards() {
+        let context = CbPaymentContext {
+            merchant_country: None,
+            card_country: Some("fr".to_string()),
+            ..french_cit_context()
+        };
+        assert!(evaluate_cb_capability(CbServiceKind::SafeR, &context).eligible);
+    }
+
+    #[test]
     fn cb_integration_port_is_acquirer_or_pat_backed() {
         assert_eq!(
             validate_cb_integration_port(&CbIntegrationPort {
@@ -189,11 +249,35 @@ mod tests {
             }),
             Err("cb_acquirer_or_pat_required")
         );
+        assert_eq!(
+            validate_cb_integration_port(&CbIntegrationPort {
+                acquirer_reference: Some("   ".to_string()),
+                pat_reference: Some("".to_string()),
+                enabled_services: vec![CbServiceKind::SafeR],
+            }),
+            Err("cb_acquirer_or_pat_required")
+        );
+        assert_eq!(
+            validate_cb_integration_port(&CbIntegrationPort {
+                acquirer_reference: Some("acquirer-1".to_string()),
+                pat_reference: None,
+                enabled_services: vec![],
+            }),
+            Err("cb_service_required")
+        );
         assert!(
             validate_cb_integration_port(&CbIntegrationPort {
                 acquirer_reference: Some("acquirer-contract-eu-1".to_string()),
                 pat_reference: None,
                 enabled_services: vec![CbServiceKind::SafeR, CbServiceKind::UpdatR],
+            })
+            .is_ok()
+        );
+        assert!(
+            validate_cb_integration_port(&CbIntegrationPort {
+                acquirer_reference: None,
+                pat_reference: Some("pat-ref-1".to_string()),
+                enabled_services: vec![CbServiceKind::FastR],
             })
             .is_ok()
         );

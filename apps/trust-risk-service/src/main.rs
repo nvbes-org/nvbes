@@ -56,7 +56,10 @@ use tokio::sync::watch;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let command: Vec<String> = std::env::args().skip(1).collect();
+    run(std::env::args().skip(1).collect()).await
+}
+
+async fn run(command: Vec<String>) -> anyhow::Result<()> {
     if matches!(command.as_slice(), [action] if action == "migrate") {
         let database_url = config::database_url_from_env()?;
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -136,7 +139,34 @@ async fn main() -> anyhow::Result<()> {
     let db = database::connect_lazy(&config.database_url)?;
     let state = app::TrustRiskState::new(config, db);
     let listener = tokio::net::TcpListener::bind(bind_addr).await?;
+    serve(state, listener).await
+}
 
+async fn serve(
+    state: app::TrustRiskState,
+    listener: tokio::net::TcpListener,
+) -> anyhow::Result<()> {
+    let bind_addr = listener.local_addr()?;
+    let router = build_router(state.clone()).await?;
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let projection_task = tokio::spawn(projection::run(state.clone(), shutdown_rx.clone()));
+    let retention_task = tokio::spawn(retention::run(state.clone(), shutdown_rx.clone()));
+
+    tracing::info!(%bind_addr, environment = %state.config.environment, "starting independent trust/risk service");
+    let server =
+        axum::serve(listener, router).with_graceful_shutdown(server_shutdown(shutdown_rx.clone()));
+    tokio::select! {
+        result = server => result?,
+        _ = process_shutdown_signal() => {},
+    }
+    let _ = shutdown_tx.send(true);
+    projection_task.await?;
+    retention_task.await?;
+    nvbes_observability::flush_error_reporting(std::time::Duration::from_secs(2));
+    Ok(())
+}
+
+async fn build_router(state: app::TrustRiskState) -> anyhow::Result<axum::Router> {
     let signals =
         TrustRiskSignalServiceServer::new(ingress_grpc::SignalService::new(state.clone()))
             .max_encoding_message_size(256 * 1024)
@@ -172,7 +202,7 @@ async fn main() -> anyhow::Result<()> {
     let http_metrics = nvbes_observability::metrics::HttpMetrics {
         handle: state.metrics.clone(),
     };
-    let router = tonic::service::Routes::from(http)
+    Ok(tonic::service::Routes::from(http)
         .add_service(health_service)
         .add_service(signals)
         .add_service(assessments)
@@ -182,23 +212,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(axum::middleware::from_fn_with_state(
             http_metrics,
             nvbes_observability::middleware::observe_request,
-        ));
-    let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let projection_task = tokio::spawn(projection::run(state.clone(), shutdown_rx.clone()));
-    let retention_task = tokio::spawn(retention::run(state.clone(), shutdown_rx.clone()));
-
-    tracing::info!(%bind_addr, environment = %state.config.environment, "starting independent trust/risk service");
-    let server =
-        axum::serve(listener, router).with_graceful_shutdown(server_shutdown(shutdown_rx.clone()));
-    tokio::select! {
-        result = server => result?,
-        _ = process_shutdown_signal() => {},
-    }
-    let _ = shutdown_tx.send(true);
-    projection_task.await?;
-    retention_task.await?;
-    nvbes_observability::flush_error_reporting(std::time::Duration::from_secs(2));
-    Ok(())
+        )))
 }
 
 async fn server_shutdown(mut shutdown: watch::Receiver<bool>) {
@@ -222,5 +236,13 @@ async fn process_shutdown_signal() {
 }
 
 #[cfg(test)]
+#[path = "trust_risk.grpc.tests.support.rs"]
+pub(crate) mod grpc_test_support;
+
+#[cfg(test)]
 #[path = "trust_risk.acceptance.tests.rs"]
 mod acceptance_tests;
+
+#[cfg(test)]
+#[path = "trust_risk.main.tests.rs"]
+mod main_tests;

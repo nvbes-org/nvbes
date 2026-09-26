@@ -76,6 +76,37 @@ fn lateness_retry_and_quarantine_are_bounded() {
     let id = Uuid::parse_str("018f7f2d-fc7d-7b7a-9f72-3abddda8d201").unwrap();
     assert!(retry_delay(1, id).is_some());
     assert!(retry_delay(MAX_PROJECTION_ATTEMPTS, id).is_none());
+    let delay = retry_delay(1, id).expect("attempt 1 retries");
+    let byte = u64::from(id.as_bytes()[0]);
+    let expected = (1 + byte % 2).min(60);
+    assert_eq!(delay.as_secs(), expected);
+}
+
+#[test]
+fn projection_windows_include_exact_age_boundaries() {
+    let watermark = Utc.timestamp_opt(1_787_590_000, 0).unwrap();
+    let at_watermark = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d210",
+        watermark.timestamp(),
+        10,
+    );
+    let at_24h = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d211",
+        watermark.timestamp() - 86_400,
+        10,
+    );
+    let future = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d212",
+        watermark.timestamp() + 1,
+        10,
+    );
+    let too_old = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d213",
+        watermark.timestamp() - 86_401,
+        10,
+    );
+    let features = derive_features([&at_watermark, &at_24h, &future, &too_old], watermark);
+    assert_eq!(features["events_24h"], 2.0);
 }
 
 proptest! {
@@ -107,5 +138,112 @@ proptest! {
         if let Some(delay) = delay {
             prop_assert!((1..=60).contains(&delay.as_secs()));
         }
+    }
+}
+
+#[test]
+fn derive_features_skips_future_and_stale_events() {
+    let watermark = Utc.timestamp_opt(1_787_590_000, 0).unwrap();
+    let future = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d401",
+        watermark.timestamp() + 60,
+        90,
+    );
+    let stale = signal(
+        "018f7f2d-fc7d-7b7a-9f72-3abddda8d402",
+        watermark.timestamp() - 90_000,
+        90,
+    );
+    let features = derive_features([future, stale].iter().collect::<Vec<_>>(), watermark);
+    assert_eq!(features["events_1h"], 0.0);
+    assert_eq!(features["events_24h"], 0.0);
+}
+
+#[test]
+fn derive_features_tracks_network_automation_and_tenant_subjects() {
+    let watermark = Utc.timestamp_opt(1_787_590_000, 0).unwrap();
+    let tenant_signal = RiskSignal::try_from(pb::RiskSignal {
+        signal_id: "018f7f2d-fc7d-7b7a-9f72-3abddda8d301".to_string(),
+        schema_version: 1,
+        producer: "billing-checkout-fixture".to_string(),
+        signal_kind: "network.reputation".to_string(),
+        occurred_at: Some(prost_types::Timestamp {
+            seconds: watermark.timestamp() - 100,
+            nanos: 0,
+        }),
+        partition_key: "regional:eu-west:tenant:example".to_string(),
+        subjects: vec![pb::SubjectReference {
+            kind: pb::SubjectKind::Tenant.into(),
+            namespace: "nvbes.tenant".to_string(),
+            opaque_id: "tenant:018f7f2d".to_string(),
+            scope: pb::DataScope::Regional.into(),
+            tenant_id: None,
+        }],
+        attributes: HashMap::from([(
+            "risk_score".to_string(),
+            pb::AttributeValue {
+                value: Some(pb::attribute_value::Value::UnsignedValue(80)),
+            },
+        )]),
+        context: None,
+        scope: pb::DataScope::Regional.into(),
+    })
+    .unwrap();
+    let automation_signal = RiskSignal::try_from(pb::RiskSignal {
+        signal_id: "018f7f2d-fc7d-7b7a-9f72-3abddda8d302".to_string(),
+        schema_version: 1,
+        producer: "billing-checkout-fixture".to_string(),
+        signal_kind: "automation.score".to_string(),
+        occurred_at: Some(prost_types::Timestamp {
+            seconds: watermark.timestamp() - 50,
+            nanos: 0,
+        }),
+        partition_key: "regional:eu-west:automation:example".to_string(),
+        subjects: vec![pb::SubjectReference {
+            kind: pb::SubjectKind::Principal.into(),
+            namespace: "nvbes.identity".to_string(),
+            opaque_id: "principal:018f7f2d-auto".to_string(),
+            scope: pb::DataScope::Regional.into(),
+            tenant_id: None,
+        }],
+        attributes: HashMap::from([(
+            "confidence".to_string(),
+            pb::AttributeValue {
+                value: Some(pb::attribute_value::Value::DecimalValue(0.82)),
+            },
+        )]),
+        context: None,
+        scope: pb::DataScope::Regional.into(),
+    })
+    .unwrap();
+    let features = derive_features(
+        [tenant_signal, automation_signal]
+            .iter()
+            .collect::<Vec<_>>(),
+        watermark,
+    );
+    assert_eq!(features["network_risk_score_max_1h"], 80.0);
+    assert_eq!(features["linked_tenants_24h"], 1.0);
+    assert_eq!(features["automation_confidence_max_1h"], 0.82);
+}
+
+#[cfg(feature = "database-tests")]
+mod runtime {
+    use std::time::Duration;
+
+    use tokio::sync::watch;
+
+    use super::super::run;
+    use crate::grpc_test_support;
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn run_loop_updates_projection_heartbeat(pool: sqlx::PgPool) {
+        let state = grpc_test_support::state(pool);
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+        let task = tokio::spawn(run(state.clone(), shutdown_rx));
+        tokio::time::sleep(Duration::from_millis(400)).await;
+        shutdown_tx.send(true).unwrap();
+        task.await.unwrap();
+        assert!(state.projection_heartbeat.read().await.is_some());
     }
 }

@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT plan_code, stripe_price_id, currency, amount_cents, billing_interval, is_active\n        FROM billing_plans\n        ORDER BY plan_code ASC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "plan_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "stripe_price_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "currency",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "amount_cents",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "billing_interval",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_active",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ee960b78ac87f508f034dffdcdc8746b939f20992cede5f5cac18c0ef8ba76ec"
+}

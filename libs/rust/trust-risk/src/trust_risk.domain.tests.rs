@@ -4,6 +4,7 @@ use crate::proto::nvbes::trust_risk::v1::{DataScope, SubjectKind};
 use crate::{
     rules::{FeatureMap, RuleSet, evaluate},
     signal::{SignalError, SubjectReference},
+    types::Recommendation,
 };
 
 fn wire_subject(opaque_id: &str) -> crate::proto::nvbes::trust_risk::v1::SubjectReference {
@@ -14,6 +15,26 @@ fn wire_subject(opaque_id: &str) -> crate::proto::nvbes::trust_risk::v1::Subject
         scope: DataScope::Regional.into(),
         tenant_id: Some("018f7f2d-fc7d-7b7a-9f72-3abddda8d001".to_string()),
     }
+}
+
+#[test]
+fn recommendation_strictest_keeps_higher_rank() {
+    assert_eq!(
+        Recommendation::Allow.strictest(Recommendation::Deny),
+        Recommendation::Deny
+    );
+    assert_eq!(
+        Recommendation::Deny.strictest(Recommendation::Allow),
+        Recommendation::Deny
+    );
+    assert_eq!(
+        Recommendation::Challenge.strictest(Recommendation::Review),
+        Recommendation::Review
+    );
+    assert_eq!(
+        Recommendation::Review.strictest(Recommendation::Challenge),
+        Recommendation::Review
+    );
 }
 
 #[test]

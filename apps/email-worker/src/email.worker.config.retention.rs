@@ -38,7 +38,23 @@ mod tests {
     #[test]
     fn retention_keeps_secret_payloads_shorter_than_the_ledger() {
         assert!(parse("30", "400").is_ok());
+        assert!(
+            parse("90", "400").is_ok(),
+            "90 days is the inclusive payload ceiling"
+        );
         assert!(parse("91", "400").is_err());
+        assert!(
+            parse("30", "30").is_ok(),
+            "ledger may equal payload retention"
+        );
         assert!(parse("30", "29").is_err());
+        assert!(
+            parse("30", "3650").is_ok(),
+            "3650 days is the inclusive ledger ceiling"
+        );
+        assert!(parse("30", "3651").is_err());
+        assert!(parse("abc", "400").is_err());
+        assert!(parse("0", "400").is_err());
+        assert!(parse("-1", "400").is_err());
     }
 }

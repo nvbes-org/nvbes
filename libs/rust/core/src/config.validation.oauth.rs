@@ -75,4 +75,43 @@ mod tests {
 
         assert!(validate_fapi_high_assurance(&config).is_ok());
     }
+
+    #[test]
+    fn mtls_satisfies_sender_constrained_token_requirement() {
+        let config = AppConfig {
+            fapi_high_assurance_enabled: true,
+            mtls_enabled: true,
+            ..AppConfig::default()
+        };
+        assert!(validate_fapi_high_assurance(&config).is_ok());
+    }
+
+    #[test]
+    fn production_rejects_non_hex_or_wrong_length_digest() {
+        let non_hex = AppConfig {
+            environment: "production".to_string(),
+            dpop_enabled: true,
+            fapi_high_assurance_enabled: true,
+            fapi_conformance_evidence_sha256: Some("g".repeat(64)),
+            ..AppConfig::default()
+        };
+        assert!(
+            validate_fapi_high_assurance(&non_hex)
+                .unwrap_err()
+                .contains("NVBES_FAPI_CONFORMANCE_EVIDENCE_SHA256")
+        );
+
+        let short = AppConfig {
+            environment: "production".to_string(),
+            mtls_enabled: true,
+            fapi_high_assurance_enabled: true,
+            fapi_conformance_evidence_sha256: Some("abc".to_string()),
+            ..AppConfig::default()
+        };
+        assert!(
+            validate_fapi_high_assurance(&short)
+                .unwrap_err()
+                .contains("NVBES_FAPI_CONFORMANCE_EVIDENCE_SHA256")
+        );
+    }
 }

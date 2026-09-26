@@ -1,10 +1,66 @@
+use std::{ffi::OsString, sync::Mutex};
+
 use super::{
-    ConfigError,
-    observability::{ObservabilityConfig, parse_sample_rate, validate},
+    ConfigError, TrustRiskConfig, database_url_from_env,
+    observability::{self, ObservabilityConfig, parse_sample_rate, validate},
     parse_operators, parse_producers,
 };
 
 const TOKEN: &str = "producer-token-with-at-least-32-characters";
+
+static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+const TEST_VARS: &[&str] = &[
+    "NVBES_ENVIRONMENT",
+    "NVBES_TRUST_RISK_DATABASE_URL",
+    "NVBES_TRUST_RISK_BIND_ADDR",
+    "NVBES_TRUST_RISK_PRODUCER_POLICIES",
+    "NVBES_TRUST_RISK_OPERATOR_TOKENS",
+    "NVBES_TRUST_RISK_METRICS_TOKEN",
+    "NVBES_TRUST_RISK_SIGNALS_RETENTION_DAYS",
+    "NVBES_TRUST_RISK_EVALUATIONS_RETENTION_DAYS",
+    "NVBES_TRUST_RISK_LABELS_RETENTION_DAYS",
+    "NVBES_TRUST_RISK_REVIEWS_RETENTION_DAYS",
+    "NVBES_TRUST_RISK_AUDIT_RETENTION_DAYS",
+    "SENTRY_DSN",
+    "NVBES_SENTRY_DSN",
+    "SENTRY_TRACES_SAMPLE_RATE",
+    "NVBES_SENTRY_TRACES_SAMPLE_RATE",
+    "NVBES_OTLP_ENDPOINT",
+    "NVBES_OTLP_AUTHORIZATION_HEADER",
+];
+
+struct EnvGuard {
+    saved: Vec<(&'static str, Option<OsString>)>,
+}
+
+impl EnvGuard {
+    fn isolated() -> Self {
+        let saved = TEST_VARS
+            .iter()
+            .map(|name| (*name, std::env::var_os(name)))
+            .collect();
+        for name in TEST_VARS {
+            unsafe { std::env::remove_var(name) };
+        }
+        Self { saved }
+    }
+
+    fn set(&self, name: &str, value: impl AsRef<std::ffi::OsStr>) {
+        unsafe { std::env::set_var(name, value) };
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        for (name, val) in &self.saved {
+            match val {
+                Some(v) => unsafe { std::env::set_var(name, v) },
+                None => unsafe { std::env::remove_var(name) },
+            }
+        }
+    }
+}
 
 #[test]
 fn parses_explicit_producer_permissions() {
@@ -35,6 +91,21 @@ fn rejects_duplicate_policies_and_weak_tokens() {
 }
 
 #[test]
+fn producer_token_accepts_exact_thirty_two_characters() {
+    let exact = "01234567890123456789012345678901";
+    assert_eq!(exact.len(), 32);
+    let value = format!(
+        r#"[{{"producer":"identity-service","token":"{exact}","signal_prefixes":["identity."]}}]"#
+    );
+    assert!(parse_producers(&value).is_ok());
+    let short = format!(
+        r#"[{{"producer":"identity-service","token":"{}","signal_prefixes":["identity."]}}]"#,
+        &exact[..31]
+    );
+    assert_eq!(parse_producers(&short).unwrap_err(), ConfigError::WeakToken);
+}
+
+#[test]
 fn operator_permissions_are_explicit() {
     let value = format!(
         r#"[{{"actor":"operator:ada","token":"{TOKEN}","permissions":["evaluation:read"]}}]"#
@@ -62,16 +133,288 @@ fn production_requires_sentry_and_authenticated_https_otlp() {
         otlp_authorization_header: Some("Basic dXNlcjp0b2tlbg==".to_string()),
     };
     assert!(validate("production", &valid).is_ok());
+    assert!(
+        validate(
+            "development",
+            &ObservabilityConfig {
+                sentry_dsn: None,
+                sentry_traces_sample_rate: 0.0,
+                otlp_endpoint: None,
+                otlp_authorization_header: None,
+            }
+        )
+        .is_ok()
+    );
+    assert!(
+        validate(
+            "test",
+            &ObservabilityConfig {
+                sentry_dsn: None,
+                sentry_traces_sample_rate: 0.0,
+                otlp_endpoint: None,
+                otlp_authorization_header: None,
+            }
+        )
+        .is_ok()
+    );
+
+    let mut bad_rate = valid.clone();
+    bad_rate.sentry_traces_sample_rate = 1.5;
+    assert_eq!(
+        validate("production", &bad_rate).unwrap_err(),
+        ConfigError::Invalid("SENTRY_TRACES_SAMPLE_RATE")
+    );
 
     let mut missing_sentry = valid.clone();
     missing_sentry.sentry_dsn = None;
     assert!(validate("production", &missing_sentry).is_err());
 
+    let mut http_sentry = valid.clone();
+    http_sentry.sentry_dsn = Some("http://public@example.ingest.sentry.io/42".to_string());
+    assert_eq!(
+        validate("production", &http_sentry).unwrap_err(),
+        ConfigError::Invalid("SENTRY_DSN")
+    );
+
+    let mut no_at = valid.clone();
+    no_at.sentry_dsn = Some("https://example.ingest.sentry.io/42".to_string());
+    assert_eq!(
+        validate("production", &no_at).unwrap_err(),
+        ConfigError::Invalid("SENTRY_DSN")
+    );
+
+    let mut padded_sentry = valid.clone();
+    padded_sentry.sentry_dsn = Some(" https://public@example.ingest.sentry.io/42 ".to_string());
+    assert_eq!(
+        validate("production", &padded_sentry).unwrap_err(),
+        ConfigError::Invalid("SENTRY_DSN")
+    );
+
     let mut insecure_otlp = valid.clone();
     insecure_otlp.otlp_endpoint = Some("http://collector:4317".to_string());
-    assert!(validate("production", &insecure_otlp).is_err());
+    assert_eq!(
+        validate("production", &insecure_otlp).unwrap_err(),
+        ConfigError::Invalid("NVBES_OTLP_ENDPOINT")
+    );
 
-    let mut missing_auth = valid;
+    let mut missing_otlp = valid.clone();
+    missing_otlp.otlp_endpoint = None;
+    assert!(validate("production", &missing_otlp).is_err());
+
+    let mut missing_auth = valid.clone();
     missing_auth.otlp_authorization_header = None;
     assert!(validate("production", &missing_auth).is_err());
+
+    let mut short_auth = valid.clone();
+    short_auth.otlp_authorization_header = Some("Basic short".to_string());
+    assert_eq!(
+        validate("production", &short_auth).unwrap_err(),
+        ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER")
+    );
+
+    let mut exact_auth = valid.clone();
+    exact_auth.otlp_authorization_header = Some("Basic 0123456789".to_string());
+    assert_eq!(
+        exact_auth.otlp_authorization_header.as_ref().unwrap().len(),
+        16
+    );
+    assert!(
+        validate("production", &exact_auth).is_ok(),
+        "exactly 16 characters must remain accepted (`<` not `<=`)"
+    );
+
+    let mut bearer_auth = valid.clone();
+    bearer_auth.otlp_authorization_header = Some("Bearer dXNlcjp0b2tlbg==".to_string());
+    assert_eq!(
+        validate("production", &bearer_auth).unwrap_err(),
+        ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER")
+    );
+
+    let mut newline_auth = valid;
+    newline_auth.otlp_authorization_header = Some("Basic dXNlcjp0b2tlbg==\n".to_string());
+    assert_eq!(
+        validate("production", &newline_auth).unwrap_err(),
+        ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER")
+    );
+}
+
+#[test]
+fn observability_from_environment_reads_aliases_in_test() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let guard = EnvGuard::isolated();
+    guard.set(
+        "NVBES_SENTRY_DSN",
+        "https://public@example.ingest.sentry.io/42",
+    );
+    guard.set("NVBES_SENTRY_TRACES_SAMPLE_RATE", "0.25");
+    guard.set("NVBES_OTLP_ENDPOINT", "https://otlp.example.net");
+    guard.set("NVBES_OTLP_AUTHORIZATION_HEADER", "Basic dXNlcjp0b2tlbg==");
+    let cfg = observability::from_environment("test").expect("test observability");
+    assert_eq!(
+        cfg.sentry_dsn.as_deref(),
+        Some("https://public@example.ingest.sentry.io/42")
+    );
+    assert_eq!(cfg.sentry_traces_sample_rate, 0.25);
+    assert_eq!(
+        cfg.otlp_endpoint.as_deref(),
+        Some("https://otlp.example.net")
+    );
+    assert!(
+        cfg.otlp_authorization_header
+            .as_deref()
+            .unwrap()
+            .starts_with("Basic ")
+    );
+
+    drop(guard);
+    let guard = EnvGuard::isolated();
+    guard.set("SENTRY_TRACES_SAMPLE_RATE", "2.0");
+    assert_eq!(
+        observability::from_environment("development").unwrap_err(),
+        ConfigError::Invalid("SENTRY_TRACES_SAMPLE_RATE")
+    );
+    let _ = guard;
+}
+
+#[test]
+fn from_env_loads_development_defaults() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let _guard = EnvGuard::isolated();
+    let cfg = TrustRiskConfig::from_env().expect("development defaults");
+    assert_eq!(cfg.environment, "development");
+    assert_eq!(cfg.bind_addr.to_string(), "127.0.0.1:3050");
+    assert!(cfg.producers.contains_key("billing-checkout-fixture"));
+    assert!(cfg.operators.contains_key("development-operator"));
+    assert_eq!(cfg.retention.signals_days, 30);
+    assert_eq!(cfg.retention.audit_days, 730);
+}
+
+#[test]
+fn from_env_case_table_overrides_retention_and_bind() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_ENVIRONMENT", "test");
+    guard.set("NVBES_TRUST_RISK_BIND_ADDR", "127.0.0.1:4050");
+    guard.set("NVBES_TRUST_RISK_DATABASE_URL", "postgres://trust.test/db");
+    guard.set("NVBES_TRUST_RISK_SIGNALS_RETENTION_DAYS", "14");
+    guard.set("NVBES_TRUST_RISK_AUDIT_RETENTION_DAYS", "100");
+    guard.set(
+        "NVBES_TRUST_RISK_METRICS_TOKEN",
+        "metrics-token-with-at-least-32-characters",
+    );
+    let producer = format!(
+        r#"[{{"producer":"identity-service","token":"{TOKEN}","signal_prefixes":["identity."],"can_assess":true}}]"#
+    );
+    let operator = format!(
+        r#"[{{"actor":"operator:ada","token":"{TOKEN}","permissions":["evaluation:read"]}}]"#
+    );
+    guard.set("NVBES_TRUST_RISK_PRODUCER_POLICIES", &producer);
+    guard.set("NVBES_TRUST_RISK_OPERATOR_TOKENS", &operator);
+
+    let cfg = TrustRiskConfig::from_env().expect("overrides");
+    assert_eq!(cfg.bind_addr.to_string(), "127.0.0.1:4050");
+    assert_eq!(cfg.database_url, "postgres://trust.test/db");
+    assert_eq!(cfg.retention.signals_days, 14);
+    assert_eq!(cfg.retention.audit_days, 100);
+    assert!(cfg.producers["identity-service"].can_assess);
+}
+
+#[test]
+fn from_env_rejects_invalid_bind_and_retention() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_TRUST_RISK_BIND_ADDR", "not-a-socket");
+    assert_eq!(
+        TrustRiskConfig::from_env().unwrap_err(),
+        ConfigError::Invalid("NVBES_TRUST_RISK_BIND_ADDR")
+    );
+    drop(guard);
+
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_TRUST_RISK_SIGNALS_RETENTION_DAYS", "0");
+    assert_eq!(
+        TrustRiskConfig::from_env().unwrap_err(),
+        ConfigError::Invalid("NVBES_TRUST_RISK_SIGNALS_RETENTION_DAYS")
+    );
+}
+
+#[test]
+fn production_requires_explicit_database_and_policies() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_ENVIRONMENT", "production");
+    assert_eq!(
+        database_url_from_env().unwrap_err(),
+        ConfigError::Missing("NVBES_TRUST_RISK_DATABASE_URL")
+    );
+    assert!(matches!(
+        TrustRiskConfig::from_env().unwrap_err(),
+        ConfigError::Missing(_)
+    ));
+}
+
+#[test]
+fn rejects_empty_policy_lists_and_bad_identifiers() {
+    assert_eq!(
+        parse_producers("[]").unwrap_err(),
+        ConfigError::Invalid("policy list")
+    );
+    assert_eq!(
+        parse_operators("[]").unwrap_err(),
+        ConfigError::Invalid("policy list")
+    );
+    let bad_id = format!(r#"[{{"producer":"ab","token":"{TOKEN}","signal_prefixes":[]}}]"#);
+    assert_eq!(
+        parse_producers(&bad_id).unwrap_err(),
+        ConfigError::Invalid("policy identifier")
+    );
+    let duplicate_ops = format!(
+        r#"[{{"actor":"operator:ada","token":"{TOKEN}","permissions":[]}},{{"actor":"operator:ada","token":"{TOKEN}","permissions":[]}}]"#
+    );
+    assert_eq!(
+        parse_operators(&duplicate_ops).unwrap_err(),
+        ConfigError::DuplicatePolicy
+    );
+    let newline_token =
+        format!(r#"[{{"producer":"identity-service","token":"{TOKEN}\n","signal_prefixes":[]}}]"#);
+    assert_eq!(
+        parse_producers(&newline_token).unwrap_err(),
+        ConfigError::WeakToken
+    );
+}
+
+#[test]
+fn from_env_rejects_weak_metrics_token() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_ENVIRONMENT", "test");
+    guard.set("NVBES_TRUST_RISK_METRICS_TOKEN", "too-short-metrics-token");
+    assert_eq!(
+        TrustRiskConfig::from_env().unwrap_err(),
+        ConfigError::WeakToken
+    );
+    drop(guard);
+
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_ENVIRONMENT", "test");
+    guard.set(
+        "NVBES_TRUST_RISK_METRICS_TOKEN",
+        "01234567890123456789012345678901",
+    );
+    assert!(
+        TrustRiskConfig::from_env().is_ok(),
+        "exactly 32 characters must remain accepted (`<` not `<=`)"
+    );
+    drop(guard);
+
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_ENVIRONMENT", "test");
+    guard.set(
+        "NVBES_TRUST_RISK_METRICS_TOKEN",
+        "metrics-token-with-at-least-32-characters\n",
+    );
+    assert_eq!(
+        TrustRiskConfig::from_env().unwrap_err(),
+        ConfigError::WeakToken
+    );
 }

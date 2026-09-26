@@ -42,3 +42,7 @@ impl IntoResponse for BillingError {
 }
 
 pub type BillingResult<T> = Result<T, BillingError>;
+
+#[cfg(test)]
+#[path = "billing.error.tests.rs"]
+mod tests;

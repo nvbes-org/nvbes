@@ -168,3 +168,7 @@ pub enum ConfigError {
     #[error("configuration is invalid: {0}")]
     Invalid(&'static str),
 }
+
+#[cfg(test)]
+#[path = "account.config.tests.rs"]
+mod tests;

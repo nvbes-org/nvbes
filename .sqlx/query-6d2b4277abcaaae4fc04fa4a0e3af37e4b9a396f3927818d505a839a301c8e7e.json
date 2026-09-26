@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO identity_audit_events (id, principal_id, actor_principal_id, event_type, correlation_id) VALUES ($1, $2, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6d2b4277abcaaae4fc04fa4a0e3af37e4b9a396f3927818d505a839a301c8e7e"
+}

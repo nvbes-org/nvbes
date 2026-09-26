@@ -52,3 +52,7 @@ impl fmt::Debug for SafeLog<Option<String>> {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "pii.logging.tests.rs"]
+mod tests;

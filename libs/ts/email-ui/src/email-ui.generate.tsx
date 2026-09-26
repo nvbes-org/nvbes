@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { render } from 'react-email';
 import { EmailActionTemplate } from './email-ui.action-template';
 import { emailMarkers } from './email-ui.markers';
+import { normalizeGeneratedHtml } from './email-ui.normalize';
 import { EmailShellTemplate } from './email-ui.shell-template';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -34,7 +35,7 @@ const templates = [
 ];
 
 for (const template of templates) {
-  const expected = `${template.html.trim()}\n`;
+  const expected = normalizeGeneratedHtml(template.html);
   if (checkOnly) {
     const current = await readFile(template.path, 'utf8');
     if (current !== expected) {

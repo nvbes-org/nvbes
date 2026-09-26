@@ -114,6 +114,14 @@ mod tests {
         insecure_sentry.sentry_dsn = Some("http://public@example.invalid/1".to_string());
         assert!(validate("production", &insecure_sentry).is_err());
 
+        let mut padded_sentry = config();
+        padded_sentry.sentry_dsn = Some(" https://public@example.invalid/1".to_string());
+        assert!(validate("production", &padded_sentry).is_err());
+
+        let mut missing_at = config();
+        missing_at.sentry_dsn = Some("https://public.example.invalid/1".to_string());
+        assert!(validate("production", &missing_at).is_err());
+
         let mut direct_export = config();
         direct_export.otlp_authorization_header = Some("Basic secret".to_string());
         assert!(validate("production", &direct_export).is_err());
@@ -121,5 +129,14 @@ mod tests {
         let mut public_metrics = config();
         public_metrics.observability_internal_token = None;
         assert!(validate("production", &public_metrics).is_err());
+
+        let mut short_token = config();
+        short_token.observability_internal_token = Some("too-short-token".to_string());
+        assert!(validate("production", &short_token).is_err());
+
+        let mut placeholder_token = config();
+        placeholder_token.observability_internal_token =
+            Some("please-change-me-before-production-use".to_string());
+        assert!(validate("production", &placeholder_token).is_err());
     }
 }

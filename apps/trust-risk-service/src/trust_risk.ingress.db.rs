@@ -11,6 +11,12 @@ use uuid::Uuid;
 
 use crate::auth::constant_time_eq;
 
+pub const MAX_SIGNAL_PAYLOAD_BYTES: usize = 192 * 1024;
+
+pub(crate) fn signal_payload_exceeds_budget(payload_len: usize) -> bool {
+    payload_len > MAX_SIGNAL_PAYLOAD_BYTES
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignalReceipt {
     pub id: Uuid,
@@ -25,7 +31,7 @@ pub async fn persist_signal(
     retention_days: u32,
 ) -> Result<SignalReceipt, PersistSignalError> {
     let payload = wire.encode_to_vec();
-    if payload.len() > 192 * 1024 {
+    if signal_payload_exceeds_budget(payload.len()) {
         return Err(PersistSignalError::PayloadTooLarge);
     }
     let mut tx = pool.begin().await?;
@@ -42,7 +48,7 @@ pub async fn persist_signal_in_transaction(
 ) -> Result<SignalReceipt, PersistSignalError> {
     let fingerprint = fingerprint(signal);
     let payload = wire.encode_to_vec();
-    if payload.len() > 192 * 1024 {
+    if signal_payload_exceeds_budget(payload.len()) {
         return Err(PersistSignalError::PayloadTooLarge);
     }
     let retention_deadline = signal.occurred_at() + Duration::days(i64::from(retention_days));

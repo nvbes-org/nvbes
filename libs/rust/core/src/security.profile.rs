@@ -99,17 +99,61 @@ mod tests {
     }
 
     #[test]
-    fn restricted_profile_requires_high_assurance_controls() {
-        let profile = SecurityProfile::RestrictedTenant;
+    fn data_classification_flags_are_exclusive() {
+        assert!(DataClassification::Confidential.is_customer_sensitive());
+        assert!(DataClassification::Restricted.is_customer_sensitive());
+        assert!(!DataClassification::Public.is_customer_sensitive());
+        assert!(!DataClassification::Internal.is_customer_sensitive());
 
-        assert!(profile.requires_sender_constrained_token());
-        assert!(profile.requires_mtls());
-        assert_eq!(profile.minimum_admin_aal(), "aal3");
+        assert!(DataClassification::Public.allows_plaintext_observability());
+        assert!(DataClassification::Internal.allows_plaintext_observability());
+        assert!(!DataClassification::Confidential.allows_plaintext_observability());
+        assert!(!DataClassification::Restricted.allows_plaintext_observability());
+
+        assert!(DataClassification::Restricted.requires_dedicated_controls());
+        assert!(!DataClassification::Confidential.requires_dedicated_controls());
+        assert!(!DataClassification::Public.requires_dedicated_controls());
     }
 
     #[test]
-    fn shared_cell_cannot_host_restricted_data() {
+    fn security_profile_controls_match_each_variant() {
+        assert!(SecurityProfile::BrowserSession.requires_csrf());
+        assert!(!SecurityProfile::OauthPublic.requires_csrf());
+        assert!(!SecurityProfile::ServiceM2m.requires_csrf());
+
+        assert!(!SecurityProfile::BrowserSession.requires_sender_constrained_token());
+        assert!(!SecurityProfile::OauthPublic.requires_sender_constrained_token());
+        assert!(SecurityProfile::OauthConfidential.requires_sender_constrained_token());
+        assert!(SecurityProfile::ServiceM2m.requires_sender_constrained_token());
+        assert!(SecurityProfile::PartnerApi.requires_sender_constrained_token());
+        assert!(SecurityProfile::RestrictedTenant.requires_sender_constrained_token());
+
+        assert!(!SecurityProfile::BrowserSession.requires_mtls());
+        assert!(!SecurityProfile::PartnerApi.requires_mtls());
+        assert!(SecurityProfile::ServiceM2m.requires_mtls());
+        assert!(SecurityProfile::RestrictedTenant.requires_mtls());
+
+        assert!(SecurityProfile::PartnerApi.requires_http_message_signature());
+        assert!(!SecurityProfile::ServiceM2m.requires_http_message_signature());
+        assert!(!SecurityProfile::BrowserSession.requires_http_message_signature());
+
+        assert_eq!(
+            SecurityProfile::RestrictedTenant.minimum_admin_aal(),
+            "aal3"
+        );
+        assert_eq!(SecurityProfile::BrowserSession.minimum_admin_aal(), "aal2");
+        assert_eq!(SecurityProfile::ServiceM2m.minimum_admin_aal(), "aal2");
+        assert_eq!(SecurityProfile::PartnerApi.minimum_admin_aal(), "aal2");
+    }
+
+    #[test]
+    fn tenant_cell_kind_gates_restricted_data_and_kms() {
         assert!(!TenantCellKind::SharedDataPlane.allows_restricted_data());
         assert!(TenantCellKind::DedicatedDataPlane.allows_restricted_data());
+        assert!(TenantCellKind::FullyDedicated.allows_restricted_data());
+
+        assert!(!TenantCellKind::SharedDataPlane.requires_dedicated_kms_key());
+        assert!(TenantCellKind::DedicatedDataPlane.requires_dedicated_kms_key());
+        assert!(TenantCellKind::FullyDedicated.requires_dedicated_kms_key());
     }
 }

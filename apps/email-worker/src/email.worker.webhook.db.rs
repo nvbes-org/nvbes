@@ -221,6 +221,8 @@ mod tests {
         assert_eq!(normalized_state("email_delivered"), Some("delivered"));
         assert_eq!(normalized_state("email_spam"), Some("complained"));
         assert_eq!(normalized_state("blocklist_created"), Some("hard_bounced"));
+        assert_eq!(normalized_state("email_dropped"), Some("dropped"));
+        assert_eq!(normalized_state("email_soft_bounced"), Some("deferred"));
         assert_eq!(normalized_state("future_event"), None);
     }
 

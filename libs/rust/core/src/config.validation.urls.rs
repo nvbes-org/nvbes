@@ -53,7 +53,12 @@ pub(crate) fn validate_public_url(
         ));
     }
 
-    if let Ok(ip_addr) = host.parse::<IpAddr>() {
+    // `Url::host_str` keeps brackets around IPv6 literals (`[::1]`).
+    let host_for_ip = host
+        .strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .unwrap_or(host);
+    if let Ok(ip_addr) = host_for_ip.parse::<IpAddr>() {
         let is_loopback = match ip_addr {
             IpAddr::V4(ipv4) => ipv4.is_loopback(),
             IpAddr::V6(ipv6) => ipv6.is_loopback(),
@@ -131,3 +136,7 @@ pub(crate) fn validate_webauthn_rp_id(value: &str, strict_mode: bool) -> Result<
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "config.validation.urls.tests.rs"]
+mod tests;

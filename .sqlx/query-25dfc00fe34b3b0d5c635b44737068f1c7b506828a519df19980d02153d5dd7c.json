@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO billing_checkout_sessions\n          (idempotency_key, account_id, account_type, plan_code, stripe_session_id, stripe_customer_id, checkout_url)\n          VALUES ($1, $2, $3, $4, $5, $6, $7)\n        ON CONFLICT (idempotency_key) DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "25dfc00fe34b3b0d5c635b44737068f1c7b506828a519df19980d02153d5dd7c"
+}

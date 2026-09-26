@@ -149,6 +149,26 @@ mod tests {
     }
 
     #[test]
+    fn regional_price_selection_covers_all_pricing_regions() {
+        let cases = [
+            ("US", "north_america"),
+            ("BR", "latam"),
+            ("FR", "western_europe"),
+            ("PL", "eastern_europe"),
+            ("AE", "mena"),
+            ("IN", "south_asia"),
+            ("TH", "southeast_asia"),
+            ("JP", "apac"),
+            ("ZA", "africa"),
+        ];
+        for (country, region) in cases {
+            let selection = regional_price_selection(Some(country));
+            assert_eq!(selection.country_code.as_deref(), Some(country));
+            assert_eq!(selection.pricing_region.as_deref(), Some(region));
+        }
+    }
+
+    #[test]
     fn preserve_historical_price_ignores_current_price_changes() {
         let invoice_price = PriceVersion {
             id: Uuid::nil(),
@@ -201,5 +221,53 @@ mod tests {
         .expect("tenant-specific price should be selected");
 
         assert_eq!(selected.amount.amount_minor, 3_900);
+    }
+
+    #[test]
+    fn active_plan_price_falls_back_to_active_monthly_catalog_price() {
+        let plan_version_id = Uuid::new_v4();
+        let prices = vec![
+            PriceVersion {
+                id: Uuid::new_v4(),
+                plan_version_id: Some(plan_version_id),
+                meter_code: None,
+                amount: Money::eur(3_900),
+                interval_unit: BillingInterval::Year,
+                active: true,
+            },
+            PriceVersion {
+                id: Uuid::new_v4(),
+                plan_version_id: Some(plan_version_id),
+                meter_code: None,
+                amount: Money::eur(2_900),
+                interval_unit: BillingInterval::Month,
+                active: false,
+            },
+            PriceVersion {
+                id: Uuid::new_v4(),
+                plan_version_id: Some(plan_version_id),
+                meter_code: None,
+                amount: Money::eur(3_500),
+                interval_unit: BillingInterval::Month,
+                active: true,
+            },
+        ];
+
+        let selected = active_plan_price(PriceSelection {
+            plan_version_id,
+            tenant_price_version_id: None,
+            prices: &prices,
+        })
+        .expect("active monthly price should be selected");
+        assert_eq!(selected.amount.amount_minor, 3_500);
+
+        assert!(
+            active_plan_price(PriceSelection {
+                plan_version_id: Uuid::new_v4(),
+                tenant_price_version_id: None,
+                prices: &prices,
+            })
+            .is_none()
+        );
     }
 }

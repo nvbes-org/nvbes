@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO billing_checkout_sessions (idempotency_key, account_id, account_type, plan_code, stripe_session_id, stripe_customer_id, checkout_url) VALUES ($1, $2, 'team', 'standard_monthly', $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1d14a6d68bb7b5dea06c56f1b83a78c0582992d4917245c63f99988bb1835d73"
+}

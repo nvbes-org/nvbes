@@ -47,6 +47,19 @@ fn weak_internal_token_is_rejected() {
 }
 
 #[test]
+fn exact_minimum_token_length_is_accepted() {
+    let token = "a".repeat(32);
+    assert_eq!(token.len(), 32);
+    EmailClientConfig::from_values(
+        "development",
+        "http://127.0.0.1:3041".to_string(),
+        token,
+        Duration::from_secs(3),
+    )
+    .expect("32-character token meets the floor");
+}
+
+#[test]
 fn malformed_endpoint_timeout_and_metadata_are_rejected() {
     for (endpoint, token, timeout, expected) in [
         (

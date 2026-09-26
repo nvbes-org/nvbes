@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT principal_id, id FROM identity_sessions \n             WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > clock_timestamp()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "principal_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "ef10d63639d1d74130709263f309c96ba459f31fd7d6345f33b18e8989c43860"
+}

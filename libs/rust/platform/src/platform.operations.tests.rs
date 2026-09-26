@@ -187,3 +187,138 @@ async fn observations_and_appeals_preserve_domain_and_subject_boundaries(pool: P
         Err(OperationsError::Forbidden)
     ));
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn appeal_notes_and_cost_corrections_cover_failure_branches(pool: PgPool) {
+    let actor = actor();
+    assert!(matches!(
+        execute(
+            &pool,
+            &actor,
+            command(Action::OpenCase {
+                category: CaseCategory::Appeal,
+                owner: ServiceId::Account,
+                subject_id: Uuid::new_v4(),
+                source: "appeal ticket".into(),
+                summary: "Appeal without original case".into(),
+                related_case_id: None,
+            }),
+        )
+        .await,
+        Err(OperationsError::Invalid(_))
+    ));
+    assert!(matches!(
+        execute(
+            &pool,
+            &actor,
+            command(Action::OpenCase {
+                category: CaseCategory::Appeal,
+                owner: ServiceId::Account,
+                subject_id: Uuid::new_v4(),
+                source: "appeal ticket".into(),
+                summary: "Appeal with missing original".into(),
+                related_case_id: Some(Uuid::new_v4()),
+            }),
+        )
+        .await,
+        Err(OperationsError::NotFound)
+    ));
+
+    let opened = execute(&pool, &actor, open()).await.unwrap();
+    let case_id = opened.case_id.unwrap();
+    execute(
+        &pool,
+        &actor,
+        command(Action::AddNote {
+            case_id,
+            expected_version: 1,
+            note: "Investigating synthetic support request".into(),
+            evidence: "Operator verified ticket timeline".into(),
+        }),
+    )
+    .await
+    .unwrap();
+    for (version, status) in [
+        (2, CaseStatus::Investigating),
+        (3, CaseStatus::Resolved),
+        (4, CaseStatus::Closed),
+    ] {
+        execute(
+            &pool,
+            &actor,
+            command(Action::Transition {
+                case_id,
+                expected_version: version,
+                status,
+                evidence: "API receipt and user notification verified".into(),
+            }),
+        )
+        .await
+        .unwrap();
+    }
+    assert!(matches!(
+        execute(
+            &pool,
+            &actor,
+            command(Action::AddNote {
+                case_id,
+                expected_version: 5,
+                note: "Closed cases cannot accept notes".into(),
+                evidence: "Operator attempted late note".into(),
+            }),
+        )
+        .await,
+        Err(OperationsError::Invalid(_))
+    ));
+
+    assert!(matches!(
+        execute(
+            &pool,
+            &actor,
+            command(Action::RecordCost {
+                month: chrono::NaiveDate::from_ymd_opt(2026, 9, 1).unwrap(),
+                provider: "Scaleway".into(),
+                category: "compute".into(),
+                actual_cents: 100,
+                forecast_cents: 150,
+                evidence: "synthetic invoice reference".into(),
+                replaces: Some(Uuid::new_v4()),
+            }),
+        )
+        .await,
+        Err(OperationsError::NotFound)
+    ));
+
+    let original = execute(
+        &pool,
+        &actor,
+        command(Action::RecordCost {
+            month: chrono::NaiveDate::from_ymd_opt(2026, 9, 1).unwrap(),
+            provider: "Scaleway".into(),
+            category: "compute".into(),
+            actual_cents: 200,
+            forecast_cents: 250,
+            evidence: "synthetic invoice reference".into(),
+            replaces: None,
+        }),
+    )
+    .await
+    .unwrap();
+    assert!(matches!(
+        execute(
+            &pool,
+            &actor,
+            command(Action::RecordCost {
+                month: chrono::NaiveDate::from_ymd_opt(2026, 10, 1).unwrap(),
+                provider: "Scaleway".into(),
+                category: "compute".into(),
+                actual_cents: 180,
+                forecast_cents: 220,
+                evidence: "synthetic invoice reference".into(),
+                replaces: original.cost_id,
+            }),
+        )
+        .await,
+        Err(OperationsError::Invalid(_))
+    ));
+}

@@ -122,3 +122,7 @@ pub async fn costs(
         "coverage":"Operator must verify all providers; recorded totals are not proof of completeness"}),
     ))
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "platform.operations.routes.tests.rs"]
+mod tests;

@@ -22,3 +22,7 @@ pub fn policy_after_payment_failure(previous_failures: u32) -> AccessPolicyState
 pub fn policy_after_payment_success() -> AccessPolicyState {
     AccessPolicyState::Active
 }
+
+#[cfg(test)]
+#[path = "dunning.tests.rs"]
+mod tests;

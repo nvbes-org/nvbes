@@ -3,9 +3,21 @@ name: "nvbes CodeQL configuration"
 # archive/ holds retired products and prototypes that are not part of the
 # active V1 runtime (see AGENTS.md). They must not raise Code Scanning alerts.
 # Active code lives outside archive/ and stays fully analyzed.
+#
+# Rust/JS test fixtures intentionally use dummy passwords, HMAC secrets, and
+# key material. Excluding tests keeps the gate focused on production surfaces.
 paths-ignore:
   - archive
   - archive/**
   - '**/archive/**'
   - .temp
   - mutants.out.old
+  - '**/*.tests.rs'
+  - '**/*_tests.rs'
+  - '**/*.test.rs'
+  - '**/tests/**'
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.test.mjs'
+  - '**/*.test.js'
+  - '**/*.spec.ts'

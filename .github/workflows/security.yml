@@ -213,7 +213,8 @@ jobs:
         env:
           RUSTUP_TOOLCHAIN: nightly-2026-07-20
         run: |
-          cargo +nightly-2026-07-20 fuzz run content-digest -- -max_total_time=30
+          cargo +nightly-2026-07-20 fuzz run content-digest -- -max_total_time=60
+          cargo +nightly-2026-07-20 fuzz run stripe-signature -- -max_total_time=60
 
   zizmor:
     runs-on: ubuntu-latest

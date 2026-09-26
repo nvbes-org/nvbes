@@ -1,6 +1,7 @@
 use axum::{body::Body, http::Request};
 use tower::ServiceExt;
 
+use crate::database::database_test_support::WithoutTokenKeysGuard;
 use crate::discovery::router;
 use crate::health::tests::state;
 
@@ -38,6 +39,7 @@ async fn oidc_metadata_endpoint_returns_expected_configuration() {
 
 #[tokio::test]
 async fn jwks_endpoint_fails_cleanly_without_configured_token_keys() {
+    let _env = WithoutTokenKeysGuard::install();
     let app = router(&state());
     let response = app
         .oneshot(

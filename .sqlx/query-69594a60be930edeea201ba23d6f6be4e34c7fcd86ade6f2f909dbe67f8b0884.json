@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT principal_id FROM identity_recovery_challenges WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > clock_timestamp() FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "principal_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "69594a60be930edeea201ba23d6f6be4e34c7fcd86ade6f2f909dbe67f8b0884"
+}

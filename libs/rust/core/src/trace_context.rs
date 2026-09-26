@@ -158,6 +158,40 @@ mod tests {
     }
 
     #[test]
+    fn parse_valid_traceparent_unsampled() {
+        let result =
+            parse_traceparent("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00").unwrap();
+        assert!(!result.sampled);
+        assert_eq!(
+            result.to_header_value(),
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00"
+        );
+    }
+
+    #[test]
+    fn parse_traceparent_table_rejects_invalid_shapes() {
+        let cases = [
+            "",
+            "01-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            "00-SHORT-b7ad6b7169203331-01",
+            "00-0AF7651916CD43DD8448EB211C80319C-b7ad6b7169203331-01",
+            "00-00000000000000000000000000000000-b7ad6b7169203331-01",
+            "00-0af7651916cd43dd8448eb211c80319c-SHORT-01",
+            "00-0af7651916cd43dd8448eb211c80319c-B7AD6B7169203331-01",
+            "00-0af7651916cd43dd8448eb211c80319c-0000000000000000-01",
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-0",
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-0G",
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331",
+        ];
+        for value in cases {
+            assert!(
+                parse_traceparent(value).is_none(),
+                "expected reject for {value:?}"
+            );
+        }
+    }
+
+    #[test]
     fn child_keeps_trace_id_and_changes_span_id() {
         let parent =
             parse_traceparent("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01").unwrap();
@@ -169,11 +203,70 @@ mod tests {
     }
 
     #[test]
+    fn extract_and_inject_round_trip_with_tracestate() {
+        let parent = new_traceparent(true);
+        let mut headers = HeaderMap::new();
+        inject_traceparent_into(&mut headers, &parent, Some("vendor=value"));
+
+        assert_eq!(
+            headers
+                .get(traceparent_header_name())
+                .and_then(|v| v.to_str().ok()),
+            Some(parent.to_header_value().as_str())
+        );
+        assert_eq!(
+            extract_tracestate(&headers).as_deref(),
+            Some("vendor=value")
+        );
+        assert_eq!(extract_traceparent(&headers), Some(parent.clone()));
+
+        let rebuilt = trace_headers(&parent, Some("vendor=value"));
+        assert_eq!(extract_traceparent(&rebuilt), Some(parent));
+        assert_eq!(
+            extract_tracestate(&rebuilt).as_deref(),
+            Some("vendor=value")
+        );
+    }
+
+    #[test]
+    fn extract_trace_headers_return_none_when_absent_or_invalid() {
+        let empty = HeaderMap::new();
+        assert!(extract_traceparent(&empty).is_none());
+        assert!(extract_tracestate(&empty).is_none());
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            TRACEPARENT_HEADER,
+            HeaderValue::from_static("not-a-traceparent"),
+        );
+        assert!(extract_traceparent(&headers).is_none());
+    }
+
+    #[test]
     fn fresh_trace_headers_include_w3c_headers() {
         let headers = fresh_trace_headers(true);
 
         assert!(headers.get(TRACEPARENT_HEADER).is_some());
         assert!(extract_traceparent(&headers).is_some());
+        assert_eq!(tracestate_header_name().as_str(), TRACESTATE_HEADER);
+        let _ = TraceStateValue("cong=1".into());
+    }
+
+    #[test]
+    fn inject_without_tracestate_leaves_tracestate_absent() {
+        let parent = new_traceparent(false);
+        let headers = trace_headers(&parent, None);
+        assert!(headers.get(TRACESTATE_HEADER).is_none());
+        assert!(!extract_traceparent(&headers).unwrap().sampled);
+    }
+
+    #[test]
+    fn with_fresh_trace_headers_attaches_traceparent() {
+        let client = reqwest::Client::new();
+        let request = with_fresh_trace_headers(client.get("http://127.0.0.1/health"))
+            .build()
+            .expect("request builds");
+        assert!(request.headers().get(TRACEPARENT_HEADER).is_some());
     }
 }
 

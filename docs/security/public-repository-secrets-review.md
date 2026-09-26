@@ -25,6 +25,7 @@ par une exclusion large de chemin ou de règle.
 | Configurations Terraform                            | `infrastructure/environments/*/terraform.tfvars.example` | placeholders non fonctionnels   |
 | Developer archivé                                   | `apps/developer-service/src/**contract_tests.rs`         | secrets et préfixes de fixtures |
 | MFA                                                 | `docs/architecture/identity-mfa-recovery.md`             | exemple conceptuel OAuth        |
+| MFA RFC 6238 test vector                            | `libs/rust/core/src/mfa.rs`                              | secret BASE32 de test RFC       |
 
 ## Reproduction
 

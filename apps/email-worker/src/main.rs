@@ -54,12 +54,19 @@ mod webhook_db;
 mod webhook_verify;
 
 #[cfg(test)]
+#[path = "email.worker.webhook.verify.fixtures.rs"]
+mod webhook_verify_fixtures;
+
+#[cfg(test)]
 #[path = "email.worker.test_support.rs"]
 mod test_support;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let command: Vec<String> = std::env::args().skip(1).collect();
+    run(std::env::args().skip(1).collect()).await
+}
+
+async fn run(command: Vec<String>) -> anyhow::Result<()> {
     if matches!(command.as_slice(), [action] if action == "deployment-bootstrap") {
         return run_deployment_bootstrap().await;
     }
@@ -83,6 +90,17 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    let release_suppression_args = match command.as_slice() {
+        [] => None,
+        [action] if action == "error-reporting-smoke" => None,
+        [action, message_id, actor, reason] if action == "release-suppression" => {
+            Some((message_id.clone(), actor.clone(), reason.clone()))
+        }
+        _ => anyhow::bail!(
+            "usage: nvbes-email-worker [migrate|validate-runtime|error-reporting-smoke|synthetic-smoke|release-suppression <message-id> <actor> <reason>]"
+        ),
+    };
+
     let _error_reporting_guard = error_reporting::init(&config);
     nvbes_observability::install_safe_panic_hook();
     nvbes_observability::init_tracing_with_config(
@@ -102,21 +120,24 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    match command.as_slice() {
-        [] => {}
-        [action, message_id, actor, reason] if action == "release-suppression" => {
-            let db = database::connect(&config.database_url).await?;
-            release_suppression(&db, message_id, actor, reason).await?;
-            return Ok(());
-        }
-        _ => anyhow::bail!(
-            "usage: nvbes-email-worker [migrate|validate-runtime|error-reporting-smoke|synthetic-smoke|release-suppression <message-id> <actor> <reason>]"
-        ),
+    if let Some((message_id, actor, reason)) = release_suppression_args {
+        let db = database::connect(&config.database_url).await?;
+        release_suppression(&db, &message_id, &actor, &reason).await?;
+        return Ok(());
     }
 
     let db = database::connect_lazy(&config.database_url)?;
     let state = state::EmailWorkerState::new(config, db)?;
     let http_listener = tokio::net::TcpListener::bind(state.config.http_bind_addr).await?;
+    serve(state, http_listener, process_shutdown_signal()).await
+}
+
+async fn serve(
+    state: state::EmailWorkerState,
+    http_listener: tokio::net::TcpListener,
+    shutdown_signal: impl std::future::Future<Output = ()>,
+) -> anyhow::Result<()> {
+    let bind_addr = http_listener.local_addr()?;
     let email_grpc = grpc_service::EmailDeliveryGrpcService::new(state.clone());
     let operations_grpc = grpc_operations::EmailOperationsGrpcService::new(state.clone());
     let (health_reporter, health_service) = tonic_health::server::health_reporter();
@@ -164,7 +185,7 @@ async fn main() -> anyhow::Result<()> {
         .with_graceful_shutdown(server_shutdown(shutdown_rx.clone()));
 
     tracing::info!(
-        bind_addr = %state.config.http_bind_addr,
+        %bind_addr,
         environment = %state.config.environment,
         provider = provider_name(&state.config.provider),
         runtime_role = ?state.config.runtime_role,
@@ -176,7 +197,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         result = server => result?,
-        _ = process_shutdown_signal() => {},
+        _ = shutdown_signal => {},
     }
     let _ = shutdown_tx.send(true);
     if let Some(dispatcher) = local_dispatcher {
@@ -266,4 +287,4 @@ fn redacted_sender(sender: &str) -> String {
 
 #[cfg(test)]
 #[path = "email.worker.main.tests.rs"]
-mod tests;
+mod main_tests;

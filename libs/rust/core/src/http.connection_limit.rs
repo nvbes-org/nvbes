@@ -178,3 +178,7 @@ where
         })
     }
 }
+
+#[cfg(test)]
+#[path = "http.connection_limit.tests.rs"]
+mod tests;

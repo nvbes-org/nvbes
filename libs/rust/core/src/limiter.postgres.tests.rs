@@ -1,4 +1,6 @@
 use super::*;
+use axum::http::HeaderMap;
+use std::time::Duration;
 
 async fn limiter() -> RateLimiter {
     let db = nvbes_test_utils::postgres::test_pool().await;
@@ -67,4 +69,74 @@ async fn invalid_policy_and_database_failure_never_allow_requests() {
             .code,
         "rate_limiter_error"
     );
+}
+
+#[tokio::test]
+async fn check_helpers_apply_multiple_rules() {
+    let limiter = limiter().await;
+    let db = limiter.db.clone();
+    let action = format!("core_helpers_{}", uuid::Uuid::new_v4());
+    let window = Duration::from_secs(60);
+
+    check_rate_limit(&db, &action, "key:a", 2, window)
+        .await
+        .expect("first key");
+    check_rate_limit_pair(
+        &db,
+        &action,
+        RateLimitRule {
+            key: "pair:first",
+            max_hits: 1,
+            window,
+        },
+        RateLimitRule {
+            key: "pair:second",
+            max_hits: 1,
+            window,
+        },
+    )
+    .await
+    .expect("pair ok");
+
+    let mut headers = HeaderMap::new();
+    headers.insert("x-nvbes-client-ip", "203.0.113.55".parse().unwrap());
+    check_dual_rate_limit(&db, &headers, &action, "scoped", 1, 1, window)
+        .await
+        .expect("dual ok");
+
+    check_rate_limit_rules(
+        &db,
+        &action,
+        &[
+            RateLimitRule {
+                key: "rules:one",
+                max_hits: 1,
+                window,
+            },
+            RateLimitRule {
+                key: "rules:two",
+                max_hits: 1,
+                window,
+            },
+        ],
+    )
+    .await
+    .expect("rules ok");
+}
+
+#[tokio::test]
+async fn invalid_action_is_rejected_before_database_work() {
+    let limiter = limiter().await;
+    let window = Duration::from_secs(60);
+    let long_action = "a".repeat(256);
+    for action in ["", long_action.as_str()] {
+        assert_eq!(
+            limiter
+                .check(action, "user", 1, window)
+                .await
+                .unwrap_err()
+                .code,
+            "rate_limiter_config"
+        );
+    }
 }

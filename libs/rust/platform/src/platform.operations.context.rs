@@ -80,3 +80,7 @@ impl ContextClient {
         result
     }
 }
+
+#[cfg(test)]
+#[path = "platform.operations.context.tests.rs"]
+mod tests;

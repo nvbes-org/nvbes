@@ -299,8 +299,8 @@
           "includes": ["payload_hash", "WebhookRetryDecision::Duplicate"]
         },
         {
-          "path": "libs/rust/billing/src/portal_actions.rs",
-          "includes": ["create_provider_portal_session", "billing.portal_opened"]
+          "path": "apps/billing-service/src/billing.portal.rs",
+          "includes": ["create_portal_handler", "portal_session_created"]
         }
       ]
     },

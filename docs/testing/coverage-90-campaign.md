@@ -37,28 +37,77 @@ seuil = baseline mesurée − 2 points (bruit run-to-run de llvm-cov), plancher 
 Chaque vague relève les seuils des crates qu'elle traite. Un seuil ne redescend
 jamais. `nvbes-email` conserve son seuil produit explicite 95/90/90.
 
-## État au commit `1f0d660f`
+## État au commit `80921c2b` (+ suite branches billing-worker)
 
-Workspace : **51,0 %** de lignes (16 851 couvertes / 33 033 instrumentées),
-soit **12 878 lignes** à couvrir pour atteindre 90 % partout.
+Workspace : mesure llvm-cov post push (`91,9 %` lignes workspace).
+Toutes les crates du cliquet sont ≥ 90 % **lignes**.
 
-| Crate | Lignes | Restant pour 90 % | Vague |
-| :--- | ---: | ---: | :--- |
-| `nvbes-email` | 97,1 % | atteint | — |
-| `nvbes-email-scaleway` | 96,3 % | atteint | — |
-| `nvbes-email-worker` | 84,1 % | 180 | 1 |
-| `nvbes-platform` | 73,8 % | 211 | 1 |
-| `nvbes-trust-risk` | 73,9 % | 115 | 1 |
-| `nvbes-billing-worker` | 53,5 % | 259 | 1 |
-| `nvbes-audit` | 36,4 % | 58 | 1 |
-| `nvbes-identity-service` | 62,8 % | 631 | 2 |
-| `nvbes-observability` | 15,7 % | 661 | 2 |
-| `nvbes-account-service` | 27,9 % | 786 | 2 |
-| `nvbes-billing-service` | 47,4 % | 814 | 3 |
-| `nvbes-trust-risk-service` | 40,3 % | 1 057 | 3 |
-| `nvbes-region` | 41,7 % | 1 579 | 3 |
-| `nvbes-core` | 47,3 % | 1 889 | 4 |
-| `nvbes-billing` | 38,4 % | 4 769 | 5 |
+| Crate                      | Lignes | Restant pour 90 % | Vague |
+| :------------------------- | -----: | ----------------: | :---- |
+| `nvbes-email`              | 98,3 % |           atteint | —     |
+| `nvbes-email-scaleway`     | 96,3 % |           atteint | —     |
+| `nvbes-audit`              |  100 % |           atteint | 1     |
+| `nvbes-observability`      | 97,7 % |           atteint | 2     |
+| `nvbes-trust-risk`         | 94,6 % |           atteint | 1     |
+| `nvbes-email-worker`       | 92,7 % |           atteint | 1     |
+| `nvbes-account-service`    | 92,1 % |           atteint | 2     |
+| `nvbes-billing-worker`     | 91,8 % |           atteint | 1     |
+| `nvbes-region`             | 91,4 % |           atteint | 3     |
+| `nvbes-billing-service`    | 91,1 % |           atteint | 3     |
+| `nvbes-billing`            | 90,9 % |           atteint | 5     |
+| `nvbes-core`               | 90,8 % |           atteint | 4     |
+| `nvbes-identity-service`   | 90,5 % |           atteint | 2     |
+| `nvbes-platform`           | 90,3 % |           atteint | 1     |
+| `nvbes-trust-risk-service` | 90,1 % |           atteint | 3     |
+
+### Branches (catalogue V1, mesure ciblée post-vague)
+
+Remesure `cargo llvm-cov --branch` (nightly épinglé, `--all-features` +
+Postgres via `scripts/with-security-test-db.sh`) sur les crates de la dernière
+vague :
+
+| Crate                      | Branches | Restant pour 90 % |
+| :------------------------- | -------: | ----------------: |
+| `nvbes-billing`            |   94,7 % |           atteint |
+| `nvbes-email-worker`       |   92,5 % |           atteint |
+| `nvbes-core`               |   91,9 % |           atteint |
+| `nvbes-trust-risk-service` |   90,7 % |           atteint |
+| `nvbes-billing-worker`     |   96,7 % |           atteint |
+
+`nvbes-billing-worker` était le dernier écart (86,7 % → 96,7 %) : les sondes
+`postgres_reachable` hardcodaient `:5432` alors que le wrapper local expose
+Postgres sur `:15432`, ce qui faisait skipper les suites migrate/serve/ready.
+
+Les vagues 1–5, la purge Cloud orpheline, la couverture in-process de
+`main.rs` et la vague branches sont livrées.
+
+### Mutation (catalogue V1, fermée)
+
+| Unité | Score | Note |
+| :--- | ---: | :--- |
+| `@nvbes/email-ui` | 100 % | Stryker |
+| `nvbes-audit` | 100 % | cargo-mutants |
+| `nvbes-email-scaleway` | 100 % | cargo-mutants |
+| `nvbes-email` | **92,7 %** | helpers/mock/renderer/client |
+| `nvbes-trust-risk` | **96,2 %** | 253 caught / 10 missed |
+| `nvbes-platform` | **93,3 %** | `--all-features` + bornes cockpit |
+| `nvbes-core` | **90,2 %** | 81,5 → 87,1 → 90,2 |
+| `nvbes-email-worker` | **98,2 %** | skips health flaky + tueurs config/dispatch/auth |
+| `nvbes-billing-worker` | **96,7 %** | assert emails + migrate schema + recv timeout |
+| `nvbes-region` | **93,2 %** | FromStr exhaustif DataRegion / LegalJurisdiction |
+| `nvbes-trust-risk-service` | **98,6 %** | budgets stricts + bornes auth/review + exclude metrics/error_reporting |
+| `nvbes-identity-service` | **100 %** | 234 caught / 0 missed |
+| `nvbes-account-service` | **90,9 %** | 90 caught / 9 missed |
+| `nvbes-billing-service` | **93,5 %** | skips CLI/serve + tueurs plans/grpc/outbox |
+| `nvbes-billing` | **91,6 %** | match arms models/pricing/psp + excludes checkout_geo |
+| `nvbes-observability` | **100 %** | labels Prometheus uniques + smoke `\|\|`/`&&` + exclude Drop/init/capture Sentry |
+
+**Pièges de mesure corrigés :**
+- `unset CARGO_TARGET_DIR` avant `cargo mutants` (sinon binaire `Fresh` non muté)
+- `--all-features` pour activer `database-tests` là où il existe
+- args harness après `-- --` (`--skip`…), pas via `--cargo-test-arg` seul
+
+Catalogue mutation V1 Rust : **toutes les unités ≥ 90 %** (aucune crate sous le plancher 50 %).
 
 ## Vagues
 
@@ -142,10 +191,10 @@ Deux mécanismes coexistent pour les tests adossés à PostgreSQL :
 `nvbes-billing` n'utilise ni l'un ni l'autre. La vague 5 doit trancher pour un
 mécanisme unique avant d'écrire les tests, pas après.
 
-## Limite d'environnement connue
+## Isolation llvm-cov (couverture vs branches)
 
-Sur macOS arm64, `llvm-cov export` segfaute quand `cargo llvm-cov` lui passe
-les objets de build scripts. La mesure locale se contourne en collectant avec
-`cargo llvm-cov --no-report` puis en appelant `llvm-cov export` avec les seuls
-binaires de `target/llvm-cov-target/debug/deps`. La CI Linux n'est pas
-affectée.
+Les scripts `scripts/test-workspace-coverage.sh` (stable, lignes) et
+`scripts/test-workspace-condition.sh` (nightly `--branch`) isolent leurs
+artefacts sous `target/coverage` et `target/condition`. Chaque lane produit un
+rapport one-shot : ne pas vider `CARGO_TARGET_DIR` entre `clean` et le rapport
+(race `CACHEDIR.TAG` / binaires nightly sous `debug/build/<crate>/out`).

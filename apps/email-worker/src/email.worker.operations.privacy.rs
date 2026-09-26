@@ -99,3 +99,18 @@ fn timestamp(value: DateTime<Utc>) -> prost_types::Timestamp {
         nanos: value.timestamp_subsec_nanos() as i32,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::{TimeZone, Utc};
+
+    #[test]
+    fn timestamp_preserves_unix_seconds_and_nanos() {
+        let value = Utc.with_ymd_and_hms(2026, 3, 15, 12, 30, 45).unwrap()
+            + chrono::Duration::nanoseconds(123_456_789);
+        let stamped = super::timestamp(value);
+        assert_eq!(stamped.seconds, value.timestamp());
+        assert_eq!(stamped.nanos, value.timestamp_subsec_nanos() as i32);
+        assert_ne!(stamped, prost_types::Timestamp::default());
+    }
+}

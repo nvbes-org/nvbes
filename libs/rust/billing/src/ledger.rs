@@ -83,12 +83,18 @@ mod tests {
     #[test]
     fn full_payment_balances_invoice_entries() {
         let entries = paid_invoice_entries(4_680, 780, "EUR");
+        assert_eq!(entries.len(), 5);
+        assert_eq!(entries[0].amount_minor, 4_680);
+        assert_eq!(entries[1].amount_minor, -780);
         assert!(ledger_balances_to_zero(&entries));
     }
 
     #[test]
     fn partial_refund_balances_as_append_only_entries() {
         let entries = refund_entries(1_000, "EUR");
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].amount_minor, 1_000);
+        assert_eq!(entries[1].amount_minor, -1_000);
         assert!(ledger_balances_to_zero(&entries));
     }
 }

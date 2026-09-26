@@ -126,3 +126,7 @@ fn origin_parts(uri: &Uri) -> Option<OriginParts> {
 fn is_loopback_host(host: &str) -> bool {
     matches!(host, "localhost" | "127.0.0.1" | "::1")
 }
+
+#[cfg(test)]
+#[path = "security.cors.tests.rs"]
+mod tests;

@@ -79,7 +79,7 @@
       "inputs": ["production"],
       "outputs": [],
       "options": {
-        "command": "cargo clippy --workspace --all-targets --locked -- -D warnings"
+        "command": "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings"
       },
       "configurations": {},
       "parallelism": true,
@@ -90,7 +90,7 @@
       "inputs": ["default"],
       "outputs": [],
       "options": {
-        "command": "cargo nextest run --workspace --locked"
+        "command": "bash scripts/with-security-test-db.sh cargo nextest run --workspace --locked"
       },
       "configurations": {},
       "parallelism": true,
@@ -105,7 +105,7 @@
       ],
       "outputs": ["{workspaceRoot}/.temp/rust"],
       "options": {
-        "command": "bash scripts/test-workspace-coverage.sh"
+        "command": "bash scripts/with-security-test-db.sh bash scripts/test-workspace-coverage.sh"
       },
       "configurations": {},
       "parallelism": false,
@@ -128,7 +128,7 @@
       ],
       "outputs": ["{workspaceRoot}/.temp/rust"],
       "options": {
-        "command": "bash scripts/test-workspace-condition.sh"
+        "command": "bash scripts/with-security-test-db.sh bash scripts/test-workspace-condition.sh"
       },
       "configurations": {},
       "parallelism": false,
@@ -139,6 +139,14 @@
       "cache": false,
       "parallelism": false,
       "options": { "command": "node tools/rust-workspace/mutation-v1.mjs" }
+    },
+    "mutation:diff": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": {
+        "command": "bash scripts/with-security-test-db.sh node tools/rust-workspace/mutation-in-diff.mjs"
+      }
     },
     "mutation:baseline": {
       "executor": "nx:run-commands",

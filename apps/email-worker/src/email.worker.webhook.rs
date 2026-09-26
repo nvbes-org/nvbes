@@ -166,6 +166,11 @@ mod tests {
     use super::{SnsMessage, is_sns_content_type, response, webhook_event_type};
 
     #[test]
+    fn webhook_body_limit_is_256_kib() {
+        assert_eq!(super::MAX_WEBHOOK_BODY_BYTES, 262_144);
+    }
+
+    #[test]
     fn webhook_accepts_only_sns_envelope_content_types() {
         let mut headers = HeaderMap::new();
         assert!(!is_sns_content_type(&headers));

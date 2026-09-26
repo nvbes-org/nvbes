@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n          s.plan_code,\n          s.status,\n          COALESCE(p.currency, 'eur') AS currency,\n          COALESCE(NULLIF(s.monthly_price_cents, 0), p.amount_cents, 0) AS monthly_price_cents,\n          c.email AS customer_email,\n          s.stripe_customer_id,\n          s.cancel_at_period_end,\n          s.current_period_end\n        FROM billing_subscriptions s\n        LEFT JOIN billing_plans p ON p.plan_code = s.plan_code\n        LEFT JOIN billing_customers c\n          ON c.account_id = s.account_id\n         AND c.account_type = s.account_type\n        WHERE s.account_id = $1\n        ORDER BY s.updated_at DESC\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "plan_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "currency",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "monthly_price_cents",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "customer_email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "stripe_customer_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "cancel_at_period_end",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "current_period_end",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "e1ae81836fe534c76d0b430f48cc3a94bb85aeeeeeba9b5c90dd35272b82d45a"
+}

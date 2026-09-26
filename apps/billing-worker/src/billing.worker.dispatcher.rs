@@ -38,35 +38,51 @@ pub async fn dispatch_message(
         return Ok(DispatchOutcome::Acknowledged);
     }
 
-    let mut tx = state.db.begin().await?;
+    enum Lookup {
+        Uuid(Uuid),
+        Id(i64),
+    }
 
-    let event = if let Ok(uuid_val) = Uuid::parse_str(trimmed) {
-        sqlx::query_as::<_, OutboxRow>(
-            r#"
-            SELECT id, event_uuid, event_type, aggregate_id, payload, published_at, created_at
-            FROM billing_outbox
-            WHERE event_uuid = $1
-            FOR UPDATE SKIP LOCKED
-            "#,
-        )
-        .bind(uuid_val)
-        .fetch_optional(&mut *tx)
-        .await?
+    let lookup = if let Ok(uuid_val) = Uuid::parse_str(trimmed) {
+        Lookup::Uuid(uuid_val)
     } else if let Ok(id_val) = trimmed.parse::<i64>() {
-        sqlx::query_as::<_, OutboxRow>(
-            r#"
-            SELECT id, event_uuid, event_type, aggregate_id, payload, published_at, created_at
-            FROM billing_outbox
-            WHERE id = $1
-            FOR UPDATE SKIP LOCKED
-            "#,
-        )
-        .bind(id_val)
-        .fetch_optional(&mut *tx)
-        .await?
+        Lookup::Id(id_val)
     } else {
         tracing::warn!(identifier = %trimmed, "unknown billing queue message identifier format");
         return Ok(DispatchOutcome::Acknowledged);
+    };
+
+    let mut tx = state.db.begin().await?;
+
+    let event = match lookup {
+        Lookup::Uuid(uuid_val) => {
+            sqlx::query_as!(
+                OutboxRow,
+                r#"
+                SELECT id, event_uuid, event_type, aggregate_id, payload, published_at, created_at
+                FROM billing_outbox
+                WHERE event_uuid = $1
+                FOR UPDATE SKIP LOCKED
+                "#,
+                uuid_val
+            )
+            .fetch_optional(&mut *tx)
+            .await?
+        }
+        Lookup::Id(id_val) => {
+            sqlx::query_as!(
+                OutboxRow,
+                r#"
+                SELECT id, event_uuid, event_type, aggregate_id, payload, published_at, created_at
+                FROM billing_outbox
+                WHERE id = $1
+                FOR UPDATE SKIP LOCKED
+                "#,
+                id_val
+            )
+            .fetch_optional(&mut *tx)
+            .await?
+        }
     };
 
     let Some(event) = event else {
@@ -84,10 +100,12 @@ pub async fn dispatch_message(
         return Ok(DispatchOutcome::Retry);
     }
 
-    sqlx::query("UPDATE billing_outbox SET published_at = clock_timestamp() WHERE id = $1")
-        .bind(event.id)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query!(
+        "UPDATE billing_outbox SET published_at = clock_timestamp() WHERE id = $1",
+        event.id
+    )
+    .execute(&mut *tx)
+    .await?;
 
     tx.commit().await?;
 
@@ -101,81 +119,99 @@ pub async fn dispatch_message(
     Ok(DispatchOutcome::Acknowledged)
 }
 
+pub(crate) fn receipt_notification_from_event(
+    event: &OutboxRow,
+) -> Option<BillingReceiptNotification> {
+    let email = event
+        .payload
+        .get("recipient_email")
+        .and_then(Value::as_str)?;
+    Some(BillingReceiptNotification {
+        account_id: event.aggregate_id,
+        recipient_email: email.to_string(),
+        customer_name: event
+            .payload
+            .get("customer_name")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        amount_minor: event
+            .payload
+            .get("amount_minor")
+            .and_then(Value::as_i64)
+            .unwrap_or(0),
+        currency: event
+            .payload
+            .get("currency")
+            .and_then(Value::as_str)
+            .unwrap_or("EUR")
+            .to_string(),
+        invoice_id: event
+            .payload
+            .get("invoice_id")
+            .and_then(Value::as_str)
+            .unwrap_or("in_unknown")
+            .to_string(),
+        invoice_url: event
+            .payload
+            .get("invoice_url")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+    })
+}
+
+pub(crate) fn failure_notification_from_event(
+    event: &OutboxRow,
+    app_url: &str,
+) -> Option<BillingPaymentFailureNotification> {
+    let email = event
+        .payload
+        .get("recipient_email")
+        .and_then(Value::as_str)?;
+    Some(BillingPaymentFailureNotification {
+        account_id: event.aggregate_id,
+        recipient_email: email.to_string(),
+        customer_name: event
+            .payload
+            .get("customer_name")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        amount_minor: event
+            .payload
+            .get("amount_minor")
+            .and_then(Value::as_i64)
+            .unwrap_or(0),
+        currency: event
+            .payload
+            .get("currency")
+            .and_then(Value::as_str)
+            .unwrap_or("EUR")
+            .to_string(),
+        invoice_id: event
+            .payload
+            .get("invoice_id")
+            .and_then(Value::as_str)
+            .unwrap_or("in_unknown")
+            .to_string(),
+        billing_portal_url: Some(format!("{app_url}/billing/portal")),
+        invoice_url: event
+            .payload
+            .get("invoice_url")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+    })
+}
+
 async fn process_event(state: &BillingWorkerState, event: &OutboxRow) -> anyhow::Result<()> {
     if let Some(client) = state.email_client.as_ref() {
         match event.event_type.as_str() {
             "billing.invoice.paid.v1" => {
-                if let Some(email) = event.payload.get("recipient_email").and_then(Value::as_str) {
-                    let notif = BillingReceiptNotification {
-                        account_id: event.aggregate_id,
-                        recipient_email: email.to_string(),
-                        customer_name: event
-                            .payload
-                            .get("customer_name")
-                            .and_then(Value::as_str)
-                            .map(str::to_string),
-                        amount_minor: event
-                            .payload
-                            .get("amount_minor")
-                            .and_then(Value::as_i64)
-                            .unwrap_or(0),
-                        currency: event
-                            .payload
-                            .get("currency")
-                            .and_then(Value::as_str)
-                            .unwrap_or("EUR")
-                            .to_string(),
-                        invoice_id: event
-                            .payload
-                            .get("invoice_id")
-                            .and_then(Value::as_str)
-                            .unwrap_or("in_unknown")
-                            .to_string(),
-                        invoice_url: event
-                            .payload
-                            .get("invoice_url")
-                            .and_then(Value::as_str)
-                            .map(str::to_string),
-                    };
-                    let _ = deliver_billing_receipt(client, notif).await;
+                if let Some(notif) = receipt_notification_from_event(event) {
+                    deliver_billing_receipt(client, notif).await?;
                 }
             }
             "billing.invoice.payment_failed.v1" => {
-                if let Some(email) = event.payload.get("recipient_email").and_then(Value::as_str) {
-                    let default_portal = format!("{}/billing/portal", state.config.app_url);
-                    let notif = BillingPaymentFailureNotification {
-                        account_id: event.aggregate_id,
-                        recipient_email: email.to_string(),
-                        customer_name: event
-                            .payload
-                            .get("customer_name")
-                            .and_then(Value::as_str)
-                            .map(str::to_string),
-                        amount_minor: event
-                            .payload
-                            .get("amount_minor")
-                            .and_then(Value::as_i64)
-                            .unwrap_or(0),
-                        currency: event
-                            .payload
-                            .get("currency")
-                            .and_then(Value::as_str)
-                            .unwrap_or("EUR")
-                            .to_string(),
-                        invoice_id: event
-                            .payload
-                            .get("invoice_id")
-                            .and_then(Value::as_str)
-                            .unwrap_or("in_unknown")
-                            .to_string(),
-                        billing_portal_url: Some(default_portal),
-                        invoice_url: event
-                            .payload
-                            .get("invoice_url")
-                            .and_then(Value::as_str)
-                            .map(str::to_string),
-                    };
-                    let _ = deliver_payment_failure(client, notif).await;
+                if let Some(notif) = failure_notification_from_event(event, &state.config.app_url) {
+                    deliver_payment_failure(client, notif).await?;
                 }
             }
             _ => {
@@ -215,14 +251,15 @@ pub async fn run_local(
 }
 
 pub async fn sweep_pending(state: &BillingWorkerState) -> anyhow::Result<usize> {
-    let rows = sqlx::query_as::<_, OutboxRow>(
+    let rows = sqlx::query_as!(
+        OutboxRow,
         r#"
         SELECT id, event_uuid, event_type, aggregate_id, payload, published_at, created_at
         FROM billing_outbox
         WHERE published_at IS NULL
         ORDER BY id ASC
         LIMIT 50
-        "#,
+        "#
     )
     .fetch_all(&state.db)
     .await?;
@@ -234,6 +271,9 @@ pub async fn sweep_pending(state: &BillingWorkerState) -> anyhow::Result<usize> 
     Ok(count)
 }
 
+#[cfg(test)]
+#[path = "billing.worker.dispatcher.process.tests.rs"]
+mod process_tests;
 #[cfg(test)]
 #[path = "billing.worker.dispatcher.tests.rs"]
 mod tests;

@@ -210,4 +210,57 @@ mod tests {
             "billing.entitlement.changed"
         );
     }
+
+    #[test]
+    fn trialing_status_zeros_non_trial_quotas_and_grants_feature_credits() {
+        let plan = PlanVersion {
+            id: Uuid::nil(),
+            plan_code: "trial".to_string(),
+            version: 1,
+            features: vec![FeatureCode("share_links".to_string())],
+            quotas: vec![
+                QuotaDefinition {
+                    code: "storage_gb".to_string(),
+                    unit: "gb".to_string(),
+                    included_quantity: 100,
+                },
+                QuotaDefinition {
+                    code: "trial_storage_gb".to_string(),
+                    unit: "gb".to_string(),
+                    included_quantity: 5,
+                },
+            ],
+            price: None,
+        };
+
+        let snapshot = generate_entitlement_snapshot(EntitlementInput {
+            plan,
+            addons: Vec::new(),
+            commercial_credits: vec![
+                CommercialCreditGrant {
+                    feature_code: Some("priority_support".to_string()),
+                    quota_code: None,
+                    quantity: 1,
+                    expired: false,
+                },
+                CommercialCreditGrant {
+                    feature_code: None,
+                    quota_code: Some("api_calls".to_string()),
+                    quantity: 10,
+                    expired: true,
+                },
+            ],
+            status: EntitlementStatus::Trialing,
+            region_policy: RegionPolicy {
+                uploads_allowed: true,
+                quota_overrides: BTreeMap::new(),
+            },
+        });
+
+        assert_eq!(snapshot.quotas.get("storage_gb"), Some(&0));
+        assert_eq!(snapshot.quotas.get("trial_storage_gb"), Some(&5));
+        assert_eq!(snapshot.features.get("priority_support"), Some(&true));
+        assert!(!snapshot.quotas.contains_key("api_calls"));
+        assert!(!snapshot.billing_locked);
+    }
 }

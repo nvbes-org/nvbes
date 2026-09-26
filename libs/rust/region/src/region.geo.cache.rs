@@ -150,3 +150,7 @@ pub fn merge_cached_intelligence(
         .map(|value| merge_intelligence_into_relation(relation.clone(), value))
         .unwrap_or(relation)
 }
+
+#[cfg(test)]
+#[path = "region.geo.cache.tests.rs"]
+mod tests;

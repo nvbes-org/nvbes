@@ -15,7 +15,8 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/security.headers.rs",
-              "includes": ["ACCEPT_CH_VALUE", "CRITICAL_CH_VALUE", "Sec-CH-UA"]
+              "includes": ["ACCEPT_CH_VALUE", "CRITICAL_CH_VALUE", "Sec-CH-UA"],
+              "tests": ["security_headers_request_all_user_agent_client_hints"]
             },
             {
               "path": "apps/identity-service/src/identity.http.rs",
@@ -23,7 +24,8 @@
             },
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["authenticate", "hash_token"]
+              "includes": ["authenticate", "hash_token"],
+              "tests": ["opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"]
             }
           ]
         }
@@ -46,7 +48,8 @@
                 "hash_token(&token)",
                 "expires_at",
                 "SESSION_TTL_HOURS"
-              ]
+              ],
+              "tests": ["opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"]
             }
           ]
         }
@@ -86,7 +89,11 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.tokens.rs",
-              "includes": ["AccessTokenClaims", "TokenService", "pub fn verify("]
+              "includes": ["AccessTokenClaims", "TokenService", "pub fn verify("],
+              "tests": [
+                "access_token_is_rs256_audience_bound_and_short_lived",
+                "verify_rejects_invalid_header_kid_typ_and_token_type"
+              ]
             },
             {
               "path": "libs/rust/core/src/auth.rs",
@@ -165,6 +172,10 @@
                 "insert_clear_site_data_header",
                 "CSP_VALUE",
                 "frame-ancestors 'none'"
+              ],
+              "tests": [
+                "clear_site_data_header_clears_browser_state",
+                "security_headers_deny_clickjacking_with_csp_and_legacy_header"
               ]
             }
           ]

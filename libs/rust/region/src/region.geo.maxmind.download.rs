@@ -20,8 +20,17 @@ pub async fn download_csv_archive(
     config: &MaxMindGeoLiteConfig,
     edition_id: &'static str,
 ) -> Result<Vec<u8>, reqwest::Error> {
+    download_csv_archive_from_url(client, GEOLITE_DOWNLOAD_URL, config, edition_id).await
+}
+
+pub(crate) async fn download_csv_archive_from_url(
+    client: &Client,
+    download_url: &str,
+    config: &MaxMindGeoLiteConfig,
+    edition_id: &'static str,
+) -> Result<Vec<u8>, reqwest::Error> {
     Ok(client
-        .get(GEOLITE_DOWNLOAD_URL)
+        .get(download_url)
         .query(&[
             ("edition_id", edition_id),
             ("license_key", config.license_key.as_str()),
@@ -59,3 +68,7 @@ pub enum MaxMindGeoLiteDownloadError {
     #[error("MaxMind GeoLite archive contains an unreadable file")]
     Io(#[from] std::io::Error),
 }
+
+#[cfg(test)]
+#[path = "region.geo.maxmind.download.tests.rs"]
+mod tests;

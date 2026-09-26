@@ -1,0 +1,5 @@
+# sqlx::query! verifies against committed `.sqlx/` metadata.
+# CI/local DATABASE_URL often points at empty coverage DBs without service schemas.
+# Refresh cache: SQLX_OFFLINE=false cargo sqlx prepare --workspace
+[env]
+SQLX_OFFLINE = "true"

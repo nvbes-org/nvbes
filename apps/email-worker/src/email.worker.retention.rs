@@ -33,3 +33,7 @@ async fn retain(state: &EmailWorkerState) -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "email.worker.retention.tests.rs"]
+mod tests;

@@ -1,12 +1,17 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * Shared helpers for docs/security/*.json control checkers.
  * Keeps per-domain scripts focused on V1 evidence assertions.
+ * Evidence may declare `includes` (source needles) and/or `tests`
+ * (Rust test function names that must exist in apps/ or libs/).
  */
 export function createControlsCheckContext() {
   /** @type {string[]} */
   const errors = [];
+  /** @type {Set<string> | null} */
+  let rustTestIndex = null;
 
   /**
    * @param {string} path
@@ -94,6 +99,53 @@ export function createControlsCheckContext() {
   }
 
   /**
+   * @param {string} dir
+   * @param {Set<string>} into
+   */
+  function indexRustTestsInDir(dir, into) {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'target' || entry.name === 'node_modules') continue;
+        indexRustTestsInDir(full, into);
+        continue;
+      }
+      if (!entry.name.endsWith('.rs')) continue;
+      const text = readFileSync(full, 'utf8');
+      for (const match of text.matchAll(/^\s*(?:async\s+)?fn\s+([A-Za-z0-9_]+)\s*\(/gm)) {
+        into.add(match[1]);
+      }
+    }
+  }
+
+  /**
+   * @returns {Set<string>}
+   */
+  function rustTestNames() {
+    if (rustTestIndex) return rustTestIndex;
+    rustTestIndex = new Set();
+    indexRustTestsInDir('apps', rustTestIndex);
+    indexRustTestsInDir('libs/rust', rustTestIndex);
+    return rustTestIndex;
+  }
+
+  /**
+   * @param {string[]} names
+   * @param {string} context
+   */
+  function requireNamedTests(names, context) {
+    const index = rustTestNames();
+    for (const name of requireArray(names, `${context}.tests`)) {
+      const testName = requireString(name, `${context}.tests[]`);
+      if (!testName) continue;
+      if (!index.has(testName)) {
+        errors.push(`${context}: missing Rust test fn ${JSON.stringify(testName)}`);
+      }
+    }
+  }
+
+  /**
    * @param {{
    *   registry: unknown,
    *   registryPath: string,
@@ -159,11 +211,26 @@ export function createControlsCheckContext() {
           `${ctrlPath}.evidence`,
         ).entries()) {
           const evidenceRecord = /** @type {Record<string, unknown>} */ (evidence);
-          evidenceCount += requireIncludes(
-            requireString(evidenceRecord.path, `${ctrlPath}.evidence[${evidenceIndex}].path`),
-            evidenceRecord.includes,
-            `${ctrlPath}.evidence[${evidenceIndex}]`,
-          );
+          const evidencePath = `${ctrlPath}.evidence[${evidenceIndex}]`;
+          const hasIncludes = Array.isArray(evidenceRecord.includes);
+          const hasTests = Array.isArray(evidenceRecord.tests);
+          if (!hasIncludes && !hasTests) {
+            errors.push(`${evidencePath}: requires includes and/or tests`);
+            continue;
+          }
+          if (hasIncludes) {
+            evidenceCount += requireIncludes(
+              requireString(evidenceRecord.path, `${evidencePath}.path`),
+              evidenceRecord.includes,
+              evidencePath,
+            );
+          } else if (typeof evidenceRecord.path === 'string' && evidenceRecord.path) {
+            readText(evidenceRecord.path);
+          }
+          if (hasTests) {
+            requireNamedTests(evidenceRecord.tests, evidencePath);
+            evidenceCount += evidenceRecord.tests.length;
+          }
         }
       }
     }
@@ -211,6 +278,8 @@ export function createControlsCheckContext() {
     readText,
     readJson,
     requireFileIncludes,
+    requireNamedTests,
+    rustTestNames,
     assertControlsRegistry,
     assertPackageCheckScript,
     finish,

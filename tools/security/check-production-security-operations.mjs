@@ -3,7 +3,15 @@ import { readFile } from 'node:fs/promises';
 const requirements = [
   {
     file: 'libs/rust/audit/src/lib.rs',
-    evidence: ['AuditEventInput', 'insert_audit_event_pool', 'insert_audit_event', 'audit_events'],
+    evidence: ['AuditEventInput', 'action_key', 'is_workspace_scoped', 'has_network_context'],
+  },
+  {
+    file: 'apps/billing-service/src/billing.audit.rs',
+    evidence: ['INSERT INTO billing_audit_events', 'record_audit_event'],
+  },
+  {
+    file: 'apps/account-service/src/account.audit.rs',
+    evidence: ['INSERT INTO account_audit_events', 'AuditInput', 'record'],
   },
   {
     file: 'infrastructure/modules/scaleway-audit-archive/main.tf',
@@ -87,13 +95,8 @@ const requirements = [
     ],
   },
   {
-    file: 'libs/rust/platform/src/platform.cockpit.actions.rs',
-    evidence: [
-      'OperatorCommand',
-      'OperatorActionPayload',
-      'OperatorActionReceipt',
-      'is_reversible',
-    ],
+    file: 'libs/rust/platform/src/platform.operations.model.rs',
+    evidence: ['Command', 'Action', 'Receipt', 'idempotency_key'],
   },
   {
     file: 'infrastructure/environments/security-audit-archive/main.tf',

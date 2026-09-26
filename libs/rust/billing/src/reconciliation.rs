@@ -107,42 +107,5 @@ pub fn detect_unbalanced_ledger(entries: &[LedgerEntry]) -> Option<Reconciliatio
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ledger::{LedgerEntry, LedgerEntryType};
-
-    #[test]
-    fn provider_amount_mismatch_produces_actionable_alert() {
-        let alert = reconcile_payment(PaymentReconciliationInput {
-            provider_payment_id: "pi_1".to_string(),
-            provider_amount_minor: 1_000,
-            provider_currency: "EUR".to_string(),
-            provider_status: PaymentStatus::Captured,
-            internal_amount_minor: Some(900),
-            internal_currency: Some("EUR".to_string()),
-            internal_status: Some(PaymentStatus::Captured),
-        });
-
-        assert!(alert.actionable);
-        assert_eq!(
-            alert.differences[0].difference_type,
-            ReconciliationDifferenceType::AmountMismatch
-        );
-    }
-
-    #[test]
-    fn unbalanced_ledger_is_detected() {
-        let diff = detect_unbalanced_ledger(&[LedgerEntry {
-            entry_type: LedgerEntryType::Invoice,
-            account_code: "accounts_receivable".to_string(),
-            amount_minor: 100,
-            currency: "EUR".to_string(),
-        }])
-        .expect("unbalanced ledger should create diff");
-
-        assert_eq!(
-            diff.difference_type,
-            ReconciliationDifferenceType::UnbalancedLedger
-        );
-    }
-}
+#[path = "reconciliation.tests.rs"]
+mod tests;

@@ -3,6 +3,7 @@ name = "nvbes-platform"
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish.workspace = true
 
 [[bin]]
 name = "nvbes-platform-operations"
@@ -28,3 +29,6 @@ database-tests = []
 
 [dev-dependencies]
 tower = "0.5"
+
+[lints]
+workspace = true
