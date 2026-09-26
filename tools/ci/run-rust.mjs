@@ -21,7 +21,11 @@ const packages = plan.fallbackFull
   : selectAffectedCargoPackages(metadata, plan.paths, process.cwd());
 if (!packages.length || packages.some((name) => !members.includes(name)))
   throw new Error('Invalid Rust candidate scope');
-if (spawnSync('cargo', ['fmt', '--all', '--check'], { stdio: 'inherit' }).status !== 0)
+// Coverage/security Postgres is schema-empty; query! must use committed `.sqlx/`.
+const cargoEnv = { ...process.env, SQLX_OFFLINE: 'true' };
+if (
+  spawnSync('cargo', ['fmt', '--all', '--check'], { stdio: 'inherit', env: cargoEnv }).status !== 0
+)
   throw new Error('Rust formatting failed');
 if (
   spawnSync(
@@ -36,13 +40,15 @@ if (
       '-D',
       'warnings',
     ],
-    { stdio: 'inherit' },
+    { stdio: 'inherit', env: cargoEnv },
   ).status !== 0
 )
   throw new Error('Rust linting failed');
 if (
-  spawnSync('pnpm', ['exec', 'nx', 'run', 'rust-workspace:micro-test'], { stdio: 'inherit' })
-    .status !== 0
+  spawnSync('pnpm', ['exec', 'nx', 'run', 'rust-workspace:micro-test'], {
+    stdio: 'inherit',
+    env: cargoEnv,
+  }).status !== 0
 )
   throw new Error('Isolated micro-tests failed');
 startMemoryWatchdog({ intervalMs: 2000, thresholdMb: 500 });
@@ -56,7 +62,7 @@ const scoped = spawnSync(
     '--no-fail-fast',
     ...packages.flatMap((name) => ['--package', name]),
   ],
-  { stdio: 'inherit' },
+  { stdio: 'inherit', env: cargoEnv },
 );
 checkOomExit(scoped.status, scoped.signal, 'cargo nextest scoped');
 // Avoid an identical second execution for global changes. For smaller scopes,
@@ -66,6 +72,7 @@ const full =
     ? scoped
     : spawnSync('cargo', ['nextest', 'run', '--workspace', '--locked', '--no-fail-fast'], {
         stdio: 'inherit',
+        env: cargoEnv,
       });
 if (full !== scoped) {
   checkOomExit(full.status, full.signal, 'cargo nextest workspace');
