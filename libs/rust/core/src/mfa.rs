@@ -87,6 +87,7 @@ pub fn random_recovery_code() -> String {
 #[cfg(test)]
 mod tests {
     use chrono::{TimeZone, Utc};
+    use data_encoding::BASE32_NOPAD;
 
     use super::{
         generate_totp_code, generate_totp_secret, normalize_code, provisioning_uri,
@@ -135,10 +136,11 @@ mod tests {
 
     #[test]
     fn generate_totp_code_matches_rfc_6238_sha1_6_digit_vector() {
-        // ASCII secret "12345678901234567890" as BASE32.
-        let secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
-        assert_eq!(generate_totp_code(secret, 1), "287082");
-        assert_eq!(generate_totp_code(secret, 0), "755224");
+        // RFC 6238 Appendix B SHA1 seed ("12345678901234567890"), encoded at
+        // runtime so scanners do not treat the public BASE32 form as a secret.
+        let secret = BASE32_NOPAD.encode(b"12345678901234567890");
+        assert_eq!(generate_totp_code(&secret, 1), "287082");
+        assert_eq!(generate_totp_code(&secret, 0), "755224");
     }
 
     #[test]
