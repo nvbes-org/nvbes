@@ -121,7 +121,7 @@ test('manual trusted CI publishes bounded TypeScript measurement artifacts', () 
   );
   assert(job.steps.every((step) => step['continue-on-error'] !== true));
   const security = job.steps.findIndex((step) => step.name === 'CI/CD security gate');
-  const setup = job.steps.findIndex((step) => step.uses === './.github/actions/ci-setup');
+  const setup = job.steps.findIndex((step) => step.uses === '$/.github/actions/ci-setup');
   assert.ok(security >= 0 && security < setup);
   const upload = job.steps.find((step) => step.name === 'Publish TypeScript measurement');
   assert.equal(upload.uses, 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a');

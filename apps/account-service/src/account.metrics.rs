@@ -53,3 +53,7 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
     });
     difference == 0
 }
+
+#[cfg(test)]
+#[path = "account.metrics.tests.rs"]
+mod tests;

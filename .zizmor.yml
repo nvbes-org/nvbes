@@ -8,7 +8,3 @@ rules:
   excessive-permissions:
     ignore:
       - "security.yml"
-  self-repository:
-    ignore:
-      - "ci.yml"
-      - "v1-testing.yml"

@@ -15,7 +15,7 @@ pub async fn append(
     event: AuditEvent<'_>,
     retention_days: u32,
 ) -> Result<DateTime<Utc>, sqlx::Error> {
-    let expires_at = Utc::now() + Duration::days(i64::from(retention_days));
+    let expires_at = expires_after(Utc::now(), retention_days);
     sqlx::query_scalar(
         r#"
         INSERT INTO trust_risk_audit_events (
@@ -33,4 +33,21 @@ pub async fn append(
     .bind(expires_at)
     .fetch_one(&mut **tx)
     .await
+}
+
+pub(crate) fn expires_after(now: DateTime<Utc>, retention_days: u32) -> DateTime<Utc> {
+    now + Duration::days(i64::from(retention_days))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn audit_expiry_adds_retention_days() {
+        let now = Utc::now();
+        let expires = expires_after(now, 10);
+        assert_eq!(expires, now + Duration::days(10));
+        assert!(expires > now);
+    }
 }

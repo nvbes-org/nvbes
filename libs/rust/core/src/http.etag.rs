@@ -72,3 +72,7 @@ fn optional_header(
         })
         .transpose()
 }
+
+#[cfg(test)]
+#[path = "http.etag.tests.rs"]
+mod tests;

@@ -28,3 +28,7 @@ pub async fn enforce_billing_action_rate_limits(
         .await?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "action_rate_limits.tests.rs"]
+mod tests;

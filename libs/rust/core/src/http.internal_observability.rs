@@ -125,10 +125,17 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{INTERNAL_TOKEN_HEADER, internal_token_matches};
-    use axum::http::{HeaderMap, HeaderValue, header};
+    use super::{INTERNAL_TOKEN_HEADER, InternalObservabilityConfig, internal_token_matches};
+    use axum::body::Body;
+    use axum::http::{HeaderMap, HeaderValue, Request, StatusCode, header};
+    use axum::{Router, routing::get};
+    use tower::ServiceExt;
 
     const TOKEN: &str = "internal-observability-token-32b";
+
+    async fn ok() -> &'static str {
+        "ok"
+    }
 
     #[test]
     fn internal_token_matches_custom_header() {
@@ -158,5 +165,75 @@ mod tests {
         );
 
         assert!(!internal_token_matches(&headers, TOKEN));
+    }
+
+    #[test]
+    fn config_from_app_config_copies_token() {
+        let app = crate::config::AppConfig {
+            environment: "production".to_string(),
+            observability_internal_token: Some(TOKEN.to_string()),
+            ..crate::config::AppConfig::default()
+        };
+        let config = InternalObservabilityConfig::from(&app);
+        assert_eq!(config.environment, "production");
+        assert_eq!(config.expected_token.as_deref(), Some(TOKEN));
+    }
+
+    #[tokio::test]
+    async fn authorize_allows_development_without_token_and_rejects_elsewhere() {
+        let open = Router::new()
+            .route("/", get(ok))
+            .layer(axum::middleware::from_fn_with_state(
+                InternalObservabilityConfig::new("development", None),
+                super::internal_observability_guard_with_config,
+            ));
+        let response = open
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let locked = Router::new()
+            .route("/", get(ok))
+            .layer(axum::middleware::from_fn_with_state(
+                InternalObservabilityConfig::new("production", None),
+                super::internal_observability_guard_with_config,
+            ));
+        let response = locked
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+        let authed = Router::new()
+            .route("/", get(ok))
+            .layer(axum::middleware::from_fn_with_state(
+                InternalObservabilityConfig::new("production", Some(TOKEN)),
+                super::internal_observability_guard_with_config,
+            ));
+        let response = authed
+            .oneshot(
+                Request::builder()
+                    .uri("/")
+                    .header(INTERNAL_TOKEN_HEADER, TOKEN)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let rejected =
+            Router::new()
+                .route("/", get(ok))
+                .layer(axum::middleware::from_fn_with_state(
+                    InternalObservabilityConfig::new("production", Some(TOKEN)),
+                    super::internal_observability_guard_with_config,
+                ));
+        let response = rejected
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 }

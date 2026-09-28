@@ -37,27 +37,5 @@ pub fn is_safe_request_id(value: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{REQUEST_ID_HEADER, is_safe_request_id, new_request_id, request_id_header};
-
-    #[test]
-    fn generated_request_ids_use_safe_prefix() {
-        let request_id = new_request_id();
-
-        assert!(request_id.starts_with("req_"));
-        assert!(is_safe_request_id(&request_id));
-    }
-
-    #[test]
-    fn unsafe_request_ids_are_rejected() {
-        assert!(!is_safe_request_id(""));
-        assert!(!is_safe_request_id("req with spaces"));
-        assert!(!is_safe_request_id("req/with/slashes"));
-        assert!(!is_safe_request_id(&"a".repeat(97)));
-    }
-
-    #[test]
-    fn request_id_header_is_stable() {
-        assert_eq!(request_id_header().as_str(), REQUEST_ID_HEADER);
-    }
-}
+#[path = "observability.request_id.tests.rs"]
+mod tests;

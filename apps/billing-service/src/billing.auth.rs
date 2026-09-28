@@ -136,19 +136,5 @@ impl FromRequestParts<BillingState> for OperatorAuth {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn principal_scopes_and_mfa_verification() {
-        let principal = BillingPrincipal {
-            id: Uuid::new_v4(),
-            scopes: vec!["billing:write".into()],
-            amr: vec!["totp".into()],
-        };
-        assert_eq!(principal.id(), principal.id);
-        assert!(principal.has_mfa());
-        assert!(principal.require_scope("billing:write").is_ok());
-        assert!(principal.require_scope("billing:admin").is_err());
-    }
-}
+#[path = "billing.auth.tests.rs"]
+mod tests;

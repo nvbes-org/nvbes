@@ -12,12 +12,22 @@ runControlsRegistryCheck({
   },
   failureTitle: 'Credential Stuffing Prevention controls failed',
   okMessage: 'Credential Stuffing Prevention controls OK',
-  runDomainAssertions({ requireFileIncludes }) {
+  runDomainAssertions({ requireFileIncludes, requireNamedTests }) {
     function assertImplementation() {
       requireFileIncludes(
         'libs/rust/core/src/limiter.rs',
         ['RateLimiter', 'RateLimitRule', 'check_rate_limit', 'max_hits', 'rate_limited'],
         'limiter.rs',
+      );
+      requireNamedTests(
+        [
+          'rate_limiter_blocks_after_limit',
+          'concurrent_requests_share_a_single_limit',
+          'sealed_totp_secret_is_bound_to_its_factor',
+          'step_up_required_for_sensitive_mutations',
+          'validate_password_rejects_weak_passwords',
+        ],
+        'credential-stuffing behavioral tests',
       );
     }
 

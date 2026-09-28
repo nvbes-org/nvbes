@@ -26,6 +26,12 @@
 /deploy/ @shaynlink
 /infrastructure/ @shaynlink
 /tools/security/ @shaynlink
+/tools/ci/ @shaynlink
+/lefthook.yml @shaynlink
+/commitlint.config.cjs @shaynlink
+/docs/testing/rust-coverage-thresholds.json @shaynlink
+/docs/testing/rust-mutation-thresholds.json @shaynlink
+/docs/testing/rust-condition-thresholds.json @shaynlink
 /**/Dockerfile @shaynlink
 /Cargo.lock @shaynlink
 /pnpm-lock.yaml @shaynlink

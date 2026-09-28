@@ -59,10 +59,10 @@ pub async fn create_checkout_handler(
     }
 
     // Verify plan exists
-    let stripe_price_id: String = sqlx::query_scalar(
+    let stripe_price_id = sqlx::query_scalar!(
         "SELECT stripe_price_id FROM billing_plans WHERE plan_code = $1 AND is_active = true",
+        &payload.plan_code
     )
-    .bind(&payload.plan_code)
     .fetch_optional(&state.db)
     .await?
     .ok_or(BillingError::Invalid("unknown_or_inactive_plan"))?;
@@ -90,21 +90,21 @@ pub async fn create_checkout_handler(
             .await?
         };
 
-    sqlx::query(
+    sqlx::query!(
         r#"
         INSERT INTO billing_checkout_sessions
           (idempotency_key, account_id, account_type, plan_code, stripe_session_id, stripe_customer_id, checkout_url)
           VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (idempotency_key) DO NOTHING
         "#,
+        &idempotency_key,
+        workspace_id,
+        account_type,
+        &payload.plan_code,
+        &stripe_session_id,
+        &customer_id,
+        &checkout_url
     )
-    .bind(&idempotency_key)
-    .bind(workspace_id)
-    .bind(account_type)
-    .bind(&payload.plan_code)
-    .bind(&stripe_session_id)
-    .bind(&customer_id)
-    .bind(&checkout_url)
     .execute(&state.db)
     .await?;
 
@@ -131,13 +131,13 @@ async fn get_existing_checkout(
     db: &PgPool,
     idempotency_key: &str,
 ) -> BillingResult<Option<(String, String)>> {
-    let row: Option<(String, String)> = sqlx::query_as(
+    let row = sqlx::query!(
         "SELECT checkout_url, stripe_session_id FROM billing_checkout_sessions WHERE idempotency_key = $1",
+        idempotency_key
     )
-    .bind(idempotency_key)
     .fetch_optional(db)
     .await?;
-    Ok(row)
+    Ok(row.map(|r| (r.checkout_url, r.stripe_session_id)))
 }
 
 async fn create_stripe_checkout(
@@ -220,10 +220,10 @@ pub async fn create_stripe_checkout_grpc(
     plan_code: &str,
     idempotency_key: &str,
 ) -> BillingResult<(String, String)> {
-    let stripe_price_id: String = sqlx::query_scalar(
+    let stripe_price_id = sqlx::query_scalar!(
         "SELECT stripe_price_id FROM billing_plans WHERE plan_code = $1 AND is_active = true",
+        plan_code
     )
-    .bind(plan_code)
     .fetch_optional(&state.db)
     .await?
     .ok_or(BillingError::Invalid("unknown_or_inactive_plan"))?;
@@ -238,3 +238,7 @@ pub async fn create_stripe_checkout_grpc(
     )
     .await
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.checkout.tests.rs"]
+mod tests;

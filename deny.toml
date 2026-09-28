@@ -4,7 +4,7 @@ exclude-dev = false
 
 [advisories]
 version = 2
-yanked = "warn"
+yanked = "deny"
 ignore = []
 
 [licenses]
@@ -29,8 +29,9 @@ allow = [
 exceptions = []
 
 [bans]
-multiple-versions = "allow"
-wildcards = "allow"
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
 highlight = "all"
 deny = []
 skip = []

@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, principal_id, session_id, redirect_uri, scope, code_challenge, code_challenge_method\n         FROM identity_authorization_codes\n         WHERE code_hash = $1 AND client_id = $2 AND consumed_at IS NULL AND expires_at > clock_timestamp()\n         FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "principal_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "session_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "redirect_uri",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "scope",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "code_challenge",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "code_challenge_method",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "fb8f1b73b53621cc228ab6e61b08971e011ed19941400f32da2b95083d4e2534"
+}

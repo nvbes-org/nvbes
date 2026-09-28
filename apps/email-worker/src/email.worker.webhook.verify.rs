@@ -186,8 +186,7 @@ impl WebhookVerifier {
             anyhow::bail!("unsupported SNS message type");
         }
         let timestamp = DateTime::parse_from_rfc3339(&message.timestamp)?.with_timezone(&Utc);
-        let age = Utc::now() - timestamp;
-        if age < -MAX_MESSAGE_AGE || age > MAX_MESSAGE_AGE {
+        if !sns_timestamp_within_window(timestamp, Utc::now(), MAX_MESSAGE_AGE) {
             anyhow::bail!("SNS message timestamp is stale");
         }
         Ok(())
@@ -229,6 +228,52 @@ impl WebhookVerifier {
         }
         Ok(())
     }
+
+    #[cfg(test)]
+    async fn seed_certificate(&self, url: &str, certificate: X509) {
+        self.certificates
+            .write()
+            .await
+            .insert(url.to_string(), certificate);
+    }
+
+    /// Test-only verifier that may call cleartext HTTP endpoints.
+    #[cfg(test)]
+    pub fn new_allowing_cleartext(config: &WebhookTrustConfig) -> anyhow::Result<Self> {
+        let trust_chain = X509::stack_from_pem(&config.ca_bundle_pem)?;
+        if trust_chain.is_empty() {
+            anyhow::bail!("SNS CA bundle contains no certificate");
+        }
+        let client = Client::builder()
+            .https_only(false)
+            .redirect(Policy::none())
+            .connect_timeout(Duration::from_secs(3))
+            .timeout(Duration::from_secs(5))
+            .build()?;
+        Ok(Self {
+            topic_arn: config.topic_arn.clone(),
+            signing_certificate_host: config.signing_certificate_host.clone(),
+            confirmation_host: config.confirmation_host.clone(),
+            trust_chain,
+            client,
+            certificates: RwLock::new(HashMap::new()),
+        })
+    }
+
+    #[cfg(test)]
+    pub async fn fetch_certificate_for_tests(&self, url: &str) -> anyhow::Result<X509> {
+        self.certificate(&Url::parse(url)?).await
+    }
+}
+
+/// Inclusive window: exact ±`max_age` bounds stay accepted (`>` / `<`, not `>=` / `<=`).
+fn sns_timestamp_within_window(
+    timestamp: DateTime<Utc>,
+    now: DateTime<Utc>,
+    max_age: chrono::Duration,
+) -> bool {
+    let age = now - timestamp;
+    !(age < -max_age || age > max_age)
 }
 
 fn validated_url(value: &str, expected_host: &str, path_prefix: &str) -> anyhow::Result<Url> {
@@ -296,3 +341,7 @@ fn canonical_message(message: &SnsMessage) -> anyhow::Result<String> {
 #[cfg(test)]
 #[path = "email.worker.webhook.verify.tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "email.worker.webhook.verify.signature.tests.rs"]
+mod signature_tests;

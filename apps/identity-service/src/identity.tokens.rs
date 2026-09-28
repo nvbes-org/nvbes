@@ -249,11 +249,11 @@ impl TokenService {
         let Ok(principal_id) = Uuid::parse_str(&claims.sub) else {
             return Ok(None);
         };
-        let active: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM identity_sessions s JOIN identity_principals p ON p.id = s.principal_id WHERE s.id = $1 AND s.principal_id = $2 AND s.revoked_at IS NULL AND s.expires_at > clock_timestamp() AND p.status = 'active')",
+        let active = sqlx::query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM identity_sessions s JOIN identity_principals p ON p.id = s.principal_id WHERE s.id = $1 AND s.principal_id = $2 AND s.revoked_at IS NULL AND s.expires_at > clock_timestamp() AND p.status = 'active') AS \"exists!\"",
+            session_id,
+            principal_id
         )
-        .bind(session_id)
-        .bind(principal_id)
         .fetch_one(db)
         .await?;
         Ok(active.then_some(claims))
@@ -269,11 +269,11 @@ pub async fn run_synthetic_smoke(
 ) -> anyhow::Result<SyntheticTokenResult> {
     let principal_id = auth::create_synthetic_identity(db, email, password).await?;
     let session = auth::authenticate(db, email, password).await?;
-    let session_id: Uuid = sqlx::query_scalar(
+    let session_id = sqlx::query_scalar!(
         "SELECT id FROM identity_sessions WHERE token_hash = $1 AND principal_id = $2",
+        auth::hash_token(&session.session_token),
+        principal_id
     )
-    .bind(auth::hash_token(&session.session_token))
-    .bind(principal_id)
     .fetch_one(db)
     .await?;
     let access_token = service.issue(
@@ -291,10 +291,12 @@ pub async fn run_synthetic_smoke(
         .introspect(db, &access_token, "unregistered-audience")
         .await?
         .is_none();
-    sqlx::query("UPDATE identity_sessions SET revoked_at = clock_timestamp() WHERE id = $1")
-        .bind(session_id)
-        .execute(db)
-        .await?;
+    sqlx::query!(
+        "UPDATE identity_sessions SET revoked_at = clock_timestamp() WHERE id = $1",
+        session_id
+    )
+    .execute(db)
+    .await?;
     let inactive_after_revocation = service
         .introspect(db, &access_token, audience)
         .await?

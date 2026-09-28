@@ -89,46 +89,5 @@ fn validate_event_type(value: &str) -> Result<(), DomainEventError> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    fn valid_input() -> DomainEventInput {
-        DomainEventInput {
-            event_type: "identity.user.created".to_string(),
-            event_version: 1,
-            tenant_id: Uuid::new_v4(),
-            region_id: "eu-fr".to_string(),
-            correlation_id: Uuid::new_v4(),
-            idempotency_key: "signup:tenant:user".to_string(),
-            payload: json!({ "user_id": Uuid::new_v4() }),
-        }
-    }
-
-    #[test]
-    fn builds_versioned_domain_event_envelope() {
-        let event = DomainEventEnvelope::new(valid_input()).expect("event input must be valid");
-
-        assert_eq!(event.event_type, "identity.user.created");
-        assert_eq!(event.event_version, 1);
-        assert_eq!(event.region_id, "eu-fr");
-        assert!(event.payload.is_object());
-    }
-
-    #[test]
-    fn rejects_unversioned_or_untyped_events() {
-        let mut input = valid_input();
-        input.event_version = 0;
-        assert_eq!(
-            DomainEventEnvelope::new(input).expect_err("zero version must fail"),
-            DomainEventError::InvalidVersion
-        );
-
-        let mut input = valid_input();
-        input.event_type = "IdentityCreated".to_string();
-        assert_eq!(
-            DomainEventEnvelope::new(input).expect_err("invalid event type must fail"),
-            DomainEventError::InvalidEventType
-        );
-    }
-}
+#[path = "platform.event.tests.rs"]
+mod tests;

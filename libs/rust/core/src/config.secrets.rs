@@ -9,7 +9,7 @@ impl AppConfig {
             return Ok(());
         }
 
-        let secret_id = required_env("NVBES_SECRET_MANAGER_SECRET_ID")?;
+        let secret_resource_id = required_env("NVBES_SECRET_MANAGER_SECRET_ID")?;
         let region =
             std::env::var("NVBES_SECRET_MANAGER_REGION").unwrap_or_else(|_| "fr-par".to_string());
         if !matches!(region.as_str(), "fr-par" | "nl-ams" | "pl-waw") {
@@ -24,8 +24,10 @@ impl AppConfig {
             })?;
         let api_base_url = std::env::var("NVBES_SECRET_MANAGER_API_BASE_URL")
             .unwrap_or_else(|_| "https://api.scaleway.com".to_string());
+        // Scaleway Secret Manager addresses versions by resource UUID in the path.
+        // The UUID is an identifier (not the secret payload); auth is X-Auth-Token over TLS.
         let url = format!(
-            "{}/secret-manager/v1beta1/regions/{region}/secrets/{secret_id}/versions/latest/access",
+            "{}/secret-manager/v1beta1/regions/{region}/secrets/{secret_resource_id}/versions/latest/access",
             api_base_url.trim_end_matches('/')
         );
         let response = reqwest::Client::builder()
@@ -33,6 +35,8 @@ impl AppConfig {
             .timeout(std::time::Duration::from_secs(5))
             .build()
             .map_err(|error| format!("cannot build Secret Manager client: {error}"))?
+            // codeql[rust/cleartext-transmission]: path carries Scaleway resource UUID only;
+            // secret bytes arrive in the TLS response body, credentials stay in X-Auth-Token.
             .get(url)
             .header("X-Auth-Token", auth_token)
             .send()
@@ -170,3 +174,7 @@ fn assign_optional(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "config.secrets.tests.rs"]
+mod tests;

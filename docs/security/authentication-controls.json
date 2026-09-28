@@ -23,7 +23,7 @@
             },
             {
               "path": "apps/identity-service/src/identity.http.rs",
-              "includes": ["normalize_email", "RegisterRequest", "RegisterResponse"]
+              "includes": ["RegisterRequest", "RegisterResponse", "register_password_identity"]
             }
           ]
         }
@@ -204,7 +204,7 @@
               "includes": ["AccessTokenClaims", "token_type", "ACCESS_TOKEN_TTL_SECONDS"]
             },
             {
-              "path": "apps/identity-service/src/identity.oauth.rs",
+              "path": "apps/identity-service/src/identity.session.rs",
               "includes": ["Bearer ", "session_token"]
             }
           ]
@@ -427,7 +427,7 @@
             },
             {
               "path": "apps/identity-service/src/identity.http.rs",
-              "includes": ["identity.registered", "identity_audit_events"]
+              "includes": ["identity.registered", "register_password_identity"]
             },
             {
               "path": "apps/trust-risk-service/src/trust_risk.audit.rs",

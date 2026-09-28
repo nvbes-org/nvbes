@@ -77,7 +77,7 @@ pub async fn assess(
     }
     let result = evaluate(&rules, &features);
     let id = Uuid::new_v4();
-    let expires_at = evaluated_at + Duration::days(i64::from(evaluation_retention_days));
+    let expires_at = evaluation_expires_at(evaluated_at, evaluation_retention_days);
     sqlx::query(
         r#"
         INSERT INTO trust_risk_evaluations (
@@ -256,6 +256,13 @@ fn band_name(value: RiskBand) -> &'static str {
         RiskBand::High => "high",
         RiskBand::Critical => "critical",
     }
+}
+
+pub(crate) fn evaluation_expires_at(
+    evaluated_at: DateTime<Utc>,
+    evaluation_retention_days: u32,
+) -> DateTime<Utc> {
+    evaluated_at + Duration::days(i64::from(evaluation_retention_days))
 }
 fn recommendation_name(value: Recommendation) -> &'static str {
     match value {

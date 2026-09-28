@@ -1,6 +1,6 @@
 use axum::{
     extract::{MatchedPath, Request, State},
-    http::{HeaderName, HeaderValue},
+    http::{HeaderMap, HeaderName, HeaderValue},
     middleware::Next,
     response::Response,
 };
@@ -31,6 +31,7 @@ pub async fn observe_request(
     // --- W3C Trace Context ---
     let incoming_traceparent = trace_context::extract_traceparent(req.headers());
     let tracestate = trace_context::extract_tracestate(req.headers());
+    #[cfg_attr(not(feature = "otlp"), allow(unused_mut))]
     let mut current_traceparent = incoming_traceparent
         .as_ref()
         .map(trace_context::child_traceparent)
@@ -54,15 +55,17 @@ pub async fn observe_request(
 
     // Also inject traceparent into request headers so that handlers using
     // HeaderMap extractors (without Request) can still propagate it.
-    if let Ok(value) = axum::http::HeaderValue::from_str(&current_traceparent.to_header_value()) {
-        req.headers_mut()
-            .insert(trace_context::traceparent_header_name(), value);
-    }
-    if let Some(ref ts) = tracestate
-        && let Ok(value) = axum::http::HeaderValue::from_str(ts)
-    {
-        req.headers_mut()
-            .insert(trace_context::tracestate_header_name(), value);
+    insert_header_str(
+        req.headers_mut(),
+        trace_context::traceparent_header_name(),
+        &current_traceparent.to_header_value(),
+    );
+    if let Some(ref ts) = tracestate {
+        insert_header_str(
+            req.headers_mut(),
+            trace_context::tracestate_header_name(),
+            ts,
+        );
     }
 
     // --- Request ID (keep backward compat) ---
@@ -102,24 +105,24 @@ pub async fn observe_request(
     }
 
     // --- Response headers ---
-    if let Ok(value) = HeaderValue::from_str(&request_id) {
-        response.headers_mut().insert(request_id_header(), value);
+    insert_header_str(response.headers_mut(), request_id_header(), &request_id);
+    insert_header_str(
+        response.headers_mut(),
+        trace_context::traceparent_header_name(),
+        &current_traceparent.to_header_value(),
+    );
+    if let Some(ts) = &tracestate {
+        insert_header_str(
+            response.headers_mut(),
+            trace_context::tracestate_header_name(),
+            ts,
+        );
     }
-    if let Ok(value) = HeaderValue::from_str(&current_traceparent.to_header_value()) {
-        response
-            .headers_mut()
-            .insert(trace_context::traceparent_header_name(), value);
-    }
-    if let Some(ts) = &tracestate
-        && let Ok(value) = HeaderValue::from_str(ts)
-    {
-        response
-            .headers_mut()
-            .insert(trace_context::tracestate_header_name(), value);
-    }
-    if let Ok(value) = HeaderValue::from_str(&server_timing_value(duration_ms)) {
-        response.headers_mut().insert(SERVER_TIMING_HEADER, value);
-    }
+    insert_header_str(
+        response.headers_mut(),
+        SERVER_TIMING_HEADER,
+        &server_timing_value(duration_ms),
+    );
 
     // --- Structured logging with both request_id and trace context ---
     let trace_id = &current_traceparent.trace_id;
@@ -254,30 +257,12 @@ fn server_timing_value(duration_ms: u64) -> String {
     format!("app;dur={duration_ms}")
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{request_path_template, server_timing_value};
-    use axum::{body::Body, http::Request};
-
-    #[test]
-    fn request_path_template_uses_matched_path_when_present() {
-        let template = request_path_template(Some("/files/{file_id}"));
-
-        assert_eq!(template, "/files/{file_id}");
-    }
-
-    #[test]
-    fn request_path_template_falls_back_when_unmatched() {
-        let _req = Request::builder()
-            .uri("/files/123")
-            .body(Body::empty())
-            .expect("request");
-
-        assert_eq!(request_path_template(None), "unmatched");
-    }
-
-    #[test]
-    fn server_timing_reports_total_app_duration() {
-        assert_eq!(server_timing_value(42), "app;dur=42");
+fn insert_header_str(headers: &mut HeaderMap, name: HeaderName, raw: &str) {
+    if let Ok(value) = HeaderValue::from_str(raw) {
+        headers.insert(name, value);
     }
 }
+
+#[cfg(test)]
+#[path = "observability.middleware.tests.rs"]
+mod tests;

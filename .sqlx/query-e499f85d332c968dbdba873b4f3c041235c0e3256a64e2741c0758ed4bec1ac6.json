@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT coalesce(sum(monthly_price_cents), 0)::bigint AS mrr FROM billing_subscriptions WHERE status = 'active'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "mrr",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e499f85d332c968dbdba873b4f3c041235c0e3256a64e2741c0758ed4bec1ac6"
+}

@@ -1,8 +1,8 @@
 use super::{
     ACCEPT_CH_VALUE, CLEAR_SITE_DATA_VALUE, CLICKJACKING_FRAME_ANCESTORS,
     CLICKJACKING_X_FRAME_OPTIONS_VALUE, CRITICAL_CH_VALUE, NEL_VALUE, PERMISSIONS_POLICY_VALUE,
-    REPORT_TO_VALUE, TIMING_ALLOW_ORIGIN_VALUE, insert_clear_site_data_header,
-    insert_security_headers, no_cache_headers, security_headers,
+    REPORT_TO_VALUE, TIMING_ALLOW_ORIGIN_VALUE, insert_cdn_cache_headers,
+    insert_clear_site_data_header, insert_security_headers, no_cache_headers, security_headers,
 };
 use axum::{
     Router,
@@ -268,4 +268,130 @@ async fn no_cache_headers_preserve_explicit_cache_control() {
         Some(&HeaderValue::from_static("public, max-age=60"))
     );
     assert!(response.headers().get(header::PRAGMA).is_none());
+}
+
+#[tokio::test]
+async fn no_cache_headers_apply_when_cache_control_absent() {
+    let app = Router::new()
+        .route("/ok", get(|| async { "ok" }))
+        .layer(from_fn(no_cache_headers));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/ok")
+                .body(Body::empty())
+                .expect("request should build"),
+        )
+        .await
+        .expect("request should succeed");
+
+    assert_eq!(
+        response.headers().get(header::CACHE_CONTROL),
+        Some(&HeaderValue::from_static(
+            "no-store, no-cache, must-revalidate"
+        ))
+    );
+    assert_eq!(
+        response.headers().get(header::PRAGMA),
+        Some(&HeaderValue::from_static("no-cache"))
+    );
+}
+
+#[test]
+fn security_headers_preserve_wildcard_vary() {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::VARY, HeaderValue::from_static("*"));
+
+    insert_security_headers(&mut headers);
+
+    assert_eq!(
+        headers.get(header::VARY),
+        Some(&HeaderValue::from_static("*"))
+    );
+}
+
+#[test]
+fn security_headers_strip_stack_fingerprint_headers() {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        HeaderName::from_static("x-powered-by"),
+        HeaderValue::from_static("Express"),
+    );
+    headers.insert(
+        HeaderName::from_static("server"),
+        HeaderValue::from_static("nginx"),
+    );
+    headers.insert(
+        HeaderName::from_static("x-aspnet-version"),
+        HeaderValue::from_static("4.0"),
+    );
+    headers.insert(
+        HeaderName::from_static("x-aspnetmvc-version"),
+        HeaderValue::from_static("5.2"),
+    );
+
+    insert_security_headers(&mut headers);
+
+    for name in [
+        "x-powered-by",
+        "server",
+        "x-aspnet-version",
+        "x-aspnetmvc-version",
+    ] {
+        assert!(
+            headers.get(HeaderName::from_static(name)).is_none(),
+            "{name} should be stripped"
+        );
+    }
+}
+
+#[test]
+fn insert_cdn_cache_headers_table_covers_swr_branches() {
+    let cases = [
+        (60, 0, "public, s-maxage=60"),
+        (120, 30, "public, s-maxage=120, stale-while-revalidate=30"),
+    ];
+    for (max_age, swr, expected) in cases {
+        let mut headers = HeaderMap::new();
+        insert_cdn_cache_headers(&mut headers, max_age, swr);
+        assert_eq!(
+            headers
+                .get(header::CACHE_CONTROL)
+                .and_then(|v| v.to_str().ok()),
+            Some(expected)
+        );
+        assert_eq!(
+            headers
+                .get(HeaderName::from_static("cdn-cache-control"))
+                .and_then(|v| v.to_str().ok()),
+            Some(expected)
+        );
+        assert_eq!(
+            headers
+                .get(HeaderName::from_static("surrogate-control"))
+                .and_then(|v| v.to_str().ok()),
+            Some(expected)
+        );
+    }
+}
+
+#[test]
+fn security_headers_append_csp_report_to_group() {
+    let mut headers = HeaderMap::new();
+    insert_security_headers(&mut headers);
+
+    let report_to: Vec<_> = headers
+        .get_all(HeaderName::from_static("report-to"))
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .collect();
+    assert!(
+        report_to.iter().any(|v| v.contains("nvbes-network-errors")),
+        "{report_to:?}"
+    );
+    assert!(
+        report_to.iter().any(|v| v.contains("nvbes-csp-endpoint")),
+        "{report_to:?}"
+    );
 }

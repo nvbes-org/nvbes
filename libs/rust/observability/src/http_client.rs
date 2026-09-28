@@ -54,3 +54,7 @@ pub fn register_trace_context(extensions: &mut axum::http::Extensions) {
     let tp = trace_context::new_traceparent(true);
     extensions.insert(tp);
 }
+
+#[cfg(test)]
+#[path = "observability.http_client.tests.rs"]
+mod tests;

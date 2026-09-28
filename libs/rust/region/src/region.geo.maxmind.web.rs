@@ -63,9 +63,17 @@ impl MaxMindGeoLiteWebClient {
         &self,
         ip: IpAddr,
     ) -> Result<Option<MaxMindGeoLiteWebLookup>, MaxMindGeoLiteWebError> {
+        self.lookup_at(ip, GEOLITE_CITY_ENDPOINT).await
+    }
+
+    async fn lookup_at(
+        &self,
+        ip: IpAddr,
+        endpoint_base: &str,
+    ) -> Result<Option<MaxMindGeoLiteWebLookup>, MaxMindGeoLiteWebError> {
         let response = self
             .client
-            .get(format!("{GEOLITE_CITY_ENDPOINT}/{ip}"))
+            .get(format!("{endpoint_base}/{ip}"))
             .basic_auth(&self.config.account_id, Some(&self.config.license_key))
             .send()
             .await?;
@@ -151,18 +159,5 @@ pub fn maxmind_web_evidence_source() -> GeoEvidenceSource {
 }
 
 #[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::maxmind_ip_relation;
-
-    #[test]
-    fn maps_country_response_to_relation() {
-        let body = json!({"country": {"iso_code": "FR"}});
-        let (relation, location) = maxmind_ip_relation("203.0.113.7".parse().unwrap(), &body)
-            .expect("relation should parse");
-
-        assert_eq!(location.country_code, "FR");
-        assert_eq!(relation.network.as_deref(), Some("203.0.113.7/32"));
-    }
-}
+#[path = "region.geo.maxmind.web.tests.rs"]
+mod tests;

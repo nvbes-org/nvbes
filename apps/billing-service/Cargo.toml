@@ -3,6 +3,7 @@ name = "nvbes-billing-service"
 edition.workspace = true
 license.workspace = true
 version.workspace = true
+publish.workspace = true
 
 [features]
 database-tests = []
@@ -40,4 +41,14 @@ tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+openssl.workspace = true
+tokio-stream = { version = "0.1.18", features = ["net"] }
 tower.workspace = true
+wiremock = "0.6"
+
+[[test]]
+name = "cli-coverage"
+path = "src/billing.cli.coverage.tests.rs"
+
+[lints]
+workspace = true

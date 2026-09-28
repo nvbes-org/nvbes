@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 
-const ignoreRules = ['SC2129', 'SC2016', 'SC2155', 'SC2034'];
+const ignoreRules = [
+  'SC2129',
+  'SC2016',
+  'SC2155',
+  'SC2034',
+  // GitHub self-repository syntax ($/...) is valid since mid-2026; actionlint
+  // 1.7.x still rejects it as an unpinned action until upstream catches up.
+  'specifying action "\\$/[^"]+" in invalid format because ref is missing',
+];
 const ignoreArgs = ignoreRules.flatMap((rule) => ['-ignore', rule]);
 
 function isBinaryAvailable(bin) {

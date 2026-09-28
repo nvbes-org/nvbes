@@ -42,3 +42,7 @@ fn response(status: &'static str) -> HealthResponse {
         service: "nvbes-account-service",
     }
 }
+
+#[cfg(test)]
+#[path = "account.health.tests.rs"]
+pub(crate) mod tests;

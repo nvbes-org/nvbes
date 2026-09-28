@@ -43,6 +43,11 @@ async fn captures_once_with_private_permissions_and_stable_provider_id() {
         .await
         .expect("deduplicated capture");
     assert_eq!(first.provider_email_id, second.provider_email_id);
+    assert!(
+        first
+            .provider_email_id
+            .starts_with("<account-job-00000000-0000-0000-0000-000000000001@")
+    );
     assert_eq!(
         std::fs::read_dir(&directory)
             .expect("capture directory")

@@ -9,8 +9,24 @@ use sentry::protocol::{Level, Value};
 
 static ERROR_REPORTING_CONFIGURED: AtomicBool = AtomicBool::new(false);
 
+#[cfg(test)]
+pub(crate) fn error_reporting_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    use std::sync::{Mutex, OnceLock};
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+}
+
 pub struct ErrorReportingGuard {
     _guard: Option<sentry::ClientInitGuard>,
+}
+
+impl Drop for ErrorReportingGuard {
+    fn drop(&mut self) {
+        // Drop the Sentry client first, then clear the process-wide flag so later
+        // tests (and condition coverage) observe a disabled reporter again.
+        drop(self._guard.take());
+        ERROR_REPORTING_CONFIGURED.store(false, Ordering::Relaxed);
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -114,10 +130,14 @@ pub fn flush_error_reporting(timeout: Duration) -> bool {
 
 pub fn install_safe_panic_hook() {}
 
-fn release_name() -> Option<Cow<'static, str>> {
+pub(crate) fn release_name() -> Option<Cow<'static, str>> {
     std::env::var("SENTRY_RELEASE")
         .or_else(|_| std::env::var("NVBES_RELEASE"))
         .ok()
         .map(Cow::Owned)
         .or_else(|| sentry::release_name!())
 }
+
+#[cfg(test)]
+#[path = "observability.error_reporting.tests.rs"]
+mod tests;

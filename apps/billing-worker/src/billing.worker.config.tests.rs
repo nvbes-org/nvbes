@@ -222,3 +222,29 @@ fn strictly_rejects_legacy_live_stripe_secret_key() {
             .contains("CRITICAL: Live Stripe credentials")
     );
 }
+
+#[test]
+fn strictly_rejects_restricted_live_stripe_keys() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_BILLING_DATABASE_URL", "postgres://localhost/test_db");
+    let test_live_key = format!("{}_{}", "rk_live", "forbidden_restricted_sample");
+    guard.set("NVBES_STRIPE_SECRET_KEY", test_live_key);
+    let err = BillingWorkerConfig::from_env().expect_err("rk_live must fail");
+    assert!(
+        err.to_string()
+            .contains("CRITICAL: Live Stripe credentials")
+    );
+}
+
+#[test]
+fn allows_non_live_stripe_secret_key_when_present() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    let guard = EnvGuard::isolated();
+    guard.set("NVBES_BILLING_DATABASE_URL", "postgres://localhost/test_db");
+    guard.set(
+        "NVBES_STRIPE_SECRET_KEY",
+        format!("{}_{}", "sk_test", "allowed_in_development"),
+    );
+    BillingWorkerConfig::from_env().expect("test-mode stripe key must load");
+}

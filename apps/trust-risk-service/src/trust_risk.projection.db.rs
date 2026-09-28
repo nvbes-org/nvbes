@@ -180,10 +180,14 @@ pub enum ProjectionError {
 }
 
 impl ProjectionError {
-    fn code(&self) -> &'static str {
+    pub(crate) fn code(&self) -> &'static str {
         match self {
             Self::InvalidPayload => "invalid_payload",
             Self::Database(_) => "database",
         }
     }
 }
+
+#[cfg(test)]
+#[path = "trust_risk.projection.db.tests.rs"]
+mod tests;

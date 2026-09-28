@@ -49,17 +49,17 @@ pub async fn record_reconciliation_item(
     reason: &str,
     details: &Value,
 ) -> BillingResult<Uuid> {
-    let id: Uuid = sqlx::query_scalar(
+    let id = sqlx::query_scalar!(
         r#"
         INSERT INTO billing_reconciliation_items (source_event_id, account_id, reason, details)
         VALUES ($1, $2, $3, $4)
         RETURNING id
         "#,
+        source_event_id,
+        account_id,
+        reason,
+        details
     )
-    .bind(source_event_id)
-    .bind(account_id)
-    .bind(reason)
-    .bind(details)
     .fetch_one(db)
     .await?;
 
@@ -70,26 +70,33 @@ pub async fn operator_overview_handler(
     State(state): State<BillingState>,
     _auth: OperatorAuth,
 ) -> BillingResult<Json<OperatorOverviewResponse>> {
-    let active_subs: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM billing_subscriptions WHERE status = 'active'")
-            .fetch_one(&state.db)
-            .await?;
-
-    let open_checkouts: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM billing_checkout_sessions WHERE status = 'open'")
-            .fetch_one(&state.db)
-            .await?;
-
-    let pending_reconciliations: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM billing_reconciliation_items WHERE status = 'pending'",
+    let active_subs = sqlx::query_scalar!(
+        "SELECT count(*) AS count FROM billing_subscriptions WHERE status = 'active'"
     )
     .fetch_one(&state.db)
-    .await?;
+    .await?
+    .unwrap_or(0);
 
-    let pending_outbox: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM billing_outbox WHERE published_at IS NULL")
-            .fetch_one(&state.db)
-            .await?;
+    let open_checkouts = sqlx::query_scalar!(
+        "SELECT count(*) AS count FROM billing_checkout_sessions WHERE status = 'open'"
+    )
+    .fetch_one(&state.db)
+    .await?
+    .unwrap_or(0);
+
+    let pending_reconciliations = sqlx::query_scalar!(
+        "SELECT count(*) AS count FROM billing_reconciliation_items WHERE status = 'pending'"
+    )
+    .fetch_one(&state.db)
+    .await?
+    .unwrap_or(0);
+
+    let pending_outbox = sqlx::query_scalar!(
+        "SELECT count(*) AS count FROM billing_outbox WHERE published_at IS NULL"
+    )
+    .fetch_one(&state.db)
+    .await?
+    .unwrap_or(0);
 
     Ok(Json(OperatorOverviewResponse {
         active_subscriptions: active_subs,
@@ -103,7 +110,8 @@ pub async fn operator_list_reconciliations_handler(
     State(state): State<BillingState>,
     _auth: OperatorAuth,
 ) -> BillingResult<Json<Vec<ReconciliationItem>>> {
-    let items = sqlx::query_as::<_, ReconciliationItem>(
+    let rows = sqlx::query_as!(
+        ReconciliationItem,
         r#"
         SELECT id, source_event_id, account_id, reason, details, status,
                resolved_by, resolved_at, resolution_notes, created_at
@@ -111,12 +119,12 @@ pub async fn operator_list_reconciliations_handler(
         WHERE status = 'pending'
         ORDER BY created_at DESC
         LIMIT 50
-        "#,
+        "#
     )
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(items))
+    Ok(Json(rows))
 }
 
 pub async fn operator_resolve_reconciliation_handler(
@@ -125,7 +133,8 @@ pub async fn operator_resolve_reconciliation_handler(
     Path(id): Path<Uuid>,
     Json(payload): Json<ResolveReconciliationRequest>,
 ) -> BillingResult<Json<ReconciliationItem>> {
-    let item = sqlx::query_as::<_, ReconciliationItem>(
+    let item = sqlx::query_as!(
+        ReconciliationItem,
         r#"
         UPDATE billing_reconciliation_items
         SET status = 'resolved',
@@ -136,9 +145,9 @@ pub async fn operator_resolve_reconciliation_handler(
         RETURNING id, source_event_id, account_id, reason, details, status,
                   resolved_by, resolved_at, resolution_notes, created_at
         "#,
+        id,
+        &payload.resolution_notes
     )
-    .bind(id)
-    .bind(&payload.resolution_notes)
     .fetch_optional(&state.db)
     .await?
     .ok_or(BillingError::NotFound)?;
@@ -159,3 +168,7 @@ pub async fn operator_resolve_reconciliation_handler(
 
     Ok(Json(item))
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.reconciliation.tests.rs"]
+mod tests;

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO billing_customers (account_id, account_type, stripe_customer_id, email)\n        VALUES ($1, $2, $3, $4)\n        ON CONFLICT (account_id, account_type) DO UPDATE SET updated_at = clock_timestamp()\n        RETURNING stripe_customer_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "stripe_customer_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "18d763687335a7bed810d38fa1b3b3ff259dcc36f7e1340f5066a396fba928bb"
+}

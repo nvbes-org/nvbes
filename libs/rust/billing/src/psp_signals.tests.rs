@@ -102,3 +102,101 @@ fn mollie_chargeback_is_recorded_as_disputed_fraud_signal() {
             .contains(&"provider_payment_charged_back".to_string())
     );
 }
+
+#[test]
+fn mollie_successful_payment_does_not_emit_fraud_signal() {
+    assert!(
+        mollie_payment_signal(&ProviderPayment {
+            provider: ProviderCode::Mollie,
+            provider_payment_id: "tr_ok".to_string(),
+            provider_customer_id: None,
+            provider_subscription_id: None,
+            plan_code: None,
+            status: "captured".to_string(),
+            amount_minor: 100,
+            currency: "EUR".to_string(),
+            payment_method: None,
+        })
+        .is_none()
+    );
+}
+
+#[test]
+fn psp_score_bands_cover_disputed_failed_and_canceled_paths() {
+    let disputed = mollie_payment_signal(&ProviderPayment {
+        provider: ProviderCode::Mollie,
+        provider_payment_id: "tr_disputed".to_string(),
+        provider_customer_id: None,
+        provider_subscription_id: None,
+        plan_code: None,
+        status: "disputed".to_string(),
+        amount_minor: 100,
+        currency: "EUR".to_string(),
+        payment_method: None,
+    })
+    .expect("disputed");
+    assert_eq!(disputed.provider_payment_status, "disputed");
+    assert_eq!(disputed.score, 75);
+
+    let canceled = mollie_payment_signal(&ProviderPayment {
+        provider: ProviderCode::Mollie,
+        provider_payment_id: "tr_canceled".to_string(),
+        provider_customer_id: None,
+        provider_subscription_id: None,
+        plan_code: None,
+        status: "canceled".to_string(),
+        amount_minor: 100,
+        currency: "EUR".to_string(),
+        payment_method: None,
+    })
+    .expect("canceled");
+    assert_eq!(canceled.provider_payment_status, "canceled");
+    assert_eq!(canceled.score, 30);
+
+    let highest = stripe_invoice_payment_failed_signal(&serde_json::json!({
+        "id": "in_high",
+        "amount_due": 1000,
+        "currency": "eur",
+        "charge": { "outcome": { "risk_level": "highest" } }
+    }));
+    assert_eq!(highest.score, 70);
+
+    let elevated = stripe_invoice_payment_failed_signal(&serde_json::json!({
+        "id": "in_elevated",
+        "amount_due": 1000,
+        "currency": "eur",
+        "charge": { "outcome": { "risk_level": "elevated" } }
+    }));
+    assert_eq!(elevated.score, 60);
+
+    let plain_failed = stripe_invoice_payment_failed_signal(&serde_json::json!({
+        "id": "in_plain_failed",
+        "amount_due": 1000,
+        "currency": "eur"
+    }));
+    assert_eq!(plain_failed.score, 45);
+}
+
+#[test]
+fn stripe_failed_invoice_without_radar_or_3ds_stays_minimal() {
+    let signal = stripe_invoice_payment_failed_signal(&serde_json::json!({
+        "id": "in_plain",
+        "amount_remaining": 1000,
+        "currency": "usd"
+    }));
+    assert_eq!(signal.provider_payment_id.as_deref(), Some("in_plain"));
+    assert_eq!(signal.amount_minor, Some(1000));
+    assert_eq!(signal.currency.as_deref(), Some("USD"));
+    assert!(
+        !signal
+            .labels
+            .iter()
+            .any(|label| label.contains("stripe_radar"))
+    );
+    assert!(
+        !signal
+            .labels
+            .iter()
+            .any(|label| label.contains("three_d_secure"))
+    );
+}

@@ -86,3 +86,7 @@ impl DispatchQueue for ScalewayDispatchQueue {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "email.worker.queue.tests.rs"]
+mod tests;

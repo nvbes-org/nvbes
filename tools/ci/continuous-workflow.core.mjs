@@ -47,7 +47,7 @@ export function validateContinuousWorkflow(text, setupText) {
     assert.deepEqual(job.needs, ['authorize-cache', 'scope']);
     const expression = `!cancelled() && needs.scope.result == 'success' && needs.authorize-cache.result == 'success' && needs.scope.outputs.${lane}-required == 'true'`;
     assert.equal(job.if, `\${{ ${expression} }}`);
-    const setup = job.steps.find((step) => step.uses === './.github/actions/ci-setup');
+    const setup = job.steps.find((step) => step.uses === '$/.github/actions/ci-setup');
     assert.ok(setup, 'lane setup required');
     assert.equal(setup.with.rust, String(['rust', 'database'].includes(lane)));
     assert.equal(setup.with.terraform, String(lane === 'terraform'));
@@ -65,7 +65,7 @@ export function validateContinuousWorkflow(text, setupText) {
     assert.ok(job.environment.name.includes("'ci-no-secrets'"));
   }
   const preflight = jobs.scope.steps.findIndex((step) => step.id === 'preflight');
-  const setup = jobs.scope.steps.findIndex((step) => step.uses === './.github/actions/ci-setup');
+  const setup = jobs.scope.steps.findIndex((step) => step.uses === '$/.github/actions/ci-setup');
   const finopsIndex = jobs.scope.steps.findIndex((step) => step.run === 'pnpm check:finops');
   assert.ok(preflight >= 0 && preflight < setup);
   assert.ok(setup < finopsIndex);

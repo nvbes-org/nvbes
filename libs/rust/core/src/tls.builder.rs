@@ -68,3 +68,7 @@ pub fn build_mtls_identity(cert_path: &str, key_path: &str) -> Result<reqwest::I
     reqwest::Identity::from_pem(combined.as_bytes())
         .map_err(|e| format!("Failed to parse client identity: {e}"))
 }
+
+#[cfg(test)]
+#[path = "tls.builder.tests.rs"]
+mod tests;

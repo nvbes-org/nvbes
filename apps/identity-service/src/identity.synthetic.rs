@@ -47,23 +47,25 @@ where
     deliver_recovery(recovery.clone()).await?;
     reset_password(db, &recovery.token, recovered_password).await?;
     let second_session = authenticate(db, email, recovered_password).await?;
-    let old_session_active: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM identity_sessions WHERE token_hash = $1 AND revoked_at IS NULL)",
+    let old_session_active = sqlx::query_scalar!(
+        "SELECT EXISTS(SELECT 1 FROM identity_sessions WHERE token_hash = $1 AND revoked_at IS NULL) AS \"exists!\"",
+        hash_token(&first_session.session_token)
     )
-    .bind(hash_token(&first_session.session_token))
     .fetch_one(db)
     .await?;
-    let recovery_consumed: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM identity_recovery_challenges WHERE token_hash = $1 AND consumed_at IS NOT NULL)",
+    let recovery_consumed = sqlx::query_scalar!(
+        "SELECT EXISTS(SELECT 1 FROM identity_recovery_challenges WHERE token_hash = $1 AND consumed_at IS NOT NULL) AS \"exists!\"",
+        hash_token(&recovery.token)
     )
-    .bind(hash_token(&recovery.token))
     .fetch_one(db)
     .await?;
-    let audit_events: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM identity_audit_events WHERE principal_id = $1")
-            .bind(principal_id)
-            .fetch_one(db)
-            .await?;
+    let audit_events = sqlx::query_scalar!(
+        "SELECT COUNT(*) AS count FROM identity_audit_events WHERE principal_id = $1",
+        principal_id
+    )
+    .fetch_one(db)
+    .await?
+    .unwrap_or(0);
 
     Ok(SyntheticSmokeResult {
         principal_id,

@@ -44,9 +44,22 @@ pub async fn run_scheduled_loyalsoldier_geoip_import(
 pub async fn import_latest_loyalsoldier_geoip(
     pool: &PgPool,
 ) -> Result<LoyalsoldierGeoIpImportReport, LoyalsoldierGeoIpImportError> {
-    let client = Client::new();
+    import_latest_loyalsoldier_geoip_with_client(pool, Client::new()).await
+}
+
+pub(crate) async fn import_latest_loyalsoldier_geoip_with_client(
+    pool: &PgPool,
+    client: Client,
+) -> Result<LoyalsoldierGeoIpImportReport, LoyalsoldierGeoIpImportError> {
     let dat = download_verified_loyalsoldier_geoip(&client).await?;
     let ranges = parse_v2fly_geoip_dat_entries(&dat)?;
+    persist_loyalsoldier_geoip_entries(pool, &ranges).await
+}
+
+async fn persist_loyalsoldier_geoip_entries(
+    pool: &PgPool,
+    ranges: &[V2flyGeoIpDatEntry],
+) -> Result<LoyalsoldierGeoIpImportReport, LoyalsoldierGeoIpImportError> {
     let country_ranges = ranges
         .iter()
         .filter(|range| loyalsoldier_is_country(&range.code))
@@ -56,7 +69,7 @@ pub async fn import_latest_loyalsoldier_geoip(
     let mut tx = pool.begin().await?;
     ensure_loyalsoldier_geoip_source_tx(&mut tx).await?;
     create_import_table_tx(&mut tx).await?;
-    insert_import_rows_tx(&mut tx, &ranges).await?;
+    insert_import_rows_tx(&mut tx, ranges).await?;
     let imported_ranges = upsert_imported_ranges_tx(&mut tx).await?;
     let expired_ranges = expire_missing_ranges_tx(&mut tx).await?;
     tx.commit().await?;
@@ -250,3 +263,7 @@ async fn expire_missing_ranges_tx(tx: &mut Transaction<'_, Postgres>) -> Result<
     .await?;
     Ok(result.rows_affected())
 }
+
+#[cfg(test)]
+#[path = "region.geo.loyalsoldier.import.tests.rs"]
+mod tests;
