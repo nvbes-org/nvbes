@@ -55,6 +55,9 @@ importers:
       '@cdktn/hcl2json':
         specifier: 0.24.0
         version: 0.24.0
+      '@cloudflare/workers-types':
+        specifier: ^5.20260921.1
+        version: 5.20260924.1
       '@commitlint/cli':
         specifier: 21.2.2
         version: 21.2.2(@types/node@26.5.1)(conventional-commits-parser@7.1.2)(typescript@5.9.3)
@@ -108,7 +111,7 @@ importers:
         version: 0.3.3(@opentelemetry/api@1.9.1)(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11(@vitest/browser@4.1.11(msw@2.14.3(@types/node@26.5.1)(typescript@5.9.3))(vite@8.2.1(@types/node@26.5.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.1))(vitest@4.1.11))(vitest@4.1.11))(esbuild@0.28.1)(happy-dom@20.11.2)(jiti@2.7.0)(msw@2.14.3(@types/node@26.5.1)(typescript@5.9.3))(terser@5.51.2)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)
       wrangler:
         specifier: 4.131.2
-        version: 4.131.2(@types/node@26.5.1)
+        version: 4.131.2(@cloudflare/workers-types@5.20260924.1)(@types/node@26.5.1)
       yaml:
         specifier: '>=2.8.3'
         version: 2.9.1
@@ -1011,6 +1014,9 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@cloudflare/workers-types@5.20260924.1':
+    resolution: {integrity: sha512-puvr63PrfAFIkdh3FInGEgS0VTQ49WYNYDC2Eupd+qvwWwGpSRjxJD5Iz22oNHCmV1UEcsDz+OtGF++01vUloA==}
 
   '@commitlint/cli@21.2.2':
     resolution: {integrity: sha512-a+6hQxIxnpdvSvS2apvttPNbEliYsVC3PqFYDiiB2kjbwIsQsj1urvQ4Tkf70pKYozPalKAuRQmm/GHwndduqA==}
@@ -7116,6 +7122,8 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20260911.1':
     optional: true
 
+  '@cloudflare/workers-types@5.20260924.1': {}
+
   '@commitlint/cli@21.2.2(@types/node@26.5.1)(conventional-commits-parser@7.1.2)(typescript@5.9.3)':
     dependencies:
       '@commitlint/config-conventional': 21.2.2
@@ -12419,7 +12427,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20260911.1
       '@cloudflare/workerd-windows-64': 1.20260911.1
 
-  wrangler@4.131.2(@types/node@26.5.1):
+  wrangler@4.131.2(@cloudflare/workers-types@5.20260924.1)(@types/node@26.5.1):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260911.1)
@@ -12430,6 +12438,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       workerd: 1.20260911.1
     optionalDependencies:
+      '@cloudflare/workers-types': 5.20260924.1
       fsevents: 2.3.3
     transitivePeerDependencies:
       - '@types/node'

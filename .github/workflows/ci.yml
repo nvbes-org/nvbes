@@ -105,7 +105,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           NVBES_CI_BASE_SHA: ${{ inputs.base_sha }}
         run: node tools/ci/scope-preflight.mjs
-      - uses: ./.github/actions/ci-setup
+      - uses: $/.github/actions/ci-setup
         if: steps.preflight.outputs.graph-required == 'true'
         with:
           caches: pnpm
@@ -145,7 +145,7 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
-      - uses: ./.github/actions/ci-setup
+      - uses: $/.github/actions/ci-setup
         with:
           node: 'true'
           rust: 'false'
@@ -188,7 +188,7 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
-      - uses: ./.github/actions/ci-setup
+      - uses: $/.github/actions/ci-setup
         with:
           node: 'true'
           rust: 'false'
@@ -228,6 +228,8 @@ jobs:
     timeout-minutes: 45
     env:
       NVBES_ENV: test
+      # Empty coverage DB has no identity/billing schema; query! uses committed `.sqlx/`.
+      SQLX_OFFLINE: 'true'
       SCW_CI_CACHE_BUCKET: ${{ vars.SCW_CI_CACHE_BUCKET }}
       SCW_CI_CACHE_S3_ENDPOINT: ${{ vars.SCW_CI_CACHE_S3_ENDPOINT }}
       SCW_CI_CACHE_REGION: ${{ vars.SCW_CI_CACHE_REGION }}
@@ -239,7 +241,7 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
-      - uses: ./.github/actions/ci-setup
+      - uses: $/.github/actions/ci-setup
         with:
           node: 'true'
           rust: 'true'
@@ -306,7 +308,7 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
-      - uses: ./.github/actions/ci-setup
+      - uses: $/.github/actions/ci-setup
         with:
           node: 'true'
           rust: 'true'
@@ -348,7 +350,7 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
-      - uses: ./.github/actions/ci-setup
+      - uses: $/.github/actions/ci-setup
         with:
           node: 'true'
           rust: 'false'
@@ -385,7 +387,7 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs --workflow .github/workflows/ci.yml
-      - uses: ./.github/actions/ci-setup
+      - uses: $/.github/actions/ci-setup
         with:
           node: 'true'
           rust: 'false'

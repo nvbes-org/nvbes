@@ -1,0 +1,484 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "nvbes V1 identity smoke subset",
+    "description": "Closed V1 foundation smoke surface for local pre-push OpenAPI contract.",
+    "contact": {
+      "name": "nvbes",
+      "url": "https://nvbes.fr"
+    },
+    "license": {
+      "name": "UNLICENSED"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/.well-known/jwks.json": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "get_jwks",
+        "responses": {
+          "200": {
+            "description": "JWKS public keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JwksResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/.well-known/oauth-authorization-server": {
+      "get": {
+        "tags": [
+          "oauth"
+        ],
+        "operationId": "oauth_authorization_server_metadata",
+        "responses": {
+          "200": {
+            "description": "OAuth authorization server metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthAuthorizationServerMetadata"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/.well-known/openid-configuration": {
+      "get": {
+        "tags": [
+          "oauth"
+        ],
+        "operationId": "openid_configuration",
+        "responses": {
+          "200": {
+            "description": "OpenID Connect discovery metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthAuthorizationServerMetadata"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "recovery": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorRecovery"
+              }
+            ]
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ErrorRecovery": {
+        "type": "string",
+        "enum": [
+          "reauthenticate"
+        ]
+      },
+      "OAuthAuthorizationServerMetadata": {
+        "type": "object",
+        "required": [
+          "issuer",
+          "authorization_endpoint",
+          "token_endpoint",
+          "jwks_uri",
+          "userinfo_endpoint",
+          "introspection_endpoint",
+          "revocation_endpoint",
+          "pushed_authorization_request_endpoint",
+          "device_authorization_endpoint",
+          "response_types_supported",
+          "grant_types_supported",
+          "token_endpoint_auth_methods_supported",
+          "token_endpoint_auth_signing_alg_values_supported",
+          "request_object_signing_alg_values_supported",
+          "subject_types_supported",
+          "id_token_signing_alg_values_supported",
+          "claims_supported",
+          "code_challenge_methods_supported",
+          "dpop_signing_alg_values_supported",
+          "scopes_supported",
+          "request_parameter_supported",
+          "request_uri_parameter_supported",
+          "require_pushed_authorization_requests",
+          "authorization_response_iss_parameter_supported",
+          "backchannel_logout_supported",
+          "backchannel_logout_session_supported",
+          "authorization_details_types_supported",
+          "tls_client_certificate_bound_access_tokens"
+        ],
+        "properties": {
+          "authorization_details_types_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "authorization_endpoint": {
+            "type": "string"
+          },
+          "authorization_response_iss_parameter_supported": {
+            "type": "boolean"
+          },
+          "backchannel_logout_session_supported": {
+            "type": "boolean"
+          },
+          "backchannel_logout_supported": {
+            "type": "boolean"
+          },
+          "claims_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "code_challenge_methods_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "device_authorization_endpoint": {
+            "type": "string"
+          },
+          "dpop_signing_alg_values_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "grant_types_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id_token_signing_alg_values_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "introspection_endpoint": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "jwks_uri": {
+            "type": "string"
+          },
+          "mtls_endpoint_aliases": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MtlsEndpointAliases"
+              }
+            ]
+          },
+          "pushed_authorization_request_endpoint": {
+            "type": "string"
+          },
+          "request_object_signing_alg_values_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "request_parameter_supported": {
+            "type": "boolean"
+          },
+          "request_uri_parameter_supported": {
+            "type": "boolean"
+          },
+          "require_pushed_authorization_requests": {
+            "type": "boolean"
+          },
+          "response_types_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "revocation_endpoint": {
+            "type": "string"
+          },
+          "scopes_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subject_types_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tls_client_certificate_bound_access_tokens": {
+            "type": "boolean"
+          },
+          "token_endpoint": {
+            "type": "string"
+          },
+          "token_endpoint_auth_methods_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "token_endpoint_auth_signing_alg_values_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "userinfo_endpoint": {
+            "type": "string"
+          }
+        }
+      },
+      "MtlsEndpointAliases": {
+        "type": "object",
+        "required": [
+          "token_endpoint",
+          "pushed_authorization_request_endpoint",
+          "introspection_endpoint",
+          "revocation_endpoint"
+        ],
+        "properties": {
+          "introspection_endpoint": {
+            "type": "string"
+          },
+          "pushed_authorization_request_endpoint": {
+            "type": "string"
+          },
+          "revocation_endpoint": {
+            "type": "string"
+          },
+          "token_endpoint": {
+            "type": "string"
+          }
+        }
+      },
+      "JwksResponse": {
+        "type": "object",
+        "required": [
+          "keys"
+        ],
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JwkKey"
+            }
+          }
+        }
+      },
+      "JwkKey": {
+        "type": "object",
+        "required": [
+          "kty",
+          "kid",
+          "alg",
+          "use",
+          "n",
+          "e"
+        ],
+        "properties": {
+          "alg": {
+            "type": "string"
+          },
+          "e": {
+            "type": "string"
+          },
+          "kid": {
+            "type": "string"
+          },
+          "kty": {
+            "type": "string"
+          },
+          "n": {
+            "type": "string"
+          },
+          "use": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "browserSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-session",
+        "description": "First-party, HttpOnly session cookie. Multi-account sessions use `__Host-session_{authuser}`. Browser mutations also require the signed double-submit `X-CSRF-Token` header."
+      },
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "/oauth/authorize",
+            "tokenUrl": "/oauth/token",
+            "refreshUrl": "/oauth/token",
+            "scopes": {
+              "account:delete": "Delete the account.",
+              "account:email:read": "Read account email addresses.",
+              "account:email:write": "Manage account email addresses.",
+              "account:export": "Request and download an account data export.",
+              "account:legal:read": "Read account consent records.",
+              "account:legal:write": "Grant or revoke account consent.",
+              "account:oauth-clients:read": "Read managed OAuth clients and policies.",
+              "account:oauth-clients:write": "Manage OAuth clients and policies.",
+              "account:oauth:approve": "Approve or deny OAuth device authorization.",
+              "account:preferences:read": "Read account preferences.",
+              "account:preferences:write": "Update account preferences.",
+              "account:profile:read": "Read the account profile.",
+              "account:profile:write": "Update the account profile.",
+              "account:security:read": "Read account security configuration.",
+              "account:security:write": "Manage account security configuration.",
+              "account:session:read": "Read active account sessions.",
+              "account:session:write": "Revoke or confirm account sessions.",
+              "drive:admin": "Administer Drive workspace resources.",
+              "drive:read": "Read Drive resources.",
+              "drive:write": "Create and update Drive resources.",
+              "email": "Read email claims.",
+              "offline_access": "Request refresh-token access.",
+              "openid": "Authenticate with OpenID Connect.",
+              "profile": "Read standard profile claims."
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "/oauth/token",
+            "scopes": {
+              "account:delete": "Delete the account.",
+              "account:email:read": "Read account email addresses.",
+              "account:email:write": "Manage account email addresses.",
+              "account:export": "Request and download an account data export.",
+              "account:legal:read": "Read account consent records.",
+              "account:legal:write": "Grant or revoke account consent.",
+              "account:oauth-clients:read": "Read managed OAuth clients and policies.",
+              "account:oauth-clients:write": "Manage OAuth clients and policies.",
+              "account:oauth:approve": "Approve or deny OAuth device authorization.",
+              "account:preferences:read": "Read account preferences.",
+              "account:preferences:write": "Update account preferences.",
+              "account:profile:read": "Read the account profile.",
+              "account:profile:write": "Update the account profile.",
+              "account:security:read": "Read account security configuration.",
+              "account:security:write": "Manage account security configuration.",
+              "account:session:read": "Read active account sessions.",
+              "account:session:write": "Revoke or confirm account sessions.",
+              "drive:admin": "Administer Drive workspace resources.",
+              "drive:read": "Read Drive resources.",
+              "drive:write": "Create and update Drive resources.",
+              "email": "Read email claims.",
+              "offline_access": "Request refresh-token access.",
+              "openid": "Authenticate with OpenID Connect.",
+              "profile": "Read standard profile claims."
+            }
+          }
+        },
+        "description": "OAuth 2.0 access tokens. Account resource operations enforce the scope declared on each operation; workspace resources additionally enforce RBAC."
+      },
+      "oauthClientBasic": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "OAuth client authentication using `client_secret_basic`. The client ID is the username and the client secret is the password. The endpoints also accept `client_secret_post` and `private_key_jwt` through their form fields."
+      },
+      "oauthClientMtls": {
+        "type": "mutualTLS",
+        "description": "OAuth mutual-TLS client authentication for clients whose security profile requires a bound certificate."
+      },
+      "registrationEnrollment": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-registration_enrollment",
+        "description": "Short-lived registration enrollment cookie issued after account registration."
+      }
+    }
+  }
+}

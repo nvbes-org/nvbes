@@ -290,3 +290,7 @@ impl GeoResolution {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "region.geo.types.tests.rs"]
+mod tests;

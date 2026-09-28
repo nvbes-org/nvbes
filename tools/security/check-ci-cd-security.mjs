@@ -185,9 +185,14 @@ function assertPermissions(path, text, allowedWritePermissions) {
   }
 }
 
+function isSelfRepositoryAction(action) {
+  // Workspace-relative (./...) and GitHub self-repository ($/...) local refs.
+  return action.startsWith('./') || action.startsWith('$/');
+}
+
 function assertActions(path, text, allowedActions) {
   for (const action of extractUses(text)) {
-    if (action.startsWith('./')) continue;
+    if (isSelfRepositoryAction(action)) continue;
     if (!allowedActions.includes(action)) {
       errors.push(`${path}: action ${action} is not allowlisted`);
     }

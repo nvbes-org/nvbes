@@ -39,3 +39,7 @@ impl IntoResponse for AccountError {
 }
 
 pub type AccountResult<T> = Result<T, AccountError>;
+
+#[cfg(test)]
+#[path = "account.error.tests.rs"]
+mod tests;

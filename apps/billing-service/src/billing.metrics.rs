@@ -45,3 +45,7 @@ async fn render(State(state): State<BillingState>, headers: HeaderMap) -> impl I
     }
     (StatusCode::OK, state.metrics.render())
 }
+
+#[cfg(test)]
+#[path = "billing.metrics.tests.rs"]
+mod tests;

@@ -31,6 +31,8 @@ debug/
 **/mutants.out*/
 rustc-ice-*.txt
 .*cargo*/
+!.cargo/
+!.cargo/config.toml
 .*rustup*/
 
 .playwright-mcp/

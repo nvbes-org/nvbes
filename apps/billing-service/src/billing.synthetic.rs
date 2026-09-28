@@ -49,18 +49,24 @@ pub async fn run(
     let session_id = format!("cs_test_{}", Uuid::new_v4().simple());
     let checkout_url = format!("{}/mock-checkout?sid={session_id}", config.app_url);
 
-    sqlx::query(
-        "INSERT INTO billing_checkout_sessions (idempotency_key, account_id, account_type, plan_code, stripe_session_id, stripe_customer_id, checkout_url) VALUES ($1, $2, 'team', 'standard_monthly', $3, $4, $5)"
+    sqlx::query!(
+        "INSERT INTO billing_checkout_sessions (idempotency_key, account_id, account_type, plan_code, stripe_session_id, stripe_customer_id, checkout_url) VALUES ($1, $2, 'team', 'standard_monthly', $3, $4, $5)",
+        &idem_key,
+        workspace_id,
+        &session_id,
+        &customer_id,
+        &checkout_url
     )
-    .bind(&idem_key).bind(workspace_id).bind(&session_id).bind(&customer_id).bind(&checkout_url)
-    .execute(db).await?;
-
-    let duplicate_count: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM billing_checkout_sessions WHERE idempotency_key = $1",
-    )
-    .bind(&idem_key)
-    .fetch_one(db)
+    .execute(db)
     .await?;
+
+    let duplicate_count = sqlx::query_scalar!(
+        "SELECT count(*) AS count FROM billing_checkout_sessions WHERE idempotency_key = $1",
+        &idem_key
+    )
+    .fetch_one(db)
+    .await?
+    .unwrap_or(0);
     let checkout_idempotent = duplicate_count == 1;
 
     // 3. Webhook simulation: checkout.session.completed
@@ -84,13 +90,21 @@ pub async fn run(
     });
 
     // Ingest webhook event
-    sqlx::query(
-        "INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status) VALUES ($1, 'checkout.session.completed', $2, $3, 'processed') ON CONFLICT (event_id) DO NOTHING"
+    sqlx::query!(
+        "INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status) VALUES ($1, 'checkout.session.completed', $2, $3, 'processed') ON CONFLICT (event_id) DO NOTHING",
+        &evt_checkout_id,
+        now,
+        &checkout_payload
     )
-    .bind(&evt_checkout_id).bind(now).bind(&checkout_payload).execute(db).await?;
+    .execute(db)
+    .await?;
 
-    sqlx::query("UPDATE billing_checkout_sessions SET status = 'completed', completed_at = clock_timestamp() WHERE stripe_session_id = $1")
-        .bind(&session_id).execute(db).await?;
+    sqlx::query!(
+        "UPDATE billing_checkout_sessions SET status = 'completed', completed_at = clock_timestamp() WHERE stripe_session_id = $1",
+        &session_id
+    )
+    .execute(db)
+    .await?;
 
     record_audit_event(
         db,
@@ -103,10 +117,14 @@ pub async fn run(
     .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     // 4. Test Webhook deduplication: try inserting same event.id
-    let reinserted: Option<String> = sqlx::query_scalar(
-        "INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status) VALUES ($1, 'checkout.session.completed', $2, $3, 'processed') ON CONFLICT (event_id) DO NOTHING RETURNING event_id"
+    let reinserted = sqlx::query_scalar!(
+        "INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status) VALUES ($1, 'checkout.session.completed', $2, $3, 'processed') ON CONFLICT (event_id) DO NOTHING RETURNING event_id",
+        &evt_checkout_id,
+        now,
+        &checkout_payload
     )
-    .bind(&evt_checkout_id).bind(now).bind(&checkout_payload).fetch_optional(db).await?;
+    .fetch_optional(db)
+    .await?;
     let webhook_deduplicated = reinserted.is_none();
 
     // 5. Subscription lifecycle: created at T2
@@ -155,10 +173,10 @@ pub async fn run(
     .map_err(|e| anyhow::anyhow!("sub old update failed: {e}"))?;
 
     // Verify subscription status is still 'active' because T1 < T2
-    let current_status: String = sqlx::query_scalar(
+    let current_status = sqlx::query_scalar!(
         "SELECT status FROM billing_subscriptions WHERE stripe_subscription_id = $1",
+        &sub_id
     )
-    .bind(&sub_id)
     .fetch_one(db)
     .await?;
     let out_of_order_protected = current_status == "active";
@@ -222,22 +240,23 @@ pub async fn run(
     .await
     .map_err(|e| anyhow::anyhow!("reconciliation record failed: {e}"))?;
 
-    sqlx::query(
+    sqlx::query!(
         r#"
         UPDATE billing_reconciliation_items
         SET status = 'resolved', resolved_by = 'operator', resolved_at = clock_timestamp(), resolution_notes = 'verified in test'
         WHERE id = $1
         "#,
+        recon_id
     )
-    .bind(recon_id)
     .execute(db)
     .await?;
 
-    let recon_status: String =
-        sqlx::query_scalar("SELECT status FROM billing_reconciliation_items WHERE id = $1")
-            .bind(recon_id)
-            .fetch_one(db)
-            .await?;
+    let recon_status = sqlx::query_scalar!(
+        "SELECT status FROM billing_reconciliation_items WHERE id = $1",
+        recon_id
+    )
+    .fetch_one(db)
+    .await?;
     let reconciliation_resolved = recon_status == "resolved";
 
     // 10. Outbox publication
@@ -248,22 +267,26 @@ pub async fn run(
     let outbox_published = published_count >= 3;
 
     // 11. Count audit and outbox
-    let audit_events: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM billing_audit_events WHERE account_id = $1")
-            .bind(workspace_id)
-            .fetch_one(db)
-            .await?;
-
-    let outbox_events: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM billing_outbox WHERE aggregate_id = $1")
-            .bind(workspace_id)
-            .fetch_one(db)
-            .await?;
-
-    let final_status: String = sqlx::query_scalar(
-        "SELECT status FROM billing_subscriptions WHERE stripe_subscription_id = $1",
+    let audit_events = sqlx::query_scalar!(
+        "SELECT count(*) AS count FROM billing_audit_events WHERE account_id = $1",
+        workspace_id
     )
-    .bind(&sub_id)
+    .fetch_one(db)
+    .await?
+    .unwrap_or(0);
+
+    let outbox_events = sqlx::query_scalar!(
+        "SELECT count(*) AS count FROM billing_outbox WHERE aggregate_id = $1",
+        workspace_id
+    )
+    .fetch_one(db)
+    .await?
+    .unwrap_or(0);
+
+    let final_status = sqlx::query_scalar!(
+        "SELECT status FROM billing_subscriptions WHERE stripe_subscription_id = $1",
+        &sub_id
+    )
     .fetch_one(db)
     .await?;
 

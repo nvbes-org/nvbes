@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO identity_audit_events (id, principal_id, actor_principal_id, event_type, correlation_id, details)\n         VALUES ($1, $2, $3, 'identity.sessions_revoked_by_operator', $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6b47bff5035d55e7f2bcccd0d8a7d19cc0c1f080dafe652814e9829dd11a4289"
+}

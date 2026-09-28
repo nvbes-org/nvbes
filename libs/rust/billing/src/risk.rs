@@ -263,4 +263,115 @@ mod tests {
         assert!(!crypto_ledger_can_create_payment(&entry));
         assert!(!crypto_ledger_can_reference_wallet(&entry));
     }
+
+    #[test]
+    fn trial_risk_friction_bands_cover_all_score_ranges() {
+        assert_eq!(trial_risk_friction(0), RiskFriction::None);
+        assert_eq!(trial_risk_friction(24), RiskFriction::None);
+        assert_eq!(trial_risk_friction(25), RiskFriction::VerifyEmail);
+        assert_eq!(trial_risk_friction(49), RiskFriction::VerifyEmail);
+        assert_eq!(trial_risk_friction(50), RiskFriction::TrialCaps);
+        assert_eq!(trial_risk_friction(74), RiskFriction::TrialCaps);
+        assert_eq!(trial_risk_friction(75), RiskFriction::RequirePaymentMethod);
+        assert_eq!(trial_risk_friction(89), RiskFriction::RequirePaymentMethod);
+        assert_eq!(trial_risk_friction(90), RiskFriction::ManualReview);
+        assert_eq!(trial_risk_friction(100), RiskFriction::ManualReview);
+    }
+
+    #[test]
+    fn score_trial_risk_sums_each_signal_and_caps_at_100() {
+        let decision = score_trial_risk(
+            &[
+                RiskSignal::DisposableEmail,
+                RiskSignal::TrialCost,
+                RiskSignal::WorkspaceCount,
+                RiskSignal::IpVelocity,
+                RiskSignal::DomainMismatch,
+                RiskSignal::PaymentFailures,
+                RiskSignal::UnusualEgress,
+            ],
+            false,
+        );
+        assert_eq!(decision.score, 100);
+        assert_eq!(decision.friction, RiskFriction::ManualReview);
+        assert_eq!(decision.reasons.len(), 7);
+
+        let verify = score_trial_risk(&[RiskSignal::DisposableEmail], false);
+        assert_eq!(verify.score, 25);
+        assert_eq!(verify.friction, RiskFriction::VerifyEmail);
+
+        let payment_method = score_trial_risk(
+            &[
+                RiskSignal::UnusualEgress,
+                RiskSignal::PaymentFailures,
+                RiskSignal::TrialCost,
+            ],
+            false,
+        );
+        assert_eq!(payment_method.score, 75);
+        assert_eq!(payment_method.friction, RiskFriction::RequirePaymentMethod);
+    }
+
+    #[test]
+    fn kyc_missing_domain_and_city_require_manual_review() {
+        let profile = KycProfile {
+            company_name: "Acme".to_string(),
+            company_domain: "  ".to_string(),
+            vat_id: None,
+            billing_contact: BillingContact {
+                name: "Ada".to_string(),
+                email: "billing@acme.example".to_string(),
+            },
+            legal_address: LegalAddress {
+                country: "FR".to_string(),
+                line1: "1 Rue".to_string(),
+                postal_code: "75001".to_string(),
+                city: "".to_string(),
+            },
+            proof_reference: Some("proof-1".to_string()),
+        };
+        let validation = validate_kyc_profile(&profile);
+        assert!(!validation.complete);
+        assert!(
+            validation
+                .missing_fields
+                .contains(&"company_domain".to_string())
+        );
+        assert!(
+            validation
+                .missing_fields
+                .contains(&"legal_address.city".to_string())
+        );
+        assert!(kyc_requires_manual_review(&profile));
+    }
+
+    #[test]
+    fn crypto_ledger_reporting_only_requires_nonzero_populated_entry() {
+        let blank = CryptoLedgerEntry {
+            asset_code: " ".to_string(),
+            amount_atomic: 0,
+            direction: CryptoLedgerDirection::Credit,
+            source_type: "x".to_string(),
+            source_id: "".to_string(),
+        };
+        assert!(!crypto_ledger_entry_is_reporting_only(&blank));
+
+        let missing_asset = CryptoLedgerEntry {
+            asset_code: " ".to_string(),
+            amount_atomic: 10,
+            direction: CryptoLedgerDirection::Credit,
+            source_type: "x".to_string(),
+            source_id: "src".to_string(),
+        };
+        assert!(!crypto_ledger_entry_is_reporting_only(&missing_asset));
+
+        let missing_source = CryptoLedgerEntry {
+            asset_code: "BTC".to_string(),
+            amount_atomic: 10,
+            direction: CryptoLedgerDirection::Credit,
+            source_type: "x".to_string(),
+            source_id: "  ".to_string(),
+        };
+        assert!(!crypto_ledger_entry_is_reporting_only(&missing_source));
+    }
 }

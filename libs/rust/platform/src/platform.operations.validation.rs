@@ -94,3 +94,7 @@ pub fn transition(from: CaseStatus, to: CaseStatus) -> Result<(), OperationsErro
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "platform.operations.validation.tests.rs"]
+mod tests;

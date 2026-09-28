@@ -26,3 +26,7 @@ pub fn can_fallback_to_another_provider(status: PaymentStatus) -> bool {
         PaymentStatus::Pending | PaymentStatus::Failed | PaymentStatus::Canceled
     )
 }
+
+#[cfg(test)]
+#[path = "payments.tests.rs"]
+mod tests;

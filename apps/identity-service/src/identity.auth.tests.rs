@@ -1,4 +1,4 @@
-use super::{hash_token, normalize_email, random_token, validate_password_pair};
+use super::{hash_token, normalize_email, random_token, validate_password, validate_password_pair};
 
 #[test]
 fn email_is_normalized_without_leaking_into_a_token() {
@@ -7,6 +7,9 @@ fn email_is_normalized_without_leaking_into_a_token() {
         "person@example.com"
     );
     assert!(normalize_email("invalid").is_err());
+    assert!(normalize_email("@example.com").is_err());
+    assert!(normalize_email("user@localhost").is_err());
+    assert!(normalize_email(&format!("{}@x.com", "a".repeat(320))).is_err());
 }
 
 #[test]
@@ -24,4 +27,7 @@ fn recovery_requires_a_distinct_strong_password() {
     assert!(validate_password_pair("long-password-one", "long-password-two").is_ok());
     assert!(validate_password_pair("same-password", "same-password").is_err());
     assert!(validate_password_pair("short", "long-password-two").is_err());
+    assert!(validate_password("long-password-one").is_ok());
+    assert!(validate_password("short").is_err());
+    assert!(validate_password(&"x".repeat(1025)).is_err());
 }

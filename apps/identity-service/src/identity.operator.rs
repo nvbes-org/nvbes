@@ -56,19 +56,19 @@ async fn issue_token(
     Json(req): Json<IssueOperatorTokenRequest>,
 ) -> Result<Json<IssueOperatorTokenResponse>, OperatorError> {
     let now = Utc::now();
-    let session: (Uuid, Uuid) = sqlx::query_as(
+    let session = sqlx::query!(
         "SELECT s.id, s.principal_id FROM identity_sessions s
          JOIN identity_principals p ON p.id = s.principal_id
          WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > $2
            AND s.step_up_expires_at IS NOT NULL AND s.step_up_expires_at > $2
            AND p.status = 'active'",
+        hash_token(&req.session_token),
+        now
     )
-    .bind(hash_token(&req.session_token))
-    .bind(now)
     .fetch_optional(&state.db)
     .await?
     .ok_or(OperatorError::Unauthorized)?;
-    let (_session_id, principal_id) = session;
+    let (_session_id, principal_id) = (session.id, session.principal_id);
 
     if !state
         .config
@@ -78,10 +78,10 @@ async fn issue_token(
         return Err(OperatorError::Forbidden);
     }
 
-    let has_totp: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM identity_auth_factors WHERE principal_id = $1 AND kind = 'totp' AND state = 'active')",
+    let has_totp = sqlx::query_scalar!(
+        "SELECT EXISTS(SELECT 1 FROM identity_auth_factors WHERE principal_id = $1 AND kind = 'totp' AND state = 'active') AS \"exists!\"",
+        principal_id
     )
-    .bind(principal_id)
     .fetch_one(&state.db)
     .await?;
     if !has_totp {
@@ -118,40 +118,42 @@ async fn revoke_sessions(
     let operator_id = Uuid::parse_str(&operator.sub).map_err(|_| OperatorError::Unauthorized)?;
 
     let mut tx = state.db.begin().await?;
-    let sessions_revoked: i64 = sqlx::query_scalar(
+    let sessions_revoked = sqlx::query_scalar!(
         "WITH updated AS (
             UPDATE identity_sessions SET revoked_at = clock_timestamp()
             WHERE principal_id = $1 AND revoked_at IS NULL
             RETURNING 1
-         ) SELECT count(*) FROM updated",
+         ) SELECT count(*) AS count FROM updated",
+        principal_id
     )
-    .bind(principal_id)
     .fetch_one(&mut *tx)
-    .await?;
-    let refresh_tokens_revoked: i64 = sqlx::query_scalar(
+    .await?
+    .unwrap_or(0);
+    let refresh_tokens_revoked = sqlx::query_scalar!(
         "WITH updated AS (
             UPDATE identity_refresh_tokens SET revoked_at = clock_timestamp()
             WHERE principal_id = $1 AND revoked_at IS NULL
             RETURNING 1
-         ) SELECT count(*) FROM updated",
+         ) SELECT count(*) AS count FROM updated",
+        principal_id
     )
-    .bind(principal_id)
     .fetch_one(&mut *tx)
-    .await?;
+    .await?
+    .unwrap_or(0);
 
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO identity_audit_events (id, principal_id, actor_principal_id, event_type, correlation_id, details)
          VALUES ($1, $2, $3, 'identity.sessions_revoked_by_operator', $4, $5)",
+        Uuid::new_v4(),
+        principal_id,
+        operator_id,
+        Uuid::new_v4(),
+        serde_json::json!({
+            "reason": req.reason,
+            "sessions_revoked": sessions_revoked,
+            "refresh_tokens_revoked": refresh_tokens_revoked
+        })
     )
-    .bind(Uuid::new_v4())
-    .bind(principal_id)
-    .bind(operator_id)
-    .bind(Uuid::new_v4())
-    .bind(serde_json::json!({
-        "reason": req.reason,
-        "sessions_revoked": sessions_revoked,
-        "refresh_tokens_revoked": refresh_tokens_revoked
-    }))
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;

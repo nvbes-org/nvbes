@@ -138,11 +138,15 @@ async fn set_active(
 }
 
 fn validate_operator_input(actor: &str, reason: &str) -> Result<(), RuleOperationError> {
-    if actor.len() < 3 || reason.trim().len() < 3 || reason.len() > 300 {
+    if !operator_input_is_valid(actor, reason) {
         Err(RuleOperationError::InvalidInput)
     } else {
         Ok(())
     }
+}
+
+pub(crate) fn operator_input_is_valid(actor: &str, reason: &str) -> bool {
+    actor.len() >= 3 && reason.trim().len() >= 3 && reason.len() <= 300
 }
 
 fn map_unique(error: sqlx::Error) -> RuleOperationError {

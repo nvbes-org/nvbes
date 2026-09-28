@@ -123,3 +123,189 @@ async fn local_event_consumer_waits_for_messages_and_stops_cleanly(pool: PgPool)
     shutdown_sender.send(true).unwrap();
     dispatcher.await.unwrap();
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn local_event_consumer_stops_when_queue_closes(pool: PgPool) {
+    let state = test_support::state(pool);
+    let (sender, receiver) = tokio::sync::mpsc::channel::<uuid::Uuid>(1);
+    let (shutdown_sender, shutdown_receiver) = watch::channel(false);
+    drop(sender);
+    let closed = tokio::spawn(run_local(state, receiver, shutdown_receiver));
+    closed.await.unwrap();
+    drop(shutdown_sender);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn local_event_consumer_dispatches_enqueued_messages(pool: PgPool) {
+    let message_id = accept(&pool, "local-dispatch", "local@example.com").await;
+    let state = test_support::state(pool.clone());
+    let receiver = state.take_local_dispatch_receiver().unwrap();
+    let (shutdown_sender, shutdown_receiver) = watch::channel(false);
+    let dispatcher = tokio::spawn(run_local(state.clone(), receiver, shutdown_receiver));
+    state.dispatch_queue.enqueue(message_id).await.unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    shutdown_sender.send(true).unwrap();
+    dispatcher.await.unwrap();
+
+    let state_name: String =
+        sqlx::query_scalar("SELECT state::text FROM email_messages WHERE id = $1")
+            .bind(message_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(state_name, "provider_accepted");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn dispatch_message_covers_missing_busy_and_deadline_expiry(pool: PgPool) {
+    let state = test_support::state(pool.clone());
+    let missing = dispatch_message(&state, uuid::Uuid::new_v4())
+        .await
+        .unwrap();
+    assert_eq!(missing, super::DispatchOutcome::Acknowledged);
+
+    let busy_id = accept(&pool, "dispatch-busy", "busy@example.com").await;
+    sqlx::query(
+        "UPDATE email_messages SET next_attempt_at = clock_timestamp() + INTERVAL '1 hour' WHERE id = $1",
+    )
+    .bind(busy_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let busy = dispatch_message(&state, busy_id).await.unwrap();
+    assert_eq!(busy, super::DispatchOutcome::Retry);
+
+    let expiring_id = accept(&pool, "dispatch-deadline", "deadline@example.com").await;
+    sqlx::query(
+        "UPDATE email_messages SET accepted_at = clock_timestamp() - INTERVAL '2 seconds', deliver_before = clock_timestamp() - INTERVAL '1 second' WHERE id = $1",
+    )
+    .bind(expiring_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    // claim_message settles expired messages before returning Claimed; still acknowledged.
+    let expired = dispatch_message(&state, expiring_id).await.unwrap();
+    assert_eq!(expired, super::DispatchOutcome::Acknowledged);
+
+    let mid_claim_id = accept(&pool, "dispatch-mid-expire", "mid-expire@example.com").await;
+    let claim = match crate::dispatch_db::claim_message(&pool, mid_claim_id)
+        .await
+        .unwrap()
+    {
+        crate::dispatch_db::ClaimResult::Claimed(claim) => *claim,
+        other => panic!("expected claim: {other:?}"),
+    };
+    sqlx::query(
+        "UPDATE email_messages SET accepted_at = clock_timestamp() - INTERVAL '2 seconds', deliver_before = clock_timestamp() - INTERVAL '1 second' WHERE id = $1",
+    )
+    .bind(mid_claim_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert!(
+        crate::dispatch_db::expire_claim_if_due(&pool, &claim)
+            .await
+            .unwrap()
+    );
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn dispatch_materializes_without_reply_to(pool: PgPool) {
+    let message_id = accept(&pool, "dispatch-no-reply", "noreply@example.com").await;
+    let mut config = test_support::config(crate::config::ProviderConfig::Mock);
+    config.reply_to = None;
+    let state = crate::state::EmailWorkerState::new(config, pool.clone()).unwrap();
+    dispatch_message(&state, message_id).await.unwrap();
+    let state_name: String =
+        sqlx::query_scalar("SELECT state::text FROM email_messages WHERE id = $1")
+            .bind(message_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(state_name, "provider_accepted");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn local_event_consumer_stops_when_shutdown_sender_drops(pool: PgPool) {
+    let state = test_support::state(pool);
+    let receiver = state.take_local_dispatch_receiver().unwrap();
+    let (shutdown_sender, shutdown_receiver) = watch::channel(false);
+    let dispatcher = tokio::spawn(run_local(state, receiver, shutdown_receiver));
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    drop(shutdown_sender);
+    dispatcher.await.unwrap();
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn local_event_consumer_logs_dispatch_failures_without_stopping(pool: PgPool) {
+    let state = test_support::state(pool);
+    let receiver = state.take_local_dispatch_receiver().unwrap();
+    let (shutdown_sender, shutdown_receiver) = watch::channel(false);
+    let dispatcher = tokio::spawn(run_local(state.clone(), receiver, shutdown_receiver));
+    state.db.close().await;
+    state
+        .dispatch_queue
+        .enqueue(uuid::Uuid::new_v4())
+        .await
+        .unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    shutdown_sender.send(true).unwrap();
+    dispatcher.await.unwrap();
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn dispatch_message_expires_when_deadline_elapses_during_claim(pool: PgPool) {
+    sqlx::query(
+        r#"
+        CREATE OR REPLACE FUNCTION email_test_expire_on_dispatch() RETURNS trigger AS $$
+        BEGIN
+          IF NEW.state = 'dispatching' THEN
+            NEW.accepted_at := clock_timestamp() - interval '2 seconds';
+            NEW.deliver_before := clock_timestamp() - interval '1 second';
+          END IF;
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("DROP TRIGGER IF EXISTS email_test_expire_on_dispatch ON email_messages")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        r#"
+        CREATE TRIGGER email_test_expire_on_dispatch
+          BEFORE UPDATE ON email_messages
+          FOR EACH ROW EXECUTE FUNCTION email_test_expire_on_dispatch()
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let message_id = accept(&pool, "dispatch-race-expire", "race-expire@example.com").await;
+    let state = test_support::state(pool.clone());
+    assert_eq!(
+        dispatch_message(&state, message_id).await.unwrap(),
+        super::DispatchOutcome::Acknowledged
+    );
+    let state_name: String =
+        sqlx::query_scalar("SELECT state::text FROM email_messages WHERE id = $1")
+            .bind(message_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(state_name, "expired");
+
+    sqlx::query("DROP TRIGGER IF EXISTS email_test_expire_on_dispatch ON email_messages")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("DROP FUNCTION IF EXISTS email_test_expire_on_dispatch()")
+        .execute(&pool)
+        .await
+        .unwrap();
+}

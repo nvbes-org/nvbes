@@ -14,12 +14,29 @@
           "description": "Block client-controlled business outcomes by deriving billing lock state, subscription status, and credential validation on the server.",
           "evidence": [
             {
-              "path": "libs/rust/billing/src/checkout_sessions.rs",
-              "includes": ["subscription_status_requires_lock", "BillingCheckoutSessionError"]
+              "path": "libs/rust/billing/src/shared.rs",
+              "includes": [
+                "subscription_status_requires_lock",
+                "validate_plan_code"
+              ],
+              "tests": [
+                "subscription_status_requires_lock_blocks_degraded_states"
+              ]
+            },
+            {
+              "path": "apps/billing-service/src/billing.checkout.rs",
+              "includes": [
+                "create_checkout_handler",
+                "idempotency_key"
+              ]
             },
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["normalize_email", "validate_password", "hash_password"]
+              "includes": [
+                "normalize_email",
+                "validate_password",
+                "hash_password"
+              ]
             }
           ]
         }
@@ -37,11 +54,18 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["request_recovery", "reset_password", "consumed_at"]
+              "includes": [
+                "request_recovery",
+                "reset_password",
+                "consumed_at"
+              ]
             },
             {
               "path": "apps/billing-service/src/billing.webhooks.rs",
-              "includes": ["stripe_webhook_handler", "apply_subscription_event_on_connection"]
+              "includes": [
+                "stripe_webhook_handler",
+                "apply_subscription_event_on_connection"
+              ]
             }
           ]
         }
@@ -59,11 +83,25 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/idempotency.rs",
-              "includes": ["validate_key", "derive_scope", "hash_request_body", "IdempotencyScope"]
+              "includes": [
+                "validate_key",
+                "derive_scope",
+                "hash_request_body",
+                "IdempotencyScope"
+              ]
             },
             {
               "path": "apps/billing-service/src/billing.webhooks.rs",
-              "includes": ["record_reconciliation_item"]
+              "includes": [
+                "record_reconciliation_item"
+              ]
+            },
+            {
+              "path": "apps/billing-service/src/billing.checkout.tests.rs",
+              "tests": [
+                "checkout_rejects_empty_idempotency_key",
+                "checkout_rejects_oversized_idempotency_key"
+              ]
             }
           ]
         }
@@ -89,7 +127,10 @@
             },
             {
               "path": "docs/security/bot-management-controls.json",
-              "includes": ["Rate Limiting and Quotas", "Public APIs"]
+              "includes": [
+                "Rate Limiting and Quotas",
+                "Public APIs"
+              ]
             }
           ]
         }
@@ -107,11 +148,19 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/authz.policy.rs",
-              "includes": ["ctx.target_role", "ctx.owns_resource", "ctx.member_share_links_enabled"]
+              "includes": [
+                "ctx.target_role",
+                "ctx.owns_resource",
+                "ctx.member_share_links_enabled"
+              ]
             },
             {
               "path": "libs/rust/core/src/authz.policy.tests.rs",
               "includes": [
+                "workspace_membership_roles_cover_expected_permission_boundaries",
+                "member_can_only_modify_owned_objects"
+              ],
+              "tests": [
                 "workspace_membership_roles_cover_expected_permission_boundaries",
                 "member_can_only_modify_owned_objects"
               ]
@@ -131,12 +180,27 @@
           "description": "Validate email semantics and length boundaries server-side before execution.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.http.rs",
-              "includes": ["normalize_email", "validate_password"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": [
+                "normalize_email",
+                "validate_password"
+              ]
             },
             {
               "path": "libs/rust/core/src/auth.helpers.validation.rs",
-              "includes": ["validate_email", "validate_password", "MIN_PASSWORD_LENGTH"]
+              "includes": [
+                "validate_email",
+                "validate_password",
+                "MIN_PASSWORD_LENGTH"
+              ]
+            },
+            {
+              "path": "libs/rust/core/src/auth.helpers.tests.rs",
+              "tests": [
+                "validate_password_accepts_strong_password",
+                "validate_password_rejects_short_passwords",
+                "validate_password_rejects_weak_passwords"
+              ]
             }
           ]
         }
@@ -154,14 +218,15 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["audit(&mut tx, principal_id, \"identity.authenticated\")"]
+              "includes": [
+                "audit(&mut tx, principal_id, \"identity.authenticated\")"
+              ]
             },
             {
-              "path": "libs/rust/billing/src/checkout_sessions.audit.rs",
+              "path": "apps/billing-service/src/billing.audit.rs",
               "includes": [
-                "CheckoutRoutingBlockedAudit",
-                "CheckoutStartedAudit",
-                "insert_billing_audit_event_tx"
+                "record_audit_event",
+                "INSERT INTO billing_audit_events"
               ]
             }
           ]
@@ -180,7 +245,9 @@
           "evidence": [
             {
               "path": "docs/security/authorization-regression-tests.json",
-              "includes": ["Actor-resource-action matrix"]
+              "includes": [
+                "Actor-resource-action matrix"
+              ]
             },
             {
               "path": "package.json",

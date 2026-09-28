@@ -21,6 +21,21 @@ pre-commit:
     00-ssh-signing:
       run: node tools/ci/check-commit-ssh-signing.mjs --config
       fail_text: 'BLOCKED commit signing KO - commits non signes refuses. Activer commit.gpgsign + signingkey.'
+    00-agent-protected:
+      run: pnpm check:agent-protected-paths
+      fail_text: 'BLOCKED llm-commit-policy KO - trailer AI-Assisted manquant.'
+    00-thresholds-monotone:
+      run: pnpm check:thresholds-monotone
+      fail_text: 'BLOCKED thresholds-monotone KO - seuil abaissé ou crate exclu.'
+    00-weak-assertions:
+      run: node --test tools/ci/check-weak-assertions.test.mjs && node tools/ci/check-weak-assertions.mjs --staged
+      fail_text: 'BLOCKED weak-assertions KO - assert!(is_err/is_ok) ajouté dans le diff.'
+    00-unwrap-ratchet:
+      run: pnpm check:unwrap-ratchet
+      fail_text: 'BLOCKED unwrap-ratchet KO - unwrap/expect ajouté hors tests.'
+    00-sqlx-ratchet:
+      run: pnpm check:sqlx-ratchet
+      fail_text: 'BLOCKED sqlx-ratchet KO - sqlx::query runtime ajouté (utiliser query!).'
     00-secrets:
       run: node tools/security/scan-secrets.mjs
       fail_text: 'BLOCKED secrets - scan-secrets KO. Corriger avant commit.'
@@ -108,6 +123,11 @@ pre-commit:
     55-test-summary:
       run: pnpm test:test-summary
       fail_text: 'BLOCKED test-summary KO.'
+    # Last step: restore index from NVBES_STAGED_TREE when a concurrent
+    # IDE/fsmonitor/fetch race cleared staged paths during long hooks.
+    99-restore-staged-tree:
+      run: bash tools/ci/restore-staged-tree.sh
+      fail_text: 'BLOCKED restore-staged-tree KO - index lost mid pre-commit.'
 
 commit-msg:
   commands:
@@ -115,6 +135,9 @@ commit-msg:
       # --strict matches .github/workflows/commitlint.yml (warnings promus en erreurs).
       run: pnpm exec commitlint --strict --edit "{1}"
       fail_text: 'BLOCKED commitlint strict KO. Message non conventionnel.'
+    agent-protected:
+      run: node tools/ci/check-agent-protected-paths.mjs --edit "{1}"
+      fail_text: 'BLOCKED llm-commit-policy KO - trailer AI-Assisted manquant.'
 
 # Tout ce qui exige Docker / Postgres / services en cours / reseau lourd.
 # Requiert : docker running, `pnpm dev:infra` si tests DB/e2e/contract.
@@ -144,6 +167,9 @@ pre-push:
     73-condition:
       run: pnpm test:rust:condition
       fail_text: 'BLOCKED test-rust-condition KO.'
+    73-mutation-diff:
+      run: pnpm test:rust:mutation:diff
+      fail_text: 'BLOCKED mutation-in-diff KO - mutant survivant sur le code modifié.'
     74-openapi-contract:
       run: pnpm test:smoke:contract
       fail_text: 'BLOCKED openapi-contract KO - services requis.'

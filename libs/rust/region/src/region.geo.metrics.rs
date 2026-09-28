@@ -48,3 +48,7 @@ pub fn record_ip_intelligence_lookup(provider: &str, outcome: &str, duration: Du
     metrics::histogram!("geo_ip_intelligence_lookup_duration_seconds", &labels)
         .record(duration.as_secs_f64());
 }
+
+#[cfg(test)]
+#[path = "region.geo.metrics.tests.rs"]
+mod tests;

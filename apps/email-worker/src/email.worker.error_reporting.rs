@@ -74,3 +74,7 @@ pub fn capture_delivery(
         },
     );
 }
+
+#[cfg(test)]
+#[path = "email.worker.error_reporting.tests.rs"]
+mod tests;

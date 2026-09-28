@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE billing_reconciliation_items\n        SET status = 'resolved', resolved_by = 'operator', resolved_at = clock_timestamp(), resolution_notes = 'verified in test'\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "60d4994cdaacfebfc8b729be8426e87e1f608cb384129276a58c5286c7656af4"
+}

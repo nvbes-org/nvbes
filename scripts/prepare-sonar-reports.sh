@@ -10,21 +10,23 @@ mkdir -p "$RUST_REPORT_DIR"
 
 printf '==> Preparing SonarCloud analysis reports\n'
 
-# 1. Generate Rust Clippy report in JSON format
+# 1. Generate Rust Clippy report in JSON format (offline sqlx macros)
 printf '==> Running cargo clippy to generate SonarCloud report...\n'
-cargo clippy --workspace --all-targets --locked --message-format=json > "$RUST_REPORT_DIR/clippy-report.json" || {
+SQLX_OFFLINE=true cargo clippy --workspace --all-targets --locked --message-format=json \
+  > "$RUST_REPORT_DIR/clippy-report.json" || {
   printf 'warn: cargo clippy exited with non-zero status; report generated with available issues\n' >&2
 }
 
-# 2. Generate Rust LCOV coverage report
-if [[ ! -f "$RUST_REPORT_DIR/lcov.info" ]]; then
-  if command -v cargo-llvm-cov >/dev/null 2>&1 && [[ -n "${NVBES_SECURITY_TEST_DATABASE_URL:-}" ]]; then
-    printf '==> Generating Rust LCOV coverage report...\n'
-    bash scripts/test-workspace-coverage.sh
-  else
-    printf '==> Note: cargo-llvm-cov or NVBES_SECURITY_TEST_DATABASE_URL not available; ensuring lcov placeholder exists\n'
-    touch "$RUST_REPORT_DIR/lcov.info"
-  fi
+# 2. Generate Rust LCOV coverage report.
+# Never emit an empty placeholder: Sonar treats that as 0% coverage on new code.
+if command -v cargo-llvm-cov >/dev/null 2>&1 \
+  && [[ -n "${NVBES_SECURITY_TEST_DATABASE_URL:-}" ]] \
+  && [[ -n "${DATABASE_URL:-}" ]]; then
+  printf '==> Generating Rust LCOV coverage report...\n'
+  bash scripts/test-workspace-coverage.sh
+else
+  printf 'error: cargo-llvm-cov + NVBES_SECURITY_TEST_DATABASE_URL + DATABASE_URL required for Sonar coverage\n' >&2
+  exit 1
 fi
 
 # 3. Validate generated reports
@@ -35,10 +37,11 @@ else
   printf '  [missing] Rust Clippy report not found\n' >&2
 fi
 
-if [[ -f "$RUST_REPORT_DIR/lcov.info" ]]; then
-  printf '  [ok] Rust LCOV coverage: %s (%s bytes)\n' "$RUST_REPORT_DIR/lcov.info" "$(wc -c < "$RUST_REPORT_DIR/lcov.info" | tr -d ' ')"
-else
-  printf '  [missing] Rust LCOV coverage not found\n' >&2
+lcov_bytes="$(wc -c < "$RUST_REPORT_DIR/lcov.info" | tr -d ' ')"
+if [[ "$lcov_bytes" -lt 100 ]]; then
+  printf 'error: Rust LCOV coverage is empty (%s bytes)\n' "$lcov_bytes" >&2
+  exit 1
 fi
+printf '  [ok] Rust LCOV coverage: %s (%s bytes)\n' "$RUST_REPORT_DIR/lcov.info" "$lcov_bytes"
 
 printf '==> SonarCloud report preparation complete\n'

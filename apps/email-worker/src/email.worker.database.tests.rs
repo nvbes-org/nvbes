@@ -7,7 +7,7 @@ use sqlx::PgPool;
 
 use super::{
     AcceptCommandError, accept_command, apply_retention, constant_time_eq, database_now,
-    expire_stale_messages, release_suppression_by_message,
+    expire_stale_messages, migrate, release_suppression_by_message,
 };
 use crate::{crypto::EmailCrypto, dispatch_db};
 
@@ -181,6 +181,11 @@ async fn retention_purges_secrets_before_deleting_the_ledger(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn queue_deadline_and_retention_queries_cover_empty_and_populated_ledgers(pool: PgPool) {
     assert!(database_now(&pool).await.unwrap() <= Utc::now() + Duration::seconds(1));
+    assert_eq!(
+        expire_stale_messages(&pool).await.unwrap(),
+        0,
+        "empty ledger must report zero expirations"
+    );
     let receipt = accept(&pool, &command("queue-expiry", "expired@example.com")).await;
     sqlx::query(
         r#"UPDATE email_messages
@@ -193,6 +198,18 @@ async fn queue_deadline_and_retention_queries_cover_empty_and_populated_ledgers(
     .await
     .unwrap();
     assert_eq!(expire_stale_messages(&pool).await.unwrap(), 1);
+    let state: String =
+        sqlx::query_scalar("SELECT state::text FROM email_messages WHERE message_id = $1")
+            .bind(&receipt.message_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(state, "expired");
+    assert_eq!(
+        expire_stale_messages(&pool).await.unwrap(),
+        0,
+        "already-expired messages must not be counted again"
+    );
 
     sqlx::query(
         r#"INSERT INTO email_provider_events (
@@ -245,4 +262,36 @@ async fn acceptance_rejects_missing_wire_payload_and_expired_commands(pool: PgPo
     assert!(!constant_time_eq(&[1, 2], &[1]));
     assert!(!constant_time_eq(&[1, 2], &[1, 3]));
     assert!(constant_time_eq(&[1, 2], &[1, 2]));
+    // Two differing bytes that cancel under XOR must still reject (kills `|`→`^`).
+    assert!(!constant_time_eq(&[1, 1], &[0, 0]));
+}
+
+#[sqlx::test(migrations = false)]
+async fn migrate_creates_the_email_delivery_schema(pool: PgPool) {
+    let exists_before: bool = sqlx::query_scalar(
+        "SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'email_messages'
+        )",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(
+        !exists_before,
+        "fixture pool must start without email schema"
+    );
+
+    migrate(&pool).await.expect("migrate applies schema");
+
+    let exists_after: bool = sqlx::query_scalar(
+        "SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'email_messages'
+        )",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(exists_after);
 }

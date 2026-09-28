@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "description": "Seuils de couverture de condition (decision/branch coverage) par crate du workspace Cargo racine. Mesure : `cargo llvm-cov --workspace --all-targets --locked --branch --json --summary-only` sous toolchain **nightly** (le flag `-Z coverage-options=branch` n'émet la métrique branches que sur nightly ; RUSTC_BOOTSTRAP sur stable produit 0 branche, rejet). La mesure est réalisée sans service Redis provisionné (état CI déterministe). Score = branches couvertes / branches totales. Chaque sous-condition (V et F) de `a && b`, `a || b`, `if`, `match`, ternaire est instrumentée comme une branche distincte : un score qui baisse signale des branches de sous-conditions non exercées. Seuil = baseline mesurée - 5 points arrondis à l'inférieur (absorbe le bruit run-to-run de llvm-cov). Plancher d'inclusion : 50. Les crates sous le plancher sont exclues du gate avec raison explicite et baseline conservée pour suivre la régression ; ré-inclusion conditionnée à un score au moins égal au plancher. Gate out-of-band : non exécuté en CI stable (nightly requis), à lancer via `pnpm test:rust:condition`.",
+  "description": "Seuils de couverture de condition (decision/branch coverage) par crate du workspace Cargo racine. Mesure : `cargo llvm-cov --workspace --all-targets --locked --branch --json --summary-only` sous toolchain **nightly** (le flag `-Z coverage-options=branch` n'\u00e9met la m\u00e9trique branches que sur nightly ; RUSTC_BOOTSTRAP sur stable produit 0 branche, rejet). La mesure est r\u00e9alis\u00e9e sans service Redis provisionn\u00e9 (\u00e9tat CI d\u00e9terministe). Score = branches couvertes / branches totales. Chaque sous-condition (V et F) de `a && b`, `a || b`, `if`, `match`, ternaire est instrument\u00e9e comme une branche distincte : un score qui baisse signale des branches de sous-conditions non exerc\u00e9es. Seuil = baseline mesur\u00e9e - 5 points arrondis \u00e0 l'inf\u00e9rieur (absorbe le bruit run-to-run de llvm-cov). Plancher d'inclusion : 50. Les crates sous le plancher sont exclues du gate avec raison explicite et baseline conserv\u00e9e pour suivre la r\u00e9gression ; r\u00e9-inclusion conditionn\u00e9e \u00e0 un score au moins \u00e9gal au plancher. Gate out-of-band : non ex\u00e9cut\u00e9 en CI stable (nightly requis), \u00e0 lancer via `pnpm test:rust:condition`.",
   "baseline": {
     "commit": "6af12ea1",
     "date": "2026-09-09",
@@ -10,92 +10,146 @@
   "crates": {
     "nvbes-email": {
       "threshold": 86,
-      "baseline": { "score": 91.7, "count": 120, "covered": 110 }
+      "baseline": {
+        "score": 91.7,
+        "count": 120,
+        "covered": 110
+      }
     },
     "nvbes-email-scaleway": {
       "threshold": 95,
-      "baseline": { "score": 100.0, "count": 2, "covered": 2 }
+      "baseline": {
+        "score": 100.0,
+        "count": 2,
+        "covered": 2
+      }
     },
     "nvbes-trust-risk": {
       "threshold": 53,
-      "baseline": { "score": 58.3, "count": 168, "covered": 98 }
+      "baseline": {
+        "score": 58.3,
+        "count": 168,
+        "covered": 98
+      }
     }
   },
   "excluded": [
     {
       "crate": "nvbes-account-service",
-      "reason": "Couverture de condition mesurée 0.0% (0/92), sous le plancher de 50% : le service s'appuie sur les tests d'intégration Redis non provisionnés en CI. Ré-inclusion conditionnée à des tests d'intégration avec service, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 0.0, "count": 92, "covered": 0 }
+      "reason": "Couverture de condition mesur\u00e9e 0.0% (0/92), sous le plancher de 50% : le service s'appuie sur les tests d'int\u00e9gration Redis non provisionn\u00e9s en CI. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests d'int\u00e9gration avec service, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 0.0,
+        "count": 92,
+        "covered": 0
+      }
     },
     {
       "crate": "nvbes-audit",
-      "reason": "Aucune branche instrumentée (0/0) : les sous-conditions du journal append-only ne sont pas émises comme branches par llvm-cov au commit de baseline (logique largement générique/derive). Ré-inclusion conditionnée à une instrumentation effective de la métrique branches.",
-      "baseline": { "score": 0.0, "count": 0, "covered": 0 }
+      "reason": "Aucune branche instrument\u00e9e (0/0) : les sous-conditions du journal append-only ne sont pas \u00e9mises comme branches par llvm-cov au commit de baseline (logique largement g\u00e9n\u00e9rique/derive). R\u00e9-inclusion conditionn\u00e9e \u00e0 une instrumentation effective de la m\u00e9trique branches.",
+      "baseline": {
+        "score": 0.0,
+        "count": 0,
+        "covered": 0
+      }
     },
     {
       "crate": "nvbes-billing-service",
-      "reason": "Couverture de condition mesurée 0.0% (0/0), sous le plancher de 50% : le service s'appuie sur les tests de base de données et Stripe. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 0.0, "count": 0, "covered": 0 }
+      "reason": "Couverture de condition mesur\u00e9e 0.0% (0/0), sous le plancher de 50% : le service s'appuie sur les tests de base de donn\u00e9es et Stripe. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 0.0,
+        "count": 0,
+        "covered": 0
+      }
     },
     {
       "crate": "nvbes-billing-worker",
-      "reason": "Couverture de condition sous le plancher de 50% : le worker s'appuie sur les tests de base de données (outbox, réconciliation) non provisionnés dans le gate unitaire. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 35.0, "count": 100, "covered": 35 }
+      "reason": "Couverture de condition sous le plancher de 50% : le worker s'appuie sur les tests de base de donn\u00e9es (outbox, r\u00e9conciliation) non provisionn\u00e9s dans le gate unitaire. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 35.0,
+        "count": 100,
+        "covered": 35
+      }
     },
     {
       "crate": "nvbes-billing",
-      "reason": "Couverture de condition mesurée 39.1% (216/552), sous le plancher de 50% : la logique Stripe est majoritairement exercée par des tests d'intégration dépendants d'un service Redis/du réseau non provisionnés en CI. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 39.1, "count": 552, "covered": 216 }
+      "reason": "Couverture de condition mesur\u00e9e 39.1% (216/552), sous le plancher de 50% : la logique Stripe est majoritairement exerc\u00e9e par des tests d'int\u00e9gration d\u00e9pendants d'un service Redis/du r\u00e9seau non provisionn\u00e9s en CI. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 39.1,
+        "count": 552,
+        "covered": 216
+      }
     },
     {
       "crate": "nvbes-core",
-      "reason": "Couverture de condition mesurée 45.3% (194/428), sous le plancher de 50% : primitives transverses dont les sous-conditions de configuration/utilitaire ne sont pas toutes exercées par les tests unitaires. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 45.3, "count": 428, "covered": 194 }
+      "reason": "Couverture de condition mesur\u00e9e 45.3% (194/428), sous le plancher de 50% : primitives transverses dont les sous-conditions de configuration/utilitaire ne sont pas toutes exerc\u00e9es par les tests unitaires. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 45.3,
+        "count": 428,
+        "covered": 194
+      }
     },
     {
       "crate": "nvbes-email-worker",
-      "reason": "Couverture de condition mesurée 49.1% (112/228), sous le plancher de 50% : failover/délivrabilité majoritairement couverts par des tests d'intégration avec services externes. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 49.1, "count": 228, "covered": 112 }
+      "reason": "Couverture de condition mesur\u00e9e 49.1% (112/228), sous le plancher de 50% : failover/d\u00e9livrabilit\u00e9 majoritairement couverts par des tests d'int\u00e9gration avec services externes. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 49.1,
+        "count": 228,
+        "covered": 112
+      }
     },
     {
       "crate": "nvbes-identity-service",
-      "reason": "Couverture de condition mesurée 46.8% (44/94), sous le plancher de 50% : routes web du service Identity couvertes par des tests d'intégration HTTP dépendants de la base. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 46.8, "count": 94, "covered": 44 }
+      "reason": "Couverture de condition mesur\u00e9e 46.8% (44/94), sous le plancher de 50% : routes web du service Identity couvertes par des tests d'int\u00e9gration HTTP d\u00e9pendants de la base. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 46.8,
+        "count": 94,
+        "covered": 44
+      }
     },
     {
       "crate": "nvbes-observability",
-      "reason": "Couverture de condition mesurée 12.2% (10/82), sous le plancher de 50% : instrumentation (tracing, middlewares, métriques) peu exercée par les tests unitaires. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 12.2, "count": 82, "covered": 10 }
+      "reason": "Couverture de condition mesur\u00e9e 12.2% (10/82), sous le plancher de 50% : instrumentation (tracing, middlewares, m\u00e9triques) peu exerc\u00e9e par les tests unitaires. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 12.2,
+        "count": 82,
+        "covered": 10
+      }
     },
     {
       "crate": "nvbes-platform",
-      "reason": "Couverture de condition mesurée 45.7% (85/186), sous le plancher de 50% : primitives plateforme couvertes à la limite, branches de fallback/config non exercées. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 45.7, "count": 186, "covered": 85 }
-    },
-    {
-      "crate": "nvbes-product-cloud",
-      "reason": "Produit Cloud exclu par la direction V1, archivé dans archive/libs/rust/products/cloud et retiré du workspace Cargo. Baseline historique conservée, sans rôle dans la décision d'exclusion.",
-      "baseline": { "score": 0.0, "count": 4, "covered": 0 }
-    },
-    {
-      "crate": "nvbes-product-enterprise",
-      "reason": "Produit Enterprise exclu par la direction V1, archivé dans archive/libs/rust/products/enterprise et retiré du workspace Cargo. Baseline historique conservée, sans rôle dans la décision d'exclusion.",
-      "baseline": { "score": 0.0, "count": 0, "covered": 0 }
+      "reason": "Couverture de condition mesur\u00e9e 45.7% (85/186), sous le plancher de 50% : primitives plateforme couvertes \u00e0 la limite, branches de fallback/config non exerc\u00e9es. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 45.7,
+        "count": 186,
+        "covered": 85
+      }
     },
     {
       "crate": "nvbes-region",
-      "reason": "Couverture de condition mesurée 46.2% (85/184), sous le plancher de 50% : résidence des données et matrices régionales partiellement exercées. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 46.2, "count": 184, "covered": 85 }
+      "reason": "Couverture de condition mesur\u00e9e 46.2% (85/184), sous le plancher de 50% : r\u00e9sidence des donn\u00e9es et matrices r\u00e9gionales partiellement exerc\u00e9es. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 46.2,
+        "count": 184,
+        "covered": 85
+      }
     },
     {
       "crate": "nvbes-test-utils",
-      "reason": "Bibliothèque utilitaire de tests uniquement (support keyword runner, pools de test) ; hors périmètre de production, non mesurée (166 branches au baseline, 54.2%).",
-      "baseline": { "score": 54.2, "count": 166, "covered": 90 }
+      "reason": "Biblioth\u00e8que utilitaire de tests uniquement (support keyword runner, pools de test) ; hors p\u00e9rim\u00e8tre de production, non mesur\u00e9e (166 branches au baseline, 54.2%).",
+      "baseline": {
+        "score": 54.2,
+        "count": 166,
+        "covered": 90
+      }
     },
     {
       "crate": "nvbes-trust-risk-service",
-      "reason": "Couverture de condition mesurée 27.0% (41/152), sous le plancher de 50% : pipelines de scoring/scans exercés par des tests d'intégration avec service Redis/queue non provisionnés en CI. Ré-inclusion conditionnée à des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": { "score": 27.0, "count": 152, "covered": 41 }
+      "reason": "Couverture de condition mesur\u00e9e 27.0% (41/152), sous le plancher de 50% : pipelines de scoring/scans exerc\u00e9s par des tests d'int\u00e9gration avec service Redis/queue non provisionn\u00e9s en CI. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
+      "baseline": {
+        "score": 27.0,
+        "count": 152,
+        "covered": 41
+      }
     }
   ]
 }

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO identity_login_identifiers (id, principal_id, kind, normalized_value, verified_at) VALUES ($1, $2, 'email', $3, clock_timestamp())",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "560652f8e3c7f70089f6939c5317be35d0d85bb5547c3485c08c069ddec2ed53"
+}

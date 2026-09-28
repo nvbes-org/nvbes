@@ -73,18 +73,21 @@ proptest! {
 
     #[test]
     fn validate_https_url_accepts_valid_https(
-        host in "[a-z0-9]([a-z0-9\\-]{1,14}[a-z0-9])?\\.[a-z]{2,6}",
+        host in "[a-z]([a-z0-9\\-]{0,14}[a-z0-9])?\\.[a-z]{2,6}",
         path in "/[a-z0-9/_\\-]{0,32}"
     ) {
+        // Reject invalid punycode-looking labels that the URL parser rejects.
+        prop_assume!(!host.starts_with("xn--"));
         let url = format!("https://{host}{path}");
         prop_assert!(validate_https_url("test_url", &url).is_ok());
     }
 
     #[test]
     fn validate_https_url_rejects_plain_http_remote(
-        host in "[a-z0-9]([a-z0-9\\-]{1,14}[a-z0-9])?\\.[a-z]{2,6}",
+        host in "[a-z]([a-z0-9\\-]{0,14}[a-z0-9])?\\.[a-z]{2,6}",
         path in "/[a-z0-9/_\\-]{0,32}"
     ) {
+        prop_assume!(!host.starts_with("xn--"));
         let url = format!("http://{host}{path}");
         prop_assert!(validate_https_url("test_url", &url).is_err());
     }

@@ -5,7 +5,7 @@ const MIN_AGE_YEARS: u32 = 13;
 const MAX_AGE_YEARS: u32 = 120;
 const EARLIEST_BIRTH_YEAR: i32 = 1900;
 
-fn region_utc_offset(country_code: &str) -> Option<i32> {
+pub(crate) fn region_utc_offset(country_code: &str) -> Option<i32> {
     match country_code {
         "FR" | "DE" | "IT" | "ES" | "NL" | "BE" | "LU" | "AT" | "CH" | "DK" | "NO" | "SE"
         | "PL" | "CZ" | "SK" | "HU" | "HR" | "SI" | "BA" | "RS" | "ME" | "MK" | "AL" | "MT"
@@ -140,3 +140,6 @@ pub(super) fn validate_birthdate_on(
 #[cfg(test)]
 #[path = "auth.helpers.birthdate.property.tests.rs"]
 mod property_tests;
+#[cfg(test)]
+#[path = "auth.helpers.birthdate.tests.rs"]
+mod unit_tests;

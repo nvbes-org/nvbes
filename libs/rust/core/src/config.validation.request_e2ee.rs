@@ -29,3 +29,7 @@ pub(crate) fn validate_request_e2ee(config: &AppConfig, strict_mode: bool) -> Re
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "config.validation.request_e2ee.tests.rs"]
+mod tests;

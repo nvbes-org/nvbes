@@ -121,15 +121,26 @@
       "decision": "to_address",
       "attack": "An attacker automates credential stuffing, password spraying, registration abuse, or authentication probes.",
       "referential": "OWASP A2 Broken Authentication; OWASP Automated Threats",
-      "countermeasures": ["DEFENSE_001", "DEFENSE_002", "DEFENSE_010"],
+      "countermeasures": [
+        "DEFENSE_001",
+        "DEFENSE_002",
+        "DEFENSE_010"
+      ],
       "validation": [
         {
           "path": "apps/identity-service/src/identity.auth.rs",
-          "includes": ["authenticate", "dummy_verify_password", "audit"]
+          "includes": [
+            "authenticate",
+            "dummy_verify_password",
+            "audit"
+          ]
         },
         {
           "path": "libs/rust/core/src/limiter.rs",
-          "includes": ["RateLimiter", "check_rate_limit"]
+          "includes": [
+            "RateLimiter",
+            "check_rate_limit"
+          ]
         }
       ]
     },
@@ -141,15 +152,26 @@
       "decision": "to_address",
       "attack": "An attacker brute-forces MFA, abuses recovery paths, or keeps retrying failed step-up flows to take over an account.",
       "referential": "OWASP Multifactor Authentication; OWASP A2 Broken Authentication",
-      "countermeasures": ["DEFENSE_002", "DEFENSE_010"],
+      "countermeasures": [
+        "DEFENSE_002",
+        "DEFENSE_010"
+      ],
       "validation": [
         {
           "path": "apps/identity-service/src/identity.mfa.rs",
-          "includes": ["enroll_totp", "confirm_enrollment", "grant_step_up", "replay_rejected"]
+          "includes": [
+            "enroll_totp",
+            "confirm_enrollment",
+            "grant_step_up",
+            "replay_rejected"
+          ]
         },
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",
-          "includes": ["sensitive_actions_require_step_up", "action_requires_step_up"]
+          "includes": [
+            "sensitive_actions_require_step_up",
+            "action_requires_step_up"
+          ]
         }
       ]
     },
@@ -161,11 +183,18 @@
       "decision": "to_address",
       "attack": "An authenticated actor manipulates team, workspace, or resource identifiers to access or mutate another customer's resources.",
       "referential": "OWASP A5 Broken Access Control; OWASP IDOR",
-      "countermeasures": ["DEFENSE_003", "DEFENSE_010"],
+      "countermeasures": [
+        "DEFENSE_003",
+        "DEFENSE_010"
+      ],
       "validation": [
         {
           "path": "apps/identity-service/src/identity.authz.rs",
-          "includes": ["AuthzDecisionRequest", "AuthzDecisionResponse", "workspace_id"]
+          "includes": [
+            "AuthzDecisionRequest",
+            "AuthzDecisionResponse",
+            "workspace_id"
+          ]
         },
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -184,7 +213,10 @@
       "decision": "to_address",
       "attack": "An attacker triggers browser-level authenticated mutations or bypasses security headers through forged requests or missing transport protections.",
       "referential": "OWASP CSRF Prevention; OWASP A5 Broken Access Control",
-      "countermeasures": ["DEFENSE_004", "DEFENSE_010"],
+      "countermeasures": [
+        "DEFENSE_004",
+        "DEFENSE_010"
+      ],
       "validation": [
         {
           "path": "libs/rust/core/src/security.headers.rs",
@@ -211,15 +243,24 @@
       "decision": "to_address",
       "attack": "An attacker frames privileged UI, clickjacks account actions, or exploits missing browser hardening headers.",
       "referential": "OWASP Clickjacking Defense; OWASP A6 Security Misconfiguration",
-      "countermeasures": ["DEFENSE_005"],
+      "countermeasures": [
+        "DEFENSE_005"
+      ],
       "validation": [
         {
           "path": "libs/rust/core/src/security.headers.rs",
-          "includes": ["x-frame-options", "frame-ancestors 'none'", "x-content-type-options"]
+          "includes": [
+            "x-frame-options",
+            "frame-ancestors 'none'",
+            "x-content-type-options"
+          ]
         },
         {
           "path": "libs/rust/core/src/security.headers.tests.rs",
-          "includes": ["x-frame-options", "CLICKJACKING_FRAME_ANCESTORS"]
+          "includes": [
+            "x-frame-options",
+            "CLICKJACKING_FRAME_ANCESTORS"
+          ]
         }
       ]
     },
@@ -231,15 +272,24 @@
       "decision": "to_address",
       "attack": "An attacker attempts cross-site scripting (XSS) through malicious input injection or missing content security policies.",
       "referential": "OWASP A7 Cross-Site Scripting; OWASP Content Security Policy",
-      "countermeasures": ["DEFENSE_006"],
+      "countermeasures": [
+        "DEFENSE_006"
+      ],
       "validation": [
         {
           "path": "libs/rust/core/src/security.headers.rs",
-          "includes": ["CSP_VALUE", "default-src 'none'", "connect-src 'self'"]
+          "includes": [
+            "CSP_VALUE",
+            "default-src 'none'",
+            "connect-src 'self'"
+          ]
         },
         {
           "path": "libs/rust/core/src/security.headers.tests.rs",
-          "includes": ["content-security-policy", "default-src 'none'"]
+          "includes": [
+            "content-security-policy",
+            "default-src 'none'"
+          ]
         }
       ]
     },
@@ -251,15 +301,24 @@
       "decision": "to_address",
       "attack": "An attacker sends forged SNS notification payloads or abuses worker dispatch pipelines with tampered delivery receipts.",
       "referential": "OWASP API Security; OWASP Message Authenticity",
-      "countermeasures": ["DEFENSE_007", "DEFENSE_010"],
+      "countermeasures": [
+        "DEFENSE_007",
+        "DEFENSE_010"
+      ],
       "validation": [
         {
           "path": "apps/email-worker/src/email.worker.webhook.verify.rs",
-          "includes": ["SnsMessage", "SnsVerificationError", "MAX_MESSAGE_AGE"]
+          "includes": [
+            "SnsMessage",
+            "SnsVerificationError",
+            "MAX_MESSAGE_AGE"
+          ]
         },
         {
           "path": "apps/email-worker/src/email.worker.dispatcher.rs",
-          "includes": ["dispatch"]
+          "includes": [
+            "dispatch"
+          ]
         }
       ]
     },
@@ -271,19 +330,32 @@
       "decision": "to_address",
       "attack": "An attacker sends fake, tampered, stale, or duplicate webhook payloads to trigger illegitimate billing side effects.",
       "referential": "OWASP Webhook Security; OWASP A5 Broken Access Control",
-      "countermeasures": ["DEFENSE_008", "DEFENSE_010"],
+      "countermeasures": [
+        "DEFENSE_008",
+        "DEFENSE_010"
+      ],
       "validation": [
         {
           "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
-          "includes": ["classify_webhook_retry", "payload_hash", "WebhookRetryDecision::Duplicate"]
+          "includes": [
+            "classify_webhook_retry",
+            "payload_hash",
+            "WebhookRetryDecision::Duplicate"
+          ]
         },
         {
           "path": "libs/rust/billing/src/stripe.rs",
-          "includes": ["verify_stripe_signature"]
+          "includes": [
+            "verify_stripe_signature"
+          ]
         },
         {
           "path": "apps/billing-service/src/billing.webhooks.rs",
-          "includes": ["stripe_webhook_handler", "stripe-signature", "pg_advisory_xact_lock"]
+          "includes": [
+            "stripe_webhook_handler",
+            "stripe-signature",
+            "pg_advisory_xact_lock"
+          ]
         }
       ]
     },
@@ -295,7 +367,10 @@
       "decision": "to_address",
       "attack": "A compromised, confused, or overprivileged operator attempts irreversible platform mutations without proper role, idempotency, or permission context.",
       "referential": "OWASP Authorization; OWASP Transaction Authorization",
-      "countermeasures": ["DEFENSE_009", "DEFENSE_010"],
+      "countermeasures": [
+        "DEFENSE_009",
+        "DEFENSE_010"
+      ],
       "validation": [
         {
           "path": "libs/rust/platform/src/platform.operations.service.rs",
@@ -325,19 +400,39 @@
       "decision": "to_address",
       "attack": "An attacker alters or deletes audit evidence to hide account, billing, or administrative abuse.",
       "referential": "OWASP A10 Insufficient Logging and Monitoring",
-      "countermeasures": ["DEFENSE_010"],
+      "countermeasures": [
+        "DEFENSE_010"
+      ],
       "validation": [
         {
           "path": "apps/identity-service/migrations/0001_identity_foundation.sql",
-          "includes": ["CREATE TABLE identity_audit_events"]
+          "includes": [
+            "CREATE TABLE identity_audit_events"
+          ]
         },
         {
           "path": "libs/rust/audit/src/lib.rs",
-          "includes": ["AuditEventInput", "INSERT INTO audit_events"]
+          "includes": [
+            "AuditEventInput",
+            "action_key",
+            "is_workspace_scoped",
+            "has_network_context"
+          ]
         },
         {
           "path": "apps/account-service/src/account.audit.rs",
-          "includes": ["INSERT INTO account_audit_events", "AuditInput", "record"]
+          "includes": [
+            "INSERT INTO account_audit_events",
+            "AuditInput",
+            "record"
+          ]
+        },
+        {
+          "path": "apps/billing-service/src/billing.audit.rs",
+          "includes": [
+            "INSERT INTO billing_audit_events",
+            "record_audit_event"
+          ]
         }
       ]
     },
@@ -349,23 +444,37 @@
       "decision": "to_address",
       "attack": "An attacker exploits leaked secrets, unknown vulnerable dependencies, missing SBOM evidence, or weak container/dependency hygiene.",
       "referential": "OWASP A9 Vulnerable Components; OWASP Software Supply Chain Security",
-      "countermeasures": ["DEFENSE_011"],
+      "countermeasures": [
+        "DEFENSE_011"
+      ],
       "validation": [
         {
           "path": "tools/security/scan-secrets.mjs",
-          "includes": ["secretPatterns", "Secret scan: ok"]
+          "includes": [
+            "secretPatterns",
+            "Secret scan: ok"
+          ]
         },
         {
           "path": "tools/security/check-dependencies.mjs",
-          "includes": ["Dependency coverage: ok", "pnpm-lock.yaml", "Cargo.lock"]
+          "includes": [
+            "Dependency coverage: ok",
+            "pnpm-lock.yaml",
+            "Cargo.lock"
+          ]
         },
         {
           "path": "tools/security/sbom.mjs",
-          "includes": ["CycloneDX SBOM: ok", ".temp/security/nvbes.cdx.json"]
+          "includes": [
+            "CycloneDX SBOM: ok",
+            ".temp/security/nvbes.cdx.json"
+          ]
         },
         {
           "path": "tools/security/check-containers.mjs",
-          "includes": ["Container/deploy manifests: ok"]
+          "includes": [
+            "Container/deploy manifests: ok"
+          ]
         }
       ]
     }

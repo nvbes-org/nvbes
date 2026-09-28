@@ -149,6 +149,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn sent_count_tracks_zero_and_multiple_deliveries() {
+        let sender = MockEmailSender::new();
+        assert_eq!(sender.sent_count().await, 0);
+        sender
+            .send_message(&message(
+                vec![EmailAddress {
+                    email: "one@example.test".into(),
+                    name: None,
+                }],
+                Vec::new(),
+            ))
+            .await
+            .unwrap();
+        sender
+            .send_message(&message(
+                vec![EmailAddress {
+                    email: "two@example.test".into(),
+                    name: None,
+                }],
+                Vec::new(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(sender.sent_count().await, 2);
+    }
+
+    #[tokio::test]
     async fn mock_derives_provider_ids_from_job_or_empty_recipient() {
         let sender = MockEmailSender::new();
         let job = sender

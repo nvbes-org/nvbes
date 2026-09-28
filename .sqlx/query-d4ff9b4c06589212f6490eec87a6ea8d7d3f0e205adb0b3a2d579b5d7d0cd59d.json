@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE identity_auth_factors SET state = 'active', last_accepted_counter = $1 WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d4ff9b4c06589212f6490eec87a6ea8d7d3f0e205adb0b3a2d579b5d7d0cd59d"
+}

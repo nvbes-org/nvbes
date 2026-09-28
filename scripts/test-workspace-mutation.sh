@@ -51,6 +51,7 @@ fi
 CARGO_MUTANTS_ARGS=(
   "${CARGO_PACKAGE_ARGS[@]}"
   --locked
+  --all-features
   --timeout "$TIMEOUT"
   --no-times
   -o "$OUT_ROOT"
@@ -71,6 +72,11 @@ fi
 
 mkdir -p "$OUT_ROOT"
 rm -rf "$OUT_DIR"
+
+# Never share CARGO_TARGET_DIR with cargo-mutants scratch copies: cargo may
+# report Fresh and re-run an unmutated test binary (false MISSED). Let each
+# scratch tree use its own target/.
+unset CARGO_TARGET_DIR
 
 set +e
 cargo mutants "${CARGO_MUTANTS_ARGS[@]}"

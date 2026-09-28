@@ -267,3 +267,25 @@ fn validate_optional_https_url(
         None => Ok(()),
     }
 }
+
+#[cfg(test)]
+mod helper_tests {
+    use super::*;
+
+    #[test]
+    fn validate_rejects_when_helpers_are_short_circuited() {
+        assert!(validate_email("not-an-email").is_err());
+        assert!(validate_text("f", "").is_err());
+        assert!(validate_text("f", "line\nbreak").is_err());
+        assert!(validate_text("f", &"a".repeat(201)).is_err());
+        validate_text("f", &"a".repeat(200)).expect("max text length");
+        assert!(validate_optional_email("f", Some("bad")).is_err());
+        validate_optional_email("f", None).expect("absent");
+        assert!(validate_money(-1, "EUR").is_err());
+        validate_money(0, "EUR").expect("zero");
+        assert!(validate_https_url("f", "http://example.com").is_err());
+        validate_https_url("f", "https://example.com").expect("https");
+        assert!(validate_idempotency_key("").is_err());
+        validate_idempotency_key("ok-key").expect("idempotency");
+    }
+}

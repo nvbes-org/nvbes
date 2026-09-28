@@ -39,25 +39,25 @@ pub(super) async fn register_password_identity(
         hash_password(password).map_err(|_| anyhow::anyhow!("password hashing failed"))?;
     let principal_id = Uuid::new_v4();
     let mut tx = db.begin().await?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO identity_principals (id, kind, status) VALUES ($1, 'human', 'active')",
+        principal_id
     )
-    .bind(principal_id)
     .execute(&mut *tx)
     .await?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO identity_login_identifiers (id, principal_id, kind, normalized_value, verified_at) VALUES ($1, $2, 'email', $3, clock_timestamp())",
+        Uuid::new_v4(),
+        principal_id,
+        &email
     )
-    .bind(Uuid::new_v4())
-    .bind(principal_id)
-    .bind(&email)
     .execute(&mut *tx)
     .await?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO identity_password_credentials (principal_id, password_hash) VALUES ($1, $2)",
+        principal_id,
+        password_hash
     )
-    .bind(principal_id)
-    .bind(password_hash)
     .execute(&mut *tx)
     .await?;
     audit(&mut tx, principal_id, audit_event).await?;
@@ -78,30 +78,31 @@ pub(super) async fn authenticate(
     password: &str,
 ) -> anyhow::Result<AuthenticatedSession> {
     let email = normalize_email(email)?;
-    let credential = sqlx::query_as::<_, (Uuid, String)>(
+    let credential = sqlx::query!(
         "SELECT p.id, c.password_hash FROM identity_principals p JOIN identity_login_identifiers i ON i.principal_id = p.id JOIN identity_password_credentials c ON c.principal_id = p.id WHERE i.kind = 'email' AND i.normalized_value = $1 AND i.verified_at IS NOT NULL AND p.status = 'active'",
+        email
     )
-    .bind(email)
     .fetch_optional(db)
     .await?;
-    let Some((principal_id, password_hash)) = credential else {
+    let Some(credential) = credential else {
         dummy_verify_password(password, None);
         anyhow::bail!("authentication failed");
     };
-    let password_valid = verify_password(password, &password_hash)
+    let password_valid = verify_password(password, &credential.password_hash)
         .map_err(|_| anyhow::anyhow!("password verification failed"))?;
     if !password_valid {
         anyhow::bail!("authentication failed");
     }
+    let principal_id = credential.id;
     let session_token = random_token();
     let mut tx = db.begin().await?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO identity_sessions (id, principal_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)",
+        Uuid::new_v4(),
+        principal_id,
+        hash_token(&session_token),
+        Utc::now() + Duration::hours(SESSION_TTL_HOURS)
     )
-    .bind(Uuid::new_v4())
-    .bind(principal_id)
-    .bind(hash_token(&session_token))
-    .bind(Utc::now() + Duration::hours(SESSION_TTL_HOURS))
     .execute(&mut *tx)
     .await?;
     audit(&mut tx, principal_id, "identity.authenticated").await?;
@@ -114,19 +115,19 @@ pub(super) async fn authenticate(
 
 pub(super) async fn revoke_session_token(db: &PgPool, token: &str) -> anyhow::Result<bool> {
     let mut tx = db.begin().await?;
-    let principal_id: Option<Uuid> = sqlx::query_scalar(
+    let principal_id = sqlx::query_scalar!(
         "SELECT principal_id FROM identity_sessions WHERE token_hash = $1 AND revoked_at IS NULL FOR UPDATE",
+        hash_token(token)
     )
-    .bind(hash_token(token))
     .fetch_optional(&mut *tx)
     .await?;
     let Some(principal_id) = principal_id else {
         return Ok(false);
     };
-    sqlx::query(
+    sqlx::query!(
         "UPDATE identity_sessions SET revoked_at = clock_timestamp() WHERE token_hash = $1 AND revoked_at IS NULL",
+        hash_token(token)
     )
-    .bind(hash_token(token))
     .execute(&mut *tx)
     .await?;
     audit(&mut tx, principal_id, "identity.session_revoked").await?;
@@ -139,23 +140,23 @@ pub(super) async fn request_recovery(
     email: &str,
 ) -> anyhow::Result<RecoveryNotification> {
     let email = normalize_email(email)?;
-    let principal_id: Uuid = sqlx::query_scalar(
+    let principal_id = sqlx::query_scalar!(
         "SELECT principal_id FROM identity_login_identifiers WHERE kind = 'email' AND normalized_value = $1 AND verified_at IS NOT NULL",
+        &email
     )
-    .bind(&email)
     .fetch_one(db)
     .await?;
     let token = random_token();
     let challenge_id = Uuid::new_v4();
     let expires_at = Utc::now() + Duration::minutes(RECOVERY_TTL_MINUTES);
     let mut tx = db.begin().await?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO identity_recovery_challenges (id, principal_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)",
+        challenge_id,
+        principal_id,
+        hash_token(&token),
+        expires_at
     )
-    .bind(challenge_id)
-    .bind(principal_id)
-    .bind(hash_token(&token))
-    .bind(expires_at)
     .execute(&mut *tx)
     .await?;
     audit(&mut tx, principal_id, "identity.recovery_requested").await?;
@@ -174,25 +175,31 @@ pub(super) async fn reset_password(db: &PgPool, token: &str, password: &str) -> 
     let password_hash =
         hash_password(password).map_err(|_| anyhow::anyhow!("password hashing failed"))?;
     let mut tx = db.begin().await?;
-    let principal_id: Uuid = sqlx::query_scalar(
+    let principal_id = sqlx::query_scalar!(
         "SELECT principal_id FROM identity_recovery_challenges WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > clock_timestamp() FOR UPDATE",
+        hash_token(token)
     )
-    .bind(hash_token(token))
     .fetch_one(&mut *tx)
     .await?;
-    sqlx::query("UPDATE identity_password_credentials SET password_hash = $1, changed_at = clock_timestamp(), compromised_at = NULL WHERE principal_id = $2")
-        .bind(password_hash)
-        .bind(principal_id)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("UPDATE identity_recovery_challenges SET consumed_at = clock_timestamp() WHERE token_hash = $1")
-        .bind(hash_token(token))
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("UPDATE identity_sessions SET revoked_at = clock_timestamp() WHERE principal_id = $1 AND revoked_at IS NULL")
-        .bind(principal_id)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query!(
+        "UPDATE identity_password_credentials SET password_hash = $1, changed_at = clock_timestamp(), compromised_at = NULL WHERE principal_id = $2",
+        password_hash,
+        principal_id
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query!(
+        "UPDATE identity_recovery_challenges SET consumed_at = clock_timestamp() WHERE token_hash = $1",
+        hash_token(token)
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query!(
+        "UPDATE identity_sessions SET revoked_at = clock_timestamp() WHERE principal_id = $1 AND revoked_at IS NULL",
+        principal_id
+    )
+    .execute(&mut *tx)
+    .await?;
     audit(&mut tx, principal_id, "identity.password_recovered").await?;
     tx.commit().await?;
     Ok(())
@@ -203,13 +210,15 @@ pub(super) async fn audit(
     principal_id: Uuid,
     event_type: &str,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO identity_audit_events (id, principal_id, actor_principal_id, event_type, correlation_id) VALUES ($1, $2, $2, $3, $4)")
-        .bind(Uuid::new_v4())
-        .bind(principal_id)
-        .bind(event_type)
-        .bind(Uuid::new_v4())
-        .execute(&mut **tx)
-        .await?;
+    sqlx::query!(
+        "INSERT INTO identity_audit_events (id, principal_id, actor_principal_id, event_type, correlation_id) VALUES ($1, $2, $2, $3, $4)",
+        Uuid::new_v4(),
+        principal_id,
+        event_type,
+        Uuid::new_v4()
+    )
+    .execute(&mut **tx)
+    .await?;
     Ok(())
 }
 
@@ -218,13 +227,15 @@ async fn outbox(
     principal_id: Uuid,
     event_type: &str,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO identity_outbox (id, event_type, aggregate_id, payload) VALUES ($1, $2, $3, $4)")
-        .bind(Uuid::new_v4())
-        .bind(event_type)
-        .bind(principal_id)
-        .bind(serde_json::json!({ "principal_id": principal_id }))
-        .execute(&mut **tx)
-        .await?;
+    sqlx::query!(
+        "INSERT INTO identity_outbox (id, event_type, aggregate_id, payload) VALUES ($1, $2, $3, $4)",
+        Uuid::new_v4(),
+        event_type,
+        principal_id,
+        serde_json::json!({ "principal_id": principal_id })
+    )
+    .execute(&mut **tx)
+    .await?;
     Ok(())
 }
 

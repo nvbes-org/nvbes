@@ -21,6 +21,20 @@ fn stripe_is_not_default_when_external_fallback_is_disabled() {
         external_provider_status: ProviderOperationalStatus::Available,
     });
     assert_eq!(error, Err(ProviderRoutingError::NoCompliantProvider));
+    assert_eq!(
+        ProviderRoutingError::NoCompliantProvider.as_str(),
+        "no_compliant_billing_provider"
+    );
+}
+
+#[test]
+fn provider_operational_status_labels_are_stable() {
+    assert_eq!(ProviderOperationalStatus::Available.as_str(), "available");
+    assert_eq!(ProviderOperationalStatus::Degraded.as_str(), "degraded");
+    assert_eq!(
+        ProviderOperationalStatus::Unavailable.as_str(),
+        "unavailable"
+    );
 }
 
 #[test]
@@ -210,6 +224,7 @@ fn route_candidates_explain_eligibility_and_visible_fees() {
     assert_eq!(candidates.len(), 2);
     assert_eq!(candidates[0].provider, ProviderCode::Mollie);
     assert!(candidates[0].eligible);
+    assert!(candidates[0].preferred);
     assert_eq!(candidates[0].residency_scope, "local");
     assert_eq!(candidates[0].success_priority, 95);
     assert_eq!(candidates[0].estimated_fee_minor, 145);
@@ -217,6 +232,7 @@ fn route_candidates_explain_eligibility_and_visible_fees() {
 
     assert_eq!(candidates[1].provider, ProviderCode::Stripe);
     assert!(!candidates[1].eligible);
+    assert!(!candidates[1].preferred);
     assert_eq!(candidates[1].residency_scope, "external");
     assert_eq!(candidates[1].success_priority, 80);
     assert_eq!(
@@ -224,6 +240,79 @@ fn route_candidates_explain_eligibility_and_visible_fees() {
         Some("external_fallback_disabled")
     );
     assert_eq!(candidates[1].estimated_fee_minor, 175);
+}
+
+#[test]
+fn route_candidates_cover_mollie_exclusion_reasons() {
+    let preferred_stripe = provider_route_candidates(&ProviderRouteRequest {
+        country: Some("fr".to_string()),
+        currency: "EUR".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: Some(ProviderCode::Stripe),
+        mollie_enabled: true,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Available,
+    });
+    assert!(!preferred_stripe[0].eligible);
+    assert_eq!(
+        preferred_stripe[0].exclusion_reason,
+        Some("not_preferred_by_routing_rule")
+    );
+    assert!(preferred_stripe[1].eligible);
+    assert!(preferred_stripe[1].preferred);
+    assert_eq!(preferred_stripe[1].exclusion_reason, None);
+
+    let disabled = provider_route_candidates(&ProviderRouteRequest {
+        country: None,
+        currency: "EUR".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: None,
+        mollie_enabled: false,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Available,
+    });
+    assert_eq!(
+        disabled[0].exclusion_reason,
+        Some("provider_disabled_or_unconfigured")
+    );
+
+    let non_eur = provider_route_candidates(&ProviderRouteRequest {
+        country: Some("DE".to_string()),
+        currency: "USD".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: None,
+        mollie_enabled: true,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Available,
+    });
+    assert_eq!(non_eur[0].exclusion_reason, Some("currency_not_supported"));
+
+    let unavailable = provider_route_candidates(&ProviderRouteRequest {
+        country: Some("NL".to_string()),
+        currency: "EUR".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: None,
+        mollie_enabled: true,
+        mollie_status: ProviderOperationalStatus::Unavailable,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Unavailable,
+    });
+    assert_eq!(
+        unavailable[0].exclusion_reason,
+        Some("provider_unavailable")
+    );
+    assert!(!unavailable[1].eligible);
+    assert_eq!(
+        unavailable[1].exclusion_reason,
+        Some("provider_unavailable")
+    );
 }
 
 #[test]
@@ -252,6 +341,43 @@ fn selected_provider_is_reported_as_eligible_candidate() {
 }
 
 #[test]
+fn operational_status_from_config_normalizes_values() {
+    assert_eq!(
+        ProviderOperationalStatus::from_config("available"),
+        ProviderOperationalStatus::Available
+    );
+    assert_eq!(
+        ProviderOperationalStatus::from_config(" DEGRADED "),
+        ProviderOperationalStatus::Degraded
+    );
+    assert_eq!(
+        ProviderOperationalStatus::from_config("offline"),
+        ProviderOperationalStatus::Unavailable
+    );
+    assert!(!ProviderOperationalStatus::Unavailable.accepts_new_checkouts());
+    assert_eq!(
+        ProviderRouteReason::LowestEstimatedCost.as_str(),
+        "lowest_estimated_cost"
+    );
+}
+
+#[test]
+fn non_eur_currency_excludes_regional_provider_without_fallback() {
+    let error = route_provider(&ProviderRouteRequest {
+        country: Some("FR".to_string()),
+        currency: "USD".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: None,
+        mollie_enabled: true,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: false,
+        external_provider_status: ProviderOperationalStatus::Available,
+    });
+    assert_eq!(error, Err(ProviderRoutingError::NoCompliantProvider));
+}
+
+#[test]
 fn cb_provider_is_modelled_as_local_for_french_card_routing() {
     assert_eq!(
         provider_residency_scope(Some("FR"), ProviderCode::Cb),
@@ -270,4 +396,43 @@ fn cb_provider_is_modelled_as_local_for_french_card_routing() {
         ),
         96
     );
+    assert_eq!(
+        provider_success_priority(
+            Some("DE"),
+            ProviderCode::Cb,
+            ProviderOperationalStatus::Available
+        ),
+        86
+    );
+}
+
+#[test]
+fn external_fallback_skips_unavailable_stripe_provider() {
+    let decision = route_provider(&ProviderRouteRequest {
+        country: Some("FR".to_string()),
+        currency: "EUR".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: None,
+        mollie_enabled: true,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Unavailable,
+    })
+    .expect("mollie remains selectable");
+    assert_eq!(decision.provider, ProviderCode::Mollie);
+
+    let candidates = provider_route_candidates(&ProviderRouteRequest {
+        country: Some("NL".to_string()),
+        currency: "EUR".to_string(),
+        payment_method: None,
+        amount_minor: 1_000,
+        preferred_provider: None,
+        mollie_enabled: false,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Unavailable,
+    });
+    assert!(!candidates[1].eligible);
+    assert_eq!(candidates[1].exclusion_reason, Some("provider_unavailable"));
 }

@@ -65,3 +65,7 @@ impl BillingConfig {
         })
     }
 }
+
+#[cfg(test)]
+#[path = "billing.config.tests.rs"]
+mod tests;

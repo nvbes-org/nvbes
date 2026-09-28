@@ -17,13 +17,14 @@ pub struct BillingPlanResponse {
 pub async fn list_plans_handler(
     State(state): State<BillingState>,
 ) -> BillingResult<Json<Vec<BillingPlanResponse>>> {
-    let plans = sqlx::query_as::<_, BillingPlanResponse>(
+    let plans = sqlx::query_as!(
+        BillingPlanResponse,
         r#"
         SELECT plan_code, name, stripe_price_id, currency, amount_cents, billing_interval
         FROM billing_plans
         WHERE is_active = true
         ORDER BY amount_cents ASC
-        "#,
+        "#
     )
     .fetch_all(&state.db)
     .await?;
@@ -55,19 +56,25 @@ pub struct StripeMappingsReport {
 /// non-negative, currency a 3-letter code, interval `month` or `year`,
 /// and at least one plan active.
 pub async fn check_stripe_mappings(pool: &PgPool) -> anyhow::Result<StripeMappingsReport> {
-    let rows = sqlx::query_as::<_, StripeMappingRow>(
+    let rows = sqlx::query_as!(
+        StripeMappingRow,
         r#"
         SELECT plan_code, stripe_price_id, currency, amount_cents, billing_interval, is_active
         FROM billing_plans
         ORDER BY plan_code ASC
-        "#,
+        "#
     )
     .fetch_all(pool)
     .await?;
 
+    Ok(evaluate_stripe_mappings(&rows))
+}
+
+/// Pure validation of Stripe price mappings (no I/O).
+pub fn evaluate_stripe_mappings(rows: &[StripeMappingRow]) -> StripeMappingsReport {
     let mut failures = Vec::new();
     let mut seen_price_ids = std::collections::HashSet::new();
-    for row in &rows {
+    for row in rows {
         if row.plan_code.trim().is_empty() {
             failures.push("billing_plans: empty plan_code".to_string());
         }
@@ -112,9 +119,17 @@ pub async fn check_stripe_mappings(pool: &PgPool) -> anyhow::Result<StripeMappin
         failures.push("billing_plans: no active plan".to_string());
     }
 
-    Ok(StripeMappingsReport {
+    StripeMappingsReport {
         plans_checked: rows.len(),
         active_plans,
         failures,
-    })
+    }
 }
+
+#[cfg(test)]
+#[path = "billing.plans.tests.rs"]
+mod tests;
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.plans.http.tests.rs"]
+mod http_tests;

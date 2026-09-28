@@ -14,7 +14,7 @@ use crate::{
 
 #[derive(Debug, Clone, FromRow)]
 pub(crate) struct ProfileRow {
-    principal_id: Uuid,
+    pub(crate) principal_id: Uuid,
     firstname: Option<String>,
     lastname: Option<String>,
     username: Option<String>,
@@ -204,3 +204,7 @@ impl From<ProfileRow> for Profile {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "account.profile.tests.rs"]
+mod tests;

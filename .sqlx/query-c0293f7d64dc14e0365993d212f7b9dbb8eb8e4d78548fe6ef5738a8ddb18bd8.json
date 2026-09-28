@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status)\n        VALUES ($1, $2, $3, $4, 'processed')\n        ON CONFLICT (event_id) DO UPDATE SET status = 'processed', error_message = NULL, processed_at = NULL\n        RETURNING event_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "event_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c0293f7d64dc14e0365993d212f7b9dbb8eb8e4d78548fe6ef5738a8ddb18bd8"
+}

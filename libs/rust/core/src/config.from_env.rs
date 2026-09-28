@@ -360,3 +360,7 @@ impl AppConfig {
         Ok(config)
     }
 }
+
+#[cfg(test)]
+#[path = "config.from_env.tests.rs"]
+mod tests;

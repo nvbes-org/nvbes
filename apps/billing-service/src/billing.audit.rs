@@ -11,18 +11,22 @@ pub async fn record_audit_event(
     action: &str,
     details: &Value,
 ) -> BillingResult<()> {
-    sqlx::query(
+    sqlx::query!(
         r#"
         INSERT INTO billing_audit_events (account_id, actor, action, details)
         VALUES ($1, $2, $3, $4)
         "#,
+        account_id,
+        actor,
+        action,
+        details
     )
-    .bind(account_id)
-    .bind(actor)
-    .bind(action)
-    .bind(details)
     .execute(db)
     .await?;
 
     Ok(())
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.audit.tests.rs"]
+mod tests;

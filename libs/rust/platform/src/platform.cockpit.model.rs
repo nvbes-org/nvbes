@@ -29,6 +29,9 @@ mod tests {
     #[test]
     fn service_ids_are_stable_wire_names() {
         assert_eq!(ServiceId::Identity.as_str(), "identity-service");
+        assert_eq!(ServiceId::Account.as_str(), "account-service");
+        assert_eq!(ServiceId::Billing.as_str(), "billing-service");
+        assert_eq!(ServiceId::Email.as_str(), "email-worker");
         assert_eq!(ServiceId::TrustRisk.as_str(), "trust-risk-service");
         assert_eq!(
             serde_json::to_string(&ServiceId::Email).unwrap(),

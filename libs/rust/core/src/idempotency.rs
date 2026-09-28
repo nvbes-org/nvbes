@@ -116,5 +116,24 @@ mod tests {
 
         assert_ne!(first.as_str(), second.as_str());
         assert_eq!(first.as_str().len(), 64);
+        assert_eq!(format!("{first}").len(), 64);
+    }
+
+    #[test]
+    fn derive_scope_falls_back_to_client_ip_then_anonymous() {
+        let method = Method::POST;
+        let uri = "/v1/resources".parse::<Uri>().expect("uri");
+
+        let mut with_ip = HeaderMap::new();
+        with_ip.insert(
+            "x-nvbes-client-ip",
+            "203.0.113.10".parse().expect("valid header"),
+        );
+        let ip_scope = derive_scope(&with_ip, &method, &uri);
+
+        let anon_scope = derive_scope(&HeaderMap::new(), &method, &uri);
+        assert_ne!(ip_scope.as_str(), anon_scope.as_str());
+        assert_eq!(ip_scope.as_str().len(), 64);
+        assert_eq!(anon_scope.as_str().len(), 64);
     }
 }

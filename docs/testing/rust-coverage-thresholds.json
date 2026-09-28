@@ -9,20 +9,20 @@
     "plan": "docs/testing/coverage-90-campaign.md"
   },
   "baseline": {
-    "commit": "9df10693",
+    "commit": "04bdc8b5",
     "date": "2026-09-23"
   },
   "crates": {
     "nvbes-email": {
       "threshold": {
-        "lines": 95,
-        "functions": 90,
-        "regions": 90
+        "lines": 96,
+        "functions": 93,
+        "regions": 95
       },
       "baseline": {
-        "lines": 97.1,
-        "functions": 94.7,
-        "regions": 95.9
+        "lines": 98.3,
+        "functions": 95.7,
+        "regions": 97.7
       }
     },
     "nvbes-email-scaleway": {
@@ -39,158 +39,158 @@
     },
     "nvbes-email-worker": {
       "threshold": {
-        "lines": 82,
-        "functions": 79,
-        "regions": 73
+        "lines": 90,
+        "functions": 88,
+        "regions": 83
       },
       "baseline": {
-        "lines": 84.1,
-        "functions": 81.9,
-        "regions": 75.5
+        "lines": 92.7,
+        "functions": 90.1,
+        "regions": 85.5
       }
     },
     "nvbes-platform": {
       "threshold": {
-        "lines": 69,
-        "functions": 63,
-        "regions": 62
+        "lines": 87,
+        "functions": 81,
+        "regions": 82
       },
       "baseline": {
-        "lines": 71.8,
-        "functions": 65.8,
-        "regions": 64.7
+        "lines": 89.2,
+        "functions": 83.6,
+        "regions": 84.3
       }
     },
     "nvbes-trust-risk": {
       "threshold": {
-        "lines": 71,
-        "functions": 66,
-        "regions": 64
+        "lines": 92,
+        "functions": 90,
+        "regions": 91
       },
       "baseline": {
-        "lines": 73.9,
-        "functions": 68.6,
-        "regions": 66.9
+        "lines": 94.6,
+        "functions": 92.4,
+        "regions": 93.2
       }
     },
     "nvbes-identity-service": {
       "threshold": {
-        "lines": 57,
-        "functions": 65,
-        "regions": 54
+        "lines": 80,
+        "functions": 84,
+        "regions": 76
       },
       "baseline": {
-        "lines": 59.0,
-        "functions": 67.1,
-        "regions": 56.5
+        "lines": 82.8,
+        "functions": 86.7,
+        "regions": 78.7
       }
     },
     "nvbes-billing-worker": {
       "threshold": {
-        "lines": 51,
-        "functions": 52,
-        "regions": 47
+        "lines": 89,
+        "functions": 85,
+        "regions": 86
       },
       "baseline": {
-        "lines": 53.5,
-        "functions": 54.4,
-        "regions": 49.0
+        "lines": 91.8,
+        "functions": 87.7,
+        "regions": 88.6
       }
     },
     "nvbes-billing-service": {
       "threshold": {
-        "lines": 45,
-        "functions": 26,
-        "regions": 42
+        "lines": 89,
+        "functions": 73,
+        "regions": 84
       },
       "baseline": {
-        "lines": 47.4,
-        "functions": 28.8,
-        "regions": 44.5
+        "lines": 91.1,
+        "functions": 75.8,
+        "regions": 86
       }
     },
     "nvbes-core": {
       "threshold": {
-        "lines": 45,
-        "functions": 42,
-        "regions": 45
+        "lines": 88,
+        "functions": 84,
+        "regions": 88
       },
       "baseline": {
-        "lines": 47.3,
-        "functions": 44.6,
-        "regions": 47.9
+        "lines": 90.8,
+        "functions": 86.8,
+        "regions": 90.4
       }
     },
     "nvbes-region": {
       "threshold": {
-        "lines": 39,
-        "functions": 41,
-        "regions": 44
+        "lines": 89,
+        "functions": 85,
+        "regions": 83
       },
       "baseline": {
-        "lines": 41.7,
-        "functions": 43.8,
-        "regions": 46.1
+        "lines": 91.4,
+        "functions": 87.5,
+        "regions": 85.5
       }
     },
     "nvbes-trust-risk-service": {
       "threshold": {
-        "lines": 38,
-        "functions": 38,
-        "regions": 36
+        "lines": 88,
+        "functions": 88,
+        "regions": 83
       },
       "baseline": {
-        "lines": 40.3,
-        "functions": 40.1,
-        "regions": 38.7
+        "lines": 90.1,
+        "functions": 90.2,
+        "regions": 85.7
       }
     },
     "nvbes-billing": {
       "threshold": {
-        "lines": 36,
-        "functions": 42,
-        "regions": 42
+        "lines": 88,
+        "functions": 87,
+        "regions": 86
       },
       "baseline": {
-        "lines": 38.4,
-        "functions": 44.7,
-        "regions": 44.3
+        "lines": 90.9,
+        "functions": 89.5,
+        "regions": 88
       }
     },
     "nvbes-audit": {
       "threshold": {
-        "lines": 34,
-        "functions": 53,
-        "regions": 42
+        "lines": 98,
+        "functions": 98,
+        "regions": 98
       },
       "baseline": {
-        "lines": 36.4,
-        "functions": 55.6,
-        "regions": 44.9
+        "lines": 100,
+        "functions": 100,
+        "regions": 100
       }
     },
     "nvbes-account-service": {
       "threshold": {
-        "lines": 25,
-        "functions": 14,
-        "regions": 22
+        "lines": 78,
+        "functions": 82,
+        "regions": 74
       },
       "baseline": {
-        "lines": 27.9,
-        "functions": 16.9,
-        "regions": 24.2
+        "lines": 80.4,
+        "functions": 84.9,
+        "regions": 76.1
       }
     },
     "nvbes-observability": {
       "threshold": {
-        "lines": 13,
-        "functions": 20,
-        "regions": 12
+        "lines": 95,
+        "functions": 96,
+        "regions": 94
       },
       "baseline": {
-        "lines": 15.7,
-        "functions": 22.0,
-        "regions": 14.1
+        "lines": 97.7,
+        "functions": 98,
+        "regions": 96.9
       }
     }
   },

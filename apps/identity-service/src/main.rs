@@ -45,7 +45,10 @@ mod tokens_config;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let command: Vec<String> = std::env::args().skip(1).collect();
+    run(std::env::args().skip(1).collect()).await
+}
+
+async fn run(command: Vec<String>) -> anyhow::Result<()> {
     if matches!(command.as_slice(), [action] if action == "error-reporting-smoke") {
         let config = error_reporting::ErrorReportingRuntimeConfig::from_env()?;
         nvbes_observability::install_safe_panic_hook();
@@ -78,11 +81,11 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if matches!(command.as_slice(), [action] if action == "synthetic-auth-email-smoke") {
-        let runtime = config::IdentityConfig::from_env()?;
         let email_address = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL")?;
         let initial_password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
         let recovered_password = required_secret("NVBES_IDENTITY_SYNTHETIC_RECOVERED_PASSWORD")?;
         let recovery_base_url = required_secret("NVBES_IDENTITY_RECOVERY_BASE_URL")?;
+        let runtime = config::IdentityConfig::from_env()?;
         let email_config = nvbes_email::EmailClientConfig::from_env(&runtime.environment)?;
         let email_client = nvbes_email::EmailClient::connect(email_config).await?;
         let pool = database::connect(&runtime.database_url, 2).await?;
@@ -99,9 +102,9 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if matches!(command.as_slice(), [action] if action == "synthetic-mfa-smoke") {
-        let runtime = config::IdentityConfig::from_env()?;
         let email = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL")?;
         let password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
+        let runtime = config::IdentityConfig::from_env()?;
         let pool = database::connect(&runtime.database_url, 2).await?;
         let crypto = mfa_crypto::MfaCrypto::with_rotation(
             runtime.mfa_key_version,
@@ -116,10 +119,10 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if matches!(command.as_slice(), [action] if action == "synthetic-token-smoke") {
-        let runtime = config::IdentityConfig::from_env()?;
         let email = required_secret("NVBES_IDENTITY_SYNTHETIC_EMAIL")?;
         let password = required_secret("NVBES_IDENTITY_SYNTHETIC_PASSWORD")?;
         let audience = required_secret("NVBES_IDENTITY_SYNTHETIC_TOKEN_AUDIENCE")?;
+        let runtime = config::IdentityConfig::from_env()?;
         let token_config = tokens_config::TokenConfig::from_env(&runtime.environment)?;
         let token_service = tokens::TokenService::new(token_config)?;
         let pool = database::connect(&runtime.database_url, 2).await?;
@@ -145,8 +148,8 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let config = config::IdentityConfig::from_env()?;
     if matches!(command.as_slice(), [action] if action == "validate-runtime") {
+        let config = config::IdentityConfig::from_env()?;
         database::connect_lazy(&config.database_url, config.database_max_connections)?;
         println!("identity runtime configuration is valid");
         return Ok(());
@@ -157,6 +160,7 @@ async fn main() -> anyhow::Result<()> {
         );
     }
 
+    let config = config::IdentityConfig::from_env()?;
     nvbes_observability::install_safe_panic_hook();
     let _error_reporting_guard = nvbes_observability::init_error_reporting_with_config(
         nvbes_observability::ErrorReportingConfig {
@@ -178,6 +182,17 @@ async fn main() -> anyhow::Result<()> {
     );
     let db = database::connect_lazy(&config.database_url, config.database_max_connections)?;
     let state = app::IdentityState::new(config.clone(), db.clone());
+    let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
+    serve(state, db, listener, shutdown_signal()).await
+}
+
+async fn serve(
+    state: app::IdentityState,
+    db: sqlx::PgPool,
+    listener: tokio::net::TcpListener,
+    shutdown_signal: impl std::future::Future<Output = ()> + Send + 'static,
+) -> anyhow::Result<()> {
+    let bind_addr = listener.local_addr()?;
     let http_metrics = nvbes_observability::metrics::HttpMetrics {
         handle: state.metrics.clone(),
     };
@@ -192,11 +207,11 @@ async fn main() -> anyhow::Result<()> {
             http_metrics,
             nvbes_observability::middleware::observe_request,
         ));
-    let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
-    tracing::info!(bind_addr = %config.bind_addr, environment = %config.environment, "starting closed identity foundation");
+
+    tracing::info!(%bind_addr, environment = %state.config.environment, "starting closed identity foundation");
 
     axum::serve(listener, router)
-        .with_graceful_shutdown(shutdown_signal())
+        .with_graceful_shutdown(shutdown_signal)
         .await?;
     nvbes_observability::flush_error_reporting(std::time::Duration::from_secs(2));
     db.close().await;
@@ -222,3 +237,7 @@ async fn shutdown_signal() {
         let _ = tokio::signal::ctrl_c().await;
     }
 }
+
+#[cfg(test)]
+#[path = "identity.main.tests.rs"]
+mod main_tests;

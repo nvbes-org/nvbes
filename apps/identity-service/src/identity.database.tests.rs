@@ -16,6 +16,7 @@ use uuid::Uuid;
 
 use crate::{
     auth::RecoveryNotification,
+    database,
     email::deliver_recovery,
     mfa,
     mfa_crypto::MfaCrypto,
@@ -26,6 +27,14 @@ use crate::{
     tokens::{TokenService, run_synthetic_smoke as run_synthetic_token_smoke},
     tokens_config::TokenConfig,
 };
+
+#[sqlx::test(migrations = "./migrations")]
+async fn connect_lazy_and_migrate_succeed_on_test_database(pool: PgPool) {
+    let url = std::env::var("DATABASE_URL").expect("DATABASE_URL");
+    let lazy = database::connect_lazy(&url, 1).expect("lazy pool");
+    assert!(lazy.acquire().await.is_ok());
+    database::migrate(&pool).await.expect("migrations");
+}
 
 #[sqlx::test(migrations = "./migrations")]
 async fn synthetic_identity_authentication_and_recovery_are_transactional(pool: PgPool) {
