@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-aws-sdk-sqs = { version = "=1.109.0", default-features = false, features = ["default-https-client", "rt-tokio"] }
+aws-sdk-sqs = { version = "=1.111.0", default-features = false, features = ["default-https-client", "rt-tokio"] }
 axum.workspace = true
 chrono.workspace = true
 hex.workspace = true
