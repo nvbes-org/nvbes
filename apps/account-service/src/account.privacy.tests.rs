@@ -9,10 +9,7 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use super::{ClosureStatus, ExportStatus, router, with_closure_participant, with_participant};
-use crate::{
-    profile,
-    test_support::HttpHarness,
-};
+use crate::{profile, test_support::HttpHarness};
 
 #[test]
 fn export_and_closure_participants_mirror_row_status() {
