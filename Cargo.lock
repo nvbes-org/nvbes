@@ -2938,11 +2938,16 @@ dependencies = [
  "chrono",
  "jsonwebtoken",
  "metrics-exporter-prometheus",
+ "nvbes-core",
+ "nvbes-dpop",
+ "nvbes-identity-sdk",
  "nvbes-observability",
+ "rsa",
  "serde",
  "serde_json",
  "sha2 0.11.0",
  "sqlx",
+ "subtle",
  "thiserror 2.0.20",
  "tokio",
  "tower",
@@ -3004,11 +3009,14 @@ dependencies = [
  "metrics-exporter-prometheus",
  "nvbes-billing",
  "nvbes-core",
+ "nvbes-dpop",
  "nvbes-email",
+ "nvbes-identity-sdk",
  "nvbes-observability",
  "prost",
  "prost-types",
  "reqwest 0.12.28",
+ "rsa",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -3189,6 +3197,24 @@ dependencies = [
  "tower",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "nvbes-identity-sdk"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "jsonwebtoken",
+ "rand 0.9.5",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "thiserror 2.0.20",
+ "tokio",
+ "url",
+ "urlencoding",
 ]
 
 [[package]]

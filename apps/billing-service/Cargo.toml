@@ -22,6 +22,8 @@ metrics.workspace = true
 metrics-exporter-prometheus.workspace = true
 nvbes-billing = { path = "../../libs/rust/billing" }
 nvbes-core = { path = "../../libs/rust/core" }
+nvbes-identity-sdk = { path = "../../libs/rust/identity-sdk-backend" }
+nvbes-dpop = { path = "../../libs/rust/dpop", features = ["resource-server"] }
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
 reqwest.workspace = true
@@ -38,6 +40,5 @@ prost-types = "0.14"
 tower.workspace = true
 tracing.workspace = true
 uuid.workspace = true
-
 [dev-dependencies]
-tower.workspace = true
+rsa = "0.9.10"

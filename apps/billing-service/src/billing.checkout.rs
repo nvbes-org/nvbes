@@ -11,6 +11,7 @@ use uuid::Uuid;
 use crate::{
     app::BillingState,
     auth::BillingPrincipal,
+    authorization::{self, BillingAccount},
     customer::get_or_create_customer,
     error::{BillingError, BillingResult},
 };
@@ -30,13 +31,26 @@ pub struct CheckoutSessionResponse {
 pub async fn create_checkout_handler(
     State(state): State<BillingState>,
     principal: BillingPrincipal,
-    Path(workspace_id): Path<Uuid>,
+    Path(account): Path<BillingAccount>,
     headers: HeaderMap,
     Json(payload): Json<CreateCheckoutRequest>,
 ) -> BillingResult<Json<CheckoutSessionResponse>> {
-    principal.require_scope("billing:write")?;
-
-    let account_type = payload.account_type.as_deref().unwrap_or("team");
+    principal.require_scope("billing:checkout")?;
+    let account_type = account.account_type.as_str();
+    if payload
+        .account_type
+        .as_deref()
+        .is_some_and(|value| value != account_type)
+    {
+        return Err(BillingError::Invalid("account_type conflicts with route"));
+    }
+    authorization::require(
+        state.config.account_authority.as_ref(),
+        principal.id(),
+        &account,
+    )
+    .await?;
+    let workspace_id = account.id;
     let idempotency_key = headers
         .get("idempotency-key")
         .and_then(|v| v.to_str().ok())

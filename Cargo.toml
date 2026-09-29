@@ -11,6 +11,7 @@ members = [
   "libs/rust/core",
   "libs/rust/region",
   "libs/rust/dpop",
+  "libs/rust/identity-sdk-backend",
   "libs/rust/email",
   "libs/rust/adapters/email-scaleway",
   "libs/rust/observability",
