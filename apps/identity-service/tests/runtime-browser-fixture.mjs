@@ -139,6 +139,10 @@ try {
       NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM: publicKey,
       NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET: authorizationSecret,
     };
+    if (service !== 'identity') {
+      environments[service].NVBES_IDENTITY_INTROSPECTION_URL =
+        `${backends.identity}/oauth/introspect`;
+    }
     const resource = resources.find((value) => value.audience === `nvbes-${service}-service`);
     if (resource)
       Object.assign(environments[service], {
@@ -160,7 +164,8 @@ try {
       NVBES_IDENTITY_MFA_ENCRYPTION_KEY: recoveryKey.toString('base64'),
     });
   Object.assign(environments.billing, {
-    NVBES_BILLING_ACCOUNT_ORIGIN: origins.account,
+    // Private Account authorize URL: JWT/browser traffic stays on HTTPS origins.
+    NVBES_BILLING_ACCOUNT_ORIGIN: backends.account,
     NVBES_STRIPE_API_BASE_URL: 'http://127.0.0.1:1',
   });
   for (const service of Object.keys(binaries))

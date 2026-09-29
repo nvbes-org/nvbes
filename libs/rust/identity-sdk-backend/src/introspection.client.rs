@@ -70,11 +70,32 @@ impl IntrospectionClient {
         if decoded.len() != 32 || URL_SAFE_NO_PAD.encode(&decoded) != secret {
             return Err(invalid());
         }
-        let endpoint = Url::parse(&format!(
-            "{}/oauth/introspect",
-            issuer.trim_end_matches('/')
-        ))
-        .map_err(|_| invalid())?;
+        // Optional loopback/internal override: JWT `iss` stays the public issuer while
+        // resource servers call a private introspection URL (fixture HTTP backends).
+        let endpoint = match std::env::var("NVBES_IDENTITY_INTROSPECTION_URL") {
+            Ok(url) => {
+                let parsed = Url::parse(&url).map_err(|_| invalid())?;
+                let loopback =
+                    matches!(parsed.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"));
+                if parsed.host_str().is_none()
+                    || parsed.path() != "/oauth/introspect"
+                    || parsed.query().is_some()
+                    || parsed.fragment().is_some()
+                    || !parsed.username().is_empty()
+                    || parsed.password().is_some()
+                    || !(parsed.scheme() == "https" || (parsed.scheme() == "http" && loopback))
+                {
+                    return Err(invalid());
+                }
+                parsed
+            }
+            Err(std::env::VarError::NotPresent) => Url::parse(&format!(
+                "{}/oauth/introspect",
+                issuer.trim_end_matches('/')
+            ))
+            .map_err(|_| invalid())?,
+            Err(_) => return Err(invalid()),
+        };
         let mut authorization = HeaderValue::from_str(&format!(
             "Basic {}",
             STANDARD.encode(format!("{client_id}:{secret}"))

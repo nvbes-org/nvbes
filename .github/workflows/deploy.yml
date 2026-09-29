@@ -194,6 +194,7 @@ jobs:
       TF_VAR_scaleway_organization_id: ${{ vars.SCW_ORGANIZATION_ID }}
       TF_VAR_scaleway_project_id: ${{ vars.SCW_PROJECT_ID }}
       TF_VAR_account_metrics_token: ${{ secrets.ACCOUNT_METRICS_TOKEN }}
+      TF_VAR_identity_token_issuer: ${{ vars.IDENTITY_TOKEN_ISSUER }}
       TF_VAR_identity_token_key_id: ${{ vars.IDENTITY_TOKEN_KEY_ID }}
       TF_VAR_identity_token_public_key_pem: ${{ secrets.IDENTITY_TOKEN_PUBLIC_KEY_PEM }}
       TF_VAR_account_sentry_dsn: ${{ secrets.ACCOUNT_SENTRY_DSN }}

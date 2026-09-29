@@ -49,6 +49,7 @@ nvbes/
 ├── apps/
 │   ├── email-worker/       # Runtime Email actif
 │   ├── identity-web/       # UI hébergée Identity (OAuth/MFA)
+│   ├── account-web/        # UI Account (session, logout RP)
 │   └── trust-risk-service/ # Runtime Trust/Risk actif
 ├── libs/
 │   ├── rust/
