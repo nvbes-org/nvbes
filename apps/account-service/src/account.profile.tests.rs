@@ -9,7 +9,7 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use super::{ProfileRow, UpdateProfile, clean, ensure_profile, router, validate_profile};
-use crate::test_support::{access_token, state_with_pool};
+use crate::test_support::HttpHarness;
 
 #[test]
 fn validate_profile_rejects_oversized_and_future_values() {
@@ -125,10 +125,10 @@ async fn ensure_profile_is_idempotent(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn profile_http_get_and_update(pool: PgPool) {
     let principal_id = Uuid::new_v4();
-    let state = state_with_pool(pool);
-    let app = router(state);
-    let read_token = access_token(principal_id, "account:read", false);
-    let write_token = access_token(principal_id, "account:write", false);
+    let harness = HttpHarness::new(pool).await;
+    let app = router(harness.state.clone());
+    let read_token = harness.access_token(principal_id, "account:read", false);
+    let write_token = harness.access_token(principal_id, "account:write", false);
 
     let get = app
         .clone()

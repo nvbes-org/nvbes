@@ -43,17 +43,17 @@ mod database {
     use tower::ServiceExt;
     use uuid::Uuid;
 
-    use crate::test_support::{access_token, state_with_pool};
+    use crate::test_support::HttpHarness;
 
     use super::super::router;
 
     #[sqlx::test(migrations = "./migrations")]
     async fn preferences_and_notifications_http_round_trip(pool: PgPool) {
         let principal_id = Uuid::new_v4();
-        let state = state_with_pool(pool);
-        let app = router(state);
-        let read_token = access_token(principal_id, "account:read", false);
-        let write_token = access_token(principal_id, "account:write", false);
+        let harness = HttpHarness::new(pool).await;
+        let app = router(harness.state.clone());
+        let read_token = harness.access_token(principal_id, "account:read", false);
+        let write_token = harness.access_token(principal_id, "account:write", false);
 
         let preferences = app
             .clone()

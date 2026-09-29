@@ -1,10 +1,18 @@
 //! Shared HTTP + JWT fixtures for Account service integration tests.
 
+use axum::{Form, Json, Router, routing::post};
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 use openssl::{pkey::PKey, rsa::Rsa};
-use serde::Serialize;
+use serde_json::{Value, json};
 use sqlx::PgPool;
-use std::sync::{Mutex, OnceLock};
+use std::{
+    collections::HashMap,
+    sync::{
+        Arc, Mutex, OnceLock,
+        atomic::{AtomicUsize, Ordering},
+    },
+};
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use crate::{app::AccountState, auth::TokenVerifier, config::AccountConfig};
@@ -33,21 +41,6 @@ fn test_keys() -> &'static TestKeys {
     })
 }
 
-#[derive(Serialize)]
-struct Claims {
-    sub: String,
-    token_type: String,
-    scope: String,
-    amr: Vec<String>,
-    iss: String,
-    aud: String,
-    exp: u64,
-    iat: u64,
-    nbf: u64,
-    jti: String,
-    sid: String,
-}
-
 pub(crate) fn account_config() -> AccountConfig {
     AccountConfig {
         browser_origins: Default::default(),
@@ -72,34 +65,102 @@ pub(crate) fn account_config() -> AccountConfig {
     }
 }
 
-pub(crate) fn state_with_pool(pool: PgPool) -> AccountState {
-    AccountState::new(account_config(), pool).expect("account state")
+pub(crate) struct HttpHarness {
+    pub state: AccountState,
+    issuer: String,
+    replies: Arc<Mutex<HashMap<String, Value>>>,
+    _calls: Arc<AtomicUsize>,
+    _server: JoinHandle<()>,
 }
 
-pub(crate) fn access_token(principal_id: Uuid, scopes: &str, step_up: bool) -> String {
-    let now = jsonwebtoken::get_current_timestamp();
-    let mut amr = vec!["pwd".to_owned()];
-    if step_up {
-        amr.push("totp".into());
+impl HttpHarness {
+    pub(crate) async fn new(pool: PgPool) -> Self {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let issuer = format!("http://{}", listener.local_addr().unwrap());
+        let replies = Arc::new(Mutex::new(HashMap::<String, Value>::new()));
+        let calls = Arc::new(AtomicUsize::new(0));
+        let identity = Router::new().route(
+            "/oauth/introspect",
+            post({
+                let replies = replies.clone();
+                let calls = calls.clone();
+                move |Form(body): Form<HashMap<String, String>>| {
+                    let replies = replies.clone();
+                    let calls = calls.clone();
+                    async move {
+                        calls.fetch_add(1, Ordering::SeqCst);
+                        let token = body.get("token").cloned().unwrap_or_default();
+                        let body = replies
+                            .lock()
+                            .expect("introspection replies")
+                            .get(&token)
+                            .cloned()
+                            .unwrap_or_else(|| json!({"active": false}));
+                        Json(body)
+                    }
+                }
+            }),
+        );
+        let server = tokio::spawn(async move {
+            axum::serve(listener, identity).await.unwrap();
+        });
+        let mut config = account_config();
+        config.token_issuer = issuer.clone();
+        let state = AccountState::new(config, pool).expect("account state");
+        Self {
+            state,
+            issuer,
+            replies,
+            _calls: calls,
+            _server: server,
+        }
     }
-    let claims = Claims {
-        sub: principal_id.to_string(),
-        token_type: "access".into(),
-        scope: scopes.into(),
-        amr,
-        iss: "http://127.0.0.1".into(),
-        aud: "nvbes-account-service".into(),
-        exp: now + 600,
-        iat: now,
-        nbf: now,
-        jti: Uuid::new_v4().to_string(),
-        sid: Uuid::new_v4().to_string(),
-    };
-    let mut header = Header::new(Algorithm::RS256);
-    header.kid = Some("identity-key-1".into());
-    header.typ = Some("at+jwt".into());
-    let key = EncodingKey::from_rsa_pem(test_keys().private_pem.as_bytes()).expect("encoding");
-    encode(&header, &claims, &key).unwrap()
+
+    pub(crate) fn access_token(&self, principal_id: Uuid, scopes: &str, step_up: bool) -> String {
+        let now = jsonwebtoken::get_current_timestamp();
+        let mut amr = vec!["pwd"];
+        if step_up {
+            amr.push("totp");
+        }
+        let mut claims = json!({
+            "sub": principal_id,
+            "sid": Uuid::new_v4(),
+            "grant_id": Uuid::new_v4(),
+            "jti": Uuid::new_v4(),
+            "iss": self.issuer,
+            "aud": "nvbes-account-service",
+            "client_id": "account-web",
+            "token_type": "access",
+            "scope": scopes,
+            "amr": amr,
+            "auth_time": now.saturating_sub(60),
+            "iat": now,
+            "nbf": now,
+            "exp": now + 600,
+        });
+        if step_up {
+            claims["step_up_time"] = json!(now.saturating_sub(30));
+            claims["step_up_expires_at"] = json!(now + 300);
+        }
+        let mut header = Header::new(Algorithm::RS256);
+        header.kid = Some("identity-key-1".into());
+        header.typ = Some("at+jwt".into());
+        let key = EncodingKey::from_rsa_pem(test_keys().private_pem.as_bytes()).expect("encoding");
+        let token = encode(&header, &claims, &key).unwrap();
+        let mut active = claims;
+        active["active"] = json!(true);
+        active["token_type"] = json!("Bearer");
+        self.replies
+            .lock()
+            .expect("introspection replies")
+            .insert(token.clone(), active);
+        token
+    }
+}
+
+/// Back-compat helper for tests that only need a pool-backed state without HTTP auth.
+pub(crate) fn state_with_pool(pool: PgPool) -> AccountState {
+    AccountState::new(account_config(), pool).expect("account state")
 }
 
 #[allow(
