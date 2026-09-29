@@ -48,6 +48,7 @@ sur les anciens PRD, blueprints et plans :
 nvbes/
 ├── apps/
 │   ├── email-worker/       # Runtime Email actif
+│   ├── identity-web/       # UI hébergée Identity (OAuth/MFA)
 │   └── trust-risk-service/ # Runtime Trust/Risk actif
 ├── libs/
 │   ├── rust/
@@ -62,7 +63,9 @@ nvbes/
 │   │   ├── redis/          # Primitives Redis actives
 │   │   └── trust-risk/     # Domaine Trust/Risk
 │   └── ts/
+│       ├── http-client/        # Transport fetch partagé (DTO + DPoP helpers)
 │       ├── identity-sdk-core/  # Types OpenAPI générés
+│       ├── identity-sdk-web/   # SDK navigateur Identity (OAuth/DPoP/WebAuthn)
 │       └── email-ui/           # Templates React Email actifs
 ├── infrastructure/         # Terraform/OpenTofu et contrat FinOps
 └── archive/                # Produits et prototypes hors runtime actif

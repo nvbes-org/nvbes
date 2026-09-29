@@ -1,0 +1,227 @@
+import { logoutHostedSession } from './hosted.client';
+import {
+  getHostedAuthenticationStatus,
+  type HostedAuthenticationStatus,
+} from './hosted.authentication';
+import {
+  generateHostedRecoveryCodes,
+  redeemHostedRecoveryCode,
+  completeHostedMfaRecovery,
+  resumeHostedMfaRecovery,
+  cancelHostedMfaRecovery,
+  type HostedMfaRecovery,
+  type HostedMfaRecovered,
+} from './hosted.recovery';
+import { loginHostedSecurityKey, type HostedSecurityKeyLogin } from './hosted.security-key';
+import {
+  listHostedTotpFactors,
+  revokeHostedTotpFactor,
+  type HostedTotpFactor,
+} from './hosted.totp.management';
+import {
+  startHostedTotpEnrollment,
+  confirmHostedTotpEnrollment,
+  stepUpHostedTotp,
+  type HostedTotpEnrollment,
+} from './hosted.totp';
+import type { HostedInteraction } from './hosted.client';
+import { registerHostedPasskey, loginHostedPasskey, stepUpHostedPasskey } from './hosted.webauthn';
+import {
+  listHostedPasskeys,
+  renameHostedPasskey,
+  revokeHostedPasskey,
+  type HostedPasskey,
+} from './hosted.webauthn.credentials';
+import {
+  exchangeAuthorizationCode,
+  type AuthorizationCodeTokenResponse,
+} from './oauth.authorization-code';
+import {
+  createAuthorizationRequest,
+  type AuthorizationRequest,
+  type AuthorizationRequestInput,
+} from './oauth.authorization-request';
+import { defaultWebStorage, type WebStorage } from './storage';
+import type { WebauthnCreateOptions, WebauthnGetOptions } from './webauthn';
+import type { DpopTransactionStore } from './dpop.transaction-store';
+
+export interface AuthConfig {
+  baseUrl: string;
+  clientId: string;
+  redirectUri: string;
+  resource: string;
+}
+
+export interface IdentityWebConfig extends AuthConfig {
+  cookieDomain?: string;
+  secureCookies?: boolean;
+  storage?: WebStorage;
+  dpop?: boolean;
+  dpopStore?: DpopTransactionStore;
+}
+
+export class NvbesIdentityWeb {
+  private readonly config: IdentityWebConfig;
+  private readonly storage: WebStorage;
+
+  constructor(config: IdentityWebConfig) {
+    this.config = {
+      secureCookies: true,
+      ...config,
+    };
+    this.storage = config.storage ?? defaultWebStorage();
+  }
+
+  createAuthorizationRequest(
+    options: AuthorizationRequestInput = {},
+  ): Promise<AuthorizationRequest> {
+    return createAuthorizationRequest(
+      {
+        baseUrl: this.config.baseUrl,
+        clientId: this.config.clientId,
+        redirectUri: this.config.redirectUri,
+        resource: this.config.resource,
+        dpop: this.config.dpop,
+        dpopStore: this.config.dpopStore,
+        storage: this.storage,
+      },
+      options,
+    );
+  }
+
+  async redirectToLogin(options: AuthorizationRequestInput = {}): Promise<void> {
+    const request = await this.createAuthorizationRequest(options);
+    window.location.assign(request.authorizationUrl);
+  }
+
+  exchangeAuthorizationCode(input: {
+    code: string;
+    state: string;
+  }): Promise<AuthorizationCodeTokenResponse> {
+    return exchangeAuthorizationCode(
+      {
+        baseUrl: this.config.baseUrl,
+        clientId: this.config.clientId,
+        redirectUri: this.config.redirectUri,
+        storage: this.storage,
+        dpopStore: this.config.dpopStore,
+      },
+      input,
+    );
+  }
+
+  clearAuthorizationTransaction(): void {
+    this.storage.clearTransaction();
+  }
+
+  async logout(sessionCsrfToken?: string): Promise<void> {
+    if (!sessionCsrfToken)
+      throw new Error('Identity logout requires an explicit session CSRF token.');
+    await logoutHostedSession({ baseUrl: this.config.baseUrl }, sessionCsrfToken);
+  }
+
+  startTotpEnrollment(sessionCsrf: string): Promise<HostedTotpEnrollment> {
+    return startHostedTotpEnrollment({ baseUrl: this.config.baseUrl }, sessionCsrf);
+  }
+
+  getAuthenticationStatus(interaction: HostedInteraction): Promise<HostedAuthenticationStatus> {
+    return getHostedAuthenticationStatus({ baseUrl: this.config.baseUrl }, interaction);
+  }
+
+  listTotpFactors(sessionCsrf: string): Promise<HostedTotpFactor[]> {
+    return listHostedTotpFactors({ baseUrl: this.config.baseUrl }, sessionCsrf);
+  }
+
+  revokeTotpFactor(sessionCsrf: string, id: string): Promise<void> {
+    return revokeHostedTotpFactor({ baseUrl: this.config.baseUrl }, sessionCsrf, id);
+  }
+
+  confirmTotpEnrollment(sessionCsrf: string, factorId: string, code: string): Promise<string> {
+    return confirmHostedTotpEnrollment(
+      { baseUrl: this.config.baseUrl },
+      sessionCsrf,
+      factorId,
+      code,
+    );
+  }
+
+  stepUpTotp(sessionCsrf: string, code: string): Promise<string> {
+    return stepUpHostedTotp({ baseUrl: this.config.baseUrl }, sessionCsrf, code);
+  }
+
+  registerPasskey(
+    sessionCsrf: string,
+    label: string,
+    options?: WebauthnCreateOptions,
+  ): Promise<string> {
+    return registerHostedPasskey({ baseUrl: this.config.baseUrl }, sessionCsrf, label, options);
+  }
+
+  loginPasskey(
+    interaction: HostedInteraction,
+    options?: WebauthnGetOptions,
+  ): Promise<HostedInteraction> {
+    return loginHostedPasskey({ baseUrl: this.config.baseUrl }, interaction, options);
+  }
+
+  loginWithSecurityKey(
+    interaction: HostedInteraction,
+    credentials: { email: string; password: string },
+    options?: WebauthnGetOptions,
+  ): Promise<HostedSecurityKeyLogin> {
+    return loginHostedSecurityKey(
+      { baseUrl: this.config.baseUrl },
+      interaction,
+      credentials,
+      options,
+    );
+  }
+
+  stepUpPasskey(sessionCsrf: string, options?: WebauthnGetOptions): Promise<string> {
+    return stepUpHostedPasskey({ baseUrl: this.config.baseUrl }, sessionCsrf, options);
+  }
+
+  listPasskeys(sessionCsrf: string): Promise<HostedPasskey[]> {
+    return listHostedPasskeys({ baseUrl: this.config.baseUrl }, sessionCsrf);
+  }
+
+  renamePasskey(sessionCsrf: string, id: string, label: string): Promise<void> {
+    return renameHostedPasskey({ baseUrl: this.config.baseUrl }, sessionCsrf, id, label);
+  }
+
+  revokePasskey(sessionCsrf: string, id: string): Promise<void> {
+    return revokeHostedPasskey({ baseUrl: this.config.baseUrl }, sessionCsrf, id);
+  }
+
+  generateRecoveryCodes(sessionCsrf: string): Promise<string[]> {
+    return generateHostedRecoveryCodes({ baseUrl: this.config.baseUrl }, sessionCsrf);
+  }
+
+  resumeMfaRecovery(): Promise<HostedMfaRecovery> {
+    return resumeHostedMfaRecovery({ baseUrl: this.config.baseUrl });
+  }
+
+  cancelMfaRecovery(recovery: HostedMfaRecovery): Promise<void> {
+    return cancelHostedMfaRecovery({ baseUrl: this.config.baseUrl }, recovery);
+  }
+
+  async redeemRecoveryCode(sessionCsrf: string, code: string): Promise<HostedMfaRecovery> {
+    const result = await redeemHostedRecoveryCode(
+      { baseUrl: this.config.baseUrl },
+      sessionCsrf,
+      code,
+    );
+    this.clearAuthorizationTransaction();
+    return result;
+  }
+
+  completeMfaRecovery(
+    recovery: HostedMfaRecovery,
+    label: string,
+    options?: WebauthnCreateOptions,
+  ): Promise<HostedMfaRecovered> {
+    return completeHostedMfaRecovery({ baseUrl: this.config.baseUrl }, recovery, label, options);
+  }
+}
+
+export default NvbesIdentityWeb;

@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
-import { createAuthorizationRequest } from '../../../libs/ts/identity-sdk-web/src/oauth.authorization-request.ts';
-import { exchangeAuthorizationCode } from '../../../libs/ts/identity-sdk-web/src/oauth.authorization-code.ts';
-import { MemoryStorage } from '../../../libs/ts/identity-sdk-web/src/storage.ts';
-import { OAuthSession } from '../../../libs/ts/identity-sdk-web/src/oauth.session.ts';
-import { dpopFetch } from '../../../libs/ts/identity-sdk-web/src/dpop.ts';
+import {
+  createAuthorizationRequest,
+  dpopFetch,
+  exchangeAuthorizationCode,
+  MemoryStorage,
+  OAuthSession,
+} from '@nvbes/identity-sdk-web/oauth';
 
 // Node exercises the actual SDK over HTTP. IndexedDB has a separate browser proof.
 export async function verifySdkRefresh({ origins, endpoints, browser, clientId, redirect }) {
