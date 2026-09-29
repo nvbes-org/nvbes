@@ -59,17 +59,19 @@ test('container has shallow liveness and graceful shutdown', () => {
 test('runtime stays closed to public authentication', () => {
   assert.equal(mainSource.includes('route("/auth/register"'), false);
   assert.equal(mainSource.includes('route("/auth/login"'), false);
+  assert.equal(mainSource.includes('route("/api/v1/auth/register"'), false);
+  assert.equal(mainSource.includes('route("/api/v1/auth/login"'), false);
   assert.ok(errorReportingSource.includes('init_error_reporting_with_config'));
   assert.ok(mainSource.includes('otlp_authorization_header'));
   assert.ok(mainSource.includes('action == "error-reporting-smoke"'));
   assert.ok(errorReportingSource.includes('capture_error_reporting_smoke'));
 });
 
-test('container wires OAuth 2.1, discovery, and authorization routes', () => {
-  assert.ok(mainSource.includes('oauth::router(&state)'));
-  assert.ok(mainSource.includes('discovery::router(&state)'));
-  assert.ok(mainSource.includes('authz::router(&state)'));
-  assert.ok(mainSource.includes('http::router(&state)'));
+test('container wires configured OAuth HTTP routers', () => {
+  assert.ok(mainSource.includes('oauth::http::authorization_router'));
+  assert.ok(mainSource.includes('oauth::http::token_router'));
+  assert.ok(mainSource.includes('oauth::http::introspection_router'));
+  assert.ok(mainSource.includes('oauth::http::router_with_logout'));
 });
 
 test('deployment is main-only, approved, immutable and scale-to-zero', () => {
@@ -101,8 +103,12 @@ test('deployment migrates before apply and proves public auth stays absent', () 
   assert.ok(migration >= 0);
   assert.ok(apply > migration);
   assert.ok(identitySection.includes('tools/deployment/prove-identity-public-runtime.sh'));
-  assert.ok(publicRuntimeProof.includes('/auth/register"'));
+  assert.ok(publicRuntimeProof.includes('/api/v1/auth/register"'));
   assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "404" ]]'));
+  assert.ok(publicRuntimeProof.includes('/api/v1/auth/login"'));
+  assert.ok(publicRuntimeProof.includes('[[ "$login_status" == "404" ]]'));
+  assert.ok(publicRuntimeProof.includes('/auth/register"'));
+  assert.ok(publicRuntimeProof.includes('[[ "$legacy_registration_status" == "404" ]]'));
 });
 
 test('deployment records bounded activation and access-control evidence', () => {

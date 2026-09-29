@@ -6,7 +6,7 @@ use crate::{auth::audit, mfa_crypto::MfaCrypto};
 pub async fn rotate(db: &PgPool, crypto: &MfaCrypto) -> anyhow::Result<u64> {
     let mut tx = db.begin().await?;
     let factors = sqlx::query_as::<_, (Uuid, Uuid, Vec<u8>, Vec<u8>, i16)>(
-        "SELECT id, principal_id, secret_ciphertext, secret_nonce, key_version FROM identity_auth_factors WHERE key_version <> $1 FOR UPDATE",
+        "SELECT id, principal_id, secret_ciphertext, secret_nonce, key_version FROM identity_auth_factors WHERE key_version <> $1 AND state<>'revoked' FOR UPDATE",
     )
     .bind(crypto.active_version())
     .fetch_all(&mut *tx)

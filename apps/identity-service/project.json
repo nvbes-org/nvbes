@@ -11,6 +11,7 @@
         "{projectRoot}/**/*",
         "{workspaceRoot}/Cargo.toml",
         "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/libs/rust/dpop/**/*",
         "{workspaceRoot}/libs/rust/observability/**/*"
       ],
       "options": {
@@ -31,7 +32,7 @@
       "cache": true,
       "inputs": [
         "{projectRoot}/Dockerfile",
-        "{projectRoot}/tests/**/*",
+        "{projectRoot}/tests/container-contract.test.mjs",
         "{projectRoot}/Cargo.toml",
         "{projectRoot}/src/main.rs",
         "{projectRoot}/src/identity.error_reporting.rs",

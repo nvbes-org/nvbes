@@ -17,10 +17,55 @@ Le premier incrément fournit uniquement le socle opérationnel fermé :
 - TOTP chiffré par AES-256-GCM, compteur anti-rejeu et grant de step-up borné.
 
 Aucune route d'inscription ou d'authentification publique n'est exposée par cet
-incrément. Elles seront ajoutées par parcours verticaux complets. Cela maintient
-les inscriptions publiques fermées jusqu'au GO explicite.
+incrément. `/auth/register` reste absent. Les comptes humains ne sont créés que
+par invitation opérateur (`identity_invitations`, code stocké en hash SHA-256).
+Les inscriptions publiques restent fermées jusqu'au GO explicite.
+
+## Contrat de token JWT RS256
+
+Contrat canonique : `contracts/identity/access-token.v1.schema.json` et
+`contracts/identity/scopes.v1.json`.
+
+| Audience                | Scopes autorisés                                                   |
+| ----------------------- | ------------------------------------------------------------------ |
+| `nvbes-account-service` | `account:read`, `account:write`, `account:export`, `account:close` |
+| `nvbes-billing-service` | `billing:read`, `billing:checkout`                                 |
+
+- Algorithme : RS256, en-tête `typ=at+jwt`, claim `token_type=access`.
+- Durée de vie : 900 secondes (15 minutes).
+- `amr` : `pwd` obligatoire ; `totp` ou `webauthn` ajouté lorsque la session
+  porte un grant step-up actif (`step_up_method`, TTL 10 minutes).
+- Révocation : l'introspection session (`identity_sessions.revoked_at`) rend le
+  token inactif immédiatement. Sans introspection, les consommateurs doivent
+  respecter `exp` ; la fenêtre résiduelle maximale est donc **15 minutes**.
+- Preuve synthétique : `synthetic-token-smoke` (audit
+  `identity.token.synthetic_proven`, sans persister le JWT).
 
 ## Commandes
+
+L'activation du registre `NVBES_IDENTITY_OAUTH_CLIENTS_JSON` exige
+`NVBES_IDENTITY_RATE_LIMIT_KEY`, clé aléatoire de 32 octets encodée en base64,
+stable et partagée entre les répliques. Les quotas HTTP utilisent l'adresse de
+la connexion TCP ; les en-têtes proxy ne sont pas des preuves de source.
+Voir [les quotas et leur configuration](../../docs/architecture/identity-token-lifecycle.md#quotas-des-routes-http)
+avant d'activer les routes derrière un proxy. Les lots A à D restent en cours.
+
+Les routes PAR, token et UserInfo autorisent CORS pour les origines exactes des
+`redirect_uris` du registre validé, sans cookies interorigines. Les requêtes
+peuvent porter `Content-Type`, `Authorization` et `DPoP` ; les réponses exposent
+`WWW-Authenticate` et `DPoP-Nonce`. Discovery et JWKS sont lisibles depuis toute
+origine, sans credentials. Les routes de session, login et introspection ne
+reçoivent pas cette politique CORS. Cela ne remplace aucune vérification de
+client, de jeton, de preuve DPoP ou de CSRF.
+
+Pour terminer le consentement depuis l'interface Identity, les POST JSON vers
+`/oauth/authorize/approve` et `/oauth/authorize/deny` acceptent le header exact
+`Accept: application/json`. Ils répondent alors 200 avec `{ "redirect_uri": "…" }`,
+que l'interface utilise pour une navigation de premier niveau. Sans cette
+demande explicite, la réponse reste une redirection 303. La destination provient
+uniquement de l'interaction validée côté serveur ; les contrôles Origin, CSRF,
+session et consommation unique sont identiques. La réponse est `no-store`.
+Cette surface est réservée à l'origine Identity, sans CORS vers les sites clients.
 
 ```bash
 pnpm nx run identity-service:check
@@ -36,6 +81,30 @@ Le smoke exige en plus `NVBES_IDENTITY_SYNTHETIC_EMAIL`,
 `NVBES_IDENTITY_SYNTHETIC_RECOVERED_PASSWORD`. Il ne journalise aucun de ces
 secrets ni les tokens éphémères.
 
+### Test avec les API Account et Billing
+
+Le parcours HTTPS dans Chromium est décrit dans la
+[preuve navigateur](../../docs/architecture/identity-browser-protocol-proof.md).
+La cible `identity-service:test:https-browser-fixture` prépare ses trois services
+isolés ; le scénario Playwright doit ensuite être exécuté pour valider le parcours.
+
+Avec Docker actif et l'image `postgres:17-alpine` déjà présente localement :
+
+```bash
+pnpm nx run identity-service:test:resource-runtimes
+```
+
+Cette cible compile les trois binaires puis crée ses propres bases, clés,
+credentials et ports temporaires. Elle ne lit pas les fichiers `.env` et ne
+nécessite aucun `DATABASE_URL`. Le compte synthétique n'envoie aucun email et
+le test ne déclenche aucun paiement. Les processus et le conteneur éphémère
+sont nettoyés à la fin, succès ou échec.
+
+Le parcours vérifie Code/PKCE, les audiences des API, la révocation par logout
+et les réponses 503 pendant une panne d'Identity, suivies de la reprise. Il
+utilise HTTP sur loopback avec un cookie jar Node : il ne remplace pas les
+tests navigateur HTTPS, DPoP ou d'autorisation entre comptes.
+
 `synthetic-mfa-smoke` exige aussi `NVBES_IDENTITY_MFA_ENCRYPTION_KEY`, clé de
 32 octets encodée en base64. Hors développement, le runtime refuse de démarrer
 sans cette clé. Le smoke ne restitue jamais le secret TOTP.
@@ -45,6 +114,16 @@ paire optionnelle `NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY` /
 `NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION`. Exécuter `rotate-mfa-key`, vérifier
 que le résultat couvre tous les facteurs de l'ancienne version, puis seulement
 retirer la clé précédente. La rotation est transactionnelle et auditée.
+
+`synthetic-invitation-smoke` exige `NVBES_IDENTITY_SYNTHETIC_INVITER_EMAIL`,
+`NVBES_IDENTITY_SYNTHETIC_INVITED_EMAIL` et `NVBES_IDENTITY_SYNTHETIC_PASSWORD`.
+Il prouve qu'un code d'invitation n'est jamais stocké en clair et qu'une
+acceptation est à usage unique.
+
+`synthetic-token-smoke` exige en plus `NVBES_IDENTITY_TOKEN_ISSUER`,
+`NVBES_IDENTITY_TOKEN_KEY_ID`, `NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM`,
+`NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM`, `NVBES_IDENTITY_TOKEN_AUDIENCES` et
+`NVBES_IDENTITY_SYNTHETIC_TOKEN_AUDIENCE` (`nvbes-account-service` en production).
 
 `synthetic-auth-email-smoke` ajoute la preuve Identity → Email. Il exige
 `NVBES_IDENTITY_RECOVERY_BASE_URL` en HTTPS ainsi que la configuration standard

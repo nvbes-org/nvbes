@@ -1,6 +1,6 @@
 use std::sync::{Mutex, OnceLock};
 
-use super::IdentityConfig;
+use super::{IdentityConfig, mfa_runtime_config_from_env};
 
 fn env_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -99,6 +99,40 @@ fn production_requires_authenticated_observability() {
     }
     let error = IdentityConfig::from_env().expect_err("production metrics must fail closed");
     assert!(error.to_string().contains("NVBES_IDENTITY_METRICS_TOKEN"));
+    unsafe {
+        for name in [
+            "NVBES_ENVIRONMENT",
+            "NVBES_IDENTITY_DATABASE_URL",
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "NVBES_IDENTITY_MFA_KEY_VERSION",
+        ] {
+            std::env::remove_var(name);
+        }
+    }
+}
+
+#[test]
+fn private_mfa_job_requires_only_database_and_mfa_configuration() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var(
+            "NVBES_IDENTITY_DATABASE_URL",
+            "postgres://identity.test/identity",
+        );
+        std::env::set_var(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        );
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+        std::env::remove_var("NVBES_IDENTITY_METRICS_TOKEN");
+        std::env::remove_var("SENTRY_DSN");
+        std::env::remove_var("NVBES_OTLP_ENDPOINT");
+        std::env::remove_var("NVBES_OTLP_AUTHORIZATION_HEADER");
+    }
+    let config = mfa_runtime_config_from_env().expect("private MFA job configuration");
+    assert_eq!(config.key_version, 1);
+    assert_eq!(config.database_url, "postgres://identity.test/identity");
     unsafe {
         for name in [
             "NVBES_ENVIRONMENT",

@@ -10,6 +10,7 @@ members = [
   "libs/rust/billing",
   "libs/rust/core",
   "libs/rust/region",
+  "libs/rust/dpop",
   "libs/rust/email",
   "libs/rust/adapters/email-scaleway",
   "libs/rust/observability",

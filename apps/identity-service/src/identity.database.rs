@@ -24,5 +24,9 @@ pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
 mod tests;
 
 #[cfg(all(test, feature = "database-tests"))]
-#[path = "identity.database.oauth.tests.rs"]
-mod oauth_tests;
+#[path = "identity.database.tokens.tests.rs"]
+mod token_tests;
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "identity.database.invitations.tests.rs"]
+mod invitation_tests;
