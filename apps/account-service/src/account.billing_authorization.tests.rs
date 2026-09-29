@@ -7,9 +7,7 @@ use tower::ServiceExt;
 
 #[tokio::test]
 async fn only_active_personal_owners_and_consistent_team_owners_are_allowed() {
-    let url = std::env::var("DATABASE_URL").expect("DATABASE_URL required");
-    let db = crate::database::connect(&url, 2).await.unwrap();
-    crate::database::migrate(&db).await.unwrap();
+    let (db, ephemeral) = crate::test_support::ephemeral_migrated_pool().await;
     let owner = Uuid::new_v4();
     let member = Uuid::new_v4();
     let (team, _) = crate::teams::create_and_join_for_synthetic(&db, owner, member)
@@ -163,4 +161,5 @@ async fn only_active_personal_owners_and_consistent_team_owners_are_allowed() {
             .status(),
         StatusCode::SERVICE_UNAVAILABLE
     );
+    crate::test_support::drop_ephemeral_database(&ephemeral).await;
 }

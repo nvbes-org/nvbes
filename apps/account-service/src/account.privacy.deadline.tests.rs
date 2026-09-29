@@ -25,10 +25,7 @@ enum Action {
 }
 
 async fn check(action: Action, expire: bool) {
-    let pool = crate::database::connect(&std::env::var("DATABASE_URL").unwrap(), 4)
-        .await
-        .unwrap();
-    crate::database::migrate(&pool).await.unwrap();
+    let (pool, ephemeral) = crate::test_support::ephemeral_migrated_pool().await;
     let owner = Uuid::new_v4();
     let resource = Uuid::new_v4();
     if !matches!(action, Action::FirstExport | Action::FirstClosure) {
@@ -176,6 +173,7 @@ async fn check(action: Action, expire: bool) {
         );
     }
     pool.close().await;
+    crate::test_support::drop_ephemeral_database(&ephemeral).await;
 }
 
 async fn snapshot(pool: &PgPool, owner: Uuid) -> serde_json::Value {

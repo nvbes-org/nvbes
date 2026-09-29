@@ -163,6 +163,69 @@ pub(crate) fn state_with_pool(pool: PgPool) -> AccountState {
     AccountState::new(account_config(), pool).expect("account state")
 }
 
+/// Fresh migrated database derived from `DATABASE_URL` for tests that call `migrate` directly.
+pub(crate) async fn ephemeral_migrated_pool() -> (PgPool, String) {
+    let mother = std::env::var("DATABASE_URL").expect("DATABASE_URL required");
+    let admin = rewrite_database_name(&mother, "postgres");
+    let name = format!("account_ephemeral_{}", Uuid::new_v4().simple());
+    let admin_pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&admin)
+        .await
+        .expect("admin postgres");
+    sqlx::query(&format!("CREATE DATABASE \"{name}\""))
+        .execute(&admin_pool)
+        .await
+        .expect("create ephemeral database");
+    admin_pool.close().await;
+    let ephemeral = rewrite_database_name(&mother, &name);
+    let pool = crate::database::connect(&ephemeral, 4)
+        .await
+        .expect("ephemeral pool");
+    crate::database::migrate(&pool)
+        .await
+        .expect("ephemeral migrate");
+    (pool, name)
+}
+
+pub(crate) async fn drop_ephemeral_database(name: &str) {
+    let mother = match std::env::var("DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => return,
+    };
+    let admin = rewrite_database_name(&mother, "postgres");
+    let Ok(admin_pool) = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&admin)
+        .await
+    else {
+        return;
+    };
+    let _ = sqlx::query(
+        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()",
+    )
+    .bind(name)
+    .execute(&admin_pool)
+    .await;
+    let _ = sqlx::query(&format!("DROP DATABASE IF EXISTS \"{name}\""))
+        .execute(&admin_pool)
+        .await;
+    admin_pool.close().await;
+}
+
+fn rewrite_database_name(database_url: &str, name: &str) -> String {
+    let (base, query) = match database_url.split_once('?') {
+        Some((base, query)) => (base, Some(query)),
+        None => (database_url, None),
+    };
+    let slash = base.rfind('/').expect("database URL path");
+    let rewritten = format!("{}{name}", &base[..=slash]);
+    match query {
+        Some(query) => format!("{rewritten}?{query}"),
+        None => rewritten,
+    }
+}
+
 #[allow(
     dead_code,
     reason = "shared JWT verifier helper for cross-module account tests"
