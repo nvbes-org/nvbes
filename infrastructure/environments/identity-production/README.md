@@ -27,10 +27,12 @@ and provide distinct least-privilege credentials:
   `IDENTITY_TERRAFORM_STATE_SECRET_KEY`, `IDENTITY_MFA_ENCRYPTION_KEY`,
   `IDENTITY_METRICS_TOKEN`, `IDENTITY_SYNTHETIC_PASSWORD`,
   `IDENTITY_SYNTHETIC_RECOVERED_PASSWORD`, `IDENTITY_SENTRY_DSN`,
+  `IDENTITY_TOKEN_PRIVATE_KEY_PEM`, `IDENTITY_TOKEN_PUBLIC_KEY_PEM`,
   `GRAFANA_OTLP_AUTHORIZATION_HEADER`;
 - variables: `SCW_PROJECT_ID`, `SCW_ORGANIZATION_ID`, `SCW_REGION`, `SCW_ZONE`,
   `TERRAFORM_STATE_BUCKET`, `GRAFANA_OTLP_ENDPOINT`,
-  `IDENTITY_MFA_KEY_VERSION`, `IDENTITY_SENTRY_TRACES_SAMPLE_RATE`;
+  `IDENTITY_MFA_KEY_VERSION`, `IDENTITY_SENTRY_TRACES_SAMPLE_RATE`,
+  `IDENTITY_TOKEN_ISSUER`, `IDENTITY_TOKEN_KEY_ID`;
 - per-deployment approvals: `IDENTITY_DEPLOY_CONFIRMATION` equal to
   `deploy-identity-production` and `IDENTITY_DEPLOY_APPROVED_SHA` equal to the
   exact `main` commit.
@@ -40,6 +42,8 @@ materialize database identities, execute the migration job, apply the runtime
 plan, run the private Sentry delivery proof and the non-delivering synthetic
 authentication/recovery job, then record bounded activation latency, readiness,
 authenticated metrics, anonymous metrics denial and public registration closure
-liveness/readiness. Each run uses a unique `.invalid` address and emits only its
-principal UUID and bounded audit counts. Rollback uses the previously captured image
-digest; migrations are additive and remain compatible with that image.
+liveness/readiness. It also proves, privately, Account-bound token claims and
+revocation, encrypted TOTP step-up, and one-time invitation acceptance. Each run
+uses unique `.invalid` addresses and emits only bounded audit evidence. Rollback
+uses the previously captured image digest; migrations are additive and remain
+compatible with that image.

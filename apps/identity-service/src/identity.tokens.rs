@@ -294,4 +294,3 @@ mod property_tests;
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.tokens.database.tests.rs"]
 mod database_tests;
-

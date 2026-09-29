@@ -37,7 +37,7 @@ pub(crate) fn config() -> TokenConfig {
         .clone()
 }
 
-fn grant() -> ActiveGrant {
+pub(crate) fn grant() -> ActiveGrant {
     let clients = ClientRegistry::from_json(r#"[{
         "client_id":"account-web","display_name":"Account",
         "redirect_uris":["https://account.example/callback"],"post_logout_redirect_uris":[],
@@ -67,7 +67,6 @@ fn grant() -> ActiveGrant {
     }
 }
 
-<<<<<<< HEAD
 #[test]
 fn oidc_and_api_tokens_have_distinct_audiences_and_types() {
     let service = TokenService::new(config()).unwrap();
@@ -92,20 +91,6 @@ fn oidc_and_api_tokens_have_distinct_audiences_and_types() {
             .decoding_key("identity-key-1", Utc::now().timestamp() as u64)
             .unwrap(),
         &validation,
-=======
-fn service() -> TokenService {
-    let private = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
-    TokenService::new(
-        TokenConfig::from_values(
-            "test",
-            "http://identity.test".into(),
-            "identity-key-1".into(),
-            String::from_utf8(private.private_key_to_pem_pkcs8().unwrap()).unwrap(),
-            String::from_utf8(private.public_key_to_pem().unwrap()).unwrap(),
-            "nvbes-account-service".into(),
-        )
-        .unwrap(),
->>>>>>> origin/main
     )
     .unwrap()
     .claims;
