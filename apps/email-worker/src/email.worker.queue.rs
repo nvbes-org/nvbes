@@ -53,6 +53,12 @@ struct ScalewayDispatchQueue {
 
 impl ScalewayDispatchQueue {
     fn new(config: &DispatchQueueConfig) -> Self {
+        // rustls native-root loading can race under heavy nextest parallelism.
+        static TLS_INIT: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _tls_guard = TLS_INIT
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+
         let credentials = Credentials::new(
             config.access_key.clone(),
             config.secret_key.clone(),
