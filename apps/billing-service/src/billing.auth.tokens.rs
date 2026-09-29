@@ -101,8 +101,23 @@ impl TokenVerifier {
         uri: &axum::http::Uri,
         db: &sqlx::PgPool,
     ) -> Result<BillingPrincipal, BillingError> {
+        let Some(verifier) = self.0.as_ref() else {
+            #[cfg(test)]
+            if let Ok(id) = Uuid::parse_str(credentials.token) {
+                return Ok(BillingPrincipal {
+                    id,
+                    scopes: vec![
+                        "billing:read".into(),
+                        "billing:checkout".into(),
+                        "billing:write".into(),
+                        "billing:admin".into(),
+                    ],
+                    strong_authentication: true,
+                });
+            }
+            return Err(BillingError::Unauthorized);
+        };
         let (principal, expected) = self.validated(credentials.token)?;
-        let verifier = self.0.as_ref().ok_or(BillingError::Unauthorized)?;
         let proof = ResourceVerifier::verify(
             verifier.dpop.as_ref(),
             credentials,

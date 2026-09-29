@@ -11,9 +11,7 @@ use wiremock::{
     matchers::{body_string_contains, header, method, path},
 };
 
-use crate::database::http_test_support::{
-    bearer, bearer_jwt, test_router, test_router_with_config,
-};
+use crate::database::http_test_support::{JwtHarness, TestApp, bearer, test_router};
 use crate::database::test_support::test_config;
 
 #[sqlx::test(migrations = "./migrations")]
@@ -38,12 +36,13 @@ async fn checkout_requires_authentication(pool: PgPool) {
 async fn checkout_rejects_read_only_scope(pool: PgPool) {
     let workspace = Uuid::new_v4();
     let principal = Uuid::new_v4();
-    let config = crate::database::http_test_support::jwt_config();
-    let app = test_router_with_config(pool, config);
-    let response = app
+    let harness = JwtHarness::new(pool).await;
+    let authorization = harness.bearer_jwt(principal, "billing:read");
+    let response = harness
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/checkout"))
-                .header("authorization", bearer_jwt(principal, "billing:read"))
+                .header("authorization", authorization)
                 .header("content-type", "application/json")
                 .body(Body::from(
                     json!({ "plan_code": "standard_monthly" }).to_string(),
@@ -58,8 +57,9 @@ async fn checkout_rejects_read_only_scope(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn checkout_rejects_unknown_plan(pool: PgPool) {
     let workspace = Uuid::new_v4();
-    let app = test_router(pool);
+    let app = TestApp::new(pool).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/checkout"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -77,8 +77,9 @@ async fn checkout_rejects_unknown_plan(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn checkout_rejects_empty_idempotency_key(pool: PgPool) {
     let workspace = Uuid::new_v4();
-    let app = test_router(pool);
+    let app = TestApp::new(pool).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/checkout"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -98,10 +99,11 @@ async fn checkout_rejects_empty_idempotency_key(pool: PgPool) {
 async fn checkout_creates_mock_session_and_reuses_idempotency(pool: PgPool) {
     let workspace = Uuid::new_v4();
     let principal = Uuid::new_v4();
-    let app = test_router(pool.clone());
+    let app = TestApp::new(pool.clone()).await;
     let body = json!({ "plan_code": "standard_monthly", "account_type": "team" }).to_string();
 
     let first = app
+        .router
         .clone()
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/checkout"))
@@ -128,6 +130,7 @@ async fn checkout_creates_mock_session_and_reuses_idempotency(pool: PgPool) {
     );
 
     let second = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/checkout"))
                 .header("authorization", bearer(principal))
@@ -180,8 +183,9 @@ async fn checkout_calls_stripe_api_when_not_dummy_key(pool: PgPool) {
     config.stripe_secret_key = "sk_test_from_wiremock".into();
     config.stripe_api_base_url = mock.uri();
 
-    let app = test_router_with_config(pool, config);
+    let app = TestApp::with_config(pool, config).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/checkout"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -207,9 +211,10 @@ async fn checkout_calls_stripe_api_when_not_dummy_key(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn checkout_rejects_oversized_idempotency_key(pool: PgPool) {
     let workspace = Uuid::new_v4();
-    let app = test_router(pool);
+    let app = TestApp::new(pool).await;
     let oversized = "x".repeat(256);
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/checkout"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -244,8 +249,9 @@ async fn checkout_surfaces_stripe_api_errors(pool: PgPool) {
     config.stripe_secret_key = "sk_test_from_wiremock".into();
     config.stripe_api_base_url = mock.uri();
 
-    let app = test_router_with_config(pool, config);
+    let app = TestApp::with_config(pool, config).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/checkout"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -279,8 +285,9 @@ async fn checkout_rejects_stripe_payload_missing_fields(pool: PgPool) {
     config.stripe_secret_key = "sk_test_from_wiremock".into();
     config.stripe_api_base_url = mock.uri();
 
-    let app = test_router_with_config(pool, config);
+    let app = TestApp::with_config(pool, config).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/checkout"))
                 .header("authorization", bearer(Uuid::new_v4()))

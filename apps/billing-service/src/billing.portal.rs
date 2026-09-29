@@ -169,3 +169,7 @@ pub async fn create_stripe_portal_grpc(
 ) -> BillingResult<String> {
     create_stripe_portal(state, customer_id).await
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.portal.tests.rs"]
+mod tests;
