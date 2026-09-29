@@ -1,6 +1,7 @@
 use crate::oauth::{error::OAuthError, pkce::is_sha256_base64url, request::AuthorizationInput};
 use std::collections::BTreeMap;
 
+#[allow(clippy::large_enum_variant)]
 pub(super) enum AuthorizationQuery {
     Direct(AuthorizationInput),
     Par { client_id: String, handle: String },

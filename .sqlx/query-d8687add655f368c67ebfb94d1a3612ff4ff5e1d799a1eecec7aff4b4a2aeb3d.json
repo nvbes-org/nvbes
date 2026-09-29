@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO billing_webhook_events (event_id, event_type, stripe_created_at, payload, status) VALUES ($1, 'checkout.session.completed', $2, $3, 'processed') ON CONFLICT (event_id) DO NOTHING RETURNING event_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "event_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d8687add655f368c67ebfb94d1a3612ff4ff5e1d799a1eecec7aff4b4a2aeb3d"
+}

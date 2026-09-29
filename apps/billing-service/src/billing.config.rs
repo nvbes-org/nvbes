@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BillingConfig {
     pub browser_origins: nvbes_core::security::resource_cors::ResourceCorsOrigins,
     pub public_origin: Option<String>,
@@ -110,3 +110,7 @@ impl BillingConfig {
         })
     }
 }
+
+#[cfg(test)]
+#[path = "billing.config.tests.rs"]
+mod tests;

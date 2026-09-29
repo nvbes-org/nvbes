@@ -1,3 +1,4 @@
+#![allow(clippy::result_large_err)]
 use crate::{auth, mfa_crypto::MfaCrypto, recovery, recovery_delivery};
 
 #[cfg(all(test, feature = "database-tests"))]

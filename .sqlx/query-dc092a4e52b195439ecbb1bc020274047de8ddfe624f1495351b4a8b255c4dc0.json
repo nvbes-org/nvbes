@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, principal_id, secret_ciphertext, secret_nonce, key_version FROM identity_auth_factors WHERE key_version <> $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "principal_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "secret_ciphertext",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "secret_nonce",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "key_version",
+        "type_info": "Int2"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "dc092a4e52b195439ecbb1bc020274047de8ddfe624f1495351b4a8b255c4dc0"
+}

@@ -41,7 +41,7 @@ struct Decision {
     allowed: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AccountAuthority {
     client: Client,
     endpoint: Url,

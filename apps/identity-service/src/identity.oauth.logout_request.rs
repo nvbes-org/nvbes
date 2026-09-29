@@ -71,10 +71,10 @@ impl LogoutRequest {
             })
             .transpose()?;
         let explicit_client = values.remove("client_id");
-        if let (Some(client), Some(hint)) = (&explicit_client, &hint) {
-            if client != &hint.client_id {
-                return Err(OAuthError::InvalidClient);
-            }
+        if let (Some(client), Some(hint)) = (&explicit_client, &hint)
+            && client != &hint.client_id
+        {
+            return Err(OAuthError::InvalidClient);
         }
         let client_id =
             explicit_client.or_else(|| hint.as_ref().map(|hint| hint.client_id.clone()));

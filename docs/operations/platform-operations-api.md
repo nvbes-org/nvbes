@@ -2,7 +2,9 @@
 
 Le runtime existant expose une API JSON et le client Python
 `scripts/platform-operations.py`. Les anciennes cartes et actions simulées ont
-été retirées. Aucun nouveau service payant n'est nécessaire.
+été retirées. Aucun nouveau service payant n'est nécessaire. L'overview live
+expose uniquement l'identité opérateur, les sondes `/health/ready` configurées,
+et les liens cases/audits/commands/costs — pas de panneaux email/billing/finops.
 
 ## Stockage et accès
 
@@ -56,6 +58,34 @@ aucun rôle spécialisé n'est activé implicitement.
 L'émetteur doit délivrer ce contrat opérateur avant activation en production.
 La configuration échoue sans clé/émetteur/base ; il n'existe pas de bypass local.
 Le script de preuve utilise sa propre clé éphémère et des données synthétiques.
+
+### Émission Identity (prod)
+
+Identity est l'émetteur de confiance :
+
+1. Authentifier la session web, confirmer le TOTP (step-up actif).
+2. `POST /api/v1/operator/token` avec `{ "session_token": "..." }` — le principal
+   doit figurer dans `NVBES_IDENTITY_PLATFORM_OPERATOR_PRINCIPALS`.
+3. Utiliser le `access_token` retourné comme
+   `NVBES_PLATFORM_OPERATIONS_ACCESS_TOKEN` (et Bearer Account/Identity ops).
+4. Configurer Platform Operations avec la **clé publique** Identity et le même
+   `iss` : `NVBES_PLATFORM_OPERATIONS_PUBLIC_KEY_PEM` /
+   `NVBES_PLATFORM_OPERATIONS_ISSUER`.
+5. Inclure `platform-operations` dans `NVBES_IDENTITY_TOKEN_AUDIENCES`.
+
+APIs domaine utiles au parcours dossier (JWT opérateur) :
+
+- Identity : `POST /api/v1/operator/principals/{id}/sessions/revoke`
+- Account : `GET /api/v1/operator/profiles/{principal_id}` (champs minimisés)
+- Email gRPC : caller `platform-operations-service` (token producer dédié)
+
+Billing et Trust/Risk conservent temporairement leurs tokens opérateur
+(`NVBES_BILLING_OPERATOR_TOKEN`, `NVBES_TRUST_RISK_OPERATOR_TOKENS`) jusqu'à
+migration JWT ; consigner leurs reçus dans le dossier via `record_observation`.
+
+Les commandes Platform Operations d'écriture exigent un step-up frais
+(`auth_time` ≤ 5 minutes). La lecture (cases, audits, coûts, overview) exige
+seulement MFA dans `amr`.
 
 ## Client et commandes
 

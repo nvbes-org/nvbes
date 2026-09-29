@@ -6,7 +6,7 @@ use serde::Serialize;
 use crate::app::TrustRiskState;
 
 #[derive(Debug, Serialize)]
-struct HealthResponse {
+pub(crate) struct HealthResponse {
     status: &'static str,
     service: &'static str,
 }
@@ -25,7 +25,9 @@ async fn live() -> Json<HealthResponse> {
     })
 }
 
-async fn ready(State(state): State<TrustRiskState>) -> (StatusCode, Json<HealthResponse>) {
+pub(crate) async fn ready(
+    State(state): State<TrustRiskState>,
+) -> (StatusCode, Json<HealthResponse>) {
     let database_ready = tokio::time::timeout(
         std::time::Duration::from_millis(250),
         sqlx::query_scalar::<_, bool>(

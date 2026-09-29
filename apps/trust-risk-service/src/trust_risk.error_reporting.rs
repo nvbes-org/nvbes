@@ -31,3 +31,7 @@ pub fn capture_operation(
         },
     );
 }
+
+#[cfg(test)]
+#[path = "trust_risk.error_reporting.tests.rs"]
+mod tests;

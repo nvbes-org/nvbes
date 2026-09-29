@@ -28,6 +28,10 @@ fn authorize(
     if !actor.permits(permission) {
         return Err(OperationsError::Forbidden);
     }
+    let write = matches!(permission, Permission::WriteCases | Permission::WriteCosts);
+    if write && !actor.has_mfa_step_up {
+        return Err(OperationsError::Forbidden);
+    }
     Ok(actor)
 }
 
@@ -118,3 +122,7 @@ pub async fn costs(
         "coverage":"Operator must verify all providers; recorded totals are not proof of completeness"}),
     ))
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "platform.operations.routes.tests.rs"]
+mod tests;

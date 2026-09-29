@@ -1,8 +1,9 @@
 # Account service
 
-Runtime V1 propriétaire des profils, préférences, équipes, memberships et du
-cycle de vie des données Account. Il accepte exclusivement les access tokens
-RS256 émis par Identity pour l'audience Account.
+Runtime V1 propriétaire des profils, préférences, acceptations légales,
+équipes, memberships et du cycle de vie des données Account. Il accepte
+exclusivement les access tokens RS256 émis par Identity pour l'audience
+`nvbes-account-service`.
 
 Les requêtes protégées vérifient le profil `at+jwt`, l'issuer exact (sans retirer
 son slash final), l'audience `nvbes-account-service`, les scopes et les dates,
@@ -27,8 +28,9 @@ recevable pendant cinq minutes, dans la limite de l'expiration du token.
 
 Les exports sont construits par le job `process-privacy-jobs` et expirent après
 24 heures. Une fermeture dispose d'un délai d'annulation de sept jours avant
-redaction des données Account. Les autres domaines restent responsables de
-leurs propres fragments et suppressions.
+redaction des données Account. L'outbox est publiée via `publish-outbox` ou la
+boucle runtime périodique. Les autres domaines restent responsables de leurs
+propres fragments et suppressions.
 
 Le runtime ne fournit aucune inscription, credential, abonnement ou capacité
 Enterprise.

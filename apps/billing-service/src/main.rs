@@ -26,6 +26,8 @@ mod health;
 mod metrics;
 #[path = "billing.outbox.rs"]
 mod outbox;
+#[path = "billing.overview.rs"]
+mod overview;
 #[path = "billing.plans.rs"]
 mod plans;
 #[path = "billing.portal.rs"]
@@ -36,21 +38,38 @@ mod reconciliation;
 mod subscriptions;
 #[path = "billing.synthetic.rs"]
 mod synthetic;
-#[cfg(all(test, feature = "database-tests"))]
-#[path = "billing.webhooks.tests.rs"]
-mod webhook_tests;
 #[path = "billing.webhooks.rs"]
 mod webhooks;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let command: Vec<String> = std::env::args().skip(1).collect();
+    run(std::env::args().skip(1).collect()).await
+}
+
+async fn run(command: Vec<String>) -> anyhow::Result<()> {
+    if matches!(command.as_slice(), [action] if action == "deployment-bootstrap") {
+        return run_deployment_bootstrap().await;
+    }
 
     if matches!(command.as_slice(), [action] if action == "migrate") {
         let config = config::BillingConfig::from_env()?;
         let pool = database::connect(&config.database_url, 2).await?;
         database::migrate(&pool).await?;
         println!("billing database migrations applied");
+        return Ok(());
+    }
+
+    if matches!(command.as_slice(), [action] if action == "check-stripe-mappings") {
+        let config = config::BillingConfig::from_env()?;
+        let pool = database::connect(&config.database_url, 2).await?;
+        let report = plans::check_stripe_mappings(&pool).await?;
+        println!("{}", serde_json::to_string(&report)?);
+        if !report.failures.is_empty() {
+            for failure in &report.failures {
+                eprintln!("stripe mapping error: {failure}");
+            }
+            std::process::exit(1);
+        }
         return Ok(());
     }
 
@@ -103,7 +122,7 @@ async fn main() -> anyhow::Result<()> {
 
     if !command.is_empty() && command[0] != "serve" {
         anyhow::bail!(
-            "usage: nvbes-billing-service [serve|migrate|validate-runtime|publish-outbox|synthetic-billing-smoke]"
+            "usage: nvbes-billing-service [serve|migrate|validate-runtime|publish-outbox|synthetic-billing-smoke|check-stripe-mappings|deployment-bootstrap]"
         );
     }
 
@@ -196,6 +215,24 @@ fn required_uuid(name: &str) -> anyhow::Result<uuid::Uuid> {
     Ok(uuid::Uuid::parse_str(&value)?)
 }
 
+async fn run_deployment_bootstrap() -> anyhow::Result<()> {
+    let bind_addr: std::net::SocketAddr = std::env::var("NVBES_BILLING_BIND_ADDR")
+        .or_else(|_| std::env::var("NVBES_BILLING_HTTP_BIND_ADDR"))
+        .unwrap_or_else(|_| "0.0.0.0:8080".to_string())
+        .parse()
+        .map_err(|error| anyhow::anyhow!("NVBES_BILLING_BIND_ADDR is invalid: {error}"))?;
+    let listener = tokio::net::TcpListener::bind(bind_addr).await?;
+    let router = axum::Router::new().route(
+        "/health/live",
+        axum::routing::get(|| async { axum::http::StatusCode::NO_CONTENT }),
+    );
+
+    axum::serve(listener, router)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+    Ok(())
+}
+
 async fn shutdown_signal() {
     #[cfg(unix)]
     {
@@ -206,3 +243,7 @@ async fn shutdown_signal() {
     #[cfg(not(unix))]
     let _ = tokio::signal::ctrl_c().await;
 }
+
+#[cfg(test)]
+#[path = "billing.main.tests.rs"]
+mod main_tests;

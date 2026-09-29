@@ -32,8 +32,9 @@ test('Account remains closed and destructive privacy actions require MFA step-up
   assert.ok(privacySource.match(/principal\.require_step_up\(\)\?/gu)?.length >= 4);
 });
 
-test('schema changes and privacy work are explicit commands', () => {
+test('schema changes, privacy work and outbox publication are explicit commands', () => {
   assert.equal(mainSource.match(/database::migrate\(&pool\)\.await\?/gu)?.length, 1);
   assert.ok(mainSource.includes('action == "process-privacy-jobs"'));
+  assert.ok(mainSource.includes('action == "publish-outbox"'));
   assert.ok(mainSource.includes('action == "synthetic-account-smoke"'));
 });

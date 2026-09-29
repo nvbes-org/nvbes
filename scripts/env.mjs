@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -215,14 +215,16 @@ function load(path, options) {
 
 function check() {
   const template = load(templatePath);
-  if (!existsSync(localPath)) {
+  let local;
+  try {
+    local = load(localPath);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
     console.log(
       `Environment contract: ${template.assignments.size} variables, local .env absent (ok)`,
     );
     return;
   }
-
-  const local = load(localPath);
   const missing = [...template.assignments.keys()].filter((key) => !local.assignments.has(key));
   const unknown = [...local.assignments.keys()].filter((key) => !template.assignments.has(key));
   if (missing.length > 0 || unknown.length > 0) {
@@ -246,12 +248,22 @@ function check() {
 
 function sync({ prune = false } = {}) {
   const template = load(templatePath);
-  const local = existsSync(localPath)
-    ? load(localPath, { allowDuplicates: true })
-    : { assignments: new Map(), duplicates: new Set(), lines: [] };
+  let local;
+  try {
+    local = load(localPath, { allowDuplicates: true });
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    local = { assignments: new Map(), duplicates: new Set(), lines: [] };
+  }
   const rendered = renderSynchronizedEnv(template, local, prune);
 
-  writeFileSync(localPath, rendered.content, { encoding: 'utf8', mode: 0o600 });
+  // Atomic write: create the new content under a sibling temporary file,
+  // then rename over the target. A concurrent reader never observes a
+  // half-written .env and no check-then-use window exists on localPath.
+  const tmpPath = `${localPath}.${process.pid}.tmp`;
+  writeFileSync(tmpPath, rendered.content, { encoding: 'utf8', mode: 0o600 });
+  chmodSync(tmpPath, 0o600);
+  renameSync(tmpPath, localPath);
   chmodSync(localPath, 0o600);
 
   const changes = [
@@ -268,8 +280,13 @@ function sync({ prune = false } = {}) {
 }
 
 function exportMissing() {
-  if (!existsSync(localPath)) return;
-  const local = load(localPath);
+  let local;
+  try {
+    local = load(localPath);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    return;
+  }
   for (const { key, value } of local.assignments.values()) {
     if (process.env[key] === undefined) console.log(`export ${key}=${shellQuote(value)}`);
   }

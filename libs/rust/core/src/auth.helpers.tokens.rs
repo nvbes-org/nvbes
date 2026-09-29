@@ -48,3 +48,7 @@ pub fn unique_slug(seed: &str) -> String {
         &suffix[..8]
     )
 }
+
+#[cfg(test)]
+#[path = "auth.helpers.tokens.tests.rs"]
+mod tests;

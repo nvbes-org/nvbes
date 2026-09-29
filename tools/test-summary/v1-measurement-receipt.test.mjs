@@ -84,11 +84,7 @@ test('refuses a raw score below the applicable threshold', () => {
 test('manual trusted CI publishes bounded TypeScript measurement artifacts', () => {
   const workflow = parse(readFileSync('.github/workflows/v1-testing.yml', 'utf8'));
   assert.deepEqual(Object.keys(workflow.on), ['workflow_dispatch']);
-  assert.deepEqual(
-    Object.keys(workflow.on.workflow_dispatch.inputs).sort((a, b) => a.localeCompare(b)),
-    ['expected_sha', 'fallback_of', 'runner'],
-  );
-  assert.equal(workflow.on.workflow_dispatch.inputs.runner.default, 'github-hosted');
+  assert.deepEqual(workflow.on.workflow_dispatch, {});
   assert.equal(workflow.concurrency['cancel-in-progress'], true);
   assert.deepEqual(workflow.permissions, { actions: 'read', contents: 'read' });
   const job = workflow.jobs['typescript-measurement'];
@@ -98,7 +94,11 @@ test('manual trusted CI publishes bounded TypeScript measurement artifacts', () 
     'fail-fast': false,
     'max-parallel': 1,
     matrix: {
-      include: [{ package: 'email-ui', unit: '@nvbes/email-ui' }],
+      include: [
+        { package: 'email-ui', unit: '@nvbes/email-ui' },
+        { package: 'http-client', unit: '@nvbes/http-client' },
+        { package: 'identity-sdk-web', unit: '@nvbes/identity-sdk-web' },
+      ],
     },
   });
   assert.deepEqual(job.env, {
@@ -125,7 +125,7 @@ test('manual trusted CI publishes bounded TypeScript measurement artifacts', () 
   );
   assert(job.steps.every((step) => step['continue-on-error'] !== true));
   const security = job.steps.findIndex((step) => step.name === 'CI/CD security gate');
-  const setup = job.steps.findIndex((step) => step.uses === './.github/actions/ci-setup');
+  const setup = job.steps.findIndex((step) => step.uses === '$/.github/actions/ci-setup');
   assert.ok(security >= 0 && security < setup);
   const upload = job.steps.find((step) => step.name === 'Publish TypeScript measurement');
   assert.equal(upload.uses, 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a');

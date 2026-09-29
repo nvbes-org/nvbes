@@ -77,3 +77,7 @@ impl From<nvbes_dpop::resource::ResourceError> for BillingError {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "billing.error.tests.rs"]
+mod tests;

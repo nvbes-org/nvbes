@@ -323,6 +323,10 @@ macro_rules! impl_app_error {
 }
 
 #[cfg(test)]
+#[path = "http.error.tests.rs"]
+mod integration_tests;
+
+#[cfg(test)]
 mod tests {
     use super::{AppError, public_error_code, public_error_message};
     use axum::http::StatusCode;

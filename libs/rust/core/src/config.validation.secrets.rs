@@ -32,3 +32,7 @@ pub(crate) fn validate_auth_factor_encryption(
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "config.validation.secrets.tests.rs"]
+mod tests;

@@ -40,7 +40,7 @@ Service Billing V1 minimal, opérant exclusivement avec Stripe en mode test.
   réponse. Il refuse les redirections et exige que toutes les claims attendues
   correspondent au token vérifié. Les jetons liés à DPoP restent refusés en Bearer.
 - DPoP est accepté avec `NVBES_BILLING_PUBLIC_ORIGIN`, une preuve ES256 liée au
-  jeton et la migration 0002 du registre anti-rejeu local. L'introspection Identity
+  jeton et la migration 0003 du registre anti-rejeu local. L'introspection Identity
   et l'autorisation Account restent obligatoires. Voir le
   [contrat DPoP des API](../../docs/architecture/identity-resource-dpop.md).
 - Après Identity, chaque opération consulte Account pour vérifier le propriétaire
@@ -58,9 +58,6 @@ Service Billing V1 minimal, opérant exclusivement avec Stripe en mode test.
 - Scale-to-zero : conteneur `min_scale = 0`, `max_scale = 1` ; base Serverless SQL `min_cpu = 0`, `max_cpu = 1`.
 - Coût consolidé respectant le plafond global de 30 EUR TTC/mois.
 
-## Actions CLI
-
-<<<<<<< HEAD
 Les sites autorisés à lire les API sont configurés par
 `NVBES_BILLING_BROWSER_ORIGINS_JSON`, par exemple `["https://account.example"]`.
 Valeur absente : `[]`. Limites : 32 origines et 16 Kio ; chaque origine doit être
@@ -73,9 +70,7 @@ jamais les webhooks, l'opérateur, health ou les métriques. Cette liste doit
 rester cohérente avec les sites autorisés par Identity. CORS ne remplace ni
 l'introspection Identity ni l'autorisation Account.
 
-=======
-
-> > > > > > > origin/main
+## Actions CLI
 
 ```bash
 billing-service serve                     # Démarre le serveur HTTP

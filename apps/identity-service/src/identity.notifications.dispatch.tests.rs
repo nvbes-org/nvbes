@@ -63,14 +63,16 @@ async fn concurrent_dispatchers_send_each_verified_snapshot_once() {
     let (a, b) = tokio::join!(run_with(&db, &send), run_with(&db, &send));
     assert_eq!(a.unwrap().accepted + b.unwrap().accepted, 2);
     assert_eq!(run_with(&db, &send).await.unwrap().claimed, 0);
-    let commands = sent.lock().unwrap();
-    assert_eq!(commands.len(), 2);
-    assert_ne!(commands[0].idempotency_key, commands[1].idempotency_key);
-    assert!(
-        !commands
-            .iter()
-            .any(|c| c.recipient.email.starts_with("unverified"))
-    );
+    {
+        let commands = sent.lock().unwrap();
+        assert_eq!(commands.len(), 2);
+        assert_ne!(commands[0].idempotency_key, commands[1].idempotency_key);
+        assert!(
+            !commands
+                .iter()
+                .any(|c| c.recipient.email.starts_with("unverified"))
+        );
+    }
     let retained: i64 = sqlx::query_scalar("SELECT count(*) FROM identity_security_notifications WHERE command IS NOT NULL OR receipt_id IS NULL OR state<>'accepted'").fetch_one(&db).await.unwrap();
     assert_eq!(retained, 0);
 }

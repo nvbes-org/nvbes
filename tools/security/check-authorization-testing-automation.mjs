@@ -204,12 +204,13 @@ if (matrix) {
   if (!Object.hasOwn(scripts, 'check:authorization-testing-automation')) {
     errors.push('package.json: missing check:authorization-testing-automation script');
   }
+  const securityCheck = scripts['check:security'] || scripts.check;
   if (
-    typeof scripts.check === 'string' &&
-    !scripts.check.includes('pnpm check:authorization-testing-automation')
+    typeof securityCheck === 'string' &&
+    !securityCheck.includes('pnpm check:authorization-testing-automation')
   ) {
     errors.push(
-      'package.json: root check must include pnpm check:authorization-testing-automation',
+      'package.json: check:security or root check must include pnpm check:authorization-testing-automation',
     );
   }
 

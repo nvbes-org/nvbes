@@ -15,11 +15,20 @@ pub mod signal;
 pub mod types;
 
 #[cfg(test)]
+#[path = "trust_risk.assessment.tests.rs"]
+mod assessment_tests;
+#[cfg(test)]
+#[path = "trust_risk.attribute.tests.rs"]
+mod attribute_tests;
+#[cfg(test)]
 #[path = "trust_risk.contract.tests.rs"]
 mod contract_tests;
 #[cfg(test)]
 #[path = "trust_risk.domain.tests.rs"]
 mod domain_tests;
+#[cfg(test)]
+#[path = "trust_risk.label.tests.rs"]
+mod label_tests;
 #[cfg(test)]
 #[path = "trust_risk.property.tests.rs"]
 mod property_tests;
@@ -27,3 +36,9 @@ mod property_tests;
 #[cfg(test)]
 #[path = "trust_risk.rules.properties.tests.rs"]
 mod properties;
+#[cfg(test)]
+#[path = "trust_risk.rules.validation.tests.rs"]
+mod rules_validation_tests;
+#[cfg(test)]
+#[path = "trust_risk.signal.tests.rs"]
+mod signal_tests;

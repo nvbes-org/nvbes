@@ -114,3 +114,31 @@ fn provider_supports_external_portal_only_for_stripe() {
     assert!(!provider_supports_external_portal(ProviderCode::Mollie));
     assert!(!provider_supports_external_portal(ProviderCode::Cb));
 }
+
+#[test]
+fn provider_customer_id_for_falls_back_to_billing_customer_and_skips_mismatches() {
+    let mut mollie = billing_record("mollie");
+    mollie.provider_customer_id = None;
+    assert_eq!(
+        provider_customer_id_for(&mollie, ProviderCode::Mollie).as_deref(),
+        Some("mollie_billing")
+    );
+    assert_eq!(provider_customer_id_for(&mollie, ProviderCode::Cb), None);
+
+    let mut cb = billing_record("cb");
+    cb.stripe_customer_id = None;
+    cb.provider_customer_id = None;
+    assert_eq!(
+        provider_customer_id_for(&cb, ProviderCode::Cb).as_deref(),
+        Some("cb_billing")
+    );
+    assert_eq!(provider_customer_id_for(&cb, ProviderCode::Mollie), None);
+
+    let mut stripe = billing_record("stripe");
+    stripe.stripe_customer_id = None;
+    stripe.provider_customer_id = None;
+    assert_eq!(
+        provider_customer_id_for(&stripe, ProviderCode::Stripe).as_deref(),
+        Some("stripe_billing")
+    );
+}

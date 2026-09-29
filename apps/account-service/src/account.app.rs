@@ -34,6 +34,7 @@ pub fn router(state: AccountState) -> Router {
     ]);
     let browser = crate::profile::router(state.clone())
         .merge(crate::preferences::router(state.clone()))
+        .merge(crate::consents::router(state.clone()))
         .merge(crate::teams::router(state.clone()))
         .merge(crate::privacy::router(state.clone()))
         .layer(cors);
@@ -42,6 +43,7 @@ pub fn router(state: AccountState) -> Router {
             state.db.clone(),
             state.config.billing_authorization_secret.as_deref(),
         ))
-        .merge(crate::metrics::router(state))
+        .merge(crate::metrics::router(state.clone()))
+        .merge(crate::operator::router(state.clone()))
         .merge(browser)
 }

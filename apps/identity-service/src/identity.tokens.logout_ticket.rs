@@ -19,46 +19,6 @@ struct Ticket {
     request: LogoutRequest,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tokens::tests::config;
-
-    #[test]
-    fn ticket_expiry_and_type_are_distinct_from_authentication_tokens() {
-        let clients = ClientRegistry::from_json(r#"[{"client_id":"account-web","display_name":"Account","redirect_uris":["https://account.example/callback"],"post_logout_redirect_uris":[],"resources":{"https://api.example/account":{"audience":"nvbes-account-service","scopes":["account:read"]}},"allow_refresh":false,"require_dpop":false}]"#, false).unwrap();
-        let service = TokenService::new(config()).unwrap();
-        let request = || LogoutRequest::from_fields(vec![], &clients, &service).unwrap();
-        let ticket = service.logout_ticket(request()).unwrap();
-        assert!(service.read_logout_ticket(&ticket, &clients).is_ok());
-        assert!(service.verify_logout_hint(&ticket).is_err());
-        assert!(service.verify(&ticket, "nvbes-account-service").is_err());
-        let now = Utc::now().timestamp() as u64;
-        for (iat, exp, typ) in [
-            (now - 301, now - 1, TYPE),
-            (now, now + 301, TYPE),
-            (now + 1, now + 100, TYPE),
-            (now, now + 100, "JWT"),
-            (now, now + 100, "at+jwt"),
-        ] {
-            let ticket = service
-                .keys
-                .sign(
-                    typ,
-                    &Ticket {
-                        iss: service.issuer.clone(),
-                        aud: AUDIENCE.into(),
-                        iat,
-                        exp,
-                        request: request(),
-                    },
-                )
-                .unwrap();
-            assert!(service.read_logout_ticket(&ticket, &clients).is_err());
-        }
-    }
-}
-
 impl TokenService {
     /// Short-lived, integrity-protected navigation context. Contains no ID Token
     /// or cookie secrets and grants no right to revoke without session CSRF.
@@ -114,5 +74,45 @@ impl TokenService {
             .revalidate(clients)
             .map_err(|_| TokenError::InvalidToken)?;
         Ok(ticket.request)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::tests::config;
+
+    #[test]
+    fn ticket_expiry_and_type_are_distinct_from_authentication_tokens() {
+        let clients = ClientRegistry::from_json(r#"[{"client_id":"account-web","display_name":"Account","redirect_uris":["https://account.example/callback"],"post_logout_redirect_uris":[],"resources":{"https://api.example/account":{"audience":"nvbes-account-service","scopes":["account:read"]}},"allow_refresh":false,"require_dpop":false}]"#, false).unwrap();
+        let service = TokenService::new(config()).unwrap();
+        let request = || LogoutRequest::from_fields(vec![], &clients, &service).unwrap();
+        let ticket = service.logout_ticket(request()).unwrap();
+        assert!(service.read_logout_ticket(&ticket, &clients).is_ok());
+        assert!(service.verify_logout_hint(&ticket).is_err());
+        assert!(service.verify(&ticket, "nvbes-account-service").is_err());
+        let now = Utc::now().timestamp() as u64;
+        for (iat, exp, typ) in [
+            (now - 301, now - 1, TYPE),
+            (now, now + 301, TYPE),
+            (now + 1, now + 100, TYPE),
+            (now, now + 100, "JWT"),
+            (now, now + 100, "at+jwt"),
+        ] {
+            let ticket = service
+                .keys
+                .sign(
+                    typ,
+                    &Ticket {
+                        iss: service.issuer.clone(),
+                        aud: AUDIENCE.into(),
+                        iat,
+                        exp,
+                        request: request(),
+                    },
+                )
+                .unwrap();
+            assert!(service.read_logout_ticket(&ticket, &clients).is_err());
+        }
     }
 }

@@ -7,4 +7,4 @@ description: Liste exhaustive des endpoints OpenAPI extraits des spécifications
 
 Total de services actifs documentés : **0**
 
-Les **9 spécifications hors runtimes actifs** trouvées dans les archives, la documentation ou les SDK sont exclues : elles ne représentent pas des APIs V1 actives.
+Les **10 spécifications hors runtimes actifs** trouvées dans les archives, la documentation ou les SDK sont exclues : elles ne représentent pas des APIs V1 actives.

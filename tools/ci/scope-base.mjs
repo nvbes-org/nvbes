@@ -6,7 +6,7 @@ export async function resolveScopeBase(
   { exists, ancestor, runs },
 ) {
   if (!isUsableCommitSha(head) || !exists(head)) throw new Error('Invalid CI head');
-  const candidate = event.pull_request?.base?.sha ?? explicitBase;
+  const candidate = event.pull_request?.base?.sha ?? event.merge_group?.base_sha ?? explicitBase;
   if (candidate) {
     return isUsableCommitSha(candidate) && exists(candidate)
       ? { base: candidate, fallback: false, reason: 'explicit base' }

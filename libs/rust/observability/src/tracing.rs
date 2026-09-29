@@ -32,7 +32,10 @@ pub fn init_tracing_for_service(config: &AppConfig, service_name: &str) {
     );
 }
 
-pub fn init_tracing_with_config(config: TracingConfig<'_>, service_name: &str) {
+pub fn init_tracing_with_config(
+    config: TracingConfig<'_>,
+    #[cfg_attr(not(feature = "otlp"), allow(unused_variables))] service_name: &str,
+) {
     let default_filter = "info";
 
     let env_filter = std::env::var("RUST_LOG")
@@ -166,14 +169,5 @@ fn otlp_metadata(config: TracingConfig<'_>) -> Option<tonic::metadata::MetadataM
 }
 
 #[cfg(test)]
-mod tests {
-    use super::otlp_http_signal_endpoint;
-
-    #[test]
-    fn http_signal_endpoint_is_canonical() {
-        assert_eq!(
-            otlp_http_signal_endpoint("https://example.grafana.net/otlp/", "/v1/traces"),
-            "https://example.grafana.net/otlp/v1/traces"
-        );
-    }
-}
+#[path = "observability.tracing.tests.rs"]
+mod tests;

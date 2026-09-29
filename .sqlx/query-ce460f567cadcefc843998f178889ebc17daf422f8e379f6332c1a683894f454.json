@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE billing_webhook_events SET processed_at = clock_timestamp() WHERE event_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ce460f567cadcefc843998f178889ebc17daf422f8e379f6332c1a683894f454"
+}

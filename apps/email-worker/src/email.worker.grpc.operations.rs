@@ -16,7 +16,7 @@ use crate::{
     state::EmailWorkerState,
 };
 
-const BACKOFFICE_CALLER: &str = "backoffice-service";
+const PLATFORM_OPERATIONS_CALLER: &str = "platform-operations-service";
 const PRIVACY_CALLER: &str = "identity-service";
 
 #[derive(Clone)]
@@ -40,7 +40,7 @@ impl EmailOperationsService for EmailOperationsGrpcService {
             &request,
             &self.state,
             request.get_ref().caller.as_ref(),
-            BACKOFFICE_CALLER,
+            PLATFORM_OPERATIONS_CALLER,
         )?;
         operations_snapshot::load(&self.state.db, &self.state.crypto)
             .await
@@ -146,7 +146,12 @@ fn authenticated_operator<'a, T>(
     operator: Option<&'a EmailOperatorContext>,
 ) -> Result<OperatorAction<'a>, Status> {
     let operator = operator.ok_or_else(|| Status::invalid_argument("operator is required"))?;
-    authenticate_caller(request, state, operator.caller.as_ref(), BACKOFFICE_CALLER)?;
+    authenticate_caller(
+        request,
+        state,
+        operator.caller.as_ref(),
+        PLATFORM_OPERATIONS_CALLER,
+    )?;
     if Uuid::parse_str(&operator.actor).is_err()
         || operator.reason.trim().len() < 12
         || operator.reason.len() > 500

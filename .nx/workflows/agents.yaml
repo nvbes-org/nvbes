@@ -1,0 +1,46 @@
+# Nx Agents launch templates for the nvbes workspace.
+#
+# Referenced by `dte.distribute-on` in `.nx/ci-config.yaml`, e.g.
+# `distribute-on: 3 nvbes-medium-js`.
+#
+# Scope (conservative): only the TypeScript quality gates lane distributes
+# (`check`, `format:check`, `lint`, `typecheck`, `test`, `build` over
+# `email-ui` / `identity-sdk-core` via `tools/ci/run-lane.mjs typescript`).
+# Those tasks need Node 24 + pnpm only: no Rust toolchain, no Terraform, no
+# Docker daemon, no Postgres service. Rust / database / terraform /
+# containers / contracts lanes stay coordinator-local in `.github/workflows/ci.yml`.
+#
+# Docs:
+# - https://nx.dev/docs/kb/launch-templates
+# - https://nx.dev/docs/kb/launch-template-examples
+
+# Shared init for JS-only agents. Mirrors `.github/actions/ci-setup/action.yml`
+# (Node 24 via base image, pnpm 11.18.0 via Corepack, locked install).
+common-js-init-steps: &nvbes-js-init-steps
+  - name: Checkout
+    # Checks out the same commit the coordinator runs (GITHUB_SHA).
+    uses: 'nrwl/nx-cloud-workflows/v6/workflow-steps/checkout/main.yaml'
+  - name: Pin pnpm via Corepack
+    # `package.json` declares `packageManager: pnpm@11.18.0`; pin explicitly so
+    # agents match CI exactly instead of relying on the image default.
+    # Never print env here: forwarded values may include tokens.
+    script: |
+      corepack enable
+      for attempt in 1 2 3; do
+        corepack prepare pnpm@11.18.0 --activate && break || {
+          if [ "$attempt" -eq 3 ]; then exit 1; fi
+          sleep 2
+        }
+      done
+      pnpm --version
+  - name: Install Node Modules
+    uses: 'nrwl/nx-cloud-workflows/v6/workflow-steps/install-node-modules/main.yaml'
+
+launch-templates:
+  # Single template on purpose: no project/target routing, no custom pools.
+  # Per-agent concurrency stays on the existing `--parallel` flags inside
+  # `tools/ci/run-lane.mjs` (4, typecheck 2), so no assignment rules are needed.
+  nvbes-medium-js:
+    resource-class: 'docker_linux_amd64/medium'
+    image: 'ubuntu22.04-node24.14-v1'
+    init-steps: *nvbes-js-init-steps

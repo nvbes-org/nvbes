@@ -68,3 +68,7 @@ impl From<nvbes_dpop::resource::ResourceError> for AccountError {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "account.error.tests.rs"]
+mod tests;

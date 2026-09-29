@@ -56,7 +56,8 @@ Run workspace checks, Clippy, and the core/DPoP/product/test-utils library tests
 Run `node --test tools/ci/redis-removal.test.mjs` for dependency and CI contracts.
 Coverage, branches and mutation campaigns also require the security test database;
 previous-SHA measurements are not evidence for this change. V1 thresholds are not
-lowered. Legacy security registries referencing archived routes are not a GO proof.
+lowered. Security registries (`docs/security/*.json`) and their checkers have been
+modernized to strictly target active V1 services and controls (`pnpm check:security`).
 
 ## Local transition
 

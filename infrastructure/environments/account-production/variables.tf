@@ -65,7 +65,7 @@ variable "identity_token_issuer" {
 variable "identity_token_audience" {
   description = "Expected Identity JWT audience."
   type        = string
-  default     = "nvbes-account"
+  default     = "nvbes-account-service"
 }
 
 variable "identity_token_key_id" {

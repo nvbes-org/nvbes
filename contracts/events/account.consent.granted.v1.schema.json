@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/account.consent.granted.v1.schema.json",
+  "title": "account.consent.granted v1",
+  "type": "object",
+  "required": ["event_type", "event_version", "payload"],
+  "properties": {
+    "event_type": { "const": "account.consent.granted" },
+    "event_version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["consent_id", "principal_id", "consent_type", "document_version"],
+      "properties": {
+        "consent_id": { "type": "string", "format": "uuid" },
+        "principal_id": { "type": "string", "format": "uuid" },
+        "consent_type": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "document_version": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    }
+  }
+}

@@ -57,15 +57,23 @@ impl AccountConfig {
             .parse()
             .map_err(|_| ConfigError::Invalid("NVBES_ACCOUNT_BIND_ADDR"))?;
         let token_issuer = optional("NVBES_IDENTITY_TOKEN_ISSUER")
-            .or_else(|| development.then(|| "http://identity.local".into()))
+            .or_else(|| development.then(|| "http://127.0.0.1".into()))
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_TOKEN_ISSUER"))?;
         let token_audience = optional("NVBES_ACCOUNT_TOKEN_AUDIENCE")
             .or_else(|| development.then(|| "nvbes-account-service".into()))
             .ok_or(ConfigError::Missing("NVBES_ACCOUNT_TOKEN_AUDIENCE"))?;
         let token_key_id = required("NVBES_IDENTITY_TOKEN_KEY_ID")?;
         let token_public_key_pem = required("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM")?;
-        let identity_resource_client_id = required("NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID")?;
-        let identity_resource_secret = required("NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET")?;
+        let identity_resource_client_id = optional("NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID")
+            .or_else(|| development.then(|| "account-dev".into()))
+            .ok_or(ConfigError::Missing(
+                "NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID",
+            ))?;
+        let identity_resource_secret = optional("NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET")
+            .or_else(|| development.then(|| "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".into()))
+            .ok_or(ConfigError::Missing(
+                "NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET",
+            ))?;
         validate_token_contract(development, &token_issuer, &token_audience, &token_key_id)?;
         let metrics_token = optional("NVBES_ACCOUNT_METRICS_TOKEN")
             .or_else(|| development.then(|| "development-account-metrics-token-value".into()))
@@ -207,3 +215,7 @@ pub enum ConfigError {
     #[error("configuration is invalid: {0}")]
     Invalid(&'static str),
 }
+
+#[cfg(test)]
+#[path = "account.config.tests.rs"]
+mod tests;

@@ -74,8 +74,7 @@ pub async fn finish(
     let (id, value) = stored.ok_or(WebauthnError::InvalidCeremony)?;
     let mut passkey: Passkey = serde_json::from_value(value)?;
     let current: Credential = passkey.clone().into();
-    next_sign_count(current.counter, verified.counter())
-        .map_err(|_| WebauthnError::InvalidCeremony)?;
+    next_sign_count(current.counter, verified.counter()).ok_or(WebauthnError::InvalidCeremony)?;
     if passkey.update_credential(&verified).is_none() {
         return Err(WebauthnError::InvalidCeremony);
     }

@@ -49,3 +49,7 @@ pub async fn create_provider_portal_session(
         url: session.url,
     })
 }
+
+#[cfg(test)]
+#[path = "portal_sessions.tests.rs"]
+mod tests;

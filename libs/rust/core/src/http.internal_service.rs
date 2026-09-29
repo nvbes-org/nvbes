@@ -45,8 +45,14 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use axum::http::{HeaderMap, HeaderValue, header};
+    use std::sync::{Mutex, OnceLock};
 
-    use super::bearer_matches;
+    use super::{bearer_matches, load_token};
+
+    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+    }
 
     #[test]
     fn bearer_authentication_is_exact() {
@@ -61,5 +67,42 @@ mod tests {
             &headers,
             "internal-service-token-value-32-extra"
         ));
+        assert!(!bearer_matches(&HeaderMap::new(), token));
+    }
+
+    #[test]
+    fn load_token_uses_development_default_and_rejects_short_values() {
+        let _guard = env_lock();
+        let var = "NVBES_CORE_TEST_INTERNAL_TOKEN";
+        unsafe {
+            std::env::remove_var(var);
+        }
+        let default = "development-default-token-value-32b";
+        assert_eq!(
+            load_token(var, "development", default).expect("dev default"),
+            default
+        );
+        assert_eq!(
+            load_token(var, "test", default).expect("test default"),
+            default
+        );
+        let missing = load_token(var, "production", default).expect_err("prod required");
+        assert!(missing.contains("is required"));
+
+        unsafe {
+            std::env::set_var(var, "too-short");
+        }
+        let short = load_token(var, "production", default).expect_err("short");
+        assert!(short.contains("at least"));
+        unsafe {
+            std::env::set_var(var, "  production-internal-token-value-32  ");
+        }
+        assert_eq!(
+            load_token(var, "production", default).expect("trimmed"),
+            "production-internal-token-value-32"
+        );
+        unsafe {
+            std::env::remove_var(var);
+        }
     }
 }

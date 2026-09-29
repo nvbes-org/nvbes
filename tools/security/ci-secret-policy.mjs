@@ -232,7 +232,7 @@ export function assertSecrets(
       text.includes('[[ "$GITHUB_EVENT_NAME" == "push" ]]') &&
       text.includes('[[ "$GITHUB_REF" == refs/heads/* ]]') &&
       text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
-      text.includes('uses: ./.github/actions/ci-setup') &&
+      text.includes('uses: $/.github/actions/ci-setup') &&
       text.includes(`AWS_ACCESS_KEY_ID: ${githubExpression('secrets.SCW_CI_CACHE_ACCESS_KEY')}`) &&
       text.includes(
         `AWS_SECRET_ACCESS_KEY: ${githubExpression('secrets.SCW_CI_CACHE_SECRET_KEY')}`,

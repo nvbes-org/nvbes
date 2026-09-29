@@ -108,3 +108,7 @@ fn ip_single_host_network(ip: IpAddr) -> IpNet {
         IpAddr::V6(ip) => IpNet::V6(Ipv6Net::new(ip, 128).expect("valid ipv6 host network")),
     }
 }
+
+#[cfg(test)]
+#[path = "region.geo.maxmind.types.tests.rs"]
+mod tests;

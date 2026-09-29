@@ -86,18 +86,21 @@ mod tests {
     use super::validate_billing_fraud_policy_overrides;
     use crate::config::AppConfig;
 
-    #[test]
-    fn validates_ordered_fraud_policy_overrides() {
-        let config = AppConfig {
+    fn base_config(overrides: Option<&str>) -> AppConfig {
+        AppConfig {
             billing_fraud_step_up_threshold: 60,
             billing_fraud_manual_review_threshold: 75,
             billing_fraud_block_threshold: 90,
-            billing_fraud_policy_overrides_json: Some(
-                r#"[{"provider":"stripe","plan_code":"team","manual_review_threshold":70}]"#
-                    .to_string(),
-            ),
+            billing_fraud_policy_overrides_json: overrides.map(str::to_string),
             ..AppConfig::default()
-        };
+        }
+    }
+
+    #[test]
+    fn validates_ordered_fraud_policy_overrides() {
+        let config = base_config(Some(
+            r#"[{"provider":"stripe","plan_code":"team","manual_review_threshold":70}]"#,
+        ));
 
         validate_billing_fraud_policy_overrides(&config)
             .expect("valid override should be accepted");
@@ -105,19 +108,85 @@ mod tests {
 
     #[test]
     fn rejects_invalid_effective_fraud_policy_overrides() {
-        let config = AppConfig {
-            billing_fraud_step_up_threshold: 60,
-            billing_fraud_manual_review_threshold: 75,
-            billing_fraud_block_threshold: 90,
-            billing_fraud_policy_overrides_json: Some(
-                r#"[{"step_up_threshold":95,"manual_review_threshold":75}]"#.to_string(),
-            ),
-            ..AppConfig::default()
-        };
+        let config = base_config(Some(
+            r#"[{"step_up_threshold":95,"manual_review_threshold":75}]"#,
+        ));
 
         let error = validate_billing_fraud_policy_overrides(&config)
             .expect_err("invalid override should be rejected");
 
         assert!(error.contains("step_up <= manual_review"));
+    }
+
+    #[test]
+    fn empty_or_blank_overrides_are_accepted() {
+        validate_billing_fraud_policy_overrides(&base_config(None)).expect("none");
+        validate_billing_fraud_policy_overrides(&base_config(Some("   "))).expect("blank");
+        validate_billing_fraud_policy_overrides(&base_config(Some("[]"))).expect("empty array");
+    }
+
+    #[test]
+    fn fraud_policy_override_table_covers_reject_branches() {
+        let cases = [
+            ("not-json", "must be a valid JSON array"),
+            (r#"{"provider":"stripe"}"#, "must be a JSON array"),
+            (r#"[1]"#, "must be JSON objects"),
+            (
+                r#"[{"provider":123}]"#,
+                "override field provider must be a string",
+            ),
+            (
+                r#"[{"plan_code":false}]"#,
+                "override field plan_code must be a string",
+            ),
+            (
+                r#"[{"country":1}]"#,
+                "override field country must be a string",
+            ),
+            (
+                r#"[{"min_amount_minor":"x"}]"#,
+                "min_amount_minor must be an integer",
+            ),
+            (
+                r#"[{"max_amount_minor":1.5}]"#,
+                "max_amount_minor must be an integer",
+            ),
+            (
+                r#"[{"min_amount_minor":20,"max_amount_minor":10}]"#,
+                "min_amount_minor must be <= max_amount_minor",
+            ),
+            (
+                r#"[{"step_up_threshold":"x"}]"#,
+                "step_up_threshold must be an integer",
+            ),
+            (
+                r#"[{"block_threshold":256}]"#,
+                "block_threshold must be between 0 and 100",
+            ),
+            (
+                r#"[{"block_threshold":101}]"#,
+                "step_up <= manual_review <= block <= 100",
+            ),
+            (
+                r#"[{"block_threshold":95,"manual_review_threshold":99}]"#,
+                "step_up <= manual_review <= block <= 100",
+            ),
+        ];
+        for (raw, expected) in cases {
+            let error =
+                validate_billing_fraud_policy_overrides(&base_config(Some(raw))).expect_err(raw);
+            assert!(
+                error.contains(expected),
+                "raw={raw} error={error} expected={expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn accepts_override_with_amount_bounds_and_defaults() {
+        let config = base_config(Some(
+            r#"[{"provider":"mollie","country":"FR","min_amount_minor":100,"max_amount_minor":5000}]"#,
+        ));
+        validate_billing_fraud_policy_overrides(&config).expect("amount bounds");
     }
 }

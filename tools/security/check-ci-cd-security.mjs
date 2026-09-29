@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { assertSecrets as validateSecrets } from './ci-secret-policy.mjs';
-import { permitsFallbackDispatch } from '../ci/runner-fallback.core.mjs';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -181,15 +180,19 @@ function assertPermissions(path, text, allowedWritePermissions) {
   for (const permission of forbiddenWritePermissions) {
     const pattern = new RegExp(`^\\s*${permission}:\\s*write\\s*$`, 'mu');
     if (pattern.test(text) && !allowedWritePermissions.includes(permission)) {
-      if (permission === 'actions' && permitsFallbackDispatch(path, text)) continue;
       errors.push(`${path}: write permission ${permission}: write is not allowlisted`);
     }
   }
 }
 
+function isSelfRepositoryAction(action) {
+  // Workspace-relative (./...) and GitHub self-repository ($/...) local refs.
+  return action.startsWith('./') || action.startsWith('$/');
+}
+
 function assertActions(path, text, allowedActions) {
   for (const action of extractUses(text)) {
-    if (action.startsWith('./')) continue;
+    if (isSelfRepositoryAction(action)) continue;
     if (!allowedActions.includes(action)) {
       errors.push(`${path}: action ${action} is not allowlisted`);
     }

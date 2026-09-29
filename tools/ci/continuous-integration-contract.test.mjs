@@ -39,6 +39,12 @@ test('PostgreSQL limiter tests remain components, without stale Redis classifica
   assert.deepEqual(components['nvbes-core'], {
     'limiter::tests::rate_limiter_blocks_after_limit': 'PostgreSQL persistence',
     'limiter::postgres_tests::': 'PostgreSQL persistence and concurrency',
+    'postgres_runtime::integration_tests::':
+      'PostgreSQL pool integration requires NVBES_SECURITY_TEST_DATABASE_URL',
+    'http::keep_alive::tests::bind_listener_with_keepalive_accepts_ephemeral_ipv4_port':
+      'TCP bind blocked in micro-test sandbox',
+    'config::secrets::tests::resolve_fetches_':
+      'HTTP loopback Secret Manager requires network syscalls blocked in micro-test sandbox',
   });
   assert.equal(components['nvbes-redis'], undefined);
 });
@@ -47,8 +53,13 @@ test('CI preserves runtime isolation, FinOps, and the required gate', () => {
   const parsed = parse(workflow);
   assert.deepEqual(parsed.on.push.branches, ['main']);
   assert.deepEqual(parsed.on.pull_request.branches, ['main']);
+  assert.ok(parsed.on.merge_group !== undefined);
+  assert.deepEqual(Object.keys(parsed.on.workflow_dispatch.inputs).sort(), ['base_sha', 'mode']);
   assert.equal(parsed.on.pull_request_target, undefined);
-  assert.equal(parsed.concurrency['cancel-in-progress'], true);
+  assert.equal(
+    parsed.concurrency['cancel-in-progress'],
+    "${{ github.event_name != 'merge_group' }}",
+  );
   assert.equal(parsed.env.NX_DAEMON, 'false');
   assert.equal(parsed.env.NX_WORKSPACE_DATA_DIRECTORY, '.nx/cache/workspace-data');
 });
@@ -95,7 +106,7 @@ for (const [name, mutate] of [
   [
     'unconditional graph setup',
     (w) => {
-      delete w.jobs.scope.steps.find((s) => s.uses === './.github/actions/ci-setup').if;
+      delete w.jobs.scope.steps.find((s) => s.uses === '$/.github/actions/ci-setup').if;
     },
   ],
 ]) {

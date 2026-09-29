@@ -114,11 +114,11 @@ pub fn valid_credential_id(credential_id: &[u8]) -> bool {
 
 /// WebAuthn authenticators may report zero permanently. Once a non-zero
 /// counter has been stored, a decrease is a rollback signal and is rejected.
-pub fn next_sign_count(previous: u32, reported: u32) -> Result<u32, ()> {
+pub fn next_sign_count(previous: u32, reported: u32) -> Option<u32> {
     if previous > 0 && reported <= previous {
-        return Err(());
+        return None;
     }
-    Ok(reported)
+    Some(reported)
 }
 
 #[cfg(test)]
@@ -136,11 +136,11 @@ mod tests {
 
     #[test]
     fn signature_counter_allows_zero_but_rejects_rollback() {
-        assert_eq!(next_sign_count(0, 0), Ok(0));
-        assert_eq!(next_sign_count(0, 4), Ok(4));
-        assert_eq!(next_sign_count(4, 5), Ok(5));
-        assert_eq!(next_sign_count(4, 4), Err(()));
-        assert_eq!(next_sign_count(4, 3), Err(()));
+        assert_eq!(next_sign_count(0, 0), Some(0));
+        assert_eq!(next_sign_count(0, 4), Some(4));
+        assert_eq!(next_sign_count(4, 5), Some(5));
+        assert_eq!(next_sign_count(4, 4), None);
+        assert_eq!(next_sign_count(4, 3), None);
     }
 
     #[test]

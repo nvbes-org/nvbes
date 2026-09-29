@@ -1,6 +1,6 @@
 import { createHash, verify } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { lstat, readFile, realpath } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 
 const REQUIRED_COMPONENTS = ['account-service', 'account-web', 'account-worker'];
@@ -38,8 +38,14 @@ export async function verifyDeploymentAttestation({
     'production deployment signature',
   );
   const [attestationBytes, signature, publicKey] = await Promise.all([
-    readFile(attestationPath),
-    readFile(signaturePath),
+    readBoundedRegularFile(
+      attestationPath,
+      100 * 1024 * 1024,
+      'production deployment attestation',
+    ).then((entry) => entry.content),
+    readBoundedRegularFile(signaturePath, 4096, 'production deployment signature').then(
+      (entry) => entry.content,
+    ),
     readBoundedRegularFile(trust.publicKeyPath, 16_384, 'deployment trusted public key'),
   ]);
   assert(
@@ -150,9 +156,17 @@ async function resolveEvidenceFile(relativePath, evidenceRoot, maxBytes, label) 
     candidate.startsWith(`${evidenceRoot}${path.sep}`),
     `${label} path escapes the evidence directory`,
   );
-  const metadata = await lstat(candidate);
-  assert(metadata.isFile() && !metadata.isSymbolicLink(), `${label} must be a regular file`);
-  assert(metadata.size > 0 && metadata.size <= maxBytes, `${label} has an invalid size`);
+  // Open without following symlinks, then validate the opened file itself:
+  // check-then-use happens on the same file descriptor, so a concurrent
+  // swap between the check and the read cannot redirect the read.
+  const handle = await open(candidate, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const metadata = await handle.stat();
+    assert(metadata.isFile(), `${label} must be a regular file`);
+    assert(metadata.size > 0 && metadata.size <= maxBytes, `${label} has an invalid size`);
+  } finally {
+    await handle.close();
+  }
   const artifactPath = await realpath(candidate);
   assert(
     artifactPath.startsWith(`${evidenceRoot}${path.sep}`),
@@ -164,18 +178,34 @@ async function resolveEvidenceFile(relativePath, evidenceRoot, maxBytes, label) 
 async function readBoundedRegularFile(filePath, maxBytes, label) {
   assert(nonEmpty(filePath), `${label} path is required`);
   const resolved = path.resolve(filePath);
-  const metadata = await lstat(resolved);
-  assert(metadata.isFile() && !metadata.isSymbolicLink(), `${label} must be a regular file`);
-  assert(metadata.size > 0 && metadata.size <= maxBytes, `${label} has an invalid size`);
-  return { content: await readFile(resolved) };
+  // Same-descriptor check-then-read: O_NOFOLLOW rejects symlinks at open
+  // time and fstat validates the exact file that is subsequently read.
+  const handle = await open(resolved, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const metadata = await handle.stat();
+    assert(metadata.isFile(), `${label} must be a regular file`);
+    assert(metadata.size > 0 && metadata.size <= maxBytes, `${label} has an invalid size`);
+    const content = await handle.readFile();
+    assert(content.length > 0 && content.length <= maxBytes, `${label} has an invalid size`);
+    return { content };
+  } finally {
+    await handle.close();
+  }
 }
 
 async function sha256File(filePath) {
-  const hash = createHash('sha256');
-  for await (const chunk of createReadStream(filePath)) {
-    hash.update(chunk);
+  const handle = await open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const metadata = await handle.stat();
+    assert(metadata.isFile(), 'attestation artifact must be a regular file');
+    const hash = createHash('sha256');
+    for await (const chunk of handle.createReadStream()) {
+      hash.update(chunk);
+    }
+    return hash.digest('hex');
+  } finally {
+    await handle.close();
   }
-  return hash.digest('hex');
 }
 
 function parseAttestation(content) {

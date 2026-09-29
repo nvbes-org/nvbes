@@ -20,6 +20,24 @@
       "critical": true
     },
     {
+      "event_type": "account.team.member_left",
+      "event_version": 1,
+      "schema": "contracts/events/account.team.member_left.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.consent.granted",
+      "event_version": 1,
+      "schema": "contracts/events/account.consent.granted.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.consent.revoked",
+      "event_version": 1,
+      "schema": "contracts/events/account.consent.revoked.v1.schema.json",
+      "critical": true
+    },
+    {
       "event_type": "account.export.requested",
       "event_version": 1,
       "schema": "contracts/events/account.export.requested.v1.schema.json",

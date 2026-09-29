@@ -130,3 +130,29 @@ fn react_template_markers_inside_user_content_are_not_reinterpreted() {
         1
     );
 }
+
+#[test]
+fn renderer_helpers_preserve_optional_links_money_and_escaping() {
+    assert_eq!(
+        super::optional_link("Invoice", "View invoice", None),
+        (String::new(), String::new())
+    );
+    let (text, html) =
+        super::optional_link("Invoice", "View invoice", Some("https://example.com/i"));
+    assert!(text.contains("https://example.com/i"));
+    assert!(html.contains("href=\"https://example.com/i\""));
+    assert!(html.contains("View invoice"));
+
+    assert_eq!(super::money(4680, "eur"), "46.80 EUR");
+    assert_eq!(super::money(5, "usd"), "0.05 USD");
+
+    assert_eq!(super::optional_value(&None), "the configured address");
+    assert_eq!(
+        super::optional_value(&Some("ada@example.com".into())),
+        "ada@example.com"
+    );
+
+    assert_eq!(super::escape(r#"a&b<"c">"#), "a&amp;b&lt;&quot;c&quot;&gt;");
+    assert_eq!(super::escape("it's"), "it&#x27;s");
+    assert_eq!(super::escape("plain"), "plain");
+}

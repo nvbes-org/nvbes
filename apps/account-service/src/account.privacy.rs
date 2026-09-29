@@ -250,3 +250,7 @@ fn with_closure_participant(mut row: ClosureStatus) -> ClosureStatus {
     }];
     row
 }
+
+#[cfg(test)]
+#[path = "account.privacy.tests.rs"]
+mod tests;

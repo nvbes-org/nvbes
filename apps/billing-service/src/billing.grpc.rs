@@ -1,26 +1,28 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use nvbes_billing::{
-    fetch_workspace_billing_overview,
-    proto::nvbes::billing::v1::{
-        BillingEventReceipt, BillingOperationsSnapshot, CreateBillingPortalSessionRequest,
-        CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest,
-        CreateCheckoutSessionResponse, GetBillingOperationsSnapshotRequest,
-        GetWorkspaceBillingOverviewRequest, GetWorkspaceEntitlementsRequest,
-        ReconcileWorkspaceRequest, ReconcileWorkspaceResponse, SubmitBillingEventRequest,
-        WorkspaceBillingOverviewResponse, WorkspaceEntitlementsResponse,
-        billing_delivery_service_server::{BillingDeliveryService, BillingDeliveryServiceServer},
-        billing_operations_service_server::{
-            BillingOperationsService, BillingOperationsServiceServer,
-        },
-    },
+use nvbes_billing::proto::nvbes::billing::v1::{
+    BillingEventReceipt, BillingOperationsSnapshot, CreateBillingPortalSessionRequest,
+    CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest,
+    CreateCheckoutSessionResponse, GetBillingOperationsSnapshotRequest,
+    GetWorkspaceBillingOverviewRequest, GetWorkspaceEntitlementsRequest, ReconcileWorkspaceRequest,
+    ReconcileWorkspaceResponse, SubmitBillingEventRequest, WorkspaceBillingOverviewResponse,
+    WorkspaceEntitlementsResponse,
+    billing_delivery_service_server::{BillingDeliveryService, BillingDeliveryServiceServer},
+    billing_operations_service_server::{BillingOperationsService, BillingOperationsServiceServer},
 };
 use prost_types::Timestamp;
 
-use crate::{customer::get_or_create_customer, outbox::record_outbox_event};
+use crate::{
+    customer::get_or_create_customer, outbox::record_outbox_event,
+    overview::fetch_account_billing_overview,
+};
 
 pub const MAX_GRPC_DECODE_BYTES: usize = 256 * 1024;
+
+pub(crate) fn missing_required_pair(left: &str, right: &str) -> bool {
+    left.is_empty() || right.is_empty()
+}
 
 // ── Server constructors ───────────────────────────────────────────────────────
 
@@ -100,27 +102,27 @@ impl BillingDeliveryService for BillingDeliveryGrpcService {
         let workspace_id = parse_uuid(&request.get_ref().workspace_id)?;
         tracing::Span::current().record("workspace_id", workspace_id.to_string());
 
-        let overview = fetch_workspace_billing_overview(&self.state.db, workspace_id)
+        let overview = fetch_account_billing_overview(&self.state.db, workspace_id)
             .await
             .map_err(|e| {
                 tracing::error!(error = ?e, "get_workspace_entitlements db error");
                 Status::internal("entitlements unavailable")
-            })?;
+            })?
+            .ok_or_else(|| Status::not_found("no subscription for account"))?;
 
-        let ent = &overview.entitlements;
-        let sub = &overview.subscription;
-        let plan = &overview.plan;
+        let api_key_limit = i64::from(nvbes_billing::api_key_limit(&overview.plan_code));
 
         Ok(Response::new(WorkspaceEntitlementsResponse {
             workspace_id: workspace_id.to_string(),
-            plan_code: plan.code.clone(),
-            status: sub.status.clone(),
-            max_seats: i64::from(plan.included_users),
-            storage_bytes_quota: i64::from(plan.included_storage_gb) * 1024 * 1024 * 1024,
-            api_rate_limit_per_minute: i64::from(ent.api_key_limit) * 60,
+            plan_code: overview.plan_code,
+            status: overview.status,
+            // Cloud Drive quotas are out of V1 billing scope.
+            max_seats: 0,
+            storage_bytes_quota: 0,
+            api_rate_limit_per_minute: api_key_limit.saturating_mul(60),
             custom_domain_enabled: false,
             advanced_security_enabled: false,
-            current_period_end: sub.current_period_end.map(chrono_to_proto_ts),
+            current_period_end: overview.current_period_end.map(chrono_to_proto_ts),
         }))
     }
 
@@ -137,31 +139,29 @@ impl BillingDeliveryService for BillingDeliveryGrpcService {
         let workspace_id = parse_uuid(&request.get_ref().workspace_id)?;
         tracing::Span::current().record("workspace_id", workspace_id.to_string());
 
-        let overview = fetch_workspace_billing_overview(&self.state.db, workspace_id)
+        let overview = fetch_account_billing_overview(&self.state.db, workspace_id)
             .await
             .map_err(|e| {
                 tracing::error!(error = ?e, "get_workspace_billing_overview db error");
                 Status::internal("billing overview unavailable")
-            })?;
-
-        let sub = &overview.subscription;
-        let plan = &overview.plan;
+            })?
+            .ok_or_else(|| Status::not_found("no subscription for account"))?;
 
         Ok(Response::new(WorkspaceBillingOverviewResponse {
             workspace_id: workspace_id.to_string(),
-            plan_code: plan.code.clone(),
-            status: sub.status.clone(),
+            plan_code: overview.plan_code,
+            status: overview.status,
             customer_id: overview
-                .billing_account
-                .billing_email
-                .clone()
+                .stripe_customer_id
+                .or(overview.customer_email)
                 .unwrap_or_default(),
-            monthly_price_cents: plan.monthly_price_cents,
-            currency: plan.currency.clone(),
-            active_seats: overview.invoice_estimate.seat_overage_amount_cents,
-            storage_bytes_used: i64::from(plan.included_storage_gb) * 1024 * 1024 * 1024,
-            cancel_at_period_end: None,
-            current_period_end: sub.current_period_end.map(chrono_to_proto_ts),
+            monthly_price_cents: overview.monthly_price_cents,
+            currency: overview.currency,
+            // Cloud Drive usage meters are out of V1 billing scope.
+            active_seats: 0,
+            storage_bytes_used: 0,
+            cancel_at_period_end: Some(overview.cancel_at_period_end.to_string()),
+            current_period_end: overview.current_period_end.map(chrono_to_proto_ts),
         }))
     }
 
@@ -179,7 +179,7 @@ impl BillingDeliveryService for BillingDeliveryGrpcService {
         let workspace_id = parse_uuid(&req.workspace_id)?;
         tracing::Span::current().record("workspace_id", workspace_id.to_string());
 
-        if req.plan_code.is_empty() || req.success_url.is_empty() {
+        if missing_required_pair(&req.plan_code, &req.success_url) {
             return Err(Status::invalid_argument(
                 "plan_code and success_url are required",
             ));
@@ -297,7 +297,7 @@ impl BillingDeliveryService for BillingDeliveryGrpcService {
         let aggregate_id = parse_uuid(&req.aggregate_id)?;
         tracing::Span::current().record("event_type", &req.event_type);
 
-        if req.event_type.is_empty() || req.payload_json.is_empty() {
+        if missing_required_pair(&req.event_type, &req.payload_json) {
             return Err(Status::invalid_argument(
                 "event_type and payload_json are required",
             ));
@@ -336,40 +336,46 @@ impl BillingOperationsService for BillingOperationsGrpcService {
     ) -> Result<Response<BillingOperationsSnapshot>, Status> {
         require_grpc_token(&request, &self.state.config)?;
 
-        let active: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM billing_subscriptions WHERE status = 'active'",
+        let active = sqlx::query_scalar!(
+            "SELECT count(*) AS count FROM billing_subscriptions WHERE status = 'active'"
         )
         .fetch_one(&self.state.db)
         .await
-        .map_err(|_| Status::internal("db error"))?;
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
 
-        let past_due: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM billing_subscriptions WHERE status = 'past_due'",
+        let past_due = sqlx::query_scalar!(
+            "SELECT count(*) AS count FROM billing_subscriptions WHERE status = 'past_due'"
         )
         .fetch_one(&self.state.db)
         .await
-        .map_err(|_| Status::internal("db error"))?;
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
 
-        let pending_outbox: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM billing_outbox WHERE published_at IS NULL")
-                .fetch_one(&self.state.db)
-                .await
-                .map_err(|_| Status::internal("db error"))?;
-
-        let unresolved: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM billing_reconciliation_items WHERE status = 'pending'",
+        let pending_outbox = sqlx::query_scalar!(
+            "SELECT count(*) AS count FROM billing_outbox WHERE published_at IS NULL"
         )
         .fetch_one(&self.state.db)
         .await
-        .map_err(|_| Status::internal("db error"))?;
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
 
-        let mrr: i64 = sqlx::query_scalar(
-            "SELECT coalesce(sum(monthly_price_cents), 0) \
-             FROM billing_subscriptions WHERE status = 'active'",
+        let unresolved = sqlx::query_scalar!(
+            "SELECT count(*) AS count FROM billing_reconciliation_items WHERE status = 'pending'"
         )
         .fetch_one(&self.state.db)
         .await
-        .map_err(|_| Status::internal("db error"))?;
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
+
+        let mrr = sqlx::query_scalar!(
+            "SELECT coalesce(sum(monthly_price_cents), 0)::bigint AS mrr \
+             FROM billing_subscriptions WHERE status = 'active'"
+        )
+        .fetch_one(&self.state.db)
+        .await
+        .map_err(|_| Status::internal("db error"))?
+        .unwrap_or(0);
 
         Ok(Response::new(BillingOperationsSnapshot {
             active_subscriptions_count: active,
@@ -394,11 +400,11 @@ impl BillingOperationsService for BillingOperationsGrpcService {
         let workspace_id = parse_uuid(&request.get_ref().workspace_id)?;
         tracing::Span::current().record("workspace_id", workspace_id.to_string());
 
-        let status: Option<String> = sqlx::query_scalar(
+        let status = sqlx::query_scalar!(
             "SELECT status FROM billing_subscriptions WHERE account_id = $1 \
              ORDER BY updated_at DESC LIMIT 1",
+            workspace_id
         )
-        .bind(workspace_id)
         .fetch_optional(&self.state.db)
         .await
         .map_err(|_| Status::internal("db error"))?;
@@ -423,3 +429,36 @@ fn chrono_to_proto_ts(dt: chrono::DateTime<chrono::Utc>) -> Timestamp {
         nanos: dt.timestamp_subsec_nanos() as i32,
     }
 }
+
+#[cfg(test)]
+mod unit_tests {
+    use super::{MAX_GRPC_DECODE_BYTES, chrono_to_proto_ts, missing_required_pair};
+
+    #[test]
+    fn grpc_decode_budget_is_256_kib() {
+        assert_eq!(MAX_GRPC_DECODE_BYTES, 262_144);
+    }
+
+    #[test]
+    fn missing_required_pair_rejects_either_side_empty() {
+        assert!(missing_required_pair("", "ok"));
+        assert!(missing_required_pair("ok", ""));
+        assert!(missing_required_pair("", ""));
+        assert!(!missing_required_pair("ok", "ok"));
+    }
+
+    #[test]
+    fn chrono_to_proto_ts_preserves_seconds_and_nanos() {
+        let value = chrono::DateTime::parse_from_rfc3339("2026-09-24T12:34:56.789012345Z")
+            .expect("fixture")
+            .with_timezone(&chrono::Utc);
+        let wire = chrono_to_proto_ts(value);
+        assert_eq!(wire.seconds, value.timestamp());
+        assert_eq!(wire.nanos, value.timestamp_subsec_nanos() as i32);
+        assert_ne!(wire, prost_types::Timestamp::default());
+    }
+}
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.grpc.tests.rs"]
+mod tests;

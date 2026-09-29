@@ -234,13 +234,13 @@ async fn approve(
     let code = crate::oauth::consent::approve(&state.db, &state.clients, &form.interaction, &proof)
         .await
         .map_err(protocol_store_error)?;
-    Ok(navigation::interaction_result(
+    navigation::interaction_result(
         &headers,
         &code.request.redirect_uri,
         "code",
         &code.code,
         &code.request.state,
-    )?)
+    )
 }
 
 async fn deny(
@@ -252,13 +252,13 @@ async fn deny(
     let request = crate::oauth::consent::deny(&state.db, &state.clients, &form.interaction, &proof)
         .await
         .map_err(|_| ProtocolError::OAuth(OAuthError::InvalidRequest))?;
-    Ok(navigation::interaction_result(
+    navigation::interaction_result(
         &headers,
         &request.redirect_uri,
         "error",
         "access_denied",
         &request.state,
-    )?)
+    )
 }
 
 async fn authorize(

@@ -1,3 +1,4 @@
+#![allow(clippy::result_large_err)]
 use super::{AuthorizationState, OAuthError, ProtocolError, StepUpForm};
 use crate::{browser::SessionProof, oauth::store};
 use axum::{Extension, Json, extract::State, response::IntoResponse};

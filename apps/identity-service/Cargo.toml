@@ -1,4 +1,5 @@
 [package]
+publish = false
 name = "nvbes-identity-service"
 edition.workspace = true
 license.workspace = true

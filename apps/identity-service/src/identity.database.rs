@@ -19,6 +19,10 @@ pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
     sqlx::migrate!("./migrations").run(pool).await
 }
 
+#[cfg(test)]
+#[path = "identity.database.unit.tests.rs"]
+mod unit_tests;
+
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.database.tests.rs"]
 mod tests;
@@ -30,3 +34,7 @@ mod token_tests;
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.database.invitations.tests.rs"]
 mod invitation_tests;
+
+#[cfg(test)]
+#[path = "identity.database.test_support.rs"]
+pub(crate) mod database_test_support;

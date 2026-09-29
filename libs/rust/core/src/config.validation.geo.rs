@@ -106,7 +106,10 @@ fn validate_provider_spec(spec: &str, strict_mode: bool) -> Result<(), String> {
 mod tests {
     use crate::config::AppConfig;
 
-    use super::{validate_loyalsoldier_geoip, validate_maxmind_geolite, validate_provider_spec};
+    use super::{
+        validate_ip_intelligence, validate_loyalsoldier_geoip, validate_maxmind_geolite,
+        validate_provider_spec,
+    };
 
     #[test]
     fn validates_provider_spec_shape_and_https() {
@@ -117,6 +120,67 @@ mod tests {
             validate_provider_spec("ipinfo|https://example.test/no-placeholder", false).is_err()
         );
         assert!(validate_provider_spec("ipinfo|http://example.test/{ip}", true).is_err());
+    }
+
+    #[test]
+    fn provider_spec_table_covers_reject_branches() {
+        let cases = [
+            ("", "must be source|url_template"),
+            ("|https://example.test/{ip}", "source must not be empty"),
+            (
+                "ipinfo|https://example.test/no-ip",
+                "url_template must include {ip}",
+            ),
+            ("ipinfo|not a url/{ip}", "must be a valid URL"),
+            (
+                "ipinfo|http://example.test/{ip}",
+                "must use HTTPS outside development",
+            ),
+        ];
+        for (spec, expected) in cases {
+            let err = validate_provider_spec(spec, true).expect_err(spec);
+            assert!(
+                err.contains(expected),
+                "spec={spec:?} err={err} expected={expected}"
+            );
+        }
+        validate_provider_spec("ipinfo|http://example.test/{ip}", false)
+            .expect("http allowed in development");
+        let host_err = validate_provider_spec("ipinfo|data:text/plain,{ip}", false)
+            .expect_err("opaque url without host");
+        assert!(host_err.contains("must include a host"), "{host_err}");
+    }
+
+    #[test]
+    fn ip_intelligence_rejects_non_positive_timeout_and_ttl() {
+        let timeout = AppConfig {
+            ip_intelligence_timeout_secs: 0,
+            ip_intelligence_cache_ttl_hours: 24,
+            ..AppConfig::default()
+        };
+        let err = validate_ip_intelligence(&timeout, false).expect_err("timeout");
+        assert!(err.contains("TIMEOUT_SECS"));
+
+        let ttl = AppConfig {
+            ip_intelligence_timeout_secs: 2,
+            ip_intelligence_cache_ttl_hours: 0,
+            ..AppConfig::default()
+        };
+        let err = validate_ip_intelligence(&ttl, false).expect_err("ttl");
+        assert!(err.contains("CACHE_TTL_HOURS"));
+    }
+
+    #[test]
+    fn ip_intelligence_accepts_valid_provider_list() {
+        let config = AppConfig {
+            ip_intelligence_provider_specs: vec![
+                "ipinfo|https://example.test/{ip}|Bearer token".to_string(),
+            ],
+            ip_intelligence_timeout_secs: 2,
+            ip_intelligence_cache_ttl_hours: 24,
+            ..AppConfig::default()
+        };
+        validate_ip_intelligence(&config, true).expect("valid providers");
     }
 
     #[test]
@@ -140,6 +204,76 @@ mod tests {
     }
 
     #[test]
+    fn maxmind_table_covers_enabled_credential_and_limits() {
+        validate_maxmind_geolite(&AppConfig::default()).expect("disabled");
+
+        let cases: [(&str, AppConfig, &str); 5] = [
+            (
+                "eula",
+                AppConfig {
+                    maxmind_geolite_web_enabled: true,
+                    ..AppConfig::default()
+                },
+                "EULA_ACCEPTED",
+            ),
+            (
+                "account",
+                AppConfig {
+                    maxmind_geolite_web_enabled: true,
+                    maxmind_geolite_eula_accepted: true,
+                    maxmind_license_key: Some("license".into()),
+                    ..AppConfig::default()
+                },
+                "ACCOUNT_ID",
+            ),
+            (
+                "license",
+                AppConfig {
+                    maxmind_geolite_database_enabled: true,
+                    maxmind_geolite_eula_accepted: true,
+                    maxmind_account_id: Some("123".into()),
+                    maxmind_license_key: Some(String::new()),
+                    ..AppConfig::default()
+                },
+                "LICENSE_KEY",
+            ),
+            (
+                "timeout",
+                AppConfig {
+                    maxmind_geolite_database_enabled: true,
+                    maxmind_geolite_eula_accepted: true,
+                    maxmind_account_id: Some("123".into()),
+                    maxmind_license_key: Some("license".into()),
+                    maxmind_web_timeout_secs: 0,
+                    maxmind_web_cache_ttl_hours: 24,
+                    ..AppConfig::default()
+                },
+                "TIMEOUT_SECS",
+            ),
+            (
+                "ttl",
+                AppConfig {
+                    maxmind_geolite_database_enabled: true,
+                    maxmind_geolite_eula_accepted: true,
+                    maxmind_account_id: Some("123".into()),
+                    maxmind_license_key: Some("license".into()),
+                    maxmind_web_timeout_secs: 2,
+                    maxmind_web_cache_ttl_hours: 0,
+                    ..AppConfig::default()
+                },
+                "CACHE_TTL_HOURS",
+            ),
+        ];
+        for (name, config, expected) in cases {
+            let err = validate_maxmind_geolite(&config).expect_err(name);
+            assert!(
+                err.contains(expected),
+                "case {name}: err={err} expected={expected}"
+            );
+        }
+    }
+
+    #[test]
     fn loyalsoldier_requires_explicit_license_acceptance() {
         let config = AppConfig {
             loyalsoldier_geoip_enabled: true,
@@ -153,5 +287,10 @@ mod tests {
             ..AppConfig::default()
         };
         validate_loyalsoldier_geoip(&config).expect("valid loyalsoldier config should pass");
+    }
+
+    #[test]
+    fn loyalsoldier_disabled_is_noop() {
+        validate_loyalsoldier_geoip(&AppConfig::default()).expect("disabled");
     }
 }

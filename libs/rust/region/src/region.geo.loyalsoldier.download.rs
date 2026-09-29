@@ -17,8 +17,21 @@ pub enum LoyalsoldierGeoIpDownloadError {
 pub async fn download_verified_loyalsoldier_geoip(
     client: &Client,
 ) -> Result<Vec<u8>, LoyalsoldierGeoIpDownloadError> {
-    let checksum = download_text(client, LOYALSOLDIER_GEOIP_SHA256_URL).await?;
-    let dat = download_bytes(client, LOYALSOLDIER_GEOIP_DAT_URL).await?;
+    download_verified_loyalsoldier_geoip_with_urls(
+        client,
+        LOYALSOLDIER_GEOIP_SHA256_URL,
+        LOYALSOLDIER_GEOIP_DAT_URL,
+    )
+    .await
+}
+
+async fn download_verified_loyalsoldier_geoip_with_urls(
+    client: &Client,
+    sha256_url: &str,
+    dat_url: &str,
+) -> Result<Vec<u8>, LoyalsoldierGeoIpDownloadError> {
+    let checksum = download_text(client, sha256_url).await?;
+    let dat = download_bytes(client, dat_url).await?;
     verify_sha256(&dat, parse_sha256sum(&checksum)?)?;
     Ok(dat)
 }
@@ -73,20 +86,5 @@ fn decode_sha256_hex(value: &str) -> Option<[u8; 32]> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{decode_sha256_hex, parse_sha256sum};
-
-    #[test]
-    fn parses_sha256sum_file() {
-        let checksum =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  geoip.dat";
-
-        assert!(parse_sha256sum(checksum).is_ok());
-    }
-
-    #[test]
-    fn rejects_invalid_sha256sum() {
-        assert!(decode_sha256_hex("abc").is_none());
-        assert!(parse_sha256sum("").is_err());
-    }
-}
+#[path = "region.geo.loyalsoldier.download.tests.rs"]
+mod tests;

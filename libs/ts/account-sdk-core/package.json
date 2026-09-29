@@ -1,0 +1,23 @@
+{
+  "name": "@nvbes/account-sdk-core",
+  "version": "0.1.0",
+  "description": "OpenAPI specification for nvbes Account - cross-language SDK generation",
+  "license": "AGPL-3.0-only",
+  "files": [
+    "openapi.json",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "check": "node --test openapi.contract.test.mjs",
+    "format:check": "node ../../../node_modules/vite-plus/bin/vp fmt --check src package.json project.json tsconfig.json",
+    "generate:ts": "openapi-typescript openapi.json -o src/types.gen.ts",
+    "lint": "node ../../../node_modules/vite-plus/bin/vp lint src",
+    "test": "node --test openapi.contract.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0",
+    "typescript": "5.9.3"
+  }
+}

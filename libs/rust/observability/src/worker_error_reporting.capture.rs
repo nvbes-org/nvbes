@@ -85,3 +85,7 @@ pub fn capture_worker_operation_error(
         || sentry::capture_error(error),
     );
 }
+
+#[cfg(test)]
+#[path = "observability.worker_error_reporting.capture.tests.rs"]
+mod tests;

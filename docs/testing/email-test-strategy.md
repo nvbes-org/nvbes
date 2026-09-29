@@ -1,9 +1,10 @@
 # Stratégie de test Email
 
-> **Statut : socle V1 actif.** L'email-worker est le runtime email : ingestion gRPC
-> (`SubmitEmail`), dispatch via fournisseur (Scaleway TEM), réception de webhooks
-> (topics/events), suppressions, rétention et opérations opérateur. Livraison
-> at-least-once, pas exactly-once garantie.
+> **Statut : V1 complete (socle).** L'email-worker est le runtime email : ingestion
+> gRPC (`SubmitEmail`), dispatch via fournisseur (Scaleway TEM), réception de
+> webhooks (topics/events), suppressions, rétention et opérations opérateur.
+> Livraison at-least-once, pas exactly-once garantie. GO synthétique borné
+> uniquement ; producteurs produit et trafic public restent fermés.
 
 ## Portée et statut de preuve
 

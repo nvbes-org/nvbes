@@ -1,5 +1,8 @@
 {
   "schemaVersion": 4,
+  "status": "historical-diagnostic",
+  "supersededBy": "docs/testing/v1/account.json",
+  "note": "Harness archive-era covering account-web/worker. Not a V1 GO source; see docs/testing/account-test-strategy.md.",
   "scope": {
     "applications": ["account-service", "account-worker", "account-web"],
     "typescriptLibraries": [

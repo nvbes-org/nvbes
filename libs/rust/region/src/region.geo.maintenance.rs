@@ -91,3 +91,7 @@ pub async fn run_geo_maintenance_tx(
         expired_maxmind_relations_deleted,
     })
 }
+
+#[cfg(test)]
+#[path = "region.geo.maintenance.tests.rs"]
+mod tests;

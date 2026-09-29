@@ -55,6 +55,23 @@ the colon or a `BREAKING CHANGE:` footer.
 Default message exemptions are disabled, so merge, revert and version-only
 messages must also follow the convention.
 
+## Commit signing (required)
+
+Unsigned commits are refused by default. Local hooks and the commitlint
+workflow require an SSH or OpenPGP signature on every non-merge commit:
+
+```bash
+git config commit.gpgsign true
+# SSH (recommended):
+git config gpg.format ssh
+git config user.signingkey ~/.ssh/id_ed25519.pub
+# or OpenPGP: git config user.signingkey <KEYID>
+```
+
+Add the same key to your GitHub account as a **Signing key** so GitHub shows
+**Verified**. Check with `pnpm check:commit-signing`. `main` also enforces
+GitHub `required_signatures`.
+
 After installing dependencies, run `pnpm exec lefthook install` to enable the
 local `commit-msg` check. To check an existing commit, run
 `pnpm exec commitlint --last --verbose`. CI validates all PR commits and the PR

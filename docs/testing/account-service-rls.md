@@ -1,97 +1,33 @@
-# Account Service RLS: reference contract and production gaps
+# Account Service isolation (V1)
 
-> **Status: archived-runtime evidence.** Account is a V1 foundation boundary,
-> but the referenced service is not an active runtime. Reassess this contract
-> during the clean Account reconstruction.
+> **Statut : runtime lean actif.** Ce document remplace le contrat RLS
+> Enterprise historique. Aucune preuve V1 ne s'appuie sur
+> `identity.database.rls.reference.sql` ni sur un modèle multi-tenant forcé.
 
-## Production status
+## Modèle V1
 
-The Account Service does **not** currently enforce the hardened RLS reference
-contract in production. Promoting that contract to a migration would break
-valid request and background paths because most handlers still execute through
-a shared `PgPool`, without a transaction-scoped tenant context.
+Account isole les données par principal et membership d'équipe :
 
-The executable baseline audit records the current gaps:
+- tables profil / préférences / consents / exports / closures clés sur
+  `principal_id` ;
+- memberships `account_team_memberships` avec rôles `owner` | `member` ;
+- un seul owner par équipe (index unique partiel) ;
+- requêtes HTTP bornées au principal authentifié ou à l'appartenance équipe ;
+- un owner seul peut retirer un membre ; un owner ne quitte que s'il est le
+  dernier membre (équipe alors `closed`).
 
-- `devices`, `saml_assertion_ids`, `saml_pending_requests`,
-  `saml_sp_config`, `security_event_deliveries` and `user_sessions` have a
-  `tenant_id` column but no RLS;
-- established tenant tables such as `tenants`, `oauth_clients` and
-  `workspaces` enable RLS without `FORCE ROW LEVEL SECURITY`;
-- `system_policy_read` is a `FOR ALL` policy despite its name;
-- the shared role-scoped pool initializes RLS identifiers with the nil UUID,
-  which collides with the seeded nil-UUID system tenant;
-- most Account handlers use `PgPool` directly; the password-review path is a
-  rare path that establishes transaction-scoped RLS context;
-- bootstrap seeding, CORS refresh and the security-event dispatcher perform
-  cross-tenant or global work through the same application database model.
+Il n'y a pas de `FORCE ROW LEVEL SECURITY` ni de contexte tenant transactionnel
+dans le runtime V1. L'isolation repose sur les prédicats SQL des handlers et sur
+les contraintes de schéma.
 
-The audit intentionally fails when this inventory changes. A passing test means
-the gaps remain accurately documented, not that production RLS is complete.
+## Preuves
 
-## Test-only hardened reference
+- `account.database.tests.rs` : lifecycle synthétique (join, leave, export,
+  closure, outbox) ;
+- handlers équipes : `NotFound` si hors membership, `Forbidden` si non-owner
+  retire un membre, `Conflict` si owner quitte avec d'autres membres.
 
-[`identity.database.rls.reference.sql`](../../apps/account-service/src/identity.database.rls.reference.sql)
-is deliberately outside the migration directory. It is installed only in a
-uniquely named test database and specifies the target isolation behavior:
+## Hors périmètre V1
 
-- every tenant-scoped table has a policy;
-- every RLS table uses `FORCE ROW LEVEL SECURITY`;
-- the six uncovered tables receive `FOR ALL` tenant policies;
-- `user_sessions` requires both tenant and principal context;
-- an absent context denies reads, including nil-UUID system rows;
-- `system_policy_read` permits `SELECT` only.
-
-The reference test provisions a unique login role with `NOSUPERUSER`,
-`NOBYPASSRLS`, `NOCREATEDB`, `NOCREATEROLE`, `NOINHERIT` and
-`NOREPLICATION`. It owns neither the database nor public tables and cannot
-assume a privileged role. The test exercises tenant A/B reads and writes,
-cross-tenant denial, commit/rollback context isolation and system-policy write
-denial.
-
-The same test also runs a real `AppState::bootstrap` against the unmodified
-baseline schema. That smoke check documents the currently working
-owner-privileged startup path; it does not claim that bootstrap works with the
-hardened runtime role.
-
-## Safety and prerequisites
-
-The test creates and drops databases and roles. It rejects non-loopback
-PostgreSQL URLs, maintenance databases, production-like names and names without
-an exact `test` segment. The operator must also set
-`NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE=account-quality-v1`.
-`DATABASE_URL` (or `NVBES_DATABASE_URL`) must point to a disposable local
-application database whose role can:
-
-- connect to the `postgres` maintenance database;
-- create databases and roles;
-- install the extensions and schema objects required by Account migrations.
-
-The migration chain may create the cluster-wide `nvbes_system` role. Use a
-disposable PostgreSQL cluster, never a shared or production cluster. Redis must
-also be available for the `AppState` bootstrap smoke.
-
-Run the security lane through Nx:
-
-```bash
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/nvbes_test \
-NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE=account-quality-v1 \
-NVBES_REDIS_URL=redis://localhost:6379 \
-pnpm nx run account-service:test-security
-```
-
-The migration lane also selects this contract because the test name includes
-both `security` and `migration`.
-
-## Promotion gate
-
-Before the reference SQL can become a production migration:
-
-1. move tenant data access behind transaction-bound APIs that always establish
-   principal, tenant and workspace context;
-2. replace the nil-UUID pool sentinel with a fail-closed representation;
-3. separate migration ownership from the runtime role;
-4. give bootstrap, CORS refresh and dispatchers narrowly scoped system
-   capabilities instead of a general `BYPASSRLS` path;
-5. run the full Account service, worker and web integration suites against the
-   hardened role.
+- RLS Enterprise, SAML, workspaces multi-tenant, bootstrap nil-UUID ;
+- tout harness RLS référencé dans l'archive `account-service-next`.
