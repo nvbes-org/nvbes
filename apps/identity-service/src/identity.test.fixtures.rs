@@ -20,7 +20,12 @@ pub async fn database() -> PgPool {
         parsed.host_str(),
         Some("localhost" | "127.0.0.1" | "[::1]")
     ));
-    assert!(parsed.path().contains("identity_test"));
+    // Mother DBs: dedicated Identity fixtures (`identity_test`) or the shared
+    // coverage mother used by CI (`nvbes_coverage_test` / `*coverage_test`).
+    assert!(
+        parsed.path().contains("identity_test") || parsed.path().contains("coverage_test"),
+        "DATABASE_URL must name an Identity or coverage test database"
+    );
     let db = PgPoolOptions::new()
         .max_connections(4)
         .connect(&url)
