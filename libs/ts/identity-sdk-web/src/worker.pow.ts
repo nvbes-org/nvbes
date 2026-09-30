@@ -31,6 +31,14 @@ function leadingZeroBits(hash: Uint8Array): number {
 }
 
 self.onmessage = async (event: MessageEvent<WorkerPowMessage>) => {
+  if (
+    event.origin !== '' &&
+    typeof self !== 'undefined' &&
+    self.location &&
+    event.origin !== self.location.origin
+  ) {
+    return;
+  }
   const { nonce, difficulty } = event.data;
   let batchSize = event.data.batchSize ?? 500;
   let yieldDelayMs = event.data.yieldDelayMs ?? 15;

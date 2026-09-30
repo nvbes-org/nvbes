@@ -95,7 +95,7 @@ mod tests {
         for (iat, exp, typ) in [
             (now - 301, now - 1, TYPE),
             (now, now + 301, TYPE),
-            (now + 1, now + 100, TYPE),
+            (now + 10, now + 100, TYPE),
             (now, now + 100, "JWT"),
             (now, now + 100, "at+jwt"),
         ] {

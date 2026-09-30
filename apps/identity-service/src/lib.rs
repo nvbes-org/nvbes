@@ -66,5 +66,5 @@ mod tokens_policy;
 mod test_fixtures;
 
 #[cfg(all(test, feature = "database-tests"))]
-#[path = "identity.browser.e2e_fixture.rs"]
+#[path = "identity.browser.e2e_fixture.tests.rs"]
 mod browser_e2e_fixture;

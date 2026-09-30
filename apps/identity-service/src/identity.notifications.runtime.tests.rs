@@ -28,6 +28,24 @@ impl Drop for Worker {
 impl Worker {
     async fn start(url: &str) -> Self {
         let binary = std::env::var("NVBES_IDENTITY_TEST_EMAIL_BINARY")
+            .map(PathBuf::from)
+            .ok()
+            .or_else(|| {
+                if let Some(candidate) = std::env::current_exe()
+                    .ok()
+                    .and_then(|exe| exe.parent()?.parent().map(|p| p.join("nvbes-email-worker")))
+                    .filter(|p| p.is_file())
+                {
+                    return Some(candidate);
+                }
+                let candidates = [
+                    PathBuf::from("target/coverage/llvm-cov-target/debug/nvbes-email-worker"),
+                    PathBuf::from("../../target/coverage/llvm-cov-target/debug/nvbes-email-worker"),
+                    PathBuf::from("target/debug/nvbes-email-worker"),
+                    PathBuf::from("../../target/debug/nvbes-email-worker"),
+                ];
+                candidates.into_iter().find(|p| p.is_file())
+            })
             .expect("run the identity-service:test:email-runtime target");
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();

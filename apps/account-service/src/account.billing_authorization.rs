@@ -105,19 +105,26 @@ async fn authorize(State(state): State<Authority>, Json(target): Json<Target>) -
 }
 
 pub(crate) async fn allowed(db: &PgPool, target: &Target) -> Result<bool, sqlx::Error> {
-    let query = match target.account_type {
+    match target.account_type {
         AccountType::Principal => {
-            "SELECT EXISTS(SELECT 1 FROM account_profiles WHERE principal_id=$1 AND principal_id=$2 AND lifecycle_status='active')"
+            sqlx::query_scalar( // nvbes-allow-runtime-sql
+                "SELECT EXISTS(SELECT 1 FROM account_profiles WHERE principal_id=$1 AND principal_id=$2 AND lifecycle_status='active')",
+            )
+            .bind(target.principal_id)
+            .bind(target.account_id)
+            .fetch_one(db)
+            .await
         }
         AccountType::Team => {
-            "SELECT EXISTS(SELECT 1 FROM account_teams t JOIN account_team_memberships m ON m.team_id=t.id JOIN account_profiles p ON p.principal_id=m.principal_id WHERE t.id=$2 AND t.status='active' AND t.owner_principal_id=$1 AND m.principal_id=$1 AND m.role='owner' AND p.lifecycle_status='active')"
+            sqlx::query_scalar( // nvbes-allow-runtime-sql
+                "SELECT EXISTS(SELECT 1 FROM account_teams t JOIN account_team_memberships m ON m.team_id=t.id JOIN account_profiles p ON p.principal_id=m.principal_id WHERE t.id=$2 AND t.status='active' AND t.owner_principal_id=$1 AND m.principal_id=$1 AND m.role='owner' AND p.lifecycle_status='active')",
+            )
+            .bind(target.principal_id)
+            .bind(target.account_id)
+            .fetch_one(db)
+            .await
         }
-    };
-    sqlx::query_scalar(query)
-        .bind(target.principal_id)
-        .bind(target.account_id)
-        .fetch_one(db)
-        .await
+    }
 }
 
 #[cfg(all(test, feature = "database-tests"))]

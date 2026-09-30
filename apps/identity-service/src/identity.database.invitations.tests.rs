@@ -1,16 +1,10 @@
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::invitations;
 
-use super::{connect, migrate};
-
-#[tokio::test]
-async fn invitation_acceptance_is_one_time_and_never_persists_the_code() {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = connect(&database_url, 2)
-        .await
-        .expect("test database connects");
-    migrate(&pool).await.expect("identity migrations apply");
+#[sqlx::test(migrations = "./migrations")]
+async fn invitation_acceptance_is_one_time_and_never_persists_the_code(pool: PgPool) {
     let result = invitations::run_synthetic_smoke(
         &pool,
         &format!("inviter-{}@example.invalid", Uuid::new_v4()),

@@ -19,13 +19,16 @@ SQLX_OFFLINE=true cargo clippy --workspace --all-targets --locked --message-form
 
 # 2. Generate Rust LCOV coverage report.
 # Never emit an empty placeholder: Sonar treats that as 0% coverage on new code.
-if command -v cargo-llvm-cov >/dev/null 2>&1 \
-  && [[ -n "${NVBES_SECURITY_TEST_DATABASE_URL:-}" ]] \
-  && [[ -n "${DATABASE_URL:-}" ]]; then
-  printf '==> Generating Rust LCOV coverage report...\n'
-  bash scripts/test-workspace-coverage.sh
+if command -v cargo-llvm-cov >/dev/null 2>&1; then
+  if [[ -z "${NVBES_SECURITY_TEST_DATABASE_URL:-}" || -z "${DATABASE_URL:-}" ]]; then
+    printf '==> Wrapping with security test DB for Sonar coverage...\n'
+    bash scripts/with-security-test-db.sh bash scripts/test-workspace-coverage.sh
+  else
+    printf '==> Generating Rust LCOV coverage report...\n'
+    bash scripts/test-workspace-coverage.sh
+  fi
 else
-  printf 'error: cargo-llvm-cov + NVBES_SECURITY_TEST_DATABASE_URL + DATABASE_URL required for Sonar coverage\n' >&2
+  printf 'error: cargo-llvm-cov required for Sonar coverage\n' >&2
   exit 1
 fi
 

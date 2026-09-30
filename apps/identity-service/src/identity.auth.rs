@@ -84,18 +84,18 @@ pub(crate) async fn authenticate(
 }
 
 /// Ephemeral evidence; no raw password, serialization, clone or caller-settable fields.
-pub(crate) struct VerifiedPassword {
+pub(crate) struct VerifiedIdentity {
     principal_id: Uuid,
-    password_hash: String,
-    upgraded_hash: Option<String>,
+    stored_credential_hash: String,
+    rehashed_credential: Option<String>,
     email: String,
 }
 
 pub(crate) async fn verify_credentials(
     db: &PgPool,
     email: &str,
-    password: &str,
-) -> anyhow::Result<VerifiedPassword> {
+    input_secret: &str,
+) -> anyhow::Result<VerifiedIdentity> {
     let email = normalize_email(email)?;
     let credential = sqlx::query_as::<_, (Uuid, String)>(
         "SELECT p.id, c.password_hash FROM identity_principals p JOIN identity_login_identifiers i ON i.principal_id = p.id JOIN identity_password_credentials c ON c.principal_id = p.id WHERE i.kind = 'email' AND i.normalized_value = $1 AND p.status = 'active'",
@@ -103,35 +103,35 @@ pub(crate) async fn verify_credentials(
     .bind(&email)
     .fetch_optional(db)
     .await?;
-    let Some((principal_id, password_hash)) = credential else {
-        verify_dummy_password(password).await?;
+    let Some((principal_id, stored_hash)) = credential else {
+        verify_dummy_password(input_secret).await?;
         anyhow::bail!("authentication failed");
     };
-    let (password_valid, needs_rehash) = verify_stored_password(password, &password_hash).await?;
+    let (password_valid, needs_rehash) = verify_stored_password(input_secret, &stored_hash).await?;
     if !password_valid {
         anyhow::bail!("authentication failed");
     }
-    let upgraded_hash = if needs_rehash {
-        Some(hash_current_password(password).await?)
+    let rehashed_credential = if needs_rehash {
+        Some(hash_current_password(input_secret).await?)
     } else {
         None
     };
-    Ok(VerifiedPassword {
+    Ok(VerifiedIdentity {
         principal_id,
-        password_hash,
-        upgraded_hash,
+        stored_credential_hash: stored_hash,
+        rehashed_credential,
         email,
     })
 }
 
 pub(crate) async fn create_verified_session(
     tx: &mut Transaction<'_, Postgres>,
-    verified: VerifiedPassword,
+    verified: VerifiedIdentity,
 ) -> anyhow::Result<String> {
-    let VerifiedPassword {
+    let VerifiedIdentity {
         principal_id,
-        password_hash,
-        upgraded_hash,
+        stored_credential_hash,
+        rehashed_credential,
         email,
     } = verified;
     crate::session_locks::principal(tx, principal_id).await?;
@@ -140,7 +140,7 @@ pub(crate) async fn create_verified_session(
         "SELECT p.status = 'active' AND c.password_hash = $2 FROM identity_principals p JOIN identity_password_credentials c ON c.principal_id = p.id JOIN identity_login_identifiers i ON i.principal_id=p.id WHERE p.id = $1 AND i.kind='email' AND i.normalized_value=$3 FOR UPDATE OF p,c,i",
     )
     .bind(principal_id)
-    .bind(&password_hash)
+    .bind(&stored_credential_hash)
     .bind(email)
     .fetch_optional(&mut **tx)
     .await?
@@ -148,13 +148,13 @@ pub(crate) async fn create_verified_session(
     if !unchanged {
         anyhow::bail!("authentication failed");
     }
-    if let Some(upgraded_hash) = upgraded_hash {
+    if let Some(rehashed) = rehashed_credential {
         sqlx::query(
             "UPDATE identity_password_credentials SET password_hash=$1,changed_at=clock_timestamp() WHERE principal_id=$2 AND password_hash=$3",
         )
-        .bind(upgraded_hash)
+        .bind(rehashed)
         .bind(principal_id)
-        .bind(&password_hash)
+        .bind(&stored_credential_hash)
         .execute(&mut **tx)
         .await?;
     }

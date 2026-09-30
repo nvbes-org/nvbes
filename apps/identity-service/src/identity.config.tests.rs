@@ -1,10 +1,11 @@
-use std::sync::{Mutex, OnceLock};
+use crate::database::database_test_support::test_env_lock;
 
 use super::{IdentityConfig, mfa_runtime_config_from_env};
 
 fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+    test_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 #[test]

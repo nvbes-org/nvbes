@@ -64,7 +64,7 @@ export function probeChromeSpoofing(): boolean {
     const userAgent = navigator.userAgent;
     const isChrome =
       /Chrome|HeadlessChrome/.test(userAgent) &&
-      !/Edge|Edg|OPR|Firefox|Safari\/[0-9.]+$/.test(userAgent);
+      !/(?:Edge|Edg|OPR|Firefox|Safari\/[0-9.]+)$/.test(userAgent);
     if (!isChrome || /Mobile|Android|iPhone|iPad/i.test(userAgent)) return false;
 
     const browserWindow = window as unknown as { chrome?: Record<string, unknown> };

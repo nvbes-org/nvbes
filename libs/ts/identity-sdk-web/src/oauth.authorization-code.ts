@@ -47,7 +47,11 @@ export async function exchangeAuthorizationCode(
     throw new Error('OAuth authorization transaction expired.');
   }
 
-  const endpoint = `${config.baseUrl.replace(/\/+$/u, '')}/oauth/token`;
+  let baseEnd = config.baseUrl.length;
+  while (baseEnd > 0 && config.baseUrl.charCodeAt(baseEnd - 1) === 47) {
+    baseEnd--;
+  }
+  const endpoint = `${config.baseUrl.slice(0, baseEnd)}/oauth/token`;
   const keyStore = config.dpopStore ?? new IndexedDbDpopTransactionStore();
   let key: DpopMainKeyPair | undefined;
   if (transaction.dpop) {

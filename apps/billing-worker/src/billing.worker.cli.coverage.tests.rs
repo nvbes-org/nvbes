@@ -16,15 +16,19 @@ fn run(args: &[&str], database_url: Option<&str>) -> Output {
 }
 
 fn apply_development_env(command: &mut Command) {
+    let db_url = std::env::var("DATABASE_URL")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| {
+            std::env::var("NVBES_SECURITY_TEST_DATABASE_URL")
+                .ok()
+                .filter(|s| !s.trim().is_empty())
+        })
+        .unwrap_or_else(|| {
+            "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
+        });
     command
-        .env(
-            "NVBES_BILLING_DATABASE_URL",
-            std::env::var("DATABASE_URL")
-                .or_else(|_| std::env::var("NVBES_SECURITY_TEST_DATABASE_URL"))
-                .unwrap_or_else(|_| {
-                    "postgres://postgres:postgres@127.0.0.1:15432/nvbes_coverage_test".into()
-                }),
-        )
+        .env("NVBES_BILLING_DATABASE_URL", db_url)
         .env("NVBES_APP_URL", "https://nvbes.test");
 }
 

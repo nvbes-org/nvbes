@@ -12,7 +12,7 @@ use crate::oauth::{
 
 const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 
-pub async fn database() -> PgPool {
+async fn connect_mother_db() -> PgPool {
     let url = std::env::var("DATABASE_URL")
         .expect("DATABASE_URL must name an isolated Identity test database");
     let parsed = reqwest::Url::parse(&url).unwrap();
@@ -26,18 +26,16 @@ pub async fn database() -> PgPool {
         parsed.path().contains("identity_test") || parsed.path().contains("coverage_test"),
         "DATABASE_URL must name an Identity or coverage test database"
     );
-    let db = PgPoolOptions::new()
+    PgPoolOptions::new()
         .max_connections(4)
         .connect(&url)
         .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&db).await.unwrap();
-    db
+        .unwrap()
 }
 
 /// Isolate schema mutations and encryption-key fixtures from concurrent tests.
 pub async fn isolated_database() -> PgPool {
-    let db = database().await;
+    let db = connect_mother_db().await;
     let schema = format!("identity_test_{}", Uuid::new_v4().simple());
     sqlx::query(&format!("CREATE SCHEMA {schema}"))
         .execute(&db)
@@ -62,6 +60,10 @@ pub async fn isolated_database() -> PgPool {
         .unwrap();
     sqlx::migrate!("./migrations").run(&db).await.unwrap();
     db
+}
+
+pub async fn database() -> PgPool {
+    isolated_database().await
 }
 
 pub fn clients() -> ClientRegistry {

@@ -31,7 +31,7 @@ mod recovery_delivery;
 #[path = "identity.recovery.http.rs"]
 mod recovery_http;
 #[cfg(all(test, feature = "database-tests"))]
-#[path = "identity.recovery.test-fixture.rs"]
+#[path = "identity.recovery.test_support.rs"]
 mod recovery_test_fixture;
 #[path = "identity.sessions.lock.rs"]
 mod session_locks;

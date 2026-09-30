@@ -3,19 +3,13 @@ use rsa::{
     pkcs8::{EncodePrivateKey, EncodePublicKey},
     rand_core::OsRng,
 };
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{auth, tokens::TokenService, tokens_config::TokenConfig};
 
-use super::{connect, migrate};
-
-#[tokio::test]
-async fn session_issued_tokens_derive_step_up_amr_and_survive_step_up_expiry() {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = connect(&database_url, 2)
-        .await
-        .expect("test database connects");
-    migrate(&pool).await.expect("identity migrations apply");
+#[sqlx::test(migrations = "./migrations")]
+async fn session_issued_tokens_derive_step_up_amr_and_survive_step_up_expiry(pool: PgPool) {
     let private = RsaPrivateKey::new(&mut OsRng, 2048).unwrap();
     let public = private.to_public_key();
     let service = TokenService::new(

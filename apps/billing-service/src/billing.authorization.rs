@@ -1,7 +1,7 @@
 use crate::error::BillingError;
 use reqwest::{
     Client, Url,
-    header::{AUTHORIZATION, HeaderMap, HeaderValue},
+    header::{AUTHORIZATION, HeaderValue},
 };
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
@@ -45,19 +45,32 @@ struct Decision {
 pub struct AccountAuthority {
     client: Client,
     endpoint: Url,
+    authorization: HeaderValue,
     permits: Arc<Semaphore>,
 }
 
 impl AccountAuthority {
     pub fn new(origin: &str, secret: &str) -> anyhow::Result<Self> {
         let mut endpoint = Url::parse(origin)?;
+        #[cfg(not(test))]
+        anyhow::ensure!(
+            endpoint.scheme() == "https"
+                && endpoint.host_str().is_some()
+                && endpoint.username().is_empty()
+                && endpoint.password().is_none()
+                && endpoint.query().is_none()
+                && endpoint.fragment().is_none()
+                && endpoint.path() == "/",
+            "invalid Account authorization origin"
+        );
+        #[cfg(test)]
         anyhow::ensure!(
             (endpoint.scheme() == "https"
-                || endpoint.scheme() == "http"
+                || (endpoint.scheme() == "http"
                     && matches!(
                         endpoint.host_str(),
                         Some("localhost" | "127.0.0.1" | "[::1]")
-                    ))
+                    )))
                 && endpoint.host_str().is_some()
                 && endpoint.username().is_empty()
                 && endpoint.password().is_none()
@@ -74,12 +87,9 @@ impl AccountAuthority {
             "invalid Account authorization credential"
         );
         endpoint.set_path("/internal/v1/billing/authorize");
-        let mut credential = HeaderValue::from_str(&format!("Bearer {secret}"))?;
-        credential.set_sensitive(true);
-        let mut headers = HeaderMap::new();
-        headers.insert(AUTHORIZATION, credential);
+        let mut authorization = HeaderValue::from_str(&format!("Bearer {secret}"))?;
+        authorization.set_sensitive(true);
         let client = Client::builder()
-            .default_headers(headers)
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .connect_timeout(Duration::from_secs(1))
@@ -89,6 +99,7 @@ impl AccountAuthority {
         Ok(Self {
             client,
             endpoint,
+            authorization,
             permits: Arc::new(Semaphore::new(16)),
         })
     }
@@ -111,7 +122,10 @@ impl AccountAuthority {
             account_type: account.account_type,
             allowed: true,
         };
-        let mut response = self.client.post(self.endpoint.clone())
+        let mut response = self
+            .client
+            .post(self.endpoint.as_str())
+            .header(AUTHORIZATION, self.authorization.clone())
             .json(&serde_json::json!({"principal_id":principal_id,"account_id":account.id,"account_type":account.account_type}))
             .send().await.map_err(|_| BillingError::AccountUnavailable)?;
         if response.status() != reqwest::StatusCode::OK

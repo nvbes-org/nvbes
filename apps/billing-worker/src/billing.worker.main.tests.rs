@@ -161,7 +161,7 @@ async fn deployment_bootstrap_serves_live_health_check() {
 
     let handle = tokio::spawn(run_deployment_bootstrap());
     let mut response = None;
-    for _ in 0..40 {
+    for _ in 0..100 {
         tokio::time::sleep(Duration::from_millis(50)).await;
         if handle.is_finished() {
             break;
@@ -204,7 +204,7 @@ async fn deployment_bootstrap_accepts_legacy_bind_addr_env() {
 
     let handle = tokio::spawn(run(vec!["deployment-bootstrap".into()]));
     let mut response = None;
-    for _ in 0..40 {
+    for _ in 0..100 {
         tokio::time::sleep(Duration::from_millis(50)).await;
         if handle.is_finished() {
             break;

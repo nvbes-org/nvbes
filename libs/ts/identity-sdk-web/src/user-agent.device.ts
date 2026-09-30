@@ -47,11 +47,11 @@ export function detectOS(userAgent: string): OperatingSystem {
     return [OS_NAMES.windows, version];
   }
 
-  const ios = /(?:iPhone|iPad|iPod).*?OS (\d+)_(\d+)_?(\d+)?/.exec(userAgent);
+  const ios = /(?:iPhone|iPad|iPod)[^;)]*?OS (\d+)_(\d+)_?(\d+)?/.exec(userAgent);
   if (ios) return [OS_NAMES.ios, `${ios[1]}.${ios[2]}.${ios[3] ?? '0'}`];
   if (/iPhone|iPad|iPod/.test(userAgent)) return [OS_NAMES.ios, null];
 
-  const watchOs = /watch.*\/(\d+\.\d+\.\d+)|watch os,(\d+\.\d+),/i.exec(userAgent);
+  const watchOs = /watch[^/\r\n]*\/(\d+\.\d+\.\d+)|watch os,(\d+\.\d+),/i.exec(userAgent);
   if (watchOs) return [OS_NAMES.watchOs, watchOs[1] ?? watchOs[2] ?? null];
 
   const android = /Android (\d+)(?:\.(\d+))?(?:\.(\d+))?/i.exec(userAgent);
@@ -83,7 +83,7 @@ export function detectDevice(userAgent: string): DeviceName | null {
   if (/Nokia/i.test(userAgent)) return DEVICE_NAMES.nokia;
   if (
     /(kf[a-z]{2}wi|aeo[c-r]{2})( bui|\))/i.test(userAgent) ||
-    /(kf[a-z]+)( bui|\)).+silk\//i.test(userAgent)
+    /(kf[a-z]+)( bui|\))[^;)\r\n]*?silk\//i.test(userAgent)
   ) {
     return DEVICE_NAMES.kindleFire;
   }
