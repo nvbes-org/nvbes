@@ -1,10 +1,6 @@
 use base64::{Engine, engine::general_purpose::STANDARD};
 use std::net::SocketAddr;
 
-fn development_mfa_key() -> [u8; 32] {
-    [2_u8; 32]
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentityConfig {
     pub environment: String,
@@ -104,15 +100,12 @@ pub fn mfa_runtime_config_from_env() -> Result<MfaRuntimeConfig, ConfigError> {
 }
 
 fn mfa_runtime_config(environment: &str) -> Result<MfaRuntimeConfig, ConfigError> {
-    let mfa_encryption_key = match optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY") {
-        Some(value) => decode_key(&value)?,
-        None if matches!(environment, "development" | "test") => development_mfa_key(),
-        None => return Err(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")),
-    };
+    let mfa_encryption_key = optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
+        .ok_or(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
+        .and_then(|value| decode_key(&value))?;
     let mfa_key_version = match optional("NVBES_IDENTITY_MFA_KEY_VERSION") {
         Some(value) => parse_version("NVBES_IDENTITY_MFA_KEY_VERSION", &value)?,
-        None if matches!(environment, "development" | "test") => 1,
-        None => return Err(ConfigError::Missing("NVBES_IDENTITY_MFA_KEY_VERSION")),
+        None => 1,
     };
     let previous_key = optional("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
     let previous_version = optional("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");

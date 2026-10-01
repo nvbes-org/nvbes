@@ -77,11 +77,24 @@ fn apply_development_defaults(guard: &EnvGuard) {
 }
 
 fn postgres_reachable() -> bool {
-    std::net::TcpStream::connect_timeout(
-        &"127.0.0.1:5432".parse().unwrap(),
-        std::time::Duration::from_millis(200),
-    )
-    .is_ok()
+    let candidate = std::env::var("DATABASE_URL")
+        .or_else(|_| std::env::var("NVBES_BILLING_DATABASE_URL"))
+        .unwrap_or_else(|_| "postgres://postgres:postgres@127.0.0.1:5432/nvbes_billing".into());
+    let Some(without_scheme) = candidate.split("://").nth(1) else {
+        return false;
+    };
+    let Some(authority) = without_scheme.split('/').next() else {
+        return false;
+    };
+    let host_port = authority.rsplit('@').next().unwrap_or(authority);
+    let addr = match host_port.rsplit_once(':') {
+        Some((host, port)) => format!("{host}:{port}"),
+        None => format!("{host_port}:5432"),
+    };
+    let Ok(addr) = addr.parse() else {
+        return false;
+    };
+    std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(200)).is_ok()
 }
 
 #[tokio::test]

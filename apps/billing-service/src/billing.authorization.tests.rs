@@ -110,4 +110,5 @@ fn authority_configuration_rejects_unsafe_origins_and_weak_credentials() {
     for secret in ["".into(), "a".repeat(63), "g".repeat(64), "A".repeat(64)] {
         assert!(AccountAuthority::new("https://account.example", &secret).is_err());
     }
+    assert!(AccountAuthority::new("https://account.example", &"a".repeat(64)).is_ok());
 }

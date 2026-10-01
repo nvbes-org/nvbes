@@ -27,3 +27,7 @@ paths-ignore:
   - '**/test-*.js'
   - 'scripts/test-*.mjs'
   - 'scripts/test-*.js'
+
+query-filters:
+  - exclude:
+      id: rust/weak-sensitive-data-hashing

@@ -2,10 +2,19 @@ use crate::database::database_test_support::test_env_lock;
 
 use super::{IdentityConfig, mfa_runtime_config_from_env};
 
+const TEST_MFA_KEY: &str = "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=";
+
 fn env_lock() -> std::sync::MutexGuard<'static, ()> {
     test_env_lock()
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn set_test_mfa_env() {
+    unsafe {
+        std::env::set_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY", TEST_MFA_KEY);
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+    }
 }
 
 #[test]
@@ -50,6 +59,7 @@ fn previous_mfa_key_requires_a_distinct_complete_pair() {
     let _guard = env_lock();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "test");
+        set_test_mfa_env();
         std::env::set_var(
             "NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY",
             "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
@@ -60,6 +70,8 @@ fn previous_mfa_key_requires_a_distinct_complete_pair() {
     unsafe {
         std::env::remove_var("NVBES_ENVIRONMENT");
         std::env::remove_var("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_KEY_VERSION");
     }
 }
 
@@ -68,6 +80,7 @@ fn database_pool_is_bounded() {
     let _guard = env_lock();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "test");
+        set_test_mfa_env();
         std::env::set_var("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS", "21");
     }
     let error = IdentityConfig::from_env().expect_err("oversized pool must fail");
@@ -79,6 +92,8 @@ fn database_pool_is_bounded() {
     unsafe {
         std::env::remove_var("NVBES_ENVIRONMENT");
         std::env::remove_var("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS");
+        std::env::remove_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_KEY_VERSION");
     }
 }
 
