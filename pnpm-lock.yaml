@@ -43,7 +43,7 @@ overrides:
   esbuild: 0.28.1
   fast-uri: 3.1.8
   form-data: 4.0.6
-  hono: 4.13.5
+  hono: 4.13.7
   ip-address: 10.7.1
   js-yaml: 4.3.2
   postcss: 8.5.23
@@ -5176,8 +5176,8 @@ packages:
   headers-polyfill@5.0.1:
     resolution: {integrity: sha512-1TJ6Fih/b8h5TIcv+1+Hw0PDQWJTKDKzFZzcKOiW1wJza3XoAQlkCuXLbymPYB8+ZQyw8mHvdw560e8zVFIWyA==}
 
-  hono@4.13.5:
-    resolution: {integrity: sha512-O6+/eCYRkzzzy0rPWwKLiGBR1nFuUPZynnwjxN1MBA62NNqbT0wQEzQyK2gSO5yDIDB336sXQleAhOHrzlYyKw==}
+  hono@4.13.7:
+    resolution: {integrity: sha512-c8/gF9ac8Y78/agExVocyLevgR+JlpNB444Py0FSX8pJoPdYUfUzRcXtYEYGwt6l19qIlVZPN5Mfsw9jFShmQQ==}
     engines: {node: '>=16.9.0'}
 
   html-encoding-sniffer@7.0.0:
@@ -8994,7 +8994,7 @@ snapshots:
 
   '@hono/node-server@2.0.12(hono@4.13.5)':
     dependencies:
-      hono: 4.13.5
+      hono: 4.13.7
 
   '@img/colour@1.1.0': {}
 
@@ -9296,7 +9296,7 @@ snapshots:
       eventsource-parser: 3.1.1
       express: 5.2.1(supports-color@10.2.2)
       express-rate-limit: 8.7.0(express@5.2.1(supports-color@7.2.0))(supports-color@10.2.2)
-      hono: 4.13.5
+      hono: 4.13.7
       jose: 6.2.12
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -9318,7 +9318,7 @@ snapshots:
       eventsource-parser: 3.1.1
       express: 5.2.1(supports-color@7.2.0)
       express-rate-limit: 8.7.0(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)
-      hono: 4.13.5
+      hono: 4.13.7
       jose: 6.2.12
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -12710,7 +12710,7 @@ snapshots:
       set-cookie-parser: 3.1.0
     optional: true
 
-  hono@4.13.5: {}
+  hono@4.13.7: {}
 
   html-encoding-sniffer@7.0.0:
     dependencies:
