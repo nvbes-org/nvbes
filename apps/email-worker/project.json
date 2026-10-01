@@ -25,7 +25,7 @@
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
-        "command": "cargo nextest run --locked --package nvbes-email --package nvbes-email-worker --package nvbes-email-scaleway",
+        "command": "bash scripts/with-security-test-db.sh cargo nextest run --locked --package nvbes-email --package nvbes-email-worker --package nvbes-email-scaleway",
         "cwd": "."
       }
     },

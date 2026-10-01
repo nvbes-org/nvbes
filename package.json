@@ -72,6 +72,8 @@
     "check:sqlx-ratchet": "node tools/ci/check-sqlx-ratchet.mjs",
     "check:upstream-rules": "node --test tools/ci/check-upstream-rules.test.mjs && node tools/ci/check-upstream-rules.mjs --staged",
     "check:llm-quality": "pnpm check:thresholds-monotone && pnpm check:agent-protected-paths && pnpm check:weak-assertions && pnpm check:unwrap-ratchet && pnpm check:sqlx-ratchet && pnpm check:upstream-rules",
+    "preflight": "node tools/ci/preflight.mjs",
+    "check:preflight": "node tools/ci/preflight.mjs",
     "check:cookie-theft-mitigation": "node tools/security/check-cookie-theft-mitigation.mjs",
     "check:credential-stuffing-prevention": "node tools/security/check-credential-stuffing-prevention.mjs",
     "check:structure": "bash scripts/check-llm-structure.sh",

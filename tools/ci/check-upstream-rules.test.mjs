@@ -114,3 +114,67 @@ diff --git a/src/jwt.ts b/src/jwt.ts
   assert.equal(violations.length, 1);
   assert.equal(violations[0].rule, 'typescript:S8786');
 });
+
+test('detects global parseFloat', () => {
+  const diff = `
+diff --git a/src/math.ts b/src/math.ts
+--- a/src/math.ts
++++ b/src/math.ts
+@@ -10,0 +11,1 @@
++const val = parseFloat(str);
+`;
+  const violations = findUpstreamViolationsInDiff(diff);
+  assert.equal(violations.length, 1);
+  assert.equal(violations[0].rule, 'typescript:S7773');
+});
+
+test('detects Promise rejection with string or raw object', () => {
+  const diff = `
+diff --git a/src/async.ts b/src/async.ts
+--- a/src/async.ts
++++ b/src/async.ts
+@@ -10,0 +11,1 @@
++reject("failed to fetch");
+`;
+  const violations = findUpstreamViolationsInDiff(diff);
+  assert.equal(violations.length, 1);
+  assert.equal(violations[0].rule, 'typescript:S6671');
+});
+
+test('allows Promise rejection with Error instance', () => {
+  const diff = `
+diff --git a/src/async.ts b/src/async.ts
+--- a/src/async.ts
++++ b/src/async.ts
+@@ -10,0 +11,1 @@
++reject(new Error("failed to fetch"));
+`;
+  const violations = findUpstreamViolationsInDiff(diff);
+  assert.equal(violations.length, 0);
+});
+
+test('detects Rust thread::sleep in production code', () => {
+  const diff = `
+diff --git a/apps/identity-service/src/service.rs b/apps/identity-service/src/service.rs
+--- a/apps/identity-service/src/service.rs
++++ b/apps/identity-service/src/service.rs
+@@ -10,0 +11,1 @@
++std::thread::sleep(std::time::Duration::from_secs(1));
+`;
+  const violations = findUpstreamViolationsInDiff(diff);
+  assert.equal(violations.length, 1);
+  assert.equal(violations[0].rule, 'rust:S7487');
+});
+
+test('detects GitHub Actions workflow ${{ github.event }} injection in run step', () => {
+  const diff = `
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -10,0 +11,1 @@
++        run: echo "Event: \${{ github.event.issue.title }}"
+`;
+  const violations = findUpstreamViolationsInDiff(diff);
+  assert.equal(violations.length, 1);
+  assert.equal(violations[0].rule, 'actions:CWE-078');
+});

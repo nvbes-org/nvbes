@@ -107,13 +107,29 @@ export function findUpstreamViolationsInDiff(diffText) {
           });
         }
 
-        // typescript:S7773 - global parseInt()
-        if (/(?<![A-Za-z0-9_$.])parseInt\s*\(/u.test(lineText)) {
+        // typescript:S7773 - global parseInt() or parseFloat()
+        if (/(?<![A-Za-z0-9_$.])(?:parseInt|parseFloat)\s*\(/u.test(lineText)) {
           violations.push({
             file: currentPath,
             line: newLine,
             rule: 'typescript:S7773',
-            message: 'Global parseInt() used. Prefer Number.parseInt().',
+            message:
+              'Global parseInt()/parseFloat() used. Prefer Number.parseInt() or Number.parseFloat().',
+            snippet: lineText.trim(),
+          });
+        }
+
+        // typescript:S6671 - Promise rejection without Error
+        if (
+          /\breject\(\s*(?:['"`]|\{[^}]*\})/u.test(lineText) &&
+          !/\breject\(\s*new\s+[A-Za-z0-9_]*Error/u.test(lineText)
+        ) {
+          violations.push({
+            file: currentPath,
+            line: newLine,
+            rule: 'typescript:S6671',
+            message:
+              'Promise rejected with non-Error value. Always reject with new Error(...) or custom Error instance.',
             snippet: lineText.trim(),
           });
         }
@@ -126,6 +142,56 @@ export function findUpstreamViolationsInDiff(diffText) {
             rule: 'typescript:S8786',
             message:
               'Potentially catastrophic backtracking regex (/=+\\$/). Use bounded quantifiers (e.g. /={1,2}\\$/) or string methods.',
+            snippet: lineText.trim(),
+          });
+        }
+
+        // CodeQL / typescript:S2076 - Command injection via exec interpolation
+        if (/\b(?:exec|execSync)\s*\(\s*`[^`]*\$\{/u.test(lineText)) {
+          violations.push({
+            file: currentPath,
+            line: newLine,
+            rule: 'typescript:S2076',
+            message:
+              'Command injection risk via shell string interpolation. Use execFile or spawn with argument array.',
+            snippet: lineText.trim(),
+          });
+        }
+      }
+
+      // 3. Rust Checks (apps/ and libs/ production code)
+      const isRust = currentPath.endsWith('.rs');
+      const isRustTest =
+        currentPath.includes('/tests/') ||
+        currentPath.endsWith('.tests.rs') ||
+        currentPath.endsWith('_test.rs') ||
+        currentPath.endsWith('_tests.rs');
+
+      if (isRust && !isRustTest && !isComment) {
+        // rust:S7487 - Blocking calls in async context
+        if (/\bthread::sleep\s*\(/u.test(lineText) || /\bstd::thread::sleep\s*\(/u.test(lineText)) {
+          violations.push({
+            file: currentPath,
+            line: newLine,
+            rule: 'rust:S7487',
+            message:
+              'Blocking thread::sleep() in Rust production code. Use tokio::time::sleep() or spawn_blocking.',
+            snippet: lineText.trim(),
+          });
+        }
+      }
+
+      // 4. GitHub Actions Workflows (CodeQL injection prevention)
+      const isWorkflow =
+        currentPath.startsWith('.github/workflows/') && /\.(?:ya?ml)$/u.test(currentPath);
+      if (isWorkflow) {
+        if (/\brun:\s*.*?\$\{\{\s*(?:github\.event|inputs\.)/u.test(lineText)) {
+          violations.push({
+            file: currentPath,
+            line: newLine,
+            rule: 'actions:CWE-078',
+            message:
+              'Potential script injection via direct ${{ github.event... }} interpolation in run step. Map to env: variable first.',
             snippet: lineText.trim(),
           });
         }

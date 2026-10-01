@@ -159,7 +159,7 @@ pre-push:
       run: pnpm verify
       fail_text: 'BLOCKED verify KO - pre-commit contourne detecte.'
     71-affected:
-      run: pnpm exec nx affected -t lint,typecheck,test,build --base=origin/main --head=HEAD --parallel=4
+      run: bash scripts/with-security-test-db.sh pnpm exec nx affected -t lint,typecheck,test,build --base=origin/main --head=HEAD --parallel=2
       fail_text: 'BLOCKED nx affected KO - PR #289 pre-push affected gate.'
     72-integration:
       run: pnpm test:integration

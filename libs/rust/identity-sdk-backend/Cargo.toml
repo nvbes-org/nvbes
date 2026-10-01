@@ -21,3 +21,4 @@ tokio = { workspace = true, features = ["sync"] }
 
 [dev-dependencies]
 axum.workspace = true
+tokio = { workspace = true, features = ["full"] }
