@@ -36,6 +36,9 @@ pre-commit:
     00-sqlx-ratchet:
       run: pnpm check:sqlx-ratchet
       fail_text: 'BLOCKED sqlx-ratchet KO - sqlx::query runtime ajouté (utiliser query!).'
+    00-upstream-rules:
+      run: pnpm check:upstream-rules
+      fail_text: 'BLOCKED upstream-rules KO - violation règles SonarQube/CodeQL/CI détectée dans le diff.'
     00-secrets:
       run: node tools/security/scan-secrets.mjs
       fail_text: 'BLOCKED secrets - scan-secrets KO. Corriger avant commit.'

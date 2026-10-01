@@ -34,6 +34,9 @@ fi
 
 # 3. Generate TypeScript LCOV coverage reports
 if command -v pnpm >/dev/null 2>&1; then
+  printf '==> Prebuilding TypeScript libraries for consumer apps...\n'
+  pnpm --filter "@nvbes/http-client" --filter "@nvbes/identity-sdk-web" build || true
+
   printf '==> Generating TypeScript LCOV coverage reports...\n'
   pnpm --filter "@nvbes/http-client" \
        --filter "@nvbes/identity-sdk-web" \
@@ -43,6 +46,39 @@ if command -v pnpm >/dev/null 2>&1; then
        exec vitest run --coverage --coverage.reporter=lcov || {
     printf 'warn: typescript coverage collection exited with non-zero status\n' >&2
   }
+
+  printf '==> Normalizing and combining TypeScript LCOV reports...\n'
+  node -e "
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const packages = [
+      'libs/ts/http-client',
+      'libs/ts/identity-sdk-web',
+      'libs/ts/email-ui',
+      'apps/account-web',
+      'apps/identity-web',
+    ];
+    const rootDir = process.cwd();
+    const combined = [];
+    for (const pkg of packages) {
+      const lcovPath = path.join(rootDir, pkg, 'coverage', 'lcov.info');
+      if (fs.existsSync(lcovPath)) {
+        const content = fs.readFileSync(lcovPath, 'utf8');
+        const normalized = content.replace(/^SF:(.+)$/gm, (match, filePath) => {
+          if (path.isAbsolute(filePath)) {
+            return 'SF:' + path.relative(rootDir, filePath);
+          }
+          return 'SF:' + path.join(pkg, filePath);
+        });
+        fs.writeFileSync(lcovPath, normalized, 'utf8');
+        combined.push(normalized);
+      }
+    }
+    if (combined.length > 0) {
+      fs.mkdirSync(path.join(rootDir, 'coverage'), { recursive: true });
+      fs.writeFileSync(path.join(rootDir, 'coverage', 'lcov.info'), combined.join('\n'), 'utf8');
+    }
+  "
 fi
 
 # 4. Validate generated reports
@@ -59,5 +95,10 @@ if [[ "$lcov_bytes" -lt 100 ]]; then
   exit 1
 fi
 printf '  [ok] Rust LCOV coverage: %s (%s bytes)\n' "$RUST_REPORT_DIR/lcov.info" "$lcov_bytes"
+
+if [[ -f "coverage/lcov.info" ]]; then
+  ts_lcov_bytes="$(wc -c < "coverage/lcov.info" | tr -d ' ')"
+  printf '  [ok] TypeScript LCOV coverage: coverage/lcov.info (%s bytes)\n' "$ts_lcov_bytes"
+fi
 
 printf '==> SonarCloud report preparation complete\n'
