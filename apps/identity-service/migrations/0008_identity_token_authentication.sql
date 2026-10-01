@@ -3,9 +3,9 @@ ALTER TABLE identity_sessions
     ADD COLUMN authenticated_at TIMESTAMPTZ,
     ADD COLUMN primary_amr TEXT,
     ADD COLUMN step_up_at TIMESTAMPTZ;
-UPDATE identity_sessions SET authenticated_at=created_at, primary_amr='pwd';
+UPDATE identity_sessions SET authenticated_at=created_at, primary_amr='pwd' WHERE authenticated_at IS NULL;
 -- Do not invent a proof timestamp for older step-ups: require a fresh proof.
-UPDATE identity_sessions SET step_up_method=NULL, step_up_expires_at=NULL;
+UPDATE identity_sessions SET step_up_method=NULL, step_up_expires_at=NULL WHERE step_up_method IS NOT NULL OR step_up_expires_at IS NOT NULL;
 ALTER TABLE identity_sessions
     ALTER COLUMN authenticated_at SET NOT NULL,
     ALTER COLUMN primary_amr SET NOT NULL,

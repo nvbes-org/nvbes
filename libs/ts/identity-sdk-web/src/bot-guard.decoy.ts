@@ -34,8 +34,14 @@ const AUTOFILL_ANIM_DURATION = '1ms';
 // CSS injection dynamique — classe et animation avec noms aléatoires
 // ---------------------------------------------------------------------------
 
+function secureRandomHex(bytesCount = 6): string {
+  const bytes = new Uint8Array(bytesCount);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 function injectDecoyStyles(): { hiddenClass: string; autofillAnim: string } {
-  const rand = () => `_${Math.random().toString(36).slice(2, 10)}`;
+  const rand = () => `_${secureRandomHex(4)}`;
   const hiddenClass = rand();
   const autofillAnim = rand();
 
@@ -102,7 +108,7 @@ export function createDecoyField(): DecoyField {
 
   // --- Label (rend le champ indiscernable dans le HTML source) ---
   // ID aléatoire pour éviter le ciblage par les extensions PM.
-  const randomId = `f${Math.random().toString(36).slice(2, 10)}`;
+  const randomId = `f${secureRandomHex(4)}`;
   const label = document.createElement('label');
   label.setAttribute('for', randomId);
   label.textContent = 'Website'; // label neutre, jamais visible

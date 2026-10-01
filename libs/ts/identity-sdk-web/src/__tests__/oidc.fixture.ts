@@ -23,7 +23,7 @@ export async function idToken(
   const atHash = btoa(String.fromCharCode(...hash.slice(0, 16)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
-    .replace(/=+$/, '');
+    .replace(/={1,2}$/, '');
   return new SignJWT({
     iss: 'https://identity.example',
     aud: 'account-web',

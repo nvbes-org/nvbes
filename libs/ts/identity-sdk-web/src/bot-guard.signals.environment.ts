@@ -119,7 +119,7 @@ async function probeBattery(): Promise<boolean> {
 
 function probeStorage(): boolean {
   try {
-    const key = `_bg_${Math.random().toString(36).slice(2, 8)}`;
+    const key = `_bg_${Date.now().toString(36)}`;
     localStorage.setItem(key, '1');
     const ok = localStorage.getItem(key) === '1';
     localStorage.removeItem(key);

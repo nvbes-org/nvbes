@@ -113,7 +113,7 @@ export async function verifyIdToken(input: {
   const atHash = btoa(String.fromCharCode(...digest.slice(0, 16)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
-    .replace(/=+$/, '');
+    .replace(/={1,2}$/, '');
   if (payload.at_hash !== atHash) throw new Error('OIDC access token binding failed.');
   return {
     issuer,

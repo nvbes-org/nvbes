@@ -197,7 +197,7 @@ export async function collectFingerprintSignals(): Promise<FingerprintSignals> {
     canvas_hash: mockCanvasHash || canvasHash,
     webgl_vendor: mockWebglVendor !== null ? mockWebglVendor : webgl.vendor,
     webgl_renderer: mockWebglRenderer !== null ? mockWebglRenderer : webgl.renderer,
-    font_count: mockFontCount ? parseInt(mockFontCount, 10) : fontCount,
+    font_count: mockFontCount ? Number.parseInt(mockFontCount, 10) : fontCount,
     screen_width: screen.width,
     screen_height: screen.height,
     color_depth: screen.colorDepth,

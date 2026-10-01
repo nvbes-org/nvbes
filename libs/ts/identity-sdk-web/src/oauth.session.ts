@@ -135,7 +135,7 @@ export class OAuthSession {
 }
 
 function sameScopes(a: string, b: string): boolean {
-  const left = a.split(' ').sort();
-  const right = b.split(' ').sort();
+  const left = a.split(' ').sort((x, y) => x.localeCompare(y));
+  const right = b.split(' ').sort((x, y) => x.localeCompare(y));
   return left.length === right.length && left.every((scope, index) => scope === right[index]);
 }

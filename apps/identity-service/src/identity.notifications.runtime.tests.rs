@@ -124,8 +124,11 @@ impl Worker {
 
     async fn restart(&mut self) {
         self.child.kill().unwrap();
-        self.child.wait().unwrap();
-        self.child = self.command.spawn().unwrap();
+        let _ = tokio::task::spawn_blocking({
+            let mut child = std::mem::replace(&mut self.child, self.command.spawn().unwrap());
+            move || child.wait()
+        })
+        .await;
         self.ready().await;
     }
 }

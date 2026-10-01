@@ -6,14 +6,16 @@ interface PageActivity {
   active(): boolean;
 }
 
+const DEFAULT_PAGE_ACTIVITY: PageActivity = {
+  windowEvents: window,
+  documentEvents: document,
+  active: () => document.visibilityState === 'visible' && navigator.onLine,
+};
+
 /** One periodic check per minute of visible, online use; no background keepalive. */
 export function watchAccountSession(
   controller: Pick<AccountController, 'snapshot' | 'subscribe' | 'revalidate'>,
-  activity: PageActivity = {
-    windowEvents: window,
-    documentEvents: document,
-    active: () => document.visibilityState === 'visible' && navigator.onLine,
-  },
+  activity: PageActivity = DEFAULT_PAGE_ACTIVITY,
 ): () => void {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;

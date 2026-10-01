@@ -60,7 +60,7 @@ export async function solvePowChallenge(
       };
 
       worker.onerror = (err) => {
-        reject(err);
+        reject(err instanceof Error ? err : new Error(String(err?.message ?? 'Worker error')));
         worker.terminate();
       };
 

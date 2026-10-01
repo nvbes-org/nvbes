@@ -32,7 +32,20 @@ else
   exit 1
 fi
 
-# 3. Validate generated reports
+# 3. Generate TypeScript LCOV coverage reports
+if command -v pnpm >/dev/null 2>&1; then
+  printf '==> Generating TypeScript LCOV coverage reports...\n'
+  pnpm --filter "@nvbes/http-client" \
+       --filter "@nvbes/identity-sdk-web" \
+       --filter "@nvbes/email-ui" \
+       --filter "@nvbes/account-web" \
+       --filter "@nvbes/identity-web" \
+       exec vitest run --coverage --coverage.reporter=lcov || {
+    printf 'warn: typescript coverage collection exited with non-zero status\n' >&2
+  }
+fi
+
+# 4. Validate generated reports
 printf '==> Verifying SonarCloud reports:\n'
 if [[ -f "$RUST_REPORT_DIR/clippy-report.json" ]]; then
   printf '  [ok] Rust Clippy report: %s (%s bytes)\n' "$RUST_REPORT_DIR/clippy-report.json" "$(wc -c < "$RUST_REPORT_DIR/clippy-report.json" | tr -d ' ')"

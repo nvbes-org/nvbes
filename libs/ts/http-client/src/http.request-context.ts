@@ -26,8 +26,17 @@ export function resolveRequestUrl(path: string, baseUrl: string): URL {
   }
 
   const normalizedBase = new URL(base);
-  normalizedBase.pathname = `${base.pathname.replace(/\/+$/u, '')}/`;
-  return new URL(path.replace(/^\/+/u, ''), normalizedBase);
+  let basePath = base.pathname;
+  while (basePath.endsWith('/')) {
+    basePath = basePath.slice(0, -1);
+  }
+  normalizedBase.pathname = `${basePath}/`;
+
+  let subPath = path;
+  while (subPath.startsWith('/')) {
+    subPath = subPath.slice(1);
+  }
+  return new URL(subPath, normalizedBase);
 }
 
 export function sameOrigin(url: string, baseUrl: string): boolean {
