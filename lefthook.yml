@@ -109,7 +109,7 @@ pre-commit:
       run: pnpm test:unit
       fail_text: 'BLOCKED test-unit KO - micro-tests isoles Rust.'
     51-nx-test:
-      run: pnpm test
+      run: node tools/ci/nx-guard.mjs && NX_DAEMON=false pnpm test
       fail_text: 'BLOCKED nx test KO. Zero test rouge tolere.'
     52-ci-contract:
       run: pnpm exec nx run ci-contracts:test:ci-contract
@@ -156,7 +156,7 @@ pre-push:
       run: pnpm verify
       fail_text: 'BLOCKED verify KO - pre-commit contourne detecte.'
     71-affected:
-      run: pnpm exec nx affected -t lint,typecheck,test,build --base=origin/main --head=HEAD --parallel=4
+      run: node tools/ci/nx-guard.mjs && NX_DAEMON=false pnpm exec nx affected -t lint,typecheck,test,build --base=origin/main --head=HEAD --parallel=2
       fail_text: 'BLOCKED nx affected KO - PR #289 pre-push affected gate.'
     72-integration:
       run: pnpm test:integration
