@@ -10,7 +10,7 @@ des placeholders de configuration. Aucun secret de production exploitable n'a
 été identifié.
 
 Les exemples actuels ont été reformulés ou vidés pour que l'arbre courant passe
-sans exception. Les 28 détections historiques revues sont identifiées de façon
+sans exception. Les 32 détections historiques revues sont identifiées de façon
 granulaire dans [`.gitleaksignore`](../../.gitleaksignore) par leur empreinte
 commit, chemin, règle et ligne. Une nouvelle détection n'est donc pas masquée
 par une exclusion large de chemin ou de règle.
@@ -24,8 +24,8 @@ par une exclusion large de chemin ou de règle.
 | API Platform Operations                             | `docs/operations/platform-operations-api.md`             | UUID de démonstration           |
 | Configurations Terraform                            | `infrastructure/environments/*/terraform.tfvars.example` | placeholders non fonctionnels   |
 | Developer archivé                                   | `apps/developer-service/src/**contract_tests.rs`         | secrets et préfixes de fixtures |
-| MFA                                                 | `docs/architecture/identity-mfa-recovery.md`             | exemple conceptuel OAuth        |
-| MFA RFC 6238 test vector                            | `libs/rust/core/src/mfa.rs`                              | seed ASCII RFC encodé runtime; empreinte historique `441c0b2f…:139` (squash PR #300) |
+| MFA & Architecture                                  | `docs/architecture/identity-mfa-recovery.md`             | exemple conceptuel OAuth        |
+| Tests Core MFA                                      | `libs/rust/core/src/mfa.rs`                              | graines RFC 4226/6238 de test   |
 
 ## Reproduction
 
