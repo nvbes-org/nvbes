@@ -50,21 +50,20 @@
           "description": "Protected HTTP routes authorize the authenticated actor before executing operations.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.authz.rs",
+              "path": "apps/account-service/src/account.billing_authorization.rs",
               "includes": [
-                "AuthzDecisionRequest",
-                "AuthzDecisionResponse",
-                "authz_decision"
+                "struct Decision",
+                "/internal/v1/billing/authorize",
+                "allowed"
               ]
             },
             {
-              "path": "apps/identity-service/src/identity.authz.tests.rs",
+              "path": "apps/account-service/src/account.billing_authorization.tests.rs",
               "includes": [
-                "authz_decision_fails_cleanly_without_configured_token_keys"
+                "only_active_personal_owners_and_consistent_team_owners_are_allowed"
               ],
               "tests": [
-                "authz_decision_fails_cleanly_without_configured_token_keys",
-                "authz_decision_allows_scoped_token_and_denies_empty_scope"
+                "only_active_personal_owners_and_consistent_team_owners_are_allowed"
               ]
             }
           ]
@@ -148,19 +147,28 @@
           "description": "Require action-specific token scopes and reject requests outside their authenticated scope.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.authz.rs",
+              "path": "apps/identity-service/src/identity.tokens.rs",
               "includes": [
-                "introspect",
-                "claims.scope",
-                "Token has no authorized scopes"
+                "validate_scopes",
+                "AccessTokenClaims",
+                "claims.scope"
               ]
             },
             {
-              "path": "apps/identity-service/src/identity.tokens.rs",
+              "path": "apps/identity-service/src/identity.tokens.policy.rs",
               "includes": [
-                "AccessTokenClaims",
-                "token_type",
-                "scope"
+                "validate_scopes",
+                "requested.is_empty()"
+              ]
+            },
+            {
+              "path": "libs/rust/identity-sdk-backend/src/jwt.verifier.rs",
+              "includes": [
+                "require_scopes",
+                "required_scopes_use_exact_tokens"
+              ],
+              "tests": [
+                "required_scopes_use_exact_tokens"
               ]
             }
           ]

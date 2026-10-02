@@ -1,0 +1,7 @@
+{
+  "name": "identity-sdk-web",
+  "projectType": "library",
+  "root": "libs/ts/identity-sdk-web",
+  "sourceRoot": "libs/ts/identity-sdk-web/src",
+  "tags": ["scope:oss", "type:lib", "domain:identity", "layer:sdk"]
+}

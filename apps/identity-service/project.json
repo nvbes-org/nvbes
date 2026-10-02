@@ -11,6 +11,7 @@
         "{projectRoot}/**/*",
         "{workspaceRoot}/Cargo.toml",
         "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/libs/rust/dpop/**/*",
         "{workspaceRoot}/libs/rust/observability/**/*"
       ],
       "options": {
@@ -31,7 +32,7 @@
       "cache": true,
       "inputs": [
         "{projectRoot}/Dockerfile",
-        "{projectRoot}/tests/**/*",
+        "{projectRoot}/tests/container-contract.test.mjs",
         "{projectRoot}/Cargo.toml",
         "{projectRoot}/src/main.rs",
         "{projectRoot}/src/identity.error_reporting.rs",
@@ -40,6 +41,9 @@
         "{workspaceRoot}/.github/workflows/validate-restore.yml",
         "{workspaceRoot}/infrastructure/environments/identity-production/**/*",
         "{workspaceRoot}/tools/deployment/prove-identity-synthetic-auth.sh",
+        "{workspaceRoot}/tools/deployment/prove-identity-synthetic-token.sh",
+        "{workspaceRoot}/tools/deployment/prove-identity-synthetic-mfa.sh",
+        "{workspaceRoot}/tools/deployment/prove-identity-synthetic-invitation.sh",
         "{workspaceRoot}/tools/deployment/prove-identity-public-runtime.sh"
       ],
       "options": {
@@ -52,6 +56,39 @@
       "cache": false,
       "options": {
         "command": "bash scripts/test-identity-service-database.sh",
+        "cwd": "."
+      }
+    },
+    "test:resource-runtimes": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": {
+        "commands": [
+          "cargo test --locked --package nvbes-dpop --features resource-server",
+          "cargo build --locked --package nvbes-identity-service --package nvbes-account-service --bins --target-dir target",
+          "cargo build --locked --manifest-path apps/billing-service/Cargo.toml --bin nvbes-billing-service --target-dir apps/billing-service/target",
+          "pnpm --filter @nvbes/identity-sdk-web build",
+          "node --test apps/identity-service/tests/resource-runtimes.test.mjs"
+        ],
+        "parallel": false,
+        "cwd": "."
+      }
+    },
+    "test:https-browser-fixture": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "options": {
+        "commands": [
+          "cargo build --locked --package nvbes-identity-service --package nvbes-account-service --bins --target-dir target",
+          "cargo build --locked --manifest-path apps/billing-service/Cargo.toml --bin nvbes-billing-service --target-dir apps/billing-service/target",
+          "pnpm --filter @nvbes/identity-sdk-web build",
+          "pnpm --filter @nvbes/identity-web build",
+          "pnpm --filter @nvbes/account-web build",
+          "NVBES_IDENTITY_TEST_WEB_UI=1 NVBES_IDENTITY_TEST_ACCOUNT_WEB=1 node apps/identity-service/tests/runtime-browser-fixture.mjs"
+        ],
+        "parallel": false,
         "cwd": "."
       }
     }

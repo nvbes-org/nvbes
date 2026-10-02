@@ -22,10 +22,18 @@
               ]
             },
             {
-              "path": "apps/identity-service/src/identity.http.rs",
+              "path": "apps/identity-service/src/identity.oauth.http.rs",
               "includes": [
-                "RegisterRequest",
-                "LoginRequest"
+                "LoginForm",
+                "authenticate"
+              ]
+            },
+            {
+              "path": "apps/identity-service/src/identity.invitations.rs",
+              "includes": [
+                "normalize_email",
+                "create",
+                "accept"
               ]
             }
           ]
@@ -286,7 +294,7 @@
             {
               "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
-                "audit(&mut tx, principal_id, \"identity.authenticated\")"
+                "audit(tx, principal_id, \"identity.authenticated\")"
               ]
             },
             {

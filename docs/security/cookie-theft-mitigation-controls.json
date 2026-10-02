@@ -15,17 +15,32 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/security.headers.rs",
-              "includes": ["ACCEPT_CH_VALUE", "CRITICAL_CH_VALUE", "Sec-CH-UA"],
-              "tests": ["security_headers_request_all_user_agent_client_hints"]
+              "includes": [
+                "ACCEPT_CH_VALUE",
+                "CRITICAL_CH_VALUE",
+                "Sec-CH-UA"
+              ],
+              "tests": [
+                "security_headers_request_all_user_agent_client_hints"
+              ]
             },
             {
-              "path": "apps/identity-service/src/identity.http.rs",
-              "includes": ["LoginRequest", "LoginResponse", "session_token"]
+              "path": "apps/identity-service/src/identity.oauth.http.rs",
+              "includes": [
+                "LoginForm",
+                "session_token",
+                "set-cookie"
+              ]
             },
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["authenticate", "hash_token"],
-              "tests": ["opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"]
+              "includes": [
+                "authenticate",
+                "hash_token"
+              ],
+              "tests": [
+                "opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"
+              ]
             }
           ]
         }
@@ -49,7 +64,9 @@
                 "expires_at",
                 "SESSION_TTL_HOURS"
               ],
-              "tests": ["opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"]
+              "tests": [
+                "opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"
+              ]
             }
           ]
         }
@@ -67,11 +84,16 @@
           "evidence": [
             {
               "path": "libs/rust/trust-risk/src/trust_risk.assessment.rs",
-              "includes": ["Assessment", "RiskSignal"]
+              "includes": [
+                "Assessment",
+                "RiskSignal"
+              ]
             },
             {
               "path": "libs/rust/core/src/http.client_ip.rs",
-              "includes": ["client_ip"]
+              "includes": [
+                "client_ip"
+              ]
             }
           ]
         }
@@ -89,15 +111,21 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.tokens.rs",
-              "includes": ["AccessTokenClaims", "TokenService", "pub fn verify("],
+              "includes": [
+                "AccessTokenClaims",
+                "TokenService",
+                "pub fn verify("
+              ],
               "tests": [
-                "access_token_is_rs256_audience_bound_and_short_lived",
-                "verify_rejects_invalid_header_kid_typ_and_token_type"
+                "oidc_and_api_tokens_have_distinct_audiences_and_types",
+                "hostile_claims_and_scope_escalation_fail_validation"
               ]
             },
             {
               "path": "libs/rust/core/src/auth.rs",
-              "includes": ["step_up_required_error"]
+              "includes": [
+                "step_up_required_error"
+              ]
             }
           ]
         }
@@ -122,8 +150,11 @@
               ]
             },
             {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["reset_password", "consumed_at"]
+              "path": "apps/identity-service/src/identity.recovery.rs",
+              "includes": [
+                "reset_password",
+                "consumed_at"
+              ]
             }
           ]
         }
@@ -143,13 +174,20 @@
               "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
                 "identity.authenticated",
-                "audit(&mut tx, principal_id, \"identity.authenticated\")",
-                "identity.recovery_requested"
+                "audit(tx, principal_id, \"identity.authenticated\")"
               ]
             },
             {
               "path": "libs/rust/audit/src/lib.rs",
-              "includes": ["AuditEvent"]
+              "includes": [
+                "AuditEvent"
+              ]
+            },
+            {
+              "path": "apps/identity-service/src/identity.recovery.rs",
+              "includes": [
+                "identity.recovery_requested"
+              ]
             }
           ]
         }

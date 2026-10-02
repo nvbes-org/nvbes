@@ -50,7 +50,9 @@
     "mollie::payments::tests::": "HTTP mock payment flows require network syscalls",
     "mollie::subscriptions::tests::": "HTTP/provider subscription calls require network syscalls",
     "portal_sessions::tests::": "HTTP/provider portal calls require network syscalls",
-    "client::tests::": "gRPC/HTTP client paths require network syscalls"
+    "client::tests::billing_client_connect_marks_unreachable_endpoints_unavailable": "HTTP billing client loopback transport blocked in micro-test sandbox",
+    "client::tests::billing_client_get_workspace_entitlements_over_loopback": "HTTP billing client loopback transport blocked in micro-test sandbox",
+    "client::tests::billing_client_maps_unauthorized_entitlement_responses": "HTTP billing client loopback transport blocked in micro-test sandbox"
   },
   "nvbes-region": {
     "geo::cache::tests::cached_remote_lookup_returns_rdap_lookup": "PostgreSQL sqlx::test requires DATABASE_URL (coverage lane)",
@@ -73,19 +75,10 @@
     "geo::v2fly_import::tests::import_latest_downloads_fixture_from_mock_server": "wiremock HTTP requires network syscalls blocked in micro-test sandbox"
   },
   "nvbes-identity-service": {
-    "oauth::tests::authorize_requires_session_before_issuing_code": "Authorize path resolves clients via PostgreSQL",
-    "oauth::tests::token_authorization_code_returns_server_error_without_database": "Token exchange touches PostgreSQL",
-    "oauth::tests::token_refresh_rejects_unknown_token_without_database": "Refresh path touches PostgreSQL",
     "database::unit_tests::connect_succeeds_when_postgres_is_available": "PostgreSQL connect requires network syscalls blocked in micro-test sandbox",
     "error_reporting::tests::smoke_returns_structured_result_in_development_without_network": "Sentry client init requires network syscalls blocked in micro-test sandbox",
-    "main_tests::run_without_arguments_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
-    "main_tests::serve_exposes_live_health_until_stopped": "TCP bind/connect for serve health smoke is blocked in micro-test sandbox",
-    "main_tests::run_migrate_applies_schema_when_database_is_available": "PostgreSQL migrate requires network syscalls blocked in micro-test sandbox",
-    "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
-    "main_tests::run_rotate_mfa_key_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
-    "main_tests::run_rotate_mfa_key_accepts_previous_key_pair_before_db_failure": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
-    "operator::tests::operator_router_": "Operator HTTP handlers query PostgreSQL and require network syscalls blocked in micro-test sandbox",
-    "operator::tests::operator_token_issue_": "Operator token issue queries PostgreSQL and requires network syscalls blocked in micro-test sandbox"
+    "oauth::http::tests::discovery_advertises_logout_only_when_its_runtime_is_enabled": "HTTP discovery loopback server blocked in micro-test sandbox",
+    "oauth::http::tests::authorization_redirect_discards_post_body_for_success_and_denial": "HTTP authorize loopback server blocked in micro-test sandbox"
   },
   "nvbes-billing-worker": {
     "database::unit_tests::": "PostgreSQL connect/migrate requires network syscalls blocked in micro-test sandbox",
@@ -116,13 +109,21 @@
     "main_tests::run_serve_alias_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
     "main_tests::run_serve_attempts_email_client_connect_when_configured": "gRPC connect attempt requires network syscalls blocked in micro-test sandbox",
     "main_tests::run_serve_swallows_invalid_email_client_config": "Serve bootstrap path may touch network before invalid email client config is swallowed",
-    "main_tests::commands::": "CLI command paths that need PostgreSQL, TCP, or gRPC are blocked in micro-test sandbox"
+    "main_tests::commands::": "CLI command paths that need PostgreSQL, TCP, or gRPC are blocked in micro-test sandbox",
+    "auth::tokens::tests::protected_billing_route_requires_live_identity_activity": "HTTP identity introspection loopback transport blocked in micro-test sandbox",
+    "authorization::tests::account_decisions_are_authenticated_bound_uncached_and_fail_closed": "HTTP Account billing-authorize loopback transport blocked in micro-test sandbox"
   },
   "nvbes-account-service": {
     "main_tests::run_without_arguments_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
     "main_tests::serve_exposes_live_health_until_stopped": "TCP bind/connect for serve health smoke is blocked in micro-test sandbox",
     "main_tests::run_migrate_applies_schema_when_database_is_available": "PostgreSQL migrate requires network syscalls blocked in micro-test sandbox",
     "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
-    "main_tests::run_process_privacy_jobs_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox"
+    "main_tests::run_process_privacy_jobs_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
+    "auth::tokens::tests::account_http_guard_requires_live_identity_and_refuses_duplicate_headers": "HTTP identity introspection loopback transport blocked in micro-test sandbox"
+  },
+  "nvbes-identity-sdk": {
+    "introspection::tests::every_request_observes_current_activity_without_positive_cache": "HTTP introspection loopback transport blocked in micro-test sandbox",
+    "introspection::tests::malformed_mismatched_and_oversized_responses_never_authorize": "HTTP introspection loopback transport blocked in micro-test sandbox",
+    "introspection::tests::errors_redirects_timeouts_and_capacity_exhaustion_are_unavailable": "HTTP introspection loopback transport blocked in micro-test sandbox"
   }
 }

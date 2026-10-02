@@ -192,6 +192,30 @@
         "functions": 98,
         "regions": 96.9
       }
+    },
+    "nvbes-dpop": {
+      "threshold": {
+        "lines": 77,
+        "functions": 76,
+        "regions": 77
+      },
+      "baseline": {
+        "lines": 79.8,
+        "functions": 78.4,
+        "regions": 79.7
+      }
+    },
+    "nvbes-identity-sdk": {
+      "threshold": {
+        "lines": 33,
+        "functions": 23,
+        "regions": 36
+      },
+      "baseline": {
+        "lines": 35.5,
+        "functions": 25.6,
+        "regions": 38.2
+      }
     }
   },
   "excluded": [

@@ -159,6 +159,10 @@ jobs:
         include:
           - package: email-ui
             unit: '@nvbes/email-ui'
+          - package: http-client
+            unit: '@nvbes/http-client'
+          - package: identity-sdk-web
+            unit: '@nvbes/identity-sdk-web'
     env:
       NVBES_COVERAGE_PACKAGE: ${{ matrix.package }}
       NVBES_MUTATION_PACKAGE: ${{ matrix.package }}

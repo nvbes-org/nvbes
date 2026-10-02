@@ -189,11 +189,11 @@
       ],
       "validation": [
         {
-          "path": "apps/identity-service/src/identity.authz.rs",
+          "path": "apps/account-service/src/account.billing_authorization.rs",
           "includes": [
-            "AuthzDecisionRequest",
-            "AuthzDecisionResponse",
-            "workspace_id"
+            "principal_id",
+            "account_type",
+            "allowed"
           ]
         },
         {

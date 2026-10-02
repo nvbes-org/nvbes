@@ -32,3 +32,5 @@ cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/cloudflare/references/bi
 cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/cloudflare/references/pipelines/api.md:curl-auth-header:113
 cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/iris-development/references/setup-auth-token.md:generic-api-key:57
 cdbfef8da1db404c451257e954a08d1ab8183cb4:.agents/skills/workers-best-practices/references/rules.md:generic-api-key:82
+3834b5759ec8430a49628797cce13e6867507c1f:docs/architecture/identity-mfa-recovery.md:generic-api-key:148
+4b6c27f050a794c58a9c88d5da5500177dc073ee:infrastructure/environments/identity-production/terraform.tfvars.example:private-key:16

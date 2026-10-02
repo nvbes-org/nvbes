@@ -28,8 +28,12 @@ mod unit_tests;
 mod tests;
 
 #[cfg(all(test, feature = "database-tests"))]
-#[path = "identity.database.oauth.tests.rs"]
-mod oauth_tests;
+#[path = "identity.database.tokens.tests.rs"]
+mod token_tests;
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "identity.database.invitations.tests.rs"]
+mod invitation_tests;
 
 #[cfg(test)]
 #[path = "identity.database.test_support.rs"]

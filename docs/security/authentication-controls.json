@@ -15,15 +15,26 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["normalize_email", "Uuid::new_v4()", "identity_login_identifiers"]
+              "includes": [
+                "normalize_email",
+                "Uuid::new_v4()",
+                "identity_login_identifiers"
+              ]
             },
             {
               "path": "libs/rust/core/src/auth.helpers.validation.rs",
-              "includes": ["normalize_email", "validate_email"]
+              "includes": [
+                "normalize_email",
+                "validate_email"
+              ]
             },
             {
-              "path": "apps/identity-service/src/identity.http.rs",
-              "includes": ["RegisterRequest", "RegisterResponse", "register_password_identity"]
+              "path": "apps/identity-service/src/identity.invitations.rs",
+              "includes": [
+                "normalize_email",
+                "Uuid::new_v4()",
+                "identity.invitation.accepted"
+              ]
             }
           ]
         }
@@ -49,8 +60,11 @@
               ]
             },
             {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["validate_password", "validate_password_pair"]
+              "path": "apps/identity-service/src/identity.recovery.rs",
+              "includes": [
+                "validate_password",
+                "validate_password_pair"
+              ]
             }
           ]
         },
@@ -61,11 +75,17 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["dummy_verify_password", "authentication failed"]
+              "includes": [
+                "dummy_verify_password",
+                "authentication failed"
+              ]
             },
             {
               "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": ["dummy_verify_password", "DUMMY_ARGON2ID_HASH"]
+              "includes": [
+                "dummy_verify_password",
+                "DUMMY_ARGON2ID_HASH"
+              ]
             }
           ]
         }
@@ -83,7 +103,12 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": ["Algorithm::Argon2id", "TARGET_M_COST", "TARGET_T_COST", "TARGET_P_COST"]
+              "includes": [
+                "Algorithm::Argon2id",
+                "TARGET_M_COST",
+                "TARGET_T_COST",
+                "TARGET_P_COST"
+              ]
             }
           ]
         },
@@ -94,11 +119,17 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": ["PasswordHash::new", "verify_password"]
+              "includes": [
+                "PasswordHash::new",
+                "verify_password"
+              ]
             },
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["verify_password", "dummy_verify_password"]
+              "includes": [
+                "verify_password",
+                "dummy_verify_password"
+              ]
             }
           ]
         },
@@ -123,7 +154,7 @@
           "description": "Do not expire passwords periodically; require password changes only through explicit recovery, compromise, or user-initiated flows.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.auth.rs",
+              "path": "apps/identity-service/src/identity.recovery.rs",
               "includes": [
                 "changed_at = clock_timestamp()",
                 "compromised_at = NULL",
@@ -145,10 +176,10 @@
           "description": "Issue single-use recovery challenges with bounded expiry.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.auth.rs",
+              "path": "apps/identity-service/src/identity.recovery.rs",
               "includes": [
                 "request_recovery",
-                "RECOVERY_TTL_MINUTES",
+                "clock_timestamp()+interval '15 minutes'",
                 "identity_recovery_challenges"
               ]
             }
@@ -160,7 +191,7 @@
           "description": "Consume reset tokens, enforce expiry, block password reuse, and revoke sessions after reset.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.auth.rs",
+              "path": "apps/identity-service/src/identity.recovery.rs",
               "includes": [
                 "reset_password",
                 "consumed_at = clock_timestamp()",
@@ -169,7 +200,11 @@
             },
             {
               "path": "apps/identity-service/src/identity.synthetic.rs",
-              "includes": ["session_rotated", "recovery_consumed", "reset_password"]
+              "includes": [
+                "session_rotated",
+                "recovery_consumed",
+                "reset_password"
+              ]
             }
           ]
         },
@@ -179,7 +214,7 @@
           "description": "Require new password to differ from current password.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.auth.rs",
+              "path": "apps/identity-service/src/identity.recovery.rs",
               "includes": [
                 "validate_password_pair",
                 "recovered password must differ from the initial password"
@@ -201,11 +236,18 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.tokens.rs",
-              "includes": ["AccessTokenClaims", "token_type", "ACCESS_TOKEN_TTL_SECONDS"]
+              "includes": [
+                "AccessTokenClaims",
+                "token_type",
+                "ACCESS_TOKEN_TTL_SECONDS"
+              ]
             },
             {
               "path": "apps/identity-service/src/identity.session.rs",
-              "includes": ["Bearer ", "session_token"]
+              "includes": [
+                "Bearer ",
+                "session_token"
+              ]
             }
           ]
         },
@@ -224,7 +266,10 @@
             },
             {
               "path": "libs/rust/core/src/security.headers.tests.rs",
-              "includes": ["insert_clear_site_data_header", "CLICKJACKING_FRAME_ANCESTORS"]
+              "includes": [
+                "insert_clear_site_data_header",
+                "CLICKJACKING_FRAME_ANCESTORS"
+              ]
             }
           ]
         }
@@ -242,11 +287,18 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.mfa.rs",
-              "includes": ["STEP_UP_TTL_MINUTES", "grant_step_up", "step_up_granted"]
+              "includes": [
+                "STEP_UP_TTL_MINUTES",
+                "grant_step_up",
+                "step_up_granted"
+              ]
             },
             {
               "path": "libs/rust/core/src/authz.policy.tests.rs",
-              "includes": ["sensitive_actions_require_step_up", "action_requires_step_up"]
+              "includes": [
+                "sensitive_actions_require_step_up",
+                "action_requires_step_up"
+              ]
             }
           ]
         },
@@ -257,7 +309,11 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.mfa.rs",
-              "includes": ["run_synthetic_smoke", "replay_rejected", "step_up_granted"]
+              "includes": [
+                "run_synthetic_smoke",
+                "replay_rejected",
+                "step_up_granted"
+              ]
             }
           ]
         }
@@ -275,11 +331,17 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["dummy_verify_password", "authentication failed"]
+              "includes": [
+                "dummy_verify_password",
+                "authentication failed"
+              ]
             },
             {
-              "path": "apps/identity-service/src/identity.http.rs",
-              "includes": ["HttpError::Unauthorized", "LoginResponse"]
+              "path": "apps/identity-service/src/identity.auth.rs",
+              "includes": [
+                "authentication failed",
+                "dummy_verify_password"
+              ]
             }
           ]
         },
@@ -290,11 +352,16 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": ["dummy_verify_password", "constant computation time"]
+              "includes": [
+                "dummy_verify_password",
+                "constant computation time"
+              ]
             },
             {
               "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": ["dummy_verify_password"]
+              "includes": [
+                "dummy_verify_password"
+              ]
             }
           ]
         }
@@ -312,7 +379,11 @@
           "evidence": [
             {
               "path": "libs/rust/core/src/limiter.rs",
-              "includes": ["RateLimiter", "check_rate_limit", "RATELIMIT_LIMIT"]
+              "includes": [
+                "RateLimiter",
+                "check_rate_limit",
+                "RATELIMIT_LIMIT"
+              ]
             }
           ]
         },
@@ -323,7 +394,10 @@
           "evidence": [
             {
               "path": "apps/trust-risk-service/src/trust_risk.rules.db.rs",
-              "includes": ["trust_risk_rule_sets", "RuleSetReceipt"]
+              "includes": [
+                "trust_risk_rule_sets",
+                "RuleSetReceipt"
+              ]
             }
           ]
         }
@@ -341,11 +415,20 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.mfa.rs",
-              "includes": ["enroll_totp", "confirm_enrollment", "grant_step_up", "replay_rejected"]
+              "includes": [
+                "enroll_totp",
+                "confirm_enrollment",
+                "grant_step_up",
+                "replay_rejected"
+              ]
             },
             {
               "path": "apps/identity-service/src/identity.mfa.crypto.rs",
-              "includes": ["pub struct MfaCrypto", "pub fn seal", "active_version"]
+              "includes": [
+                "pub struct MfaCrypto",
+                "pub fn seal",
+                "active_version"
+              ]
             }
           ]
         },
@@ -356,7 +439,10 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.mfa.rs",
-              "includes": ["replay_rejected", "identity_auth_factors"]
+              "includes": [
+                "replay_rejected",
+                "identity_auth_factors"
+              ]
             }
           ]
         }
@@ -374,7 +460,11 @@
           "evidence": [
             {
               "path": "apps/identity-service/src/identity.tokens.rs",
-              "includes": ["AccessTokenClaims", "decode", "Validation"]
+              "includes": [
+                "AccessTokenClaims",
+                "decode",
+                "Validation"
+              ]
             }
           ]
         },
@@ -384,8 +474,16 @@
           "description": "Issue tokens with standard claims.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.tokens.rs",
-              "includes": ["jti", "sid", "iss", "aud", "exp", "nbf", "sub"]
+              "path": "apps/identity-service/src/identity.tokens.claims.rs",
+              "includes": [
+                "jti",
+                "sid",
+                "iss",
+                "aud",
+                "exp",
+                "nbf",
+                "sub"
+              ]
             }
           ]
         },
@@ -395,12 +493,20 @@
           "description": "Expose OIDC/OAuth metadata and require PKCE S256.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.discovery.rs",
-              "includes": ["OAuthAuthorizationServerMetadata", "OpenIdConfiguration", "jwks_uri"]
+              "path": "apps/identity-service/src/identity.oauth.metadata.rs",
+              "includes": [
+                "ProviderMetadata",
+                "jwks_uri",
+                "authorization_endpoint"
+              ]
             },
             {
-              "path": "apps/identity-service/src/identity.oauth.rs",
-              "includes": ["code_challenge", "code_challenge_method", "S256"]
+              "path": "apps/identity-service/src/identity.test.fixtures.rs",
+              "includes": [
+                "code_challenge",
+                "code_challenge_method",
+                "S256"
+              ]
             }
           ]
         }
@@ -417,21 +523,37 @@
           "description": "Record login, registration, recovery, and risk events.",
           "evidence": [
             {
+              "path": "apps/identity-service/src/identity.recovery.rs",
+              "includes": [
+                "identity.recovery_requested",
+                "identity.password_recovered"
+              ]
+            },
+            {
               "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
-                "identity.authenticated",
-                "identity.recovery_requested",
-                "identity.password_recovered",
+                "identity.authenticated"
+              ]
+            },
+            {
+              "path": "apps/identity-service/src/identity.oauth.store.rs",
+              "includes": [
                 "identity_audit_events"
               ]
             },
             {
-              "path": "apps/identity-service/src/identity.http.rs",
-              "includes": ["identity.registered", "register_password_identity"]
+              "path": "apps/identity-service/src/identity.invitations.rs",
+              "includes": [
+                "identity.invitation.created",
+                "identity.invitation.accepted"
+              ]
             },
             {
               "path": "apps/trust-risk-service/src/trust_risk.audit.rs",
-              "includes": ["trust_risk_audit_events", "AuditEvent"]
+              "includes": [
+                "trust_risk_audit_events",
+                "AuditEvent"
+              ]
             }
           ]
         }

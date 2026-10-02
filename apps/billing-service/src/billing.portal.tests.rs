@@ -12,20 +12,19 @@ use wiremock::{
     matchers::{method, path},
 };
 
-use crate::database::http_test_support::{
-    bearer, bearer_jwt, jwt_config, test_router, test_router_with_config,
-};
+use crate::database::http_test_support::{JwtHarness, TestApp, bearer};
 use crate::database::test_support::test_config;
 
 #[sqlx::test(migrations = "./migrations")]
 async fn portal_requires_billing_read_scope(pool: PgPool) {
     let workspace = Uuid::new_v4();
-    let config = crate::database::http_test_support::jwt_config();
-    let app = test_router_with_config(pool, config);
-    let response = app
+    let harness = JwtHarness::new(pool).await;
+    let authorization = harness.bearer_jwt(Uuid::new_v4(), "billing:checkout");
+    let response = harness
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/portal"))
-                .header("authorization", bearer_jwt(Uuid::new_v4(), "account:read"))
+                .header("authorization", authorization)
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -37,8 +36,9 @@ async fn portal_requires_billing_read_scope(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn portal_creates_mock_session(pool: PgPool) {
     let workspace = Uuid::new_v4();
-    let app = test_router(pool);
+    let app = TestApp::new(pool).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/portal"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -60,8 +60,9 @@ async fn portal_creates_mock_session(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn overview_defaults_to_free_without_subscription(pool: PgPool) {
     let workspace = Uuid::new_v4();
-    let app = test_router(pool);
+    let app = TestApp::new(pool).await;
     let response = app
+        .router
         .oneshot(
             Request::get(format!("/workspaces/{workspace}/billing/overview"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -113,8 +114,9 @@ async fn overview_returns_latest_subscription(pool: PgPool) {
     .await
     .unwrap();
 
-    let app = test_router(pool);
+    let app = TestApp::new(pool).await;
     let response = app
+        .router
         .oneshot(
             Request::get(format!("/workspaces/{workspace}/billing/overview"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -156,8 +158,9 @@ async fn portal_calls_stripe_api_when_not_dummy_key(pool: PgPool) {
     config.stripe_secret_key = "sk_test_from_wiremock".into();
     config.stripe_api_base_url = mock.uri();
 
-    let app = test_router_with_config(pool, config);
+    let app = TestApp::with_config(pool, config).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/portal"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -195,8 +198,9 @@ async fn portal_stripe_error_status_maps_to_billing_error(pool: PgPool) {
     config.stripe_secret_key = "sk_test_from_wiremock".into();
     config.stripe_api_base_url = mock.uri();
 
-    let app = test_router_with_config(pool, config);
+    let app = TestApp::with_config(pool, config).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/portal"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -227,8 +231,9 @@ async fn portal_stripe_missing_url_maps_to_billing_error(pool: PgPool) {
     config.stripe_secret_key = "sk_test_from_wiremock".into();
     config.stripe_api_base_url = mock.uri();
 
-    let app = test_router_with_config(pool, config);
+    let app = TestApp::with_config(pool, config).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/portal"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -256,12 +261,11 @@ async fn create_stripe_portal_grpc_forwards_helper_result() {
     let mut config = test_config();
     config.stripe_secret_key = "sk_test_from_wiremock".into();
     config.stripe_api_base_url = mock.uri();
-    let jwt = jwt_config();
     let state = crate::app::BillingState {
         db: pool,
         config: config.clone(),
         metrics: crate::metrics::install(),
-        tokens: crate::auth::TokenVerifier::new(&jwt).expect("verifier"),
+        tokens: crate::auth::TokenVerifier::new(&config).expect("verifier"),
         email_client: None,
     };
 
@@ -279,8 +283,9 @@ async fn portal_stripe_unreachable_endpoint_maps_to_billing_error(pool: PgPool) 
     // Closed local port: connect fails before any HTTP response.
     config.stripe_api_base_url = "http://127.0.0.1:1".into();
 
-    let app = test_router_with_config(pool, config);
+    let app = TestApp::with_config(pool, config).await;
     let response = app
+        .router
         .oneshot(
             Request::post(format!("/workspaces/{workspace}/billing/portal"))
                 .header("authorization", bearer(Uuid::new_v4()))
@@ -299,12 +304,11 @@ async fn create_stripe_portal_grpc_propagates_helper_errors() {
     let mut config = test_config();
     config.stripe_secret_key = "sk_test_from_wiremock".into();
     config.stripe_api_base_url = "http://127.0.0.1:1".into();
-    let jwt = jwt_config();
     let state = crate::app::BillingState {
         db: pool,
-        config,
+        config: config.clone(),
         metrics: crate::metrics::install(),
-        tokens: crate::auth::TokenVerifier::new(&jwt).expect("verifier"),
+        tokens: crate::auth::TokenVerifier::new(&config).expect("verifier"),
         email_client: None,
     };
 

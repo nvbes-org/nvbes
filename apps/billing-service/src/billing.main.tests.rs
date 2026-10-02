@@ -5,6 +5,7 @@ use tokio::sync::Mutex;
 use super::{required_uuid, run, run_deployment_bootstrap};
 
 const TEST_VARS: &[&str] = &[
+    "NVBES_ENVIRONMENT",
     "NVBES_BILLING_DATABASE_URL",
     "NVBES_BILLING_BIND_ADDR",
     "NVBES_BILLING_HTTP_BIND_ADDR",
@@ -12,6 +13,15 @@ const TEST_VARS: &[&str] = &[
     "NVBES_STRIPE_WEBHOOK_SECRET",
     "NVBES_APP_URL",
     "NVBES_IDENTITY_PUBLIC_KEY_PEM",
+    "NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM",
+    "NVBES_IDENTITY_TOKEN_ISSUER",
+    "NVBES_IDENTITY_TOKEN_KEY_ID",
+    "NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS",
+    "NVBES_IDENTITY_INTROSPECTION_URL",
+    "NVBES_BILLING_IDENTITY_RESOURCE_CLIENT_ID",
+    "NVBES_BILLING_IDENTITY_RESOURCE_SECRET",
+    "NVBES_BILLING_ACCOUNT_ORIGIN",
+    "NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET",
     "NVBES_BILLING_OPERATOR_TOKEN",
     "NVBES_BILLING_METRICS_TOKEN",
     "NVBES_EMAIL_GRPC_ENDPOINT",
@@ -67,11 +77,24 @@ fn apply_development_defaults(guard: &EnvGuard) {
 }
 
 fn postgres_reachable() -> bool {
-    std::net::TcpStream::connect_timeout(
-        &"127.0.0.1:5432".parse().unwrap(),
-        std::time::Duration::from_millis(200),
-    )
-    .is_ok()
+    let candidate = std::env::var("DATABASE_URL")
+        .or_else(|_| std::env::var("NVBES_BILLING_DATABASE_URL"))
+        .unwrap_or_else(|_| "postgres://postgres:postgres@127.0.0.1:5432/nvbes_billing".into());
+    let Some(without_scheme) = candidate.split("://").nth(1) else {
+        return false;
+    };
+    let Some(authority) = without_scheme.split('/').next() else {
+        return false;
+    };
+    let host_port = authority.rsplit('@').next().unwrap_or(authority);
+    let addr = match host_port.rsplit_once(':') {
+        Some((host, port)) => format!("{host}:{port}"),
+        None => format!("{host_port}:5432"),
+    };
+    let Ok(addr) = addr.parse() else {
+        return false;
+    };
+    std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(200)).is_ok()
 }
 
 #[tokio::test]

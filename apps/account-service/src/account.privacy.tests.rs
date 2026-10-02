@@ -9,10 +9,7 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use super::{ClosureStatus, ExportStatus, router, with_closure_participant, with_participant};
-use crate::{
-    profile,
-    test_support::{access_token, state_with_pool},
-};
+use crate::{profile, test_support::HttpHarness};
 
 #[test]
 fn export_and_closure_participants_mirror_row_status() {
@@ -49,9 +46,9 @@ fn export_and_closure_participants_mirror_row_status() {
 #[sqlx::test(migrations = "./migrations")]
 async fn export_and_closure_http_lifecycle(pool: PgPool) {
     let principal_id = Uuid::new_v4();
-    let state = state_with_pool(pool);
-    let app = router(state);
-    let token = access_token(
+    let harness = HttpHarness::new(pool).await;
+    let app = router(harness.state.clone());
+    let token = harness.access_token(
         principal_id,
         "account:export account:close account:read account:write",
         true,
@@ -152,9 +149,9 @@ async fn download_export_requires_completed_document(pool: PgPool) {
         .await
         .unwrap();
 
-    let state = state_with_pool(pool);
-    let app = router(state);
-    let token = access_token(principal_id, "account:export", true);
+    let harness = HttpHarness::new(pool).await;
+    let app = router(harness.state.clone());
+    let token = harness.access_token(principal_id, "account:export", true);
     let response = app
         .oneshot(
             Request::builder()

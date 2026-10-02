@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use super::{create_and_join_for_synthetic, hash_join_code, join_team, router};
 use crate::profile;
-use crate::test_support::{access_token, state_with_pool};
+use crate::test_support::HttpHarness;
 
 #[test]
 fn hash_join_code_is_stable_sha256() {
@@ -62,11 +62,11 @@ async fn teams_http_create_list_and_join(pool: PgPool) {
     profile::ensure_profile(&pool, owner).await.unwrap();
     profile::ensure_profile(&pool, member).await.unwrap();
 
-    let state = state_with_pool(pool);
-    let app = router(state);
-    let owner_write = access_token(owner, "account:write", false);
-    let owner_read = access_token(owner, "account:read", false);
-    let member_write = access_token(member, "account:write", false);
+    let harness = HttpHarness::new(pool).await;
+    let app = router(harness.state.clone());
+    let owner_write = harness.access_token(owner, "account:write", false);
+    let owner_read = harness.access_token(owner, "account:read", false);
+    let member_write = harness.access_token(member, "account:write", false);
 
     let created = app
         .clone()

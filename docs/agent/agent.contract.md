@@ -34,6 +34,7 @@ sources of truth.
 
 - Rust changes require `cargo check --workspace`.
 - Frontend or TypeScript changes require the targeted package check.
+- Upstream quality & security rules: verify diff with `pnpm check:upstream-rules` and `pnpm check:llm-quality`.
 - Cross-cutting changes require relevant root checks.
 - Business logic changes require a targeted test or an explicit reason why no
   test applies.

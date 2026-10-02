@@ -1,0 +1,14 @@
+{
+  "name": "identity-sdk-backend",
+  "projectType": "library",
+  "root": "libs/rust/identity-sdk-backend",
+  "sourceRoot": "libs/rust/identity-sdk-backend/src",
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": { "command": "cargo test --package nvbes-identity-sdk", "cwd": "." }
+    }
+  },
+  "tags": ["scope:oss", "type:lib", "domain:identity", "layer:sdk"]
+}

@@ -37,6 +37,7 @@ done < <(find apps libs/rust libs/ts -type f \( -name '*.rs' -o -name '*.ts' -o 
   -not -path '*/archive/*' \
   -not -path '*/node_modules/*' \
   -not -path '*/target/*' \
+  -not -path '*/dist/*' \
   -not -path '*/__snapshots__/*' \
   -not -name '*.gen.ts' \
   -not -name '*.d.ts' | sort)

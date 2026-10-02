@@ -5,7 +5,10 @@ exclude-dev = false
 [advisories]
 version = 2
 yanked = "deny"
-ignore = []
+ignore = [
+  # Local/dev RSA key material generation only; no network PKCS#1 decrypt path.
+  "RUSTSEC-2023-0071",
+]
 
 [licenses]
 version = 2
@@ -23,6 +26,7 @@ allow = [
   "CDLA-Permissive-2.0",
   "ISC",
   "MIT",
+  "MPL-2.0",
   "Unicode-3.0",
   "Zlib",
 ]

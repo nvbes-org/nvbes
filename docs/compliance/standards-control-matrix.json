@@ -185,7 +185,7 @@
           "includes": [
             "TokenConfig",
             "allowed_audiences",
-            "Identity token issuer must be an HTTPS origin"
+            "issuer must be an HTTPS origin"
           ]
         },
         {
