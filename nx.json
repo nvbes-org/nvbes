@@ -32,7 +32,7 @@
       "{workspaceRoot}/vite.config.ts"
     ]
   },
-  "parallel": 4,
+  "parallel": 2,
   "cacheDirectory": ".nx/cache",
   "targetDefaults": {
     "build": {
