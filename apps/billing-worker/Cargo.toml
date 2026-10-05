@@ -19,7 +19,7 @@ path = "src/billing.worker.cli.coverage.tests.rs"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-aws-sdk-sqs = { version = "=1.112.0", default-features = false, features = [
+aws-sdk-sqs = { version = "=1.113.0", default-features = false, features = [
   "default-https-client",
   "rt-tokio",
 ] }
