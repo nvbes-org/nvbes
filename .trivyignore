@@ -1,0 +1,7 @@
+# Trivy ignore file
+# Each ignored vulnerability must document owner, reason, and context.
+#
+# CVE-2026-93687 (GHSA-vfj7-8cjw-p6xm): Unfixed stack overflow via deeply nested patterns
+# in transitive build tooling (fast-glob/micromatch in shadcn CLI); no untrusted input is passed
+# to braces at runtime.
+CVE-2026-93687

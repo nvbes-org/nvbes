@@ -146,7 +146,7 @@ Le consommateur Email compatible doit précéder l'activation de ce producteur.
 
 Les tests vérifient remplacement des codes, propriété du compte, fraîcheur,
 suspension, consommation concurrente, rejet du jeton de récupération par OAuth,
-expiration/remplacement des cérémonies, mauvaise origine signée, récupération
+expiration et remplacement des cérémonies, mauvaise origine signée, récupération
 avec dix anciennes clés, utilisation cryptographique de la nouvelle clé et
 rollback après panne de notification ou d'audit.
 

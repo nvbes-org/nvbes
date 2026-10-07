@@ -7,3 +7,8 @@ id = "RUSTSEC-2023-0071"
 ignoreUntil = 2026-10-31
 reason = "Owner: Security. Medium Marvin timing advisory has no fixed rsa release; no repository-owned RSA private-key operation uses this crate."
 
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2026-10-31
+reason = "Owner: Security. Unfixed stack overflow via deeply nested patterns in transitive build tooling (fast-glob/micromatch in shadcn CLI); no untrusted input is passed to braces at runtime."
+
