@@ -19,7 +19,7 @@ runControlsRegistryCheck({
         'viewer_is_read_only',
         'member_can_only_modify_owned_objects',
         'sensitive_actions_require_step_up',
-        'authz_decision_allows_scoped_token_and_denies_empty_scope',
+        'only_active_personal_owners_and_consistent_team_owners_are_allowed',
         'step_up_required_for_sensitive_mutations',
       ],
       'authorization behavioral tests',

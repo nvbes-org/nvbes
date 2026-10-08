@@ -25,16 +25,21 @@ locals {
     NVBES_IDENTITY_BIND_ADDR                = "0.0.0.0:8080"
     NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS = "5"
     NVBES_IDENTITY_MFA_KEY_VERSION          = tostring(var.identity_mfa_key_version)
+    NVBES_IDENTITY_TOKEN_ISSUER             = var.identity_token_issuer
+    NVBES_IDENTITY_TOKEN_KEY_ID             = var.identity_token_key_id
+    NVBES_IDENTITY_TOKEN_AUDIENCES          = var.identity_token_audiences
     NVBES_OTLP_ENDPOINT                     = var.grafana_otlp_endpoint
     SENTRY_RELEASE                          = local.identity_image_digest
     SENTRY_TRACES_SAMPLE_RATE               = tostring(var.identity_sentry_traces_sample_rate)
   }
   identity_runtime_secrets = {
-    NVBES_IDENTITY_DATABASE_URL       = local.identity_database_runtime_url
-    NVBES_IDENTITY_MFA_ENCRYPTION_KEY = var.identity_mfa_encryption_key
-    NVBES_IDENTITY_METRICS_TOKEN      = var.identity_metrics_token
-    NVBES_OTLP_AUTHORIZATION_HEADER   = var.grafana_otlp_authorization_header
-    SENTRY_DSN                        = var.identity_sentry_dsn
+    NVBES_IDENTITY_DATABASE_URL          = local.identity_database_runtime_url
+    NVBES_IDENTITY_MFA_ENCRYPTION_KEY    = var.identity_mfa_encryption_key
+    NVBES_IDENTITY_METRICS_TOKEN         = var.identity_metrics_token
+    NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM = var.identity_token_private_key_pem
+    NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM  = var.identity_token_public_key_pem
+    NVBES_OTLP_AUTHORIZATION_HEADER      = var.grafana_otlp_authorization_header
+    SENTRY_DSN                           = var.identity_sentry_dsn
   }
 }
 

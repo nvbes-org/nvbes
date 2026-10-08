@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "audiences": {
+    "nvbes-account-service": {
+      "scopes": ["account:read", "account:write", "account:export", "account:close"]
+    },
+    "nvbes-billing-service": {
+      "scopes": ["billing:read", "billing:checkout"]
+    }
+  },
+  "amr": ["pwd", "totp", "webauthn"],
+  "access_token_ttl_seconds": 900,
+  "revocation": {
+    "introspection_available": "inactive when the grant/session is revoked, the session expires, the principal is not active, or the current client registration no longer authorizes the grant",
+    "introspection_unavailable": "cryptographic verification alone has residual validity until exp (at most 900 seconds); operations requiring current authorization must refuse when introspection is unavailable"
+  }
+}

@@ -25,8 +25,8 @@ runControlsRegistryCheck({
         'security.headers.rs',
       );
       requireFileIncludes(
-        'apps/identity-service/src/identity.http.rs',
-        ['LoginRequest', 'LoginResponse', 'session_token'],
+        'apps/identity-service/src/identity.oauth.http.rs',
+        ['LoginForm', 'session_token', 'set-cookie'],
         'login routes',
       );
       requireFileIncludes(
@@ -45,13 +45,14 @@ runControlsRegistryCheck({
       );
       requireFileIncludes(
         'apps/identity-service/src/identity.auth.rs',
-        ['identity.authenticated', 'audit(&mut tx, principal_id, "identity.authenticated")'],
+        ['identity.authenticated', 'audit(tx, principal_id, "identity.authenticated")'],
         'identity.auth.rs',
       );
       requireNamedTests(
         [
           'opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest',
-          'access_token_is_rs256_audience_bound_and_short_lived',
+          'oidc_and_api_tokens_have_distinct_audiences_and_types',
+          'hostile_claims_and_scope_escalation_fail_validation',
           'session_token_prefers_bearer_then_cookie',
           'clear_site_data_header_clears_browser_state',
           'security_headers_deny_clickjacking_with_csp_and_legacy_header',

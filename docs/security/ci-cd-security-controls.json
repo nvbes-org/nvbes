@@ -58,7 +58,11 @@
             },
             {
               "path": ".github/workflows/ci.yml",
-              "includes": ["pull_request:", "push:", "branches: [main]"]
+              "includes": [
+                "pull_request:",
+                "push:",
+                "branches: [main]"
+              ]
             }
           ]
         }
@@ -76,11 +80,19 @@
           "evidence": [
             {
               "path": ".github/workflows/ci.yml",
-              "includes": ["permissions:", "actions: read", "contents: read"]
+              "includes": [
+                "permissions:",
+                "actions: read",
+                "contents: read"
+              ]
             },
             {
               "path": "tools/security/check-ci-cd-security.mjs",
-              "includes": ["forbiddenWritePermissions", "permissions:", "write permission"]
+              "includes": [
+                "forbiddenWritePermissions",
+                "permissions:",
+                "write permission"
+              ]
             }
           ]
         }
@@ -235,7 +247,9 @@
             },
             {
               "path": ".github/workflows/ci.yml",
-              "includes": ["actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"]
+              "includes": [
+                "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+              ]
             },
             {
               "path": ".github/actions/ci-setup/action.yml",
@@ -276,7 +290,11 @@
             },
             {
               "path": "tools/ci/run-lane.mjs",
-              "includes": ["'check:structure'", "'check:nx-boundaries'", "'check:secrets'"]
+              "includes": [
+                "'check:structure'",
+                "'check:nx-boundaries'",
+                "'check:secrets'"
+              ]
             }
           ]
         }
@@ -294,11 +312,19 @@
           "evidence": [
             {
               "path": "docs/security/ci-cd-security.md",
-              "includes": ["CI/CD Security", "pnpm check:ci-cd-security", "allowlisted"]
+              "includes": [
+                "CI/CD Security",
+                "pnpm check:ci-cd-security",
+                "allowlisted"
+              ]
             },
             {
               "path": "tools/security/check-ci-cd-security.mjs",
-              "includes": ["console.log", "workflows", "evidence strings"]
+              "includes": [
+                "console.log",
+                "workflows",
+                "evidence strings"
+              ]
             }
           ]
         }
@@ -351,10 +377,10 @@
     "BOOTSTRAP_TERRAFORM_STATE_ACCESS_KEY",
     "BOOTSTRAP_TERRAFORM_STATE_SECRET_KEY",
     "CI_CACHE_GITHUB_TOKEN",
+    "CLOUDFLARE_API_TOKEN",
     "DAST_ACCOUNT_SESSION_COOKIE",
     "DAST_API_AUTHORIZATION",
     "DAST_BACKOFFICE_SESSION_COOKIE",
-    "CLOUDFLARE_API_TOKEN",
     "EMAIL_DATABASE_URL",
     "EMAIL_DATA_ENCRYPTION_KEY",
     "EMAIL_OBSERVABILITY_INTERNAL_TOKEN",
@@ -370,13 +396,14 @@
     "GRAFANA_FARO_SOURCEMAP_API_KEY",
     "GRAFANA_OTLP_AUTHORIZATION_HEADER",
     "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-    "IDENTITY_MFA_ENCRYPTION_KEY",
     "IDENTITY_METRICS_TOKEN",
+    "IDENTITY_MFA_ENCRYPTION_KEY",
     "IDENTITY_SENTRY_DSN",
     "IDENTITY_SYNTHETIC_PASSWORD",
     "IDENTITY_SYNTHETIC_RECOVERED_PASSWORD",
     "IDENTITY_TERRAFORM_STATE_ACCESS_KEY",
     "IDENTITY_TERRAFORM_STATE_SECRET_KEY",
+    "IDENTITY_TOKEN_PRIVATE_KEY_PEM",
     "IDENTITY_TOKEN_PUBLIC_KEY_PEM",
     "NVBES_STAGING_ACCOUNT_PASSWORD",
     "NX_CLOUD_ACCESS_TOKEN",
@@ -388,8 +415,8 @@
     "SCW_SECRET_KEY",
     "SENTRY_AUTH_TOKEN",
     "SONAR_TOKEN",
-    "STRIPE_SECRET_KEY",
     "STRIPE_CI_SECRET_KEY",
+    "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
     "TRUST_RISK_METRICS_TOKEN",
     "TRUST_RISK_OPERATOR_TOKENS",
@@ -399,7 +426,12 @@
     "TRUST_RISK_TERRAFORM_STATE_SECRET_KEY"
   ],
   "allowedContinueOnError": [],
-  "allowedWritePermissions": ["attestations", "id-token", "packages", "security-events"],
+  "allowedWritePermissions": [
+    "attestations",
+    "id-token",
+    "packages",
+    "security-events"
+  ],
   "requiredWorkflowIncludes": [
     "permissions:",
     "actions: read",

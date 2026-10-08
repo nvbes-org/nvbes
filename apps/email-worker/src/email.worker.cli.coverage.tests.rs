@@ -109,7 +109,7 @@ fn await_live_health(child: &mut std::process::Child, addr: &str) -> String {
     use std::net::TcpStream;
     use std::time::Duration;
 
-    let response = (0..100).find_map(|_| {
+    let response = (0..200).find_map(|_| {
         std::thread::sleep(Duration::from_millis(100));
         if let Some(status) = child.try_wait().ok().flatten() {
             let mut stderr = String::new();

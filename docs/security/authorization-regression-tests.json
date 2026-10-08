@@ -45,11 +45,19 @@
       "evidence": [
         {
           "path": "libs/rust/core/src/authz.action.rs",
-          "includes": ["pub enum WorkspaceAction", "ViewWorkspace", "DeleteWorkspace"]
+          "includes": [
+            "pub enum WorkspaceAction",
+            "ViewWorkspace",
+            "DeleteWorkspace"
+          ]
         },
         {
           "path": "libs/rust/core/src/authz.role.rs",
-          "includes": ["pub enum WorkspaceRole", "Owner", "Viewer"]
+          "includes": [
+            "pub enum WorkspaceRole",
+            "Owner",
+            "Viewer"
+          ]
         },
         {
           "path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -78,7 +86,11 @@
         },
         {
           "path": "libs/rust/core/src/authz.context.rs",
-          "includes": ["pub struct ResourceContext", "owns_resource", "target_role"]
+          "includes": [
+            "pub struct ResourceContext",
+            "owns_resource",
+            "target_role"
+          ]
         }
       ]
     },
@@ -99,7 +111,10 @@
         },
         {
           "path": "libs/rust/platform/src/platform.operations.service.rs",
-          "includes": ["actor.permits(permission)", "OperationsError::Forbidden"]
+          "includes": [
+            "actor.permits(permission)",
+            "OperationsError::Forbidden"
+          ]
         }
       ]
     },
@@ -118,8 +133,12 @@
           ]
         },
         {
-          "path": "apps/identity-service/src/identity.authz.rs",
-          "includes": ["AuthzDecisionRequest", "AuthzDecisionResponse", "workspace_id"]
+          "path": "apps/account-service/src/account.billing_authorization.rs",
+          "includes": [
+            "AccountType::Team",
+            "owner_principal_id",
+            "allowed"
+          ]
         }
       ]
     },
@@ -131,12 +150,27 @@
       "regressionRisk": "Tokens bypass missing-scope denial or inherit broader privileges than intended.",
       "evidence": [
         {
-          "path": "apps/identity-service/src/identity.authz.rs",
-          "includes": ["introspect", "claims.scope", "Token has no authorized scopes"]
+          "path": "apps/identity-service/src/identity.oauth.http.introspection.rs",
+          "includes": [
+            "introspect",
+            "claims.scope",
+            "/oauth/introspect"
+          ]
+        },
+        {
+          "path": "apps/identity-service/src/identity.tokens.claims.rs",
+          "includes": [
+            "AccessTokenClaims",
+            "token_type",
+            "scope"
+          ]
         },
         {
           "path": "apps/identity-service/src/identity.tokens.rs",
-          "includes": ["AccessTokenClaims", "token_type", "scope"]
+          "includes": [
+            "validate_scopes",
+            "claims.scope"
+          ]
         }
       ]
     },
@@ -148,15 +182,28 @@
       "regressionRisk": "Route contract changes remove authorization semantics without failing tests.",
       "evidence": [
         {
-          "path": "apps/identity-service/src/identity.authz.tests.rs",
+          "path": "apps/identity-service/src/identity.oauth.http.introspection.tests.rs",
           "includes": [
-            "authz_decision_fails_cleanly_without_configured_token_keys",
-            "introspect_fails_cleanly_without_configured_token_keys"
+            "introspection_authentication_and_form_boundaries_are_enforced",
+            "unavailable_grant_store_returns_service_error_not_active_or_inactive"
+          ],
+          "tests": [
+            "introspection_authentication_and_form_boundaries_are_enforced",
+            "unavailable_grant_store_returns_service_error_not_active_or_inactive"
           ]
         },
         {
-          "path": "apps/identity-service/src/identity.authz.rs",
-          "includes": ["/api/v1/authz/decision", "/oauth/introspect"]
+          "path": "apps/account-service/src/account.billing_authorization.rs",
+          "includes": [
+            "/internal/v1/billing/authorize",
+            "struct Decision"
+          ]
+        },
+        {
+          "path": "apps/identity-service/src/identity.oauth.http.introspection.rs",
+          "includes": [
+            "/oauth/introspect"
+          ]
         }
       ]
     },
@@ -169,11 +216,17 @@
       "evidence": [
         {
           "path": "libs/rust/platform/src/platform.operations.service.rs",
-          "includes": ["OperationsError::Forbidden", "OperationsError::Conflict"]
+          "includes": [
+            "OperationsError::Forbidden",
+            "OperationsError::Conflict"
+          ]
         },
         {
           "path": "apps/identity-service/src/identity.auth.rs",
-          "includes": ["dummy_verify_password", "authentication failed"]
+          "includes": [
+            "dummy_verify_password",
+            "authentication failed"
+          ]
         }
       ]
     },
@@ -194,7 +247,11 @@
         },
         {
           "path": "tools/security/check-authorization-regression-tests.mjs",
-          "includes": ["Authorization regression tests", "AUTHZ_REG_", "evidence strings"]
+          "includes": [
+            "Authorization regression tests",
+            "AUTHZ_REG_",
+            "evidence strings"
+          ]
         }
       ]
     }

@@ -50,22 +50,22 @@ pub fn init_tracing_with_config(
     let registry = registry.with(otlp_layer(config, service_name));
 
     if use_json_logs(config.environment) {
-        registry
+        let _ = registry
             .with(
                 tracing_subscriber::fmt::layer()
                     .with_target(false)
                     .json()
                     .flatten_event(true),
             )
-            .init();
+            .try_init();
     } else {
-        registry
+        let _ = registry
             .with(
                 tracing_subscriber::fmt::layer()
                     .with_target(false)
                     .compact(),
             )
-            .init();
+            .try_init();
     }
 }
 

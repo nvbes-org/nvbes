@@ -29,6 +29,22 @@ const syntheticProof = readFileSync(
   join(workspaceRoot, 'tools/deployment/prove-identity-synthetic-auth.sh'),
   'utf8',
 );
+const syntheticTerraform = readFileSync(
+  join(workspaceRoot, 'infrastructure/environments/identity-production/synthetic.tf'),
+  'utf8',
+);
+const syntheticTokenProof = readFileSync(
+  join(workspaceRoot, 'tools/deployment/prove-identity-synthetic-token.sh'),
+  'utf8',
+);
+const syntheticMfaProof = readFileSync(
+  join(workspaceRoot, 'tools/deployment/prove-identity-synthetic-mfa.sh'),
+  'utf8',
+);
+const syntheticInvitationProof = readFileSync(
+  join(workspaceRoot, 'tools/deployment/prove-identity-synthetic-invitation.sh'),
+  'utf8',
+);
 const publicRuntimeProof = readFileSync(
   join(workspaceRoot, 'tools/deployment/prove-identity-public-runtime.sh'),
   'utf8',
@@ -56,20 +72,22 @@ test('container has shallow liveness and graceful shutdown', () => {
   assert.ok(healthSource.includes('sqlx::query_scalar!("SELECT 1 AS one")'));
 });
 
-test('runtime exposes gated signup and oauth login surface', () => {
-  assert.ok(mainSource.includes('http::router(&state)'));
-  assert.ok(mainSource.includes('oauth::router(&state)'));
+test('runtime stays closed to public authentication', () => {
+  assert.equal(mainSource.includes('route("/auth/register"'), false);
+  assert.equal(mainSource.includes('route("/auth/login"'), false);
+  assert.equal(mainSource.includes('route("/api/v1/auth/register"'), false);
+  assert.equal(mainSource.includes('route("/api/v1/auth/login"'), false);
   assert.ok(errorReportingSource.includes('init_error_reporting_with_config'));
   assert.ok(mainSource.includes('otlp_authorization_header'));
   assert.ok(mainSource.includes('action == "error-reporting-smoke"'));
   assert.ok(errorReportingSource.includes('capture_error_reporting_smoke'));
 });
 
-test('container wires OAuth 2.1, discovery, and authorization routes', () => {
-  assert.ok(mainSource.includes('oauth::router(&state)'));
-  assert.ok(mainSource.includes('discovery::router(&state)'));
-  assert.ok(mainSource.includes('authz::router(&state)'));
-  assert.ok(mainSource.includes('http::router(&state)'));
+test('container wires configured OAuth HTTP routers', () => {
+  assert.ok(mainSource.includes('oauth::http::authorization_router'));
+  assert.ok(mainSource.includes('oauth::http::token_router'));
+  assert.ok(mainSource.includes('oauth::http::introspection_router'));
+  assert.ok(mainSource.includes('oauth::http::router_with_logout'));
 });
 
 test('deployment is main-only, approved, immutable and scale-to-zero', () => {
@@ -94,7 +112,7 @@ test('production accepts canonical 32-byte MFA keys without UTF-8 assumptions', 
   assert.equal(Buffer.from(nonUtf8Key, 'base64').byteLength, 32);
 });
 
-test('deployment migrates before apply and proves public signup stays gated', () => {
+test('deployment migrates before apply and proves public auth stays absent', () => {
   const identitySection = deploymentWorkflow.slice(deploymentWorkflow.indexOf('deploy-identity:'));
   const migration = identitySection.indexOf('- name: Run database migrations');
   const apply = identitySection.indexOf('- name: Apply reviewed Identity runtime plan');
@@ -102,9 +120,11 @@ test('deployment migrates before apply and proves public signup stays gated', ()
   assert.ok(apply > migration);
   assert.ok(identitySection.includes('tools/deployment/prove-identity-public-runtime.sh'));
   assert.ok(publicRuntimeProof.includes('/api/v1/auth/register"'));
-  assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "403" ]]'));
+  assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "404" ]]'));
   assert.ok(publicRuntimeProof.includes('/api/v1/auth/login"'));
-  assert.ok(publicRuntimeProof.includes('/oauth/authorize?'));
+  assert.ok(publicRuntimeProof.includes('[[ "$login_status" == "404" ]]'));
+  assert.ok(publicRuntimeProof.includes('/auth/register"'));
+  assert.ok(publicRuntimeProof.includes('[[ "$legacy_registration_status" == "404" ]]'));
 });
 
 test('deployment records bounded activation and access-control evidence', () => {
@@ -142,4 +162,44 @@ test('deployment proves Sentry delivery from a private production job', () => {
   assert.ok(deploymentWorkflow.includes('Prove Identity Sentry delivery'));
   assert.ok(deploymentWorkflow.includes('identity_error_reporting_smoke_job_id'));
   assert.ok(mainSource.includes('result.configured && result.flushed'));
+});
+
+test('deployment proves scoped tokens and revocation without persisting JWTs', () => {
+  assert.ok(mainSource.includes('action == "synthetic-token-smoke"'));
+  assert.ok(syntheticTerraform.includes('identity_synthetic_token'));
+  assert.ok(syntheticTerraform.includes('args                   = ["synthetic-token-smoke"]'));
+  assert.ok(syntheticTokenProof.includes('identity_token_issuer'));
+  assert.ok(syntheticTerraform.includes('NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM'));
+  assert.ok(syntheticTokenProof.includes('"nvbes-account-service"'));
+  assert.ok(
+    syntheticTokenProof.includes(
+      '["account:close","account:export","account:read","account:write"]',
+    ),
+  );
+  assert.ok(syntheticTokenProof.includes('inactive_after_revocation == true'));
+  assert.equal(syntheticTokenProof.includes('access_token'), false);
+});
+
+test('deployment proves encrypted MFA and invitation-only account creation', () => {
+  assert.ok(mainSource.includes('action == "synthetic-mfa-smoke"'));
+  assert.ok(mainSource.includes('action == "synthetic-invitation-smoke"'));
+  assert.ok(syntheticTerraform.includes('identity_synthetic_mfa'));
+  assert.ok(syntheticTerraform.includes('identity_synthetic_invitation'));
+  assert.ok(syntheticMfaProof.includes('identity_mfa_key_version'));
+  assert.ok(syntheticMfaProof.includes('step_up_method == "totp"'));
+  assert.ok(syntheticInvitationProof.includes('code_hash_bytes'));
+  assert.ok(publicRuntimeProof.includes('[[ "$registration_status" == "404" ]]'));
+  assert.ok(deploymentWorkflow.includes('tools/deployment/prove-identity-synthetic-token.sh'));
+  assert.ok(deploymentWorkflow.includes('tools/deployment/prove-identity-synthetic-mfa.sh'));
+  assert.ok(deploymentWorkflow.includes('tools/deployment/prove-identity-synthetic-invitation.sh'));
+});
+
+test('runtime container receives signing material for OAuth token issuance', () => {
+  assert.ok(runtimeTerraform.includes('NVBES_IDENTITY_TOKEN_ISSUER'));
+  assert.ok(runtimeTerraform.includes('NVBES_IDENTITY_TOKEN_KEY_ID'));
+  assert.ok(runtimeTerraform.includes('NVBES_IDENTITY_TOKEN_AUDIENCES'));
+  assert.ok(runtimeTerraform.includes('NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM'));
+  assert.ok(runtimeTerraform.includes('NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM'));
+  assert.ok(productionVariables.includes('identity_token_issuer'));
+  assert.ok(productionVariables.includes('identity_token_private_key_pem'));
 });

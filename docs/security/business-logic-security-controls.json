@@ -53,7 +53,7 @@
           "description": "Persist short-lived challenges with single-use tokens and process external events transactionally.",
           "evidence": [
             {
-              "path": "apps/identity-service/src/identity.auth.rs",
+              "path": "apps/identity-service/src/identity.recovery.rs",
               "includes": [
                 "request_recovery",
                 "reset_password",
@@ -219,7 +219,7 @@
             {
               "path": "apps/identity-service/src/identity.auth.rs",
               "includes": [
-                "audit(&mut tx, principal_id, \"identity.authenticated\")"
+                "audit(tx, principal_id, \"identity.authenticated\")"
               ]
             },
             {

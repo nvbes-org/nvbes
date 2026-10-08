@@ -178,6 +178,7 @@ async fn run_synthetic_billing_smoke_succeeds_with_explicit_ids() {
     let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
+    let _ = run(vec!["migrate".into()]).await;
     let workspace_id = uuid::Uuid::new_v4();
     let owner_id = uuid::Uuid::new_v4();
     guard.set(
@@ -199,6 +200,7 @@ async fn run_synthetic_billing_smoke_generates_ids_when_env_missing() {
     let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
+    let _ = run(vec!["migrate".into()]).await;
     run(vec!["synthetic-billing-smoke".into()])
         .await
         .expect("synthetic-billing-smoke");
@@ -213,6 +215,7 @@ async fn run_publish_outbox_reports_when_database_is_available() {
     let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
+    let _ = run(vec!["migrate".into()]).await;
     run(vec!["publish-outbox".into()])
         .await
         .expect("publish-outbox");
@@ -227,6 +230,7 @@ async fn run_publish_outbox_rejects_invalid_email_client_config() {
     let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
+    let _ = run(vec!["migrate".into()]).await;
     guard.set("NVBES_EMAIL_GRPC_ENDPOINT", "http://127.0.0.1:1");
     guard.set("NVBES_BILLING_EMAIL_TOKEN", "short");
     let err = run(vec!["publish-outbox".into()]).await.unwrap_err();
@@ -242,6 +246,7 @@ async fn run_publish_outbox_fails_when_email_endpoint_is_unreachable() {
     let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
+    let _ = run(vec!["migrate".into()]).await;
     guard.set("NVBES_EMAIL_GRPC_ENDPOINT", "http://127.0.0.1:1");
     guard.set(
         "NVBES_BILLING_EMAIL_TOKEN",

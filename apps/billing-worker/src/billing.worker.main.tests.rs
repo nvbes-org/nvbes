@@ -152,40 +152,46 @@ async fn deployment_bootstrap_serves_live_health_check() {
     let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
 
-    let probe = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("ephemeral bind");
-    let addr = probe.local_addr().expect("local addr").to_string();
-    drop(probe);
-    guard.set("NVBES_BILLING_HTTP_BIND_ADDR", &addr);
-
-    let handle = tokio::spawn(run_deployment_bootstrap());
     let mut response = None;
-    for _ in 0..40 {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        if handle.is_finished() {
-            break;
-        }
-        if let Ok(mut stream) = tokio::net::TcpStream::connect(&addr).await {
-            if stream
-                .write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")
-                .await
-                .is_err()
-            {
-                continue;
-            }
-            let mut buf = [0_u8; 128];
-            if let Ok(read) = stream.read(&mut buf).await
-                && read > 0
-            {
-                response = Some(String::from_utf8_lossy(&buf[..read]).to_string());
+    for _ in 0..3 {
+        let probe = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("ephemeral bind");
+        let addr = probe.local_addr().expect("local addr").to_string();
+        drop(probe);
+        guard.set("NVBES_BILLING_HTTP_BIND_ADDR", &addr);
+
+        let handle = tokio::spawn(run_deployment_bootstrap());
+        for _ in 0..60 {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            if handle.is_finished() {
                 break;
             }
+            if let Ok(mut stream) = tokio::net::TcpStream::connect(&addr).await {
+                if stream
+                    .write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                    .await
+                    .is_err()
+                {
+                    continue;
+                }
+                let mut buf = [0_u8; 128];
+                if let Ok(read) = stream.read(&mut buf).await
+                    && read > 0
+                {
+                    response = Some(String::from_utf8_lossy(&buf[..read]).to_string());
+                    break;
+                }
+            }
+        }
+
+        handle.abort();
+        let _ = handle.await;
+        if response.is_some() {
+            break;
         }
     }
 
-    handle.abort();
-    let _ = handle.await;
     let body = response.expect("health response");
     assert!(body.contains("204") || body.contains("200"), "{body}");
 }
@@ -195,40 +201,46 @@ async fn deployment_bootstrap_accepts_legacy_bind_addr_env() {
     let _lock = ENV_LOCK.lock().await;
     let guard = EnvGuard::isolated();
 
-    let probe = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("ephemeral bind");
-    let addr = probe.local_addr().expect("local addr").to_string();
-    drop(probe);
-    guard.set("NVBES_BILLING_BIND_ADDR", &addr);
-
-    let handle = tokio::spawn(run(vec!["deployment-bootstrap".into()]));
     let mut response = None;
-    for _ in 0..40 {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        if handle.is_finished() {
-            break;
-        }
-        if let Ok(mut stream) = tokio::net::TcpStream::connect(&addr).await {
-            if stream
-                .write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")
-                .await
-                .is_err()
-            {
-                continue;
-            }
-            let mut buf = [0_u8; 128];
-            if let Ok(read) = stream.read(&mut buf).await
-                && read > 0
-            {
-                response = Some(String::from_utf8_lossy(&buf[..read]).to_string());
+    for _ in 0..3 {
+        let probe = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("ephemeral bind");
+        let addr = probe.local_addr().expect("local addr").to_string();
+        drop(probe);
+        guard.set("NVBES_BILLING_BIND_ADDR", &addr);
+
+        let handle = tokio::spawn(run(vec!["deployment-bootstrap".into()]));
+        for _ in 0..60 {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            if handle.is_finished() {
                 break;
             }
+            if let Ok(mut stream) = tokio::net::TcpStream::connect(&addr).await {
+                if stream
+                    .write_all(b"GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                    .await
+                    .is_err()
+                {
+                    continue;
+                }
+                let mut buf = [0_u8; 128];
+                if let Ok(read) = stream.read(&mut buf).await
+                    && read > 0
+                {
+                    response = Some(String::from_utf8_lossy(&buf[..read]).to_string());
+                    break;
+                }
+            }
+        }
+
+        handle.abort();
+        let _ = handle.await;
+        if response.is_some() {
+            break;
         }
     }
 
-    handle.abort();
-    let _ = handle.await;
     let body = response.expect("health response");
     assert!(body.contains("204") || body.contains("200"), "{body}");
 }

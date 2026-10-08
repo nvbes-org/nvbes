@@ -12,6 +12,8 @@ fn clear() {
         "NVBES_ACCOUNT_TOKEN_AUDIENCE",
         "NVBES_IDENTITY_TOKEN_KEY_ID",
         "NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM",
+        "NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID",
+        "NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET",
         "NVBES_ACCOUNT_METRICS_TOKEN",
         "SENTRY_DSN",
         "SENTRY_TRACES_SAMPLE_RATE",
@@ -30,6 +32,20 @@ fn set_development_token_material() {
         std::env::set_var(
             "NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM",
             "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwEKbtGra6bWscKp5s8i3\njvE0mUrZV54vaDWEfYxnjJYc6TNPBUuHlNUOv44eePZ+TxLQ9wPYSwuhSJIPAX7c\nAkDDdzVJy36lUVTjKGND7PZtgv6ItPQb6yM7YNyM7+QHZXL0fvB5q7O1AasgT+sF\ns0ffePjSyi9QpOww8TqcgePyXN3anUmB8pwoaJQfJOOLE1sJ3zsfw+n3nG+31Lpg\nDQBwYQWrKRRH/R7aYRFoZu1ZRFINfYXVmOGUuehcYkAprNs1dte6szKyyc2zhUJi\nTUez2NsFzgzx1Q1ssxYOMbQcVqNjux5l2aC9i5VcPi7gRHWGKiN77sSjnz90vqSu\nYwIDAQAB\n-----END PUBLIC KEY-----\n",
+        );
+    }
+}
+
+fn set_production_identity_resource() {
+    // SAFETY: serialized by `test_env_lock`.
+    unsafe {
+        std::env::set_var(
+            "NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID",
+            "account-production",
+        );
+        std::env::set_var(
+            "NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET",
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         );
     }
 }
@@ -96,6 +112,7 @@ fn token_contract_rejects_insecure_issuer_and_bad_identifiers() {
     let _guard = test_env_lock().lock().unwrap();
     clear();
     set_development_token_material();
+    set_production_identity_resource();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "production");
         std::env::set_var(
@@ -191,6 +208,7 @@ fn production_requires_https_observability() {
     let _guard = test_env_lock().lock().unwrap();
     clear();
     set_development_token_material();
+    set_production_identity_resource();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "production");
         std::env::set_var(
@@ -243,6 +261,7 @@ fn production_config_loads_when_complete() {
     let _guard = test_env_lock().lock().unwrap();
     clear();
     set_development_token_material();
+    set_production_identity_resource();
     unsafe {
         std::env::set_var("NVBES_ENVIRONMENT", "production");
         std::env::set_var(
@@ -262,7 +281,7 @@ fn production_config_loads_when_complete() {
         std::env::set_var("SENTRY_TRACES_SAMPLE_RATE", "0.25");
     }
     let config = AccountConfig::from_env().expect("production config");
-    assert_eq!(config.token_issuer, "https://identity.test");
+    assert_eq!(config.token_issuer, "https://identity.test/");
     assert_eq!(config.database_max_connections, 8);
     assert_eq!(config.sentry_traces_sample_rate, 0.25);
     clear();

@@ -1,6 +1,5 @@
 use base64::{Engine, engine::general_purpose::STANDARD};
-use std::{collections::BTreeSet, net::SocketAddr};
-use uuid::Uuid;
+use std::net::SocketAddr;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentityConfig {
@@ -17,11 +16,15 @@ pub struct IdentityConfig {
     pub mfa_key_version: i16,
     pub mfa_previous_encryption_key: Option<[u8; 32]>,
     pub mfa_previous_key_version: Option<i16>,
-    pub token_issuer: String,
-    pub platform_operator_principals: BTreeSet<Uuid>,
-    pub public_signup_enabled: bool,
-    pub login_url: String,
-    pub session_cookie_secure: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MfaRuntimeConfig {
+    pub database_url: String,
+    pub encryption_key: [u8; 32],
+    pub key_version: i16,
+    pub previous_encryption_key: Option<[u8; 32]>,
+    pub previous_key_version: Option<i16>,
 }
 
 impl IdentityConfig {
@@ -44,25 +47,11 @@ impl IdentityConfig {
             .unwrap_or(default_bind_addr)
             .parse()
             .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_BIND_ADDR"))?;
-        let mfa_encryption_key = optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
-            .ok_or(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
-            .and_then(|value| decode_key(&value))?;
-        let mfa_key_version = version("NVBES_IDENTITY_MFA_KEY_VERSION")?;
-        let previous_key = optional("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
-        let previous_version = optional("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");
-        let (mfa_previous_encryption_key, mfa_previous_key_version) =
-            match (previous_key, previous_version) {
-                (None, None) => (None, None),
-                (Some(key), Some(version_value)) => {
-                    let version =
-                        parse_version("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION", &version_value)?;
-                    if version == mfa_key_version {
-                        return Err(ConfigError::Invalid("MFA key versions must be distinct"));
-                    }
-                    (Some(decode_key(&key)?), Some(version))
-                }
-                _ => return Err(ConfigError::Invalid("MFA previous key pair")),
-            };
+        let mfa = mfa_runtime_config(&environment)?;
+        let mfa_encryption_key = mfa.encryption_key;
+        let mfa_key_version = mfa.key_version;
+        let mfa_previous_encryption_key = mfa.previous_encryption_key;
+        let mfa_previous_key_version = mfa.previous_key_version;
         let sentry_dsn = optional("SENTRY_DSN");
         let sentry_traces_sample_rate = optional("SENTRY_TRACES_SAMPLE_RATE")
             .unwrap_or_else(|| "0.1".into())
@@ -75,19 +64,6 @@ impl IdentityConfig {
         let metrics_token = optional("NVBES_IDENTITY_METRICS_TOKEN")
             .or_else(|| development.then(|| "development-identity-metrics-token-value".into()))
             .ok_or(ConfigError::Missing("NVBES_IDENTITY_METRICS_TOKEN"))?;
-        let token_issuer = optional("NVBES_IDENTITY_TOKEN_ISSUER")
-            .unwrap_or_else(|| format!("http://{}", bind_addr));
-        let platform_operator_principals =
-            parse_principal_allowlist(optional("NVBES_IDENTITY_PLATFORM_OPERATOR_PRINCIPALS"))?;
-        let public_signup_enabled = match optional("NVBES_IDENTITY_PUBLIC_SIGNUP") {
-            Some(value) => parse_bool("NVBES_IDENTITY_PUBLIC_SIGNUP", &value)?,
-            None => development,
-        };
-        let login_url = optional("NVBES_IDENTITY_LOGIN_URL").unwrap_or_default();
-        let session_cookie_secure = match optional("NVBES_IDENTITY_SESSION_COOKIE_SECURE") {
-            Some(value) => parse_bool("NVBES_IDENTITY_SESSION_COOKIE_SECURE", &value)?,
-            None => !development,
-        };
         validate_observability(
             development,
             sentry_dsn.as_deref(),
@@ -110,30 +86,47 @@ impl IdentityConfig {
             mfa_key_version,
             mfa_previous_encryption_key,
             mfa_previous_key_version,
-            token_issuer,
-            platform_operator_principals,
-            public_signup_enabled,
-            login_url,
-            session_cookie_secure,
         })
     }
 }
 
-fn parse_principal_allowlist(raw: Option<String>) -> Result<BTreeSet<Uuid>, ConfigError> {
-    let Some(raw) = raw else {
-        return Ok(BTreeSet::new());
+pub fn environment_from_env() -> String {
+    optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into())
+}
+
+pub fn mfa_runtime_config_from_env() -> Result<MfaRuntimeConfig, ConfigError> {
+    let environment = environment_from_env();
+    mfa_runtime_config(&environment)
+}
+
+fn mfa_runtime_config(environment: &str) -> Result<MfaRuntimeConfig, ConfigError> {
+    let mfa_encryption_key = optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
+        .ok_or(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
+        .and_then(|value| decode_key(&value))?;
+    let mfa_key_version = match optional("NVBES_IDENTITY_MFA_KEY_VERSION") {
+        Some(value) => parse_version("NVBES_IDENTITY_MFA_KEY_VERSION", &value)?,
+        None => 1,
     };
-    let mut principals = BTreeSet::new();
-    for part in raw.split(',') {
-        let part = part.trim();
-        if part.is_empty() {
-            continue;
+    let previous_key = optional("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
+    let previous_version = optional("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");
+    let (previous_encryption_key, previous_key_version) = match (previous_key, previous_version) {
+        (None, None) => (None, None),
+        (Some(key), Some(version_value)) => {
+            let version = parse_version("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION", &version_value)?;
+            if version == mfa_key_version {
+                return Err(ConfigError::Invalid("MFA key versions must be distinct"));
+            }
+            (Some(decode_key(&key)?), Some(version))
         }
-        let id = Uuid::parse_str(part)
-            .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_PLATFORM_OPERATOR_PRINCIPALS"))?;
-        principals.insert(id);
-    }
-    Ok(principals)
+        _ => return Err(ConfigError::Invalid("MFA previous key pair")),
+    };
+    Ok(MfaRuntimeConfig {
+        database_url: database_url(environment)?,
+        encryption_key: mfa_encryption_key,
+        key_version: mfa_key_version,
+        previous_encryption_key,
+        previous_key_version,
+    })
 }
 
 fn validate_observability(
@@ -173,13 +166,6 @@ fn decode_key(value: &str) -> Result<[u8; 32], ConfigError> {
         .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
 }
 
-fn version(name: &'static str) -> Result<i16, ConfigError> {
-    match optional(name) {
-        Some(value) => parse_version(name, &value),
-        None => Err(ConfigError::Missing(name)),
-    }
-}
-
 fn parse_version(name: &'static str, value: &str) -> Result<i16, ConfigError> {
     value
         .parse::<i16>()
@@ -206,16 +192,6 @@ fn optional(name: &str) -> Option<String> {
     std::env::var(name)
         .ok()
         .filter(|value| !value.trim().is_empty())
-}
-
-fn parse_bool(name: &'static str, value: &str) -> Result<bool, ConfigError> {
-    // Use std bool parsing only. Explicit "true"/"false"/"1"/"0" match arms
-    // trip CodeQL rust/hard-coded-cryptographic-value via false dataflow into
-    // MFA crypto (alerts on this helper, sink Aes256Gcm::new).
-    value
-        .trim()
-        .parse::<bool>()
-        .map_err(|_| ConfigError::Invalid(name))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

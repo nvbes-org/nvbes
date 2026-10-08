@@ -29,20 +29,20 @@ registration_status="$(curl --silent --output /dev/null --write-out '%{http_code
   --header 'content-type: application/json' \
   --data '{"email":"closed@synthetic.invalid","password":"password-123456"}' \
   "${endpoint}/api/v1/auth/register")"
-[[ "$registration_status" == "403" ]]
+[[ "$registration_status" == "404" ]]
 login_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
   --request POST "${endpoint}/api/v1/auth/login")"
-[[ "$login_status" == "415" ]]
-authorize_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
-  "${endpoint}/oauth/authorize?response_type=code&client_id=probe&redirect_uri=https://example.com/cb")"
-[[ "$authorize_status" == "401" ]]
+[[ "$login_status" == "404" ]]
+legacy_registration_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+  --request POST "${endpoint}/auth/register")"
+[[ "$legacy_registration_status" == "404" ]]
 
 evidence="$(jq --null-input \
   --argjson activation_seconds "$activation_seconds" \
   --argjson anonymous_metrics_status "$anonymous_metrics_status" \
   --argjson registration_status "$registration_status" \
   --argjson login_status "$login_status" \
-  --argjson authorize_status "$authorize_status" \
+  --argjson legacy_registration_status "$legacy_registration_status" \
   '{activation_seconds: $activation_seconds,
     liveness: "alive",
     readiness: "ready",
@@ -50,5 +50,5 @@ evidence="$(jq --null-input \
     anonymous_metrics_status: $anonymous_metrics_status,
     public_registration_status: $registration_status,
     login_probe_status: $login_status,
-    authorize_probe_status: $authorize_status}')"
+    legacy_registration_status: $legacy_registration_status}')"
 printf '### Identity public runtime\n\n```json\n%s\n```\n' "$evidence" >> "$GITHUB_STEP_SUMMARY"

@@ -1,270 +1,247 @@
-use chrono::Utc;
-use jsonwebtoken::{Algorithm, EncodingKey, Header, decode_header, encode};
-use openssl::{pkey::PKey, rsa::Rsa};
+use super::{ACCESS_TOKEN_TTL_SECONDS, TokenService};
+use crate::{
+    authentication::Authentication, oauth::clients::ClientRegistry, tokens_claims::IdTokenClaims,
+    tokens_config::TokenConfig, tokens_grants::ActiveGrant,
+};
+use chrono::{Duration, Utc};
+use jsonwebtoken::{Algorithm, Validation, decode, decode_header};
+use rsa::{
+    RsaPrivateKey,
+    pkcs8::{EncodePrivateKey, EncodePublicKey},
+    rand_core::OsRng,
+};
+use std::sync::OnceLock;
 use uuid::Uuid;
 
-use crate::tokens_config::TokenConfig;
-
-use super::{
-    ACCESS_TOKEN_TTL_SECONDS, AccessTokenClaims, OPERATOR_AUDIENCE, OPERATOR_ROLE, TokenService,
-    validate_scope,
-};
-
-fn key_material() -> (String, String, EncodingKey) {
-    let private = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
-    let private_pem = String::from_utf8(private.private_key_to_pem_pkcs8().unwrap()).unwrap();
-    let public_pem = String::from_utf8(private.public_key_to_pem().unwrap()).unwrap();
-    let encoding = EncodingKey::from_rsa_pem(private_pem.as_bytes()).unwrap();
-    (private_pem, public_pem, encoding)
+pub(crate) fn config() -> TokenConfig {
+    static CONFIG: OnceLock<TokenConfig> = OnceLock::new();
+    CONFIG
+        .get_or_init(|| {
+            let private = RsaPrivateKey::new(&mut OsRng, 2048).unwrap();
+            TokenConfig::from_values(
+                "test",
+                "http://localhost:3000".into(),
+                "identity-key-1".into(),
+                private
+                    .to_pkcs8_pem(Default::default())
+                    .unwrap()
+                    .to_string(),
+                private
+                    .to_public_key()
+                    .to_public_key_pem(Default::default())
+                    .unwrap(),
+                "nvbes-account-service,nvbes-billing-service".into(),
+            )
+            .unwrap()
+        })
+        .clone()
 }
 
-fn service_from(private_pem: &str, public_pem: &str) -> TokenService {
-    TokenService::new(
-        TokenConfig::from_values(
-            "test",
-            "http://identity.test".into(),
-            "identity-key-1".into(),
-            private_pem.into(),
-            public_pem.into(),
-            format!("nvbes-account-service,{OPERATOR_AUDIENCE}"),
-        )
-        .unwrap(),
+pub(crate) fn grant() -> ActiveGrant {
+    let clients = ClientRegistry::from_json(r#"[{
+        "client_id":"account-web","display_name":"Account",
+        "redirect_uris":["https://account.example/callback"],"post_logout_redirect_uris":[],
+        "resources":{"https://api.example/account":{"audience":"nvbes-account-service","scopes":["account:read"]}},
+        "allow_refresh":false,"require_dpop":false
+    }]"#, false).unwrap();
+    let request = serde_json::from_value::<crate::oauth::request::AuthorizationInput>(serde_json::json!({
+        "client_id":"account-web","redirect_uri":"https://account.example/callback","response_type":"code",
+        "scope":"openid account:read","resource":"https://api.example/account",
+        "state":"transaction-state-123","nonce":"transaction-nonce-123",
+        "code_challenge":"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM","code_challenge_method":"S256"
+    })).unwrap().validate(&clients).unwrap();
+    ActiveGrant {
+        id: Uuid::new_v4(),
+        session_id: Uuid::new_v4(),
+        principal_id: Uuid::new_v4(),
+        request,
+        authentication: Authentication {
+            authenticated_at: Utc::now() - Duration::minutes(2),
+            primary_amr: "pwd".into(),
+            step_up_method: None,
+            step_up_at: None,
+            step_up_expires_at: None,
+        },
+        session_expires_at: Utc::now() + Duration::hours(1),
+        token_issued_at: None,
+    }
+}
+
+#[test]
+fn oidc_and_api_tokens_have_distinct_audiences_and_types() {
+    let service = TokenService::new(config()).unwrap();
+    let grant = grant();
+    let response = service.sign_grant(&grant).unwrap();
+    let header = decode_header(&response.access_token).unwrap();
+    assert_eq!(header.alg, Algorithm::RS256);
+    assert_eq!(header.typ.as_deref(), Some("at+jwt"));
+    let access = service
+        .verify(&response.access_token, "nvbes-account-service")
+        .unwrap();
+    assert_eq!(access.exp - access.iat, ACCESS_TOKEN_TTL_SECONDS);
+    assert_eq!(access.grant_id, grant.id.to_string());
+    assert_eq!(access.scope, "account:read");
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.set_audience(&["account-web"]);
+    validation.set_issuer(&[service.issuer()]);
+    let identity = decode::<IdTokenClaims>(
+        &response.id_token,
+        service
+            .keys
+            .decoding_key("identity-key-1", Utc::now().timestamp() as u64)
+            .unwrap(),
+        &validation,
     )
     .unwrap()
+    .claims;
+    assert_eq!(identity.sub, access.sub);
+    assert_eq!(
+        identity.auth_time,
+        grant.authentication.authenticated_at.timestamp() as u64
+    );
+    assert_eq!(identity.nonce, "transaction-nonce-123");
+    use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+    use sha2::{Digest, Sha256};
+    assert_eq!(
+        identity.at_hash,
+        URL_SAFE_NO_PAD.encode(&Sha256::digest(response.access_token.as_bytes())[..16])
+    );
+    assert!(
+        service
+            .verify(&response.id_token, "nvbes-account-service")
+            .is_err()
+    );
+    assert!(
+        service
+            .verify(&response.access_token, "nvbes-billing-service")
+            .is_err()
+    );
+    assert!(
+        service
+            .verify(&response.access_token, "account-web")
+            .is_err()
+    );
 }
 
-fn service() -> TokenService {
-    let (private_pem, public_pem, _) = key_material();
-    service_from(&private_pem, &public_pem)
+#[test]
+fn passwordless_and_step_up_evidence_are_not_invented() {
+    let service = TokenService::new(config()).unwrap();
+    let mut grant = grant();
+    grant.authentication.primary_amr = "webauthn".into();
+    let response = service.sign_grant(&grant).unwrap();
+    let access = service
+        .verify(&response.access_token, "nvbes-account-service")
+        .unwrap();
+    assert_eq!(access.amr, ["webauthn"]);
+    assert!(access.step_up_time.is_none());
+    grant.authentication.step_up_method = Some("totp".into());
+    assert!(
+        service.sign_grant(&grant).is_err(),
+        "a method without its proof time is rejected"
+    );
+    grant.authentication.step_up_at = Some(Utc::now() - Duration::minutes(1));
+    grant.authentication.step_up_expires_at = Some(Utc::now() + Duration::minutes(5));
+    let response = service.sign_grant(&grant).unwrap();
+    let access = service
+        .verify(&response.access_token, "nvbes-account-service")
+        .unwrap();
+    assert_eq!(access.amr, ["webauthn", "totp"]);
+    assert!(access.step_up_time.is_some());
+    grant.authentication.step_up_expires_at = Some(Utc::now() - Duration::seconds(1));
+    let response = service.sign_grant(&grant).unwrap();
+    let access = service
+        .verify(&response.access_token, "nvbes-account-service")
+        .unwrap();
+    assert_eq!(access.amr, ["webauthn"]);
+    assert!(access.step_up_time.is_none());
 }
 
-fn access_claims(sub: &str, sid: &str, token_type: &str) -> AccessTokenClaims {
-    let issued_at = Utc::now().timestamp() as u64;
-    AccessTokenClaims {
-        sub: sub.into(),
-        token_type: token_type.into(),
-        scope: "account:read".into(),
-        amr: vec!["pwd".into()],
-        iss: "http://identity.test".into(),
-        aud: "nvbes-account-service".into(),
-        exp: issued_at + ACCESS_TOKEN_TTL_SECONDS,
-        iat: issued_at,
-        nbf: issued_at,
-        jti: Uuid::new_v4().to_string(),
-        sid: sid.into(),
+#[test]
+fn hostile_claims_and_scope_escalation_fail_validation() {
+    let service = TokenService::new(config()).unwrap();
+    let mut grant = grant();
+    let response = service.sign_grant(&grant).unwrap();
+    let access = service
+        .verify(&response.access_token, "nvbes-account-service")
+        .unwrap();
+    for field in ["sub", "sid", "grant_id", "jti"] {
+        let mut value = serde_json::to_value(&access).unwrap();
+        value[field] = serde_json::json!("invalid");
+        let token = service.keys.sign("at+jwt", &value).unwrap();
+        assert!(service.verify(&token, "nvbes-account-service").is_err());
     }
-}
-
-fn mint(encoding: &EncodingKey, header: Header, claims: &AccessTokenClaims) -> String {
-    encode(&header, claims, encoding).unwrap()
-}
-
-fn at_jwt_header(kid: &str) -> Header {
-    let mut header = Header::new(Algorithm::RS256);
-    header.kid = Some(kid.into());
-    header.typ = Some("at+jwt".into());
-    header
-}
-
-#[test]
-fn access_token_is_rs256_audience_bound_and_short_lived() {
-    let service = service();
-    let token = service
-        .issue(
-            Uuid::new_v4(),
-            Uuid::new_v4(),
-            "nvbes-account-service",
-            "account:read",
-            vec!["pwd".into()],
-        )
-        .unwrap();
-    let header = decode_header(&token).unwrap();
-    assert_eq!(header.alg, Algorithm::RS256);
-    assert_eq!(header.kid.as_deref(), Some("identity-key-1"));
-    assert_eq!(header.typ.as_deref(), Some("at+jwt"));
-    let claims = service.verify(&token, "nvbes-account-service").unwrap();
-    assert_eq!(claims.exp - claims.iat, ACCESS_TOKEN_TTL_SECONDS);
-    assert!(service.verify(&token, "nvbes-billing-service").is_err());
-    assert_eq!(service.jwks().keys[0].alg, "RS256");
-}
-
-#[test]
-fn issue_rejects_unregistered_audience_and_malformed_scope() {
-    let service = service();
-    let principal = Uuid::new_v4();
-    let session = Uuid::new_v4();
-    assert!(
-        service
-            .issue(
-                principal,
-                session,
-                "unknown",
-                "account:read",
-                vec!["pwd".into()]
-            )
-            .is_err()
-    );
-    assert!(
-        service
-            .issue(
-                principal,
-                session,
-                "nvbes-account-service",
-                "account:read  admin",
-                vec!["pwd".into()]
-            )
-            .is_err()
-    );
-}
-
-#[test]
-fn token_service_rejects_invalid_pem_material() {
-    let (private_pem, public_pem, _) = key_material();
-    let bad_private = TokenConfig::from_values(
-        "test",
-        "http://identity.test".into(),
-        "identity-key-1".into(),
-        // Built without a literal PEM banner so secret-scan stays quiet.
-        format!(
-            "-----BEGIN {}-----\nnot-rsa\n-----END {}-----",
-            "PRIVATE KEY", "PRIVATE KEY"
-        ),
-        public_pem.clone(),
-        "nvbes-account-service".into(),
-    )
-    .unwrap();
-    assert!(TokenService::new(bad_private).is_err());
-
-    let bad_public = TokenConfig::from_values(
-        "test",
-        "http://identity.test".into(),
-        "identity-key-1".into(),
-        private_pem,
-        format!(
-            "-----BEGIN {}-----\nnot-rsa\n-----END {}-----",
-            "PUBLIC KEY", "PUBLIC KEY"
-        ),
-        "nvbes-account-service".into(),
-    )
-    .unwrap();
-    assert!(TokenService::new(bad_public).is_err());
-}
-
-#[test]
-fn verify_rejects_invalid_header_kid_typ_and_token_type() {
-    let (private_pem, public_pem, encoding) = key_material();
-    let service = service_from(&private_pem, &public_pem);
-    let principal = Uuid::new_v4().to_string();
-    let session = Uuid::new_v4().to_string();
-    let claims = access_claims(&principal, &session, "access");
-
-    let mut wrong_kid = at_jwt_header("other-key");
-    let token = mint(&encoding, wrong_kid.clone(), &claims);
-    assert!(service.verify(&token, "nvbes-account-service").is_err());
-
-    wrong_kid = at_jwt_header("identity-key-1");
-    wrong_kid.typ = Some("JWT".into());
-    let token = mint(&encoding, wrong_kid, &claims);
-    assert!(service.verify(&token, "nvbes-account-service").is_err());
-
-    let wrong_type = access_claims(&principal, &session, "refresh");
-    let token = mint(&encoding, at_jwt_header("identity-key-1"), &wrong_type);
-    let err = service
-        .verify(&token, "nvbes-account-service")
-        .expect_err("non-access token type");
-    assert!(err.to_string().contains("token type is invalid"), "{err}");
-}
-
-#[test]
-fn verify_rejects_unregistered_expected_audience() {
-    let service = service();
-    let token = service
-        .issue(
-            Uuid::new_v4(),
-            Uuid::new_v4(),
-            "nvbes-account-service",
-            "account:read",
-            vec!["pwd".into()],
-        )
-        .unwrap();
-    assert!(service.verify(&token, "unregistered-audience").is_err());
-}
-
-#[test]
-fn validate_scope_rejects_oversized_and_non_ascii_tokens() {
-    assert!(validate_scope(&"a".repeat(1024)).is_ok());
-    assert!(validate_scope(&"a".repeat(1025)).is_err());
-    assert!(validate_scope("account:read").is_ok());
-    assert!(validate_scope("caf\u{e9}").is_err());
-    assert!(validate_scope("ok@bad").is_err());
-}
-
-#[test]
-fn operator_token_is_role_bound_mfa_and_audience_locked() {
-    let service = service();
-    let principal = Uuid::new_v4();
-    let auth_time = chrono::Utc::now().timestamp();
-    assert!(
-        service
-            .issue_operator(principal, vec!["pwd".into()], auth_time)
-            .is_err()
-    );
-    let token = service
-        .issue_operator(principal, vec!["totp".into()], auth_time)
-        .unwrap();
-    let header = decode_header(&token).unwrap();
-    assert_eq!(header.typ.as_deref(), Some("operator+jwt"));
-    let claims = service.verify_operator(&token).unwrap();
-    assert_eq!(claims.sub, principal.to_string());
-    assert_eq!(claims.role, OPERATOR_ROLE);
-    assert_eq!(claims.aud, OPERATOR_AUDIENCE);
-    assert_eq!(claims.auth_time, auth_time);
-    assert!(service.verify(&token, "nvbes-account-service").is_err());
-}
-
-#[cfg(feature = "database-tests")]
-mod database {
-    use super::*;
-    use sqlx::PgPool;
-
-    #[sqlx::test(migrations = "./migrations")]
-    async fn introspect_returns_none_for_invalid_sid_or_sub(pool: PgPool) {
-        let (private_pem, public_pem, encoding) = key_material();
-        let service = service_from(&private_pem, &public_pem);
-        let header = at_jwt_header("identity-key-1");
-
-        let bad_sid = mint(
-            &encoding,
-            header.clone(),
-            &access_claims(&Uuid::new_v4().to_string(), "not-a-uuid", "access"),
-        );
+    for field in ["iat", "nbf", "auth_time"] {
+        let mut value = serde_json::to_value(&access).unwrap();
+        value[field] = serde_json::json!(access.exp + 100);
         assert!(
             service
-                .introspect(&pool, &bad_sid, "nvbes-account-service")
-                .await
-                .unwrap()
-                .is_none()
-        );
-
-        let bad_sub = mint(
-            &encoding,
-            header,
-            &access_claims("not-a-uuid", &Uuid::new_v4().to_string(), "access"),
-        );
-        assert!(
-            service
-                .introspect(&pool, &bad_sub, "nvbes-account-service")
-                .await
-                .unwrap()
-                .is_none()
-        );
-
-        assert!(
-            service
-                .introspect(&pool, "not.a.jwt", "nvbes-account-service")
-                .await
-                .unwrap()
-                .is_none()
+                .verify(
+                    &service.keys.sign("at+jwt", &value).unwrap(),
+                    "nvbes-account-service"
+                )
+                .is_err()
         );
     }
+    grant.request.scope = "openid billing:checkout".into();
+    assert!(service.sign_grant(&grant).is_err());
+    grant.request.scope = "openid account:read".into();
+    grant.session_expires_at = Utc::now() - Duration::seconds(1);
+    assert!(service.sign_grant(&grant).is_err());
+}
+
+#[test]
+fn overlapping_keys_verify_until_retirement_and_only_active_key_signs() {
+    let old = config();
+    let old_service = TokenService::new(old.clone()).unwrap();
+    let old_token = old_service.sign_grant(&grant()).unwrap().access_token;
+    let private = RsaPrivateKey::new(&mut OsRng, 2048).unwrap();
+    let mut rotated = old.clone();
+    rotated.key_id = "identity-key-2".into();
+    rotated.private_key_pem = private
+        .to_pkcs8_pem(Default::default())
+        .unwrap()
+        .to_string();
+    rotated.public_key_pem = private
+        .to_public_key()
+        .to_public_key_pem(Default::default())
+        .unwrap();
+    let overlap = serde_json::json!([{"kid":old.key_id,"public_key_pem":old.public_key_pem,
+        "accept_until":Utc::now().timestamp() as u64+3600}]);
+    let current = TokenService::new(
+        rotated
+            .clone()
+            .with_verification_keys(&overlap.to_string())
+            .unwrap(),
+    )
+    .unwrap();
+    assert!(current.verify(&old_token, "nvbes-account-service").is_ok());
+    assert_eq!(current.jwks().keys.len(), 2);
+    let issued = current.sign_grant(&grant()).unwrap().access_token;
+    assert_eq!(
+        decode_header(&issued).unwrap().kid.as_deref(),
+        Some("identity-key-2")
+    );
+    let mut expired = overlap;
+    expired[0]["accept_until"] = serde_json::json!(1);
+    let retired = TokenService::new(
+        rotated
+            .with_verification_keys(&expired.to_string())
+            .unwrap(),
+    )
+    .unwrap();
+    assert!(retired.verify(&old_token, "nvbes-account-service").is_err());
+    assert_eq!(retired.jwks().keys.len(), 1);
+}
+
+#[test]
+fn mismatched_or_weak_keys_fail_startup() {
+    let mut mismatch = config();
+    let weak = RsaPrivateKey::new(&mut OsRng, 1024).unwrap();
+    mismatch.private_key_pem = weak.to_pkcs8_pem(Default::default()).unwrap().to_string();
+    assert!(TokenService::new(mismatch.clone()).is_err());
+    mismatch.public_key_pem = weak
+        .to_public_key()
+        .to_public_key_pem(Default::default())
+        .unwrap();
+    assert!(TokenService::new(mismatch).is_err());
 }

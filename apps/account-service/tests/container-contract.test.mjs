@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const serviceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dockerfile = readFileSync(join(serviceRoot, 'Dockerfile'), 'utf8');
 const mainSource = readFileSync(join(serviceRoot, 'src/main.rs'), 'utf8');
-const authSource = readFileSync(join(serviceRoot, 'src/account.auth.rs'), 'utf8');
+const tokensSource = readFileSync(join(serviceRoot, 'src/account.auth.tokens.rs'), 'utf8');
 const privacySource = readFileSync(join(serviceRoot, 'src/account.privacy.rs'), 'utf8');
 
 test('image is reproducible and runs Account as non-root', () => {
@@ -28,7 +28,7 @@ test('container has shallow liveness and graceful shutdown', () => {
 test('Account remains closed and destructive privacy actions require MFA step-up', () => {
   assert.equal(mainSource.includes('/auth/register'), false);
   assert.equal(mainSource.includes('/checkout'), false);
-  assert.ok(authSource.includes('matches!(method.as_str(), "totp" | "webauthn")'));
+  assert.ok(tokensSource.includes('matches!(m.as_str(), "totp" | "webauthn")'));
   assert.ok(privacySource.match(/principal\.require_step_up\(\)\?/gu)?.length >= 4);
 });
 

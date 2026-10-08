@@ -59,6 +59,8 @@ sur les anciens PRD, blueprints et plans :
 nvbes/
 ├── apps/
 │   ├── email-worker/       # Runtime Email actif
+│   ├── identity-web/       # UI hébergée Identity (OAuth/MFA)
+│   ├── account-web/        # UI Account (session, logout RP)
 │   └── trust-risk-service/ # Runtime Trust/Risk actif
 ├── libs/
 │   ├── rust/
@@ -73,7 +75,9 @@ nvbes/
 │   │   ├── redis/          # Primitives Redis actives
 │   │   └── trust-risk/     # Domaine Trust/Risk
 │   └── ts/
+│       ├── http-client/        # Transport fetch partagé (DTO + DPoP helpers)
 │       ├── identity-sdk-core/  # Types OpenAPI générés
+│       ├── identity-sdk-web/   # SDK navigateur Identity (OAuth/DPoP/WebAuthn)
 │       └── email-ui/           # Templates React Email actifs
 ├── infrastructure/         # Terraform/OpenTofu et contrat FinOps
 └── archive/                # Produits et prototypes hors runtime actif
@@ -255,6 +259,44 @@ Le codebase est conçu pour être navigable par des LLMs (Claude Code, Cursor) :
 - **Services spécialisés** : Éviter les "God Objects" (un seul gros service par domaine). Préférer scinder en capacités métier (ex: `SubscriptionService`, `CheckoutService`).
 - **Module-as-a-Service** : Si un service n'a pas d'état interne, privilégier des fonctions simples dans un module plutôt qu'une struct avec des méthodes.
 - **Séparation des couches** : Maintenir une séparation nette entre persistence (`db.rs`), validation métier pure (`validation.rs`) et orchestration (`service.rs` ou `logic.rs`).
+
+## Règles de Qualité et Sécurité en Amont (SonarQube, CodeQL, Security CI, CI)
+
+Pour éviter les allers-retours avec les pipelines CI distants et SonarQube, tout agent et développeur doit appliquer STRICTEMENT ces règles en amont dès la conception et l'écriture du code :
+
+### 1. SonarQube / SonarCloud (Strict Quality Gate)
+- **SQL (`plsql:DeleteOrUpdateWithoutWhereCheck`)** : Tout `UPDATE` ou `DELETE` SQL DOIT impérativement comporter une clause `WHERE` explicite. Ne jamais écrire d'`UPDATE` ou `DELETE` sans clause `WHERE`.
+- **TypeScript / JavaScript (`typescript:S2871`)** : Tout appel `.sort()` sur un tableau DOIT impérativement fournir une fonction de comparaison explicite (ex: `(a, b) => a.localeCompare(b)` pour les chaînes, `(a, b) => a - b` pour les nombres). Le tri sans comparateur est interdit.
+- **Gestion des rejets de Promise (`typescript:S6671`)** : Dans les listeners d'événements, workers et callbacks, ne rejeter une Promise qu'avec une instance d'`Error` (`reject(new Error(...))`), jamais avec un événement brut, un objet générique ou une chaîne.
+- **Anti-ReDoS / Backtracking (`typescript:S8786`)** : Interdiction absolue des quantificateurs imbriqués ou regex à backtracking catastrophique (ex: remplacer `/=+$/` par `/={1,2}$/` ou des méthodes de chaîne `.endsWith()`, `.startsWith()`, `.slice()`).
+- **Nombres pseudo-aléatoires sécurisés (`typescript:S2245`)** : Interdiction totale de `Math.random()` dans tout contexte de sécurité, authentification, sessions, tokens, génération de secrets, identifiants, decoys ou signaux bot. Utiliser exclusivement `crypto.getRandomValues(new Uint8Array(...))` ou un CSPRNG.
+- **Parsing d'entiers (`typescript:S7773`)** : Toujours utiliser `Number.parseInt(...)` et `Number.parseFloat(...)` au lieu des fonctions globales non qualifiées `parseInt(...)` et `parseFloat(...)`.
+- **Paramètres par défaut (`typescript:S7737`)** : Ne pas initialiser les paramètres par défaut de fonctions avec des expressions complexes ou des objets mutables recalculés ; déclarer des constantes au niveau module.
+- **Rust et Asynchronicité (`rust:S7487`)** : Interdiction formelle d'appels bloquants dans un contexte asynchrone (ex: `child.wait()` ou `thread::sleep` dans Tokio). Utiliser `tokio::task::spawn_blocking` ou les équivalents asynchrones `tokio::process` / `tokio::time::sleep`.
+- **Couverture de code sur le nouveau code (`new_coverage`)** : SonarCloud exige au minimum **80% de couverture** sur tout nouveau code. Tout code métier ou composant ajouté doit avoir ses tests unitaires/intégration associés. Les rapports LCOV TypeScript doivent pointer vers des chemins relatifs à la racine (`SF:apps/...` ou `SF:libs/...`).
+- **Duplication** : Moins de 3% de code dupliqué sur le nouveau code.
+
+### 2. CodeQL (Actions, JavaScript/TypeScript, Rust)
+- **Injection de commandes** : Ne jamais interpoler de variables dynamiques dans des chaînes de commande shell (`exec`). Préférer `execFile` ou `spawn` avec des arguments en tableau typé.
+- **Path Traversal** : Toujours valider et confiner les chemins résolus à l'aide de `path.resolve` et s'assurer qu'aucun segment `..` ne permet d'échapper au périmètre autorisé.
+- **Sécurité des Workflows GitHub Actions** : Ne JAMAIS interpoler `${{ github.event... }}` directement dans des blocs `run:`. Toujours mapper les données GitHub dans des variables d'environnement `env:`.
+- **Sécurité Rust** : Tout bloc `unsafe` doit être obligatoirement accompagné d'un commentaire `// SAFETY:` détaillant ses invariants et garanties de sécurité mémoire.
+
+### 3. Security CI (OSV, Cargo Deny, Trivy, Gitleaks, Zizmor)
+- **OSV Scanner (`osv-lockfiles`)** : Aucune dépendance comportant une CVE / GHSA active n'est tolérée dans `pnpm-lock.yaml` ou `Cargo.lock`. Résoudre immédiatement via des overrides dans `pnpm-workspace.yaml` ou des montées de version.
+- **Cargo Deny** : Respect strict des licences autorisées (AGPL-3.0, MIT, Apache-2.0, BSD-3-Clause). Aucune advisory RUSTSEC tolérée. Pas de versions multiples non autorisées de crates.
+- **Gitleaks** : Zéro secret, token, mot de passe ou clé privée commité dans le dépôt ou présent dans l'historique git.
+- **Trivy** : Zéro vulnérabilité ou misconfiguration de sévérité HIGH ou CRITICAL dans les fichiers et conteneurs du projet.
+- **Zizmor** : GitHub Actions strictement durcies (actions épinglées par SHA complet, permissions minimales `permissions: contents: read`).
+
+### 4. CI & Gates NVBES
+- **Seuils monotones (`pnpm check:thresholds-monotone`)** : Interdiction absolue de baisser un seuil de couverture, de mutation ou de condition dans `docs/testing/` ou d'exclure un crate.
+- **Unwrap Ratchet (`pnpm check:unwrap-ratchet`)** : Zéro nouveau `.unwrap()` ou `.expect()` en code de production Rust.
+- **SQLx Ratchet (`pnpm check:sqlx-ratchet`)** : Zéro nouveau `sqlx::query(` runtime ; utiliser `sqlx::query!` avec métadonnées `.sqlx` hors-ligne synchronisées.
+- **Weak Assertions (`pnpm check:weak-assertions`)** : Utiliser `matches!` ou `assert_eq!` au lieu de `assert!(x.is_ok())` / `assert!(x.is_err())`.
+- **Règles en amont automatisées (`pnpm check:upstream-rules`)** : Validation automatique locale des anti-patterns SonarQube et CodeQL avant commit.
+- **Migrations DB** : Tout fichier de migration SQL doit comporter un `-- migrate:up` et un `-- migrate:down` symétriques et se terminer par un saut de ligne (`\n`).
+- **Commits** : Conventional Commits avec lignes de corps inférieures à 80 caractères et trailer obligatoire `AI-Assisted: <nom-de-l-agent>`.
 
 ## Validation avant fin de tâche
 

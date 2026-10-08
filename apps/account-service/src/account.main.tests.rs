@@ -15,6 +15,9 @@ const TEST_VARS: &[&str] = &[
     "NVBES_ACCOUNT_TOKEN_AUDIENCE",
     "NVBES_IDENTITY_TOKEN_KEY_ID",
     "NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM",
+    "NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID",
+    "NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET",
+    "NVBES_IDENTITY_INTROSPECTION_URL",
     "NVBES_ACCOUNT_METRICS_TOKEN",
     "NVBES_ACCOUNT_SYNTHETIC_OWNER_ID",
     "NVBES_ACCOUNT_SYNTHETIC_MEMBER_ID",
@@ -75,6 +78,11 @@ fn apply_development_defaults(guard: &EnvGuard) {
     );
     guard.set("NVBES_IDENTITY_TOKEN_KEY_ID", "identity-key-1");
     guard.set("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM", DEV_PUBLIC_KEY);
+    guard.set("NVBES_ACCOUNT_IDENTITY_RESOURCE_CLIENT_ID", "account-dev");
+    guard.set(
+        "NVBES_ACCOUNT_IDENTITY_RESOURCE_SECRET",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    );
 }
 
 fn postgres_reachable() -> bool {
@@ -158,9 +166,8 @@ async fn run_migrate_applies_schema_when_database_is_available() {
     let guard = EnvGuard::isolated();
     apply_development_defaults(&guard);
 
-    let admin = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://postgres:postgres@127.0.0.1:5432/nvbes_coverage_test".into()
-    });
+    let admin = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://postgres:postgres@127.0.0.1:5432/postgres".into());
     let db_name = format!(
         "account_main_{}_test",
         &uuid::Uuid::new_v4().simple().to_string()[..12]

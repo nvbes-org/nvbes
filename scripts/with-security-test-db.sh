@@ -98,4 +98,18 @@ docker exec "$CONTAINER" psql -U postgres -h 127.0.0.1 -tc \
 
 export NVBES_SECURITY_TEST_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:${PORT}/${DB}"
 export DATABASE_URL="postgres://postgres:postgres@127.0.0.1:${PORT}/${COVERAGE_DB}"
+
+# Stabilize rustls native-root loading under parallel nextest (aws-sdk SQS clients).
+if [[ -z "${SSL_CERT_FILE:-}" ]]; then
+  for candidate in \
+    /etc/ssl/cert.pem \
+    /opt/homebrew/etc/ca-certificates/cert.pem \
+    /etc/ssl/certs/ca-certificates.crt; do
+    if [[ -f "$candidate" ]]; then
+      export SSL_CERT_FILE="$candidate"
+      break
+    fi
+  done
+fi
+
 exec "$@"

@@ -12,4 +12,6 @@ paths = [
   '''(^|/)target/''',
   '''^vendor/''',
   '''^infrastructure/local/observability/app-logs/''',
+  '''^infrastructure/environments/identity-production/terraform\.tfvars\.example$''',
+  '''^docs/architecture/identity-mfa-recovery\.md$''',
 ]
