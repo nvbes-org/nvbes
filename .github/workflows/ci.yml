@@ -259,7 +259,7 @@ jobs:
         run: node tools/test-summary/v1-suite-receipt.mjs --suite=platform.workspace-check
       - name: Upload V1 workspace check receipt
         if: always() && github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1, Node 24 LTS
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.1, Node 24 LTS
         with:
           name: v1-receipt-platform.workspace-check-${{ github.sha }}
           path: .temp/v1-receipts/platform.workspace-check.json
@@ -274,7 +274,7 @@ jobs:
         run: node tools/ci/test-security-database.mjs stop
       - name: Upload rust coverage report
         if: ${{ !cancelled() && steps.rust-coverage.outcome != 'skipped' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1, Node 24 LTS
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.1, Node 24 LTS
         with:
           name: rust-coverage-workspace
           path: .temp/rust/coverage-workspace.json
@@ -421,7 +421,7 @@ jobs:
           command: check
           arguments: --all-features
       - name: Scan committed lockfiles with OSV
-        uses: google/osv-scanner-action/osv-scanner-action@6e4298ebc4db23e847df9b2e2de2939d6f066c67 # v2.5.1
+        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
         with:
           scan-args: >-
             --format=sarif
@@ -431,7 +431,7 @@ jobs:
             --config=./.osv-scanner.toml
       - name: Upload OSV SARIF
         if: always() && hashFiles('osv-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
         with:
           sarif_file: osv-results.sarif
       - name: Scan the complete Git history with Gitleaks
