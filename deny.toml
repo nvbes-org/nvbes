@@ -8,6 +8,14 @@ yanked = "deny"
 ignore = [
   # Local/dev RSA key material generation only; no network PKCS#1 decrypt path.
   "RUSTSEC-2023-0071",
+  # Pyroscope symbol parsing (object -> ruzstd); no untrusted zstd input decoded.
+  "RUSTSEC-2026-0344",
+  # Test fixtures only (nvbes-test-utils -> serde_yaml_ng -> unsafe-libyaml); unmaintained.
+  "RUSTSEC-2024-0449",
+  # MaxMind GeoLite in-memory zip reading only (read_to_end); no disk extraction via ZipArchive::extract.
+  "RUSTSEC-2026-0367",
+  "RUSTSEC-2026-0368",
+  "RUSTSEC-2026-0369",
 ]
 
 [licenses]
