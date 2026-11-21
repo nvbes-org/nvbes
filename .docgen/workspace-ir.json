@@ -1,11 +1,11 @@
 {
-  "extractedAt": "2026-09-23T12:41:02.785Z",
+  "extractedAt": "2026-11-21T12:54:31.951Z",
   "monorepo": {
-    "totalProjects": 63,
-    "totalTsPackages": 19,
-    "totalRustCrates": 45,
+    "totalProjects": 66,
+    "totalTsPackages": 24,
+    "totalRustCrates": 48,
     "totalOpenApiServices": 10,
-    "totalAdrs": 11
+    "totalAdrs": 12
   },
   "projects": [
     {
@@ -635,6 +635,18 @@
       "sourceRoot": "libs/rust/core/src"
     },
     {
+      "name": "identity-sdk-backend",
+      "projectType": "library",
+      "root": "libs/rust/identity-sdk-backend",
+      "tags": [
+        "scope:oss",
+        "type:lib",
+        "domain:identity",
+        "layer:sdk"
+      ],
+      "sourceRoot": "libs/rust/identity-sdk-backend/src"
+    },
+    {
       "name": "observability",
       "projectType": "library",
       "root": "libs/rust/observability",
@@ -695,6 +707,18 @@
       "sourceRoot": "libs/ts/email-ui/src"
     },
     {
+      "name": "http-client",
+      "projectType": "library",
+      "root": "libs/ts/http-client",
+      "tags": [
+        "scope:oss",
+        "type:lib",
+        "domain:shared",
+        "layer:transport"
+      ],
+      "sourceRoot": "libs/ts/http-client/src"
+    },
+    {
       "name": "identity-sdk-core",
       "projectType": "library",
       "root": "libs/ts/identity-sdk-core",
@@ -705,6 +729,18 @@
         "layer:sdk"
       ],
       "sourceRoot": "libs/ts/identity-sdk-core/src"
+    },
+    {
+      "name": "identity-sdk-web",
+      "projectType": "library",
+      "root": "libs/ts/identity-sdk-web",
+      "tags": [
+        "scope:oss",
+        "type:lib",
+        "domain:identity",
+        "layer:sdk"
+      ],
+      "sourceRoot": "libs/ts/identity-sdk-web/src"
     },
     {
       "name": "account-quality",
@@ -756,6 +792,106 @@
     }
   ],
   "tsPackages": [
+    {
+      "name": "@nvbes/account-web",
+      "version": "0.1.0",
+      "path": "apps/account-web",
+      "isApp": true,
+      "isLib": false,
+      "dependencies": [
+        "@fontsource-variable/geist",
+        "@nvbes/identity-sdk-web",
+        "@tanstack/react-router",
+        "class-variance-authority",
+        "cn",
+        "lucide-react",
+        "radix-ui",
+        "react",
+        "react-dom",
+        "shadcn",
+        "tw-animate-css"
+      ],
+      "devDependencies": [
+        "@tailwindcss/vite",
+        "@types/node",
+        "@types/react",
+        "@types/react-dom",
+        "@vitejs/plugin-react",
+        "jsdom",
+        "tailwindcss",
+        "typescript",
+        "vite-plus"
+      ],
+      "scripts": [
+        "dev",
+        "build",
+        "typecheck",
+        "check",
+        "lint",
+        "test",
+        "format:check"
+      ],
+      "description": ""
+    },
+    {
+      "name": "@nvbes/identity-service",
+      "version": "0.1.0",
+      "path": "apps/identity-service",
+      "isApp": true,
+      "isLib": false,
+      "dependencies": [
+        "@nvbes/identity-sdk-web"
+      ],
+      "devDependencies": [],
+      "scripts": [],
+      "description": "Identity service test harness dependencies (Rust binary lives in Cargo)"
+    },
+    {
+      "name": "@nvbes/identity-web",
+      "version": "0.1.0",
+      "path": "apps/identity-web",
+      "isApp": true,
+      "isLib": false,
+      "dependencies": [
+        "@fontsource-variable/fraunces",
+        "@fontsource-variable/geist",
+        "@nvbes/identity-sdk-web",
+        "@tanstack/react-router",
+        "class-variance-authority",
+        "cn",
+        "lucide-react",
+        "radix-ui",
+        "react",
+        "react-dom",
+        "shadcn",
+        "tw-animate-css"
+      ],
+      "devDependencies": [
+        "@tailwindcss/vite",
+        "@testing-library/react",
+        "@testing-library/user-event",
+        "@types/node",
+        "@types/react",
+        "@types/react-dom",
+        "@vitejs/plugin-react",
+        "jsdom",
+        "playwright",
+        "tailwindcss",
+        "typescript",
+        "vite-plus"
+      ],
+      "scripts": [
+        "dev",
+        "build",
+        "typecheck",
+        "lint",
+        "test",
+        "test:browser",
+        "format:check",
+        "check"
+      ],
+      "description": ""
+    },
     {
       "name": "nvbes-account-web",
       "version": "0.1.0",
@@ -1424,6 +1560,32 @@
       "description": "React Email design system and transactional email templates for nvbes"
     },
     {
+      "name": "@nvbes/http-client",
+      "version": "0.1.0",
+      "path": "libs/ts/http-client",
+      "isApp": false,
+      "isLib": true,
+      "dependencies": [
+        "zod"
+      ],
+      "devDependencies": [
+        "@vitest/coverage-v8",
+        "typescript",
+        "vite-plus"
+      ],
+      "scripts": [
+        "build",
+        "check",
+        "dev",
+        "format:check",
+        "lint",
+        "test",
+        "test:coverage",
+        "typecheck"
+      ],
+      "description": "Shared fetch transport with runtime DTO validation"
+    },
+    {
       "name": "@nvbes/identity-sdk-core",
       "version": "0.1.0",
       "path": "libs/ts/identity-sdk-core",
@@ -1444,6 +1606,33 @@
         "typecheck"
       ],
       "description": "OpenAPI specification for nvbes Identity - cross-language SDK generation"
+    },
+    {
+      "name": "@nvbes/identity-sdk-web",
+      "version": "0.1.0",
+      "path": "libs/ts/identity-sdk-web",
+      "isApp": false,
+      "isLib": true,
+      "dependencies": [
+        "@nvbes/http-client",
+        "@nvbes/identity-sdk-core",
+        "jose"
+      ],
+      "devDependencies": [
+        "@types/node",
+        "typescript",
+        "vite-plus"
+      ],
+      "scripts": [
+        "build",
+        "check",
+        "dev",
+        "format:check",
+        "lint",
+        "test",
+        "typecheck"
+      ],
+      "description": "nvbes Identity SDK for web browsers (secure cookies)"
     }
   ],
   "rustCrates": [
@@ -1454,6 +1643,9 @@
       "isApp": true,
       "isLib": false,
       "internalDependencies": [
+        "nvbes-identity-sdk",
+        "nvbes-core",
+        "nvbes-dpop",
         "nvbes-observability"
       ]
     },
@@ -1466,13 +1658,15 @@
       "internalDependencies": [
         "nvbes-billing",
         "nvbes-core",
+        "nvbes-identity-sdk",
+        "nvbes-dpop",
         "nvbes-email",
         "nvbes-observability"
       ]
     },
     {
       "name": "nvbes-billing-worker",
-      "version": "=1.109.0",
+      "version": "=1.112.0",
       "path": "apps/billing-worker",
       "isApp": true,
       "isLib": false,
@@ -1485,7 +1679,7 @@
     },
     {
       "name": "nvbes-email-worker",
-      "version": "=1.109.0",
+      "version": "=1.112.0",
       "path": "apps/email-worker",
       "isApp": true,
       "isLib": false,
@@ -1504,8 +1698,10 @@
       "isLib": false,
       "internalDependencies": [
         "nvbes-core",
+        "nvbes-dpop",
         "nvbes-email",
-        "nvbes-observability"
+        "nvbes-observability",
+        "webauthn-rs"
       ]
     },
     {
@@ -1923,6 +2119,18 @@
       ]
     },
     {
+      "name": "nvbes-consent",
+      "version": "0.1.0",
+      "path": "libs/rust/consent",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "nvbes-audit",
+        "nvbes-core",
+        "axum"
+      ]
+    },
+    {
       "name": "nvbes-core",
       "version": "0.6",
       "path": "libs/rust/core",
@@ -1935,6 +2143,18 @@
       ]
     },
     {
+      "name": "nvbes-dpop",
+      "version": "1",
+      "path": "libs/rust/dpop",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "sqlx",
+        "tokio",
+        "serde"
+      ]
+    },
+    {
       "name": "nvbes-email",
       "version": "0.23.41",
       "path": "libs/rust/email",
@@ -1943,6 +2163,24 @@
       "internalDependencies": [
         "nvbes-core",
         "tonic"
+      ]
+    },
+    {
+      "name": "nvbes-identity-sdk",
+      "version": "0.1.0",
+      "path": "libs/rust/identity-sdk-backend",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "reqwest",
+        "serde",
+        "serde_json",
+        "urlencoding",
+        "thiserror",
+        "base64",
+        "sha2",
+        "rand",
+        "tokio"
       ]
     },
     {
@@ -8935,6 +9173,12 @@
       "filePath": "docs/adr/0012-adopt-scaleway-serverless-sql-per-product.md",
       "filename": "0012-adopt-scaleway-serverless-sql-per-product.md",
       "title": "ADR 0012 - Adopter Scaleway Serverless SQL par produit",
+      "status": "accepted"
+    },
+    {
+      "filePath": "docs/adr/0013-modular-monolith-api-and-unified-worker.md",
+      "filename": "0013-modular-monolith-api-and-unified-worker.md",
+      "title": "0013. Monolithe Modulaire API et Worker Unifié",
       "status": "accepted"
     },
     {

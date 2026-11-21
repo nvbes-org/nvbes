@@ -4,7 +4,7 @@ description: Inventaire auto-généré des runtimes actifs et des applications a
 ---
 
 > Ce document est généré automatiquement de manière déterministe à partir de l'état réel du monorepo.
-> Dernière mise à jour : `2026-09-23T12:41:02.785Z`
+> Dernière mise à jour : `2026-11-21T12:54:31.951Z`
 
 ## Vue d'ensemble
 
@@ -51,27 +51,27 @@ Les **19 projets** ci-dessous sont conservés comme historique. Ils ne sont ni d
 ### `nvbes-account-service`
 - **Chemin** : `apps/account-service`
 - **Version** : `10.3.0`
-- **Dépendances internes** : `nvbes-observability`
+- **Dépendances internes** : `nvbes-identity-sdk`, `nvbes-core`, `nvbes-dpop`, `nvbes-observability`
 
 ### `nvbes-billing-service`
 - **Chemin** : `apps/billing-service`
 - **Version** : `10.3.0`
-- **Dépendances internes** : `nvbes-billing`, `nvbes-core`, `nvbes-email`, `nvbes-observability`
+- **Dépendances internes** : `nvbes-billing`, `nvbes-core`, `nvbes-identity-sdk`, `nvbes-dpop`, `nvbes-email`, `nvbes-observability`
 
 ### `nvbes-billing-worker`
 - **Chemin** : `apps/billing-worker`
-- **Version** : `=1.109.0`
+- **Version** : `=1.112.0`
 - **Dépendances internes** : `nvbes-billing`, `nvbes-core`, `nvbes-email`, `nvbes-observability`
 
 ### `nvbes-email-worker`
 - **Chemin** : `apps/email-worker`
-- **Version** : `=1.109.0`
+- **Version** : `=1.112.0`
 - **Dépendances internes** : `nvbes-core`, `nvbes-email`, `nvbes-email-scaleway`, `nvbes-observability`
 
 ### `nvbes-identity-service`
 - **Chemin** : `apps/identity-service`
 - **Version** : `10.3.0`
-- **Dépendances internes** : `nvbes-core`, `nvbes-email`, `nvbes-observability`
+- **Dépendances internes** : `nvbes-core`, `nvbes-dpop`, `nvbes-email`, `nvbes-observability`, `webauthn-rs`
 
 ### `nvbes-trust-risk-service`
 - **Chemin** : `apps/trust-risk-service`

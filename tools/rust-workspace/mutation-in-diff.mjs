@@ -124,7 +124,7 @@ export function runMutationInDiff(options = {}) {
     'cargo',
     [
       'mutants',
-      '--locked',
+      '--cargo-arg=--locked',
       '--in-diff',
       diffPath,
       '--timeout',

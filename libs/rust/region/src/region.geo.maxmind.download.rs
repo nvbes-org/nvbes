@@ -55,7 +55,7 @@ pub fn unzip_archive(bytes: &[u8]) -> Result<Vec<(String, Vec<u8>)>, MaxMindGeoL
         }
         let mut contents = Vec::new();
         file.read_to_end(&mut contents)?;
-        files.push((file.name().to_string(), contents));
+        files.push((file.name()?.to_string(), contents));
     }
 
     Ok(files)

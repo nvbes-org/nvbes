@@ -22,8 +22,11 @@ flowchart TD
         nvbes_email_scaleway["nvbes-email-scaleway"]
         nvbes_audit["nvbes-audit"]
         nvbes_billing["nvbes-billing"]
+        nvbes_consent["nvbes-consent"]
         nvbes_core["nvbes-core"]
+        nvbes_dpop["nvbes-dpop"]
         nvbes_email["nvbes-email"]
+        nvbes_identity_sdk["nvbes-identity-sdk"]
         nvbes_observability["nvbes-observability"]
         nvbes_platform["nvbes-platform"]
         nvbes_region["nvbes-region"]
@@ -31,9 +34,14 @@ flowchart TD
         nvbes_trust_risk["nvbes-trust-risk"]
     end
 
+    nvbes_account_service --> nvbes_identity_sdk
+    nvbes_account_service --> nvbes_core
+    nvbes_account_service --> nvbes_dpop
     nvbes_account_service --> nvbes_observability
     nvbes_billing_service --> nvbes_billing
     nvbes_billing_service --> nvbes_core
+    nvbes_billing_service --> nvbes_identity_sdk
+    nvbes_billing_service --> nvbes_dpop
     nvbes_billing_service --> nvbes_email
     nvbes_billing_service --> nvbes_observability
     nvbes_billing_worker --> nvbes_billing
@@ -45,8 +53,10 @@ flowchart TD
     nvbes_email_worker --> nvbes_email_scaleway
     nvbes_email_worker --> nvbes_observability
     nvbes_identity_service --> nvbes_core
+    nvbes_identity_service --> nvbes_dpop
     nvbes_identity_service --> nvbes_email
     nvbes_identity_service --> nvbes_observability
+    nvbes_identity_service --> webauthn_rs
     nvbes_trust_risk_service --> nvbes_core
     nvbes_trust_risk_service --> nvbes_observability
     nvbes_trust_risk_service --> nvbes_trust_risk
