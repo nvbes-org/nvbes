@@ -33,7 +33,7 @@ docker compose --profile infra -f infrastructure/local/docker-compose.yml up --d
 
 # The init SQL only runs when PostgreSQL creates a fresh volume. Keep startup
 # idempotent for developers who already have an existing local volume.
-for database in nvbes_dev_email nvbes_dev_trust_risk nvbes_dev_identity nvbes_dev_account nvbes_dev_billing; do
+for database in nvbes_dev nvbes_dev_email nvbes_dev_trust_risk nvbes_dev_identity nvbes_dev_account nvbes_dev_billing; do
   database_exists="$(docker compose --profile infra -f infrastructure/local/docker-compose.yml exec -T postgres \
     psql --username postgres --dbname postgres --tuples-only --no-align \
     --command "SELECT 1 FROM pg_database WHERE datname = '$database'")"
@@ -43,15 +43,6 @@ for database in nvbes_dev_email nvbes_dev_trust_risk nvbes_dev_identity nvbes_de
   fi
 done
 
-cargo run --package nvbes-email-worker -- migrate
-cargo run --package nvbes-trust-risk-service -- migrate
-cargo run --package nvbes-identity-service -- migrate
-cargo run --package nvbes-account-service -- migrate
-cargo run --package nvbes-billing-service -- migrate
-
-bash "$SCRIPT_DIR/dev-email-worker.sh" &
-bash "$SCRIPT_DIR/dev-trust-risk-service.sh" &
-bash "$SCRIPT_DIR/dev-identity-service.sh" &
-bash "$SCRIPT_DIR/dev-account-service.sh" &
-bash "$SCRIPT_DIR/dev-billing-service.sh" &
+bash "$SCRIPT_DIR/dev-api.sh" &
+bash "$SCRIPT_DIR/dev-worker.sh" &
 wait

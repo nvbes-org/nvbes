@@ -1,7 +1,7 @@
 # Monorepo nvbes - Agent Context Pack
 
 > Fiche de contexte ultra-synthétique auto-générée pour agents IA (Cursor, Antigravity, Claude Code).
-> Générée le : `2026-11-21T15:01:15.203Z`
+> Générée le : `2026-11-21T18:27:12.321Z`
 
 ## 1. Direction V1
 - Livrer uniquement le socle Identity, Account, Billing, Email, Trust/Risk et Platform Operations.
@@ -19,24 +19,17 @@
 ## 3. Services Backend actifs (Axum / Rust)
 | Service | Chemin | Endpoints OpenAPI |
 | :--- | :--- | :--- |
-| `nvbes-account-service` | `apps/account-service` | 20 endpoints |
 | `nvbes-api` | `apps/api` | 20 endpoints |
-| `nvbes-billing-service` | `apps/billing-service` | - endpoints |
-| `nvbes-billing-worker` | `apps/billing-worker` | - endpoints |
-| `nvbes-email-worker` | `apps/email-worker` | - endpoints |
-| `nvbes-identity-service` | `apps/identity-service` | 69 endpoints |
-| `nvbes-trust-risk-service` | `apps/trust-risk-service` | - endpoints |
 | `nvbes-worker` | `apps/worker` | - endpoints |
 
 ## 4. Applications Frontend actives (React / Vite)
 | Application | Chemin | Rôle |
 | :--- | :--- | :--- |
 | `@nvbes/account-web` | `apps/account-web` | Interface utilisateur |
-| `@nvbes/identity-service` | `apps/identity-service` | Identity service test harness dependencies (Rust binary lives in Cargo) |
 | `@nvbes/identity-web` | `apps/identity-web` | Interface utilisateur |
 
 ## 5. Bibliothèques disponibles
-- **Rust (`libs/rust/`)** : `nvbes-email-scaleway`, `nvbes-audit`, `nvbes-billing`, `nvbes-consent`, `nvbes-core`, `nvbes-dpop`, `nvbes-email`, `nvbes-identity-sdk`, `nvbes-observability`, `nvbes-platform` (+3 autres).
+- **Rust (`libs/rust/`)** : `nvbes-account-service`, `nvbes-email-scaleway`, `nvbes-audit`, `nvbes-billing`, `nvbes-billing-service`, `nvbes-consent`, `nvbes-core`, `nvbes-dpop`, `nvbes-email`, `nvbes-identity-service` (+6 autres).
 - **TypeScript (`libs/ts/`)** : `@nvbes/account-sdk-core`, `@nvbes/email-ui`, `@nvbes/http-client`, `@nvbes/identity-sdk-core`, `@nvbes/identity-sdk-web`.
 
 La présence d'une bibliothèque Cloud, Drive, Backoffice, Developer ou Enterprise ne la rend pas active. Vérifier la direction produit avant usage.

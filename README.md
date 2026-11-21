@@ -28,23 +28,23 @@ NO-GO.
 
 ## État du monorepo
 
-Le dépôt est orchestré avec pnpm workspaces, Cargo workspace et Nx.
+Le dépôt est orchestré avec pnpm workspaces, Cargo workspace et Nx. Le socle applicatif est structuré en **Monolithe Modulaire HTTP serverless** (`apps/api`) et **Worker d'arrière-plan centralisé** (`apps/worker`), complété par les interfaces web hébergées (`identity-web`, `account-web`).
 
 ```text
 nvbes/
 ├── apps/
-│   ├── api/                  # API Monolithe Modulaire HTTP serverless
+│   ├── api/                  # API Monolithe Modulaire HTTP serverless (Axum)
 │   ├── worker/               # Worker d'arrière-plan unifié (outbox/purges)
-│   ├── email-worker/         # Runtime Email actif (en cours de convergence)
-│   └── trust-risk-service/   # Runtime Trust/Risk actif
+│   ├── account-web/          # Interface web Compte & Équipes (React/Vite)
+│   └── identity-web/         # Interface web Authentification & Sessions (React/Vite)
 ├── libs/
-│   ├── rust/                 # Domaines, ports, adaptateurs et primitives partagés
-│   └── ts/                   # SDK, clients et runtime web réutilisables
+│   ├── rust/                 # Domaines (identity, account, billing, consent...), ports et primitives
+│   └── ts/                   # SDKs, clients et runtime web réutilisables
 ├── contracts/                # OpenAPI, Protobuf, événements et GraphQL
-├── infrastructure/           # IaC et contrat FinOps
+├── infrastructure/           # IaC OpenTofu/Terraform et contrat FinOps
 ├── deploy/                   # Manifestes de déploiement
-├── docs/                     # Sources produit, architecture et opérations
-└── archive/                  # Produits et prototypes retirés du runtime actif
+├── docs/                     # Spécifications, architecture, ADRs et opérations
+└── archive/                  # Services historiques et prototypes archivés
 ```
 
 Les applications Account, Cloud, Developer, Enterprise et Backoffice archivées
@@ -71,19 +71,17 @@ Prérequis : Node.js 24+, pnpm 11+, Rust stable, Docker Compose et OpenTofu.
 pnpm install
 pnpm env:sync
 pnpm env:check
-pnpm dev              # Email + Trust/Risk + Identity + Account + Billing
+pnpm dev              # Lance l'infrastructure locale, l'API et le Worker
 ```
 
 Commandes principales :
 
 ```bash
-pnpm dev:api                  # API Monolithique Modulaire
-pnpm dev:worker               # Worker unifié (outbox/purges)
-pnpm dev:identity-service      # Identity seul
-pnpm dev:account-service       # Account seul
-pnpm dev:billing-service       # Billing seul
-pnpm dev:email-worker          # Email seul
-pnpm dev:trust-risk-service    # Trust/Risk seul
+pnpm dev:api          # API Monolithique Modulaire (Axum, port 8080)
+pnpm dev:worker       # Worker unifié (outbox/purges, port 8081)
+pnpm dev:identity-web # Interface web Identity (Vite)
+pnpm dev:account-web  # Interface web Account (Vite)
+pnpm dev:infra        # Conteneurs d'infrastructure locale (PostgreSQL, Mailpit)
 pnpm check            # Gates complets, dont FinOps
 pnpm check:finops     # Budget et plafonds serverless
 pnpm lint             # Lint web et Rust

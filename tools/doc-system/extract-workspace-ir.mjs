@@ -71,6 +71,20 @@ export function extractWorkspaceIR() {
     const dir = dirname(pkgFile);
     const relDir = relative(REPO_ROOT, dir);
 
+    if (data.nx && (data.nx.name || data.name)) {
+      const nxName = data.nx.name || data.name;
+      if (!projects.some((p) => p.name === nxName && p.root === relDir)) {
+        projects.push({
+          name: nxName,
+          projectType:
+            data.nx.projectType || (relDir.startsWith('apps/') ? 'application' : 'library'),
+          root: relDir,
+          tags: Array.isArray(data.nx.tags) ? data.nx.tags : [],
+          sourceRoot: data.nx.sourceRoot || relDir,
+        });
+      }
+    }
+
     tsPackages.push({
       name: data.name,
       version: data.version || '0.1.0',

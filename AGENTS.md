@@ -58,19 +58,21 @@ sur les anciens PRD, blueprints et plans :
 ```
 nvbes/
 ├── apps/
-│   ├── api/                # API Monolithe Modulaire HTTP serverless
+│   ├── api/                # API Monolithe Modulaire HTTP serverless (Axum)
 │   ├── worker/             # Worker d'arrière-plan unifié (outbox/purges)
-│   ├── email-worker/       # Runtime Email (en cours de convergence)
-│   ├── identity-web/       # UI hébergée Identity (OAuth/MFA)
-│   ├── account-web/        # UI Account (session, logout RP)
-│   └── trust-risk-service/ # Runtime Trust/Risk actif
+│   ├── identity-web/       # UI hébergée Identity (OAuth/MFA, React/Vite)
+│   └── account-web/        # UI Account (session, logout RP, React/Vite)
 ├── libs/
 │   ├── rust/
+│   │   ├── identity/       # Domaine Identity (OAuth 2.1, OIDC, MFA)
+│   │   ├── account/        # Domaine Account (Profils, Équipes, Sessions)
+│   │   ├── billing-service/# Domaine Billing (Stripe, Abonnements)
+│   │   ├── consent/        # Domaine Consent & RGPD (CGU, Cookies, GPC)
 │   │   ├── core/           # Primitives partagées (config, auth, mfa)
 │   │   ├── adapters/       # Adaptateurs externes actifs (Scaleway email)
 │   │   ├── audit/          # Audit append-only
 │   │   ├── billing/        # Logique billing partagée
-│   │   ├── email/          # Service email
+│   │   ├── email/          # Service email (Scaleway TEM, templates)
 │   │   ├── observability/  # Métriques, tracing, sentry
 │   │   ├── platform/       # Primitives de plateforme
 │   │   ├── region/         # Régions et résidence des données
@@ -146,14 +148,12 @@ Fichiers sous 300 lignes = contexte LLM optimal. Le LLM peut lire un fichier ent
 ## Commandes
 
 ```bash
-pnpm dev              # Runtimes locaux principaux
+pnpm dev              # Runtimes locaux principaux (API + Worker)
 pnpm dev:api          # API Monolithique Modulaire
 pnpm dev:worker       # Worker unifié (outbox/purges)
-pnpm dev:identity-service
-pnpm dev:account-service
-pnpm dev:billing-service
-pnpm dev:email-worker
-pnpm dev:trust-risk-service
+pnpm dev:identity-web # Interface web Identity
+pnpm dev:account-web  # Interface web Account
+pnpm dev:infra        # Conteneurs d'infrastructure locale
 pnpm check            # Checks complets
 pnpm lint             # Lint complet
 pnpm test             # Tests complets

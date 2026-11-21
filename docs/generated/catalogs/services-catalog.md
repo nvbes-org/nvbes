@@ -4,16 +4,18 @@ description: Inventaire auto-généré des runtimes actifs et des applications a
 ---
 
 > Ce document est généré automatiquement de manière déterministe à partir de l'état réel du monorepo.
-> Dernière mise à jour : `2026-11-21T17:54:38.575Z`
+> Dernière mise à jour : `2026-11-21T18:27:12.321Z`
 
 ## Vue d'ensemble
 
-Le runtime actif contient **2 applications et services**. Les projets sous `archive/` sont exclus de ce total et ne constituent pas une roadmap produit.
+Le runtime actif contient **4 applications et services**. Les projets sous `archive/` sont exclus de ce total et ne constituent pas une roadmap produit.
 
 | Application / Service | Domaine | Scope | Type | Emplacement |
 | :--- | :--- | :--- | :--- | :--- |
-| **`api`** | `api` | `platform` | 💻 Frontend (React/Vite) | `apps/api` |
-| **`worker`** | `worker` | `platform` | 💻 Frontend (React/Vite) | `apps/worker` |
+| **`api`** | `api` | `platform` | ⚙️ Backend (Rust/Axum) | `apps/api` |
+| **`worker`** | `worker` | `platform` | ⚙️ Backend (Rust/Axum) | `apps/worker` |
+| **`account-web`** | `account` | `platform` | 💻 Frontend (React/Vite) | `apps/account-web` |
+| **`identity-web`** | `identity` | `platform` | 💻 Frontend (React/Vite) | `apps/identity-web` |
 
 ## Inventaire archivé
 

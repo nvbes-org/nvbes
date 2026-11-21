@@ -1,7 +1,7 @@
 {
-  "extractedAt": "2026-11-21T17:54:38.575Z",
+  "extractedAt": "2026-11-21T18:27:12.321Z",
   "monorepo": {
-    "totalProjects": 69,
+    "totalProjects": 71,
     "totalTsPackages": 24,
     "totalRustCrates": 50,
     "totalOpenApiServices": 9,
@@ -825,6 +825,30 @@
         "layer:tooling"
       ],
       "sourceRoot": "tools/test-summary"
+    },
+    {
+      "name": "account-web",
+      "projectType": "application",
+      "root": "apps/account-web",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:account",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/account-web"
+    },
+    {
+      "name": "identity-web",
+      "projectType": "application",
+      "root": "apps/identity-web",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:identity",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/identity-web"
     }
   ],
   "tsPackages": [
