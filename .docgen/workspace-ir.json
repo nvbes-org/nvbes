@@ -1,9 +1,9 @@
 {
-  "extractedAt": "2026-11-21T13:15:04.752Z",
+  "extractedAt": "2026-11-21T13:52:36.832Z",
   "monorepo": {
-    "totalProjects": 67,
+    "totalProjects": 68,
     "totalTsPackages": 24,
-    "totalRustCrates": 49,
+    "totalRustCrates": 50,
     "totalOpenApiServices": 10,
     "totalAdrs": 12
   },
@@ -103,6 +103,18 @@
         "layer:app"
       ],
       "sourceRoot": "apps/trust-risk-service/src"
+    },
+    {
+      "name": "worker",
+      "projectType": "application",
+      "root": "apps/worker",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:worker",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/worker/src"
     },
     {
       "name": "account-service",
@@ -1743,6 +1755,21 @@
         "nvbes-observability",
         "nvbes-trust-risk",
         "opentelemetry-otlp"
+      ]
+    },
+    {
+      "name": "nvbes-worker",
+      "version": "0.1.0",
+      "path": "apps/worker",
+      "isApp": true,
+      "isLib": false,
+      "internalDependencies": [
+        "nvbes-account-service",
+        "nvbes-billing-service",
+        "nvbes-core",
+        "nvbes-email",
+        "nvbes-email-scaleway",
+        "nvbes-observability"
       ]
     },
     {

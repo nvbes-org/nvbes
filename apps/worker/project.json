@@ -1,0 +1,31 @@
+{
+	"name": "worker",
+	"projectType": "application",
+	"root": "apps/worker",
+	"sourceRoot": "apps/worker/src",
+	"targets": {
+		"check": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/**/*",
+				"{workspaceRoot}/Cargo.toml",
+				"{workspaceRoot}/Cargo.lock",
+				"{workspaceRoot}/libs/rust/**/*"
+			],
+			"options": {
+				"command": "cargo check --locked --package nvbes-worker --all-targets",
+				"cwd": "."
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "cargo test --locked --package nvbes-worker",
+				"cwd": "."
+			}
+		}
+	},
+	"tags": ["scope:platform", "type:app", "domain:worker", "layer:app"]
+}

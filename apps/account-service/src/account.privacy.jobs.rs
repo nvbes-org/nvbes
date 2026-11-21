@@ -10,8 +10,8 @@ use crate::{
 
 #[derive(Debug, Serialize)]
 pub struct PrivacyJobResult {
-    pub(crate) exports_completed: u64,
-    pub(crate) closures_completed: u64,
+    pub exports_completed: u64,
+    pub closures_completed: u64,
 }
 
 pub async fn process_pending(db: &PgPool) -> AccountResult<PrivacyJobResult> {

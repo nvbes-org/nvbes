@@ -4,11 +4,11 @@ description: Inventaire auto-généré des runtimes actifs et des applications a
 ---
 
 > Ce document est généré automatiquement de manière déterministe à partir de l'état réel du monorepo.
-> Dernière mise à jour : `2026-11-21T13:15:04.752Z`
+> Dernière mise à jour : `2026-11-21T13:52:36.832Z`
 
 ## Vue d'ensemble
 
-Le runtime actif contient **8 applications et services**. Les projets sous `archive/` sont exclus de ce total et ne constituent pas une roadmap produit.
+Le runtime actif contient **9 applications et services**. Les projets sous `archive/` sont exclus de ce total et ne constituent pas une roadmap produit.
 
 | Application / Service | Domaine | Scope | Type | Emplacement |
 | :--- | :--- | :--- | :--- | :--- |
@@ -20,6 +20,7 @@ Le runtime actif contient **8 applications et services**. Les projets sous `arch
 | **`identity-service`** | `identity` | `platform` | ⚙️ Backend (Rust/Axum) | `apps/identity-service` |
 | **`platform-operations-service`** | `platform-operations` | `platform` | ⚙️ Backend (Rust/Axum) | `apps/platform-operations-service` |
 | **`trust-risk-service`** | `trust-risk` | `platform` | ⚙️ Backend (Rust/Axum) | `apps/trust-risk-service` |
+| **`worker`** | `worker` | `platform` | 💻 Frontend (React/Vite) | `apps/worker` |
 
 ## Inventaire archivé
 
@@ -83,3 +84,8 @@ Les **19 projets** ci-dessous sont conservés comme historique. Ils ne sont ni d
 - **Chemin** : `apps/trust-risk-service`
 - **Version** : `0.1.0`
 - **Dépendances internes** : `nvbes-core`, `nvbes-observability`, `nvbes-trust-risk`, `opentelemetry-otlp`
+
+### `nvbes-worker`
+- **Chemin** : `apps/worker`
+- **Version** : `0.1.0`
+- **Dépendances internes** : `nvbes-account-service`, `nvbes-billing-service`, `nvbes-core`, `nvbes-email`, `nvbes-email-scaleway`, `nvbes-observability`

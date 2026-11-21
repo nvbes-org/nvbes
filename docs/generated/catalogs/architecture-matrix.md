@@ -17,6 +17,7 @@ flowchart TD
         nvbes_email_worker["nvbes-email-worker"]
         nvbes_identity_service["nvbes-identity-service"]
         nvbes_trust_risk_service["nvbes-trust-risk-service"]
+        nvbes_worker["nvbes-worker"]
     end
 
     subgraph Libraries ["Bibliotheques Partagees"]
@@ -69,6 +70,12 @@ flowchart TD
     nvbes_trust_risk_service --> nvbes_observability
     nvbes_trust_risk_service --> nvbes_trust_risk
     nvbes_trust_risk_service --> opentelemetry_otlp
+    nvbes_worker --> nvbes_account_service
+    nvbes_worker --> nvbes_billing_service
+    nvbes_worker --> nvbes_core
+    nvbes_worker --> nvbes_email
+    nvbes_worker --> nvbes_email_scaleway
+    nvbes_worker --> nvbes_observability
 ```
 
 ## Règles d'Isolation des Domaines (Boundaries)

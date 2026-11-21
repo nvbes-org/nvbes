@@ -3500,6 +3500,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvbes-worker"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "nvbes-account-service",
+ "nvbes-billing-service",
+ "nvbes-core",
+ "nvbes-email",
+ "nvbes-email-scaleway",
+ "nvbes-observability",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.21",
+ "tokio",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "objc2"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

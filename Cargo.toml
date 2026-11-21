@@ -2,6 +2,7 @@
 members = [
   "apps/email-worker",
   "apps/api",
+  "apps/worker",
   "apps/account-service",
   "apps/billing-service",
   "apps/billing-worker",

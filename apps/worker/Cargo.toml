@@ -1,0 +1,40 @@
+[package]
+name = "nvbes-worker"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "nvbes-worker"
+path = "src/main.rs"
+
+[lib]
+name = "nvbes_worker"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+chrono.workspace = true
+metrics.workspace = true
+metrics-exporter-prometheus.workspace = true
+nvbes-account-service = { path = "../account-service" }
+nvbes-billing-service = { path = "../billing-service" }
+nvbes-core = { path = "../../libs/rust/core" }
+nvbes-email = { path = "../../libs/rust/email" }
+nvbes-email-scaleway = { path = "../../libs/rust/adapters/email-scaleway" }
+nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tower = "0.5"
+
+[lints]
+workspace = true
