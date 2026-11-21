@@ -138,7 +138,7 @@
           "includes": ["has_recent_phishing_resistant_authentication", "Aal::Aal2"]
         },
         {
-          "path": "apps/identity-service/src/identity.mfa.rs",
+          "path": "libs/rust/identity/src/identity.mfa.rs",
           "includes": ["step_up_expires_at", "grant_step_up", "step_up_granted"]
         }
       ]
@@ -181,7 +181,7 @@
       "frameworks": ["OAUTH-OIDC-FAPI"],
       "evidence": [
         {
-          "path": "apps/identity-service/src/identity.tokens.config.rs",
+          "path": "libs/rust/identity/src/identity.tokens.config.rs",
           "includes": [
             "TokenConfig",
             "allowed_audiences",
@@ -189,7 +189,7 @@
           ]
         },
         {
-          "path": "apps/identity-service/src/identity.tokens.rs",
+          "path": "libs/rust/identity/src/identity.tokens.rs",
           "includes": ["AccessTokenClaims", "JsonWebKeySet", "ACCESS_TOKEN_TTL_SECONDS"]
         }
       ]

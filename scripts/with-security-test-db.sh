@@ -10,6 +10,15 @@
 # already set (DATABASE_URL is still filled if missing).
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+export ROOT_DIR
+if [[ -f "$SCRIPT_DIR/lib/workspace-env.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/lib/workspace-env.sh"
+  load_workspace_env "nvbes:with-security-test-db"
+fi
+
 CONTAINER="nvbes-security-test-db"
 DB="nvbes_security_test"
 COVERAGE_DB="nvbes_coverage_test"
@@ -51,6 +60,16 @@ ensure_coverage_database_url() {
   fi
   export DATABASE_URL="$coverage_url"
 }
+
+if [[ -z "${NVBES_SECURITY_TEST_DATABASE_URL:-}" ]]; then
+  for candidate_port in 5432 15432; do
+    candidate_url="postgres://postgres:postgres@127.0.0.1:${candidate_port}/${DB}"
+    if url_is_reachable "$candidate_url"; then
+      NVBES_SECURITY_TEST_DATABASE_URL="$candidate_url"
+      break
+    fi
+  done
+fi
 
 if [[ -n "${NVBES_SECURITY_TEST_DATABASE_URL:-}" ]]; then
   if url_is_reachable "$NVBES_SECURITY_TEST_DATABASE_URL" \

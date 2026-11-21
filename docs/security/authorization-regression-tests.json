@@ -142,15 +142,15 @@
 			"regressionRisk": "Tokens bypass missing-scope denial or inherit broader privileges than intended.",
 			"evidence": [
 				{
-					"path": "apps/identity-service/src/identity.oauth.http.introspection.rs",
+					"path": "libs/rust/identity/src/identity.oauth.http.introspection.rs",
 					"includes": ["introspect", "claims.scope", "/oauth/introspect"]
 				},
 				{
-					"path": "apps/identity-service/src/identity.tokens.claims.rs",
+					"path": "libs/rust/identity/src/identity.tokens.claims.rs",
 					"includes": ["AccessTokenClaims", "token_type", "scope"]
 				},
 				{
-					"path": "apps/identity-service/src/identity.tokens.rs",
+					"path": "libs/rust/identity/src/identity.tokens.rs",
 					"includes": ["validate_scopes", "claims.scope"]
 				}
 			]
@@ -163,7 +163,7 @@
 			"regressionRisk": "Route contract changes remove authorization semantics without failing tests.",
 			"evidence": [
 				{
-					"path": "apps/identity-service/src/identity.oauth.http.introspection.tests.rs",
+					"path": "libs/rust/identity/src/identity.oauth.http.introspection.tests.rs",
 					"includes": [
 						"introspection_authentication_and_form_boundaries_are_enforced",
 						"unavailable_grant_store_returns_service_error_not_active_or_inactive"
@@ -178,7 +178,7 @@
 					"includes": ["/internal/v1/billing/authorize", "struct Decision"]
 				},
 				{
-					"path": "apps/identity-service/src/identity.oauth.http.introspection.rs",
+					"path": "libs/rust/identity/src/identity.oauth.http.introspection.rs",
 					"includes": ["/oauth/introspect"]
 				}
 			]
@@ -198,7 +198,7 @@
 					]
 				},
 				{
-					"path": "apps/identity-service/src/identity.auth.rs",
+					"path": "libs/rust/identity/src/identity.auth.rs",
 					"includes": ["dummy_verify_password", "authentication failed"]
 				}
 			]

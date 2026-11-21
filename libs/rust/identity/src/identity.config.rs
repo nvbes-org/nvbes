@@ -1,0 +1,207 @@
+use base64::{Engine, engine::general_purpose::STANDARD};
+use std::net::SocketAddr;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IdentityConfig {
+    pub environment: String,
+    pub sentry_dsn: Option<String>,
+    pub sentry_traces_sample_rate: f32,
+    pub otlp_endpoint: Option<String>,
+    pub otlp_authorization_header: Option<String>,
+    pub metrics_token: String,
+    pub database_url: String,
+    pub database_max_connections: u32,
+    pub bind_addr: SocketAddr,
+    pub mfa_encryption_key: [u8; 32],
+    pub mfa_key_version: i16,
+    pub mfa_previous_encryption_key: Option<[u8; 32]>,
+    pub mfa_previous_key_version: Option<i16>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MfaRuntimeConfig {
+    pub database_url: String,
+    pub encryption_key: [u8; 32],
+    pub key_version: i16,
+    pub previous_encryption_key: Option<[u8; 32]>,
+    pub previous_key_version: Option<i16>,
+}
+
+impl IdentityConfig {
+    pub fn from_env() -> Result<Self, ConfigError> {
+        let environment = optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into());
+        let development = matches!(environment.as_str(), "development" | "test");
+        let database_url = database_url(&environment)?;
+        let database_max_connections = optional("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS")
+            .unwrap_or_else(|| "5".into())
+            .parse::<u32>()
+            .ok()
+            .filter(|value| (1..=20).contains(value))
+            .ok_or(ConfigError::Invalid(
+                "NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS",
+            ))?;
+        let default_bind_addr = std::env::var("PORT")
+            .map(|port| format!("0.0.0.0:{port}"))
+            .unwrap_or_else(|_| "127.0.0.1:3060".into());
+        let bind_addr = optional("NVBES_IDENTITY_BIND_ADDR")
+            .unwrap_or(default_bind_addr)
+            .parse()
+            .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_BIND_ADDR"))?;
+        let mfa = mfa_runtime_config(&environment)?;
+        let mfa_encryption_key = mfa.encryption_key;
+        let mfa_key_version = mfa.key_version;
+        let mfa_previous_encryption_key = mfa.previous_encryption_key;
+        let mfa_previous_key_version = mfa.previous_key_version;
+        let sentry_dsn = optional("SENTRY_DSN");
+        let sentry_traces_sample_rate = optional("SENTRY_TRACES_SAMPLE_RATE")
+            .unwrap_or_else(|| "0.1".into())
+            .parse::<f32>()
+            .ok()
+            .filter(|value| (0.0..=1.0).contains(value))
+            .ok_or(ConfigError::Invalid("SENTRY_TRACES_SAMPLE_RATE"))?;
+        let otlp_endpoint = optional("NVBES_OTLP_ENDPOINT");
+        let otlp_authorization_header = optional("NVBES_OTLP_AUTHORIZATION_HEADER");
+        let metrics_token = optional("NVBES_IDENTITY_METRICS_TOKEN")
+            .or_else(|| development.then(|| "development-identity-metrics-token-value".into()))
+            .ok_or(ConfigError::Missing("NVBES_IDENTITY_METRICS_TOKEN"))?;
+        validate_observability(
+            development,
+            sentry_dsn.as_deref(),
+            otlp_endpoint.as_deref(),
+            otlp_authorization_header.as_deref(),
+            &metrics_token,
+        )?;
+
+        Ok(Self {
+            environment,
+            sentry_dsn,
+            sentry_traces_sample_rate,
+            otlp_endpoint,
+            otlp_authorization_header,
+            metrics_token,
+            database_url,
+            database_max_connections,
+            bind_addr,
+            mfa_encryption_key,
+            mfa_key_version,
+            mfa_previous_encryption_key,
+            mfa_previous_key_version,
+        })
+    }
+}
+
+pub fn environment_from_env() -> String {
+    optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into())
+}
+
+pub fn mfa_runtime_config_from_env() -> Result<MfaRuntimeConfig, ConfigError> {
+    let environment = environment_from_env();
+    mfa_runtime_config(&environment)
+}
+
+fn mfa_runtime_config(environment: &str) -> Result<MfaRuntimeConfig, ConfigError> {
+    let mfa_encryption_key = optional("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
+        .ok_or(ConfigError::Missing("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
+        .and_then(|value| decode_key(&value))?;
+    let mfa_key_version = match optional("NVBES_IDENTITY_MFA_KEY_VERSION") {
+        Some(value) => parse_version("NVBES_IDENTITY_MFA_KEY_VERSION", &value)?,
+        None => 1,
+    };
+    let previous_key = optional("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
+    let previous_version = optional("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");
+    let (previous_encryption_key, previous_key_version) = match (previous_key, previous_version) {
+        (None, None) => (None, None),
+        (Some(key), Some(version_value)) => {
+            let version = parse_version("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION", &version_value)?;
+            if version == mfa_key_version {
+                return Err(ConfigError::Invalid("MFA key versions must be distinct"));
+            }
+            (Some(decode_key(&key)?), Some(version))
+        }
+        _ => return Err(ConfigError::Invalid("MFA previous key pair")),
+    };
+    Ok(MfaRuntimeConfig {
+        database_url: database_url(environment)?,
+        encryption_key: mfa_encryption_key,
+        key_version: mfa_key_version,
+        previous_encryption_key,
+        previous_key_version,
+    })
+}
+
+fn validate_observability(
+    development: bool,
+    sentry_dsn: Option<&str>,
+    otlp_endpoint: Option<&str>,
+    otlp_authorization_header: Option<&str>,
+    metrics_token: &str,
+) -> Result<(), ConfigError> {
+    if metrics_token.len() < 32 || metrics_token.contains(['\r', '\n']) {
+        return Err(ConfigError::Invalid("NVBES_IDENTITY_METRICS_TOKEN"));
+    }
+    if !development {
+        let sentry = sentry_dsn.ok_or(ConfigError::Missing("SENTRY_DSN"))?;
+        let otlp = otlp_endpoint.ok_or(ConfigError::Missing("NVBES_OTLP_ENDPOINT"))?;
+        let authorization = otlp_authorization_header
+            .ok_or(ConfigError::Missing("NVBES_OTLP_AUTHORIZATION_HEADER"))?;
+        if !sentry.starts_with("https://") || !sentry.contains('@') {
+            return Err(ConfigError::Invalid("SENTRY_DSN"));
+        }
+        if !otlp.starts_with("https://") {
+            return Err(ConfigError::Invalid("NVBES_OTLP_ENDPOINT"));
+        }
+        if !authorization.starts_with("Basic ") || authorization.contains(['\r', '\n']) {
+            return Err(ConfigError::Invalid("NVBES_OTLP_AUTHORIZATION_HEADER"));
+        }
+    }
+    Ok(())
+}
+
+fn decode_key(value: &str) -> Result<[u8; 32], ConfigError> {
+    let decoded = STANDARD
+        .decode(value)
+        .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))?;
+    decoded
+        .try_into()
+        .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_MFA_ENCRYPTION_KEY"))
+}
+
+fn parse_version(name: &'static str, value: &str) -> Result<i16, ConfigError> {
+    value
+        .parse::<i16>()
+        .ok()
+        .filter(|version| *version > 0)
+        .ok_or(ConfigError::Invalid(name))
+}
+
+pub fn database_url_from_env() -> Result<String, ConfigError> {
+    let environment = optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into());
+    database_url(&environment)
+}
+
+fn database_url(environment: &str) -> Result<String, ConfigError> {
+    optional("NVBES_IDENTITY_DATABASE_URL")
+        .or_else(|| {
+            matches!(environment, "development" | "test")
+                .then(|| "postgres://localhost/nvbes_identity".into())
+        })
+        .ok_or(ConfigError::Missing("NVBES_IDENTITY_DATABASE_URL"))
+}
+
+fn optional(name: &str) -> Option<String> {
+    std::env::var(name)
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ConfigError {
+    #[error("required configuration is missing: {0}")]
+    Missing(&'static str),
+    #[error("configuration is invalid: {0}")]
+    Invalid(&'static str),
+}
+
+#[cfg(test)]
+#[path = "identity.config.tests.rs"]
+mod tests;

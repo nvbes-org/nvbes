@@ -9,7 +9,6 @@
     "dev:api": "bash scripts/dev-api.sh",
     "dev:worker": "bash scripts/dev-worker.sh",
     "dev:email-worker": "bash scripts/dev-email-worker.sh",
-    "dev:identity-service": "bash scripts/dev-identity-service.sh",
     "dev:identity-web": "pnpm exec nx run identity-web:dev",
     "dev:account-web": "pnpm exec nx run account-web:dev",
     "dev:trust-risk-service": "bash scripts/dev-trust-risk-service.sh",

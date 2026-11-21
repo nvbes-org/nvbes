@@ -1,83 +1,138 @@
-# nvbes Identity Service
+# nvbes Identity service
 
-Authorization Server OAuth 2.1 / OpenID Connect et service d'identité de nvbes.
+Runtime actif propriétaire des credentials, sessions, mécanismes de récupération,
+MFA, step-up et émission de tokens du socle V1.
 
-Identity est la source d'autorité pour les identités, les facteurs
-d'authentification, les sessions et l'émission des tokens. Il ne porte pas les
-profils, préférences, consentements de confidentialité ni demandes de fermeture
-du produit Account.
+Le premier incrément fournit uniquement le socle opérationnel fermé :
 
-## Responsabilités
+- configuration stricte hors développement ;
+- base PostgreSQL indépendante et migrations explicites ;
+- probes HTTP peu coûteuses ;
+- liveness superficielle, readiness dépendante de PostgreSQL et métriques
+  Prometheus protégées ;
+- traces OTLP authentifiées et remontée Sentry obligatoires en production ;
+- tables minimales pour principals, identifiants, credentials, audit et outbox.
+- smoke interne couvrant création synthétique, authentification, rotation de
+  session et récupération de mot de passe à usage unique.
+- TOTP chiffré par AES-256-GCM, compteur anti-rejeu et grant de step-up borné.
 
-- Universal Login hébergé par `identity-web`;
-- authentification par mot de passe, passkeys/WebAuthn et MFA;
-- vérification et récupération des adresses de connexion;
-- sessions navigateur et gestion des appareils;
-- Authorization Code avec PAR et PKCE `S256`;
-- refresh tokens rotatifs, révocation, introspection, JWKS et UserInfo;
-- clients OAuth humains et machine-to-machine;
-- fédération OIDC/SAML, SCIM et décisions d'autorisation Identity;
-- listener gRPC interne d'introspection.
+Aucune route d'inscription ou d'authentification publique n'est exposée par cet
+incrément. `/auth/register` reste absent. Les comptes humains ne sont créés que
+par invitation opérateur (`identity_invitations`, code stocké en hash SHA-256).
+Les inscriptions publiques restent fermées jusqu'au GO explicite.
 
-Chaque resource server valide localement la signature, l'issuer et sa propre
-audience. Par exemple, `account-service` n'accepte que
-`aud = nvbes-account-service`.
+## Contrat de token JWT RS256
 
-## Endpoints publics principaux
+Contrat canonique : `contracts/identity/access-token.v1.schema.json` et
+`contracts/identity/scopes.v1.json`.
 
-### Authentification
+| Audience                | Scopes autorisés                                                   |
+| ----------------------- | ------------------------------------------------------------------ |
+| `nvbes-account-service` | `account:read`, `account:write`, `account:export`, `account:close` |
+| `nvbes-billing-service` | `billing:read`, `billing:checkout`                                 |
 
-- `POST /api/v1/auth/register`
-- `POST /api/v1/auth/challenge/identifier`
-- `POST /api/v1/auth/challenge/pwd`
-- `POST /api/v1/auth/challenge/mfa`
-- `POST /api/v1/auth/logout`
-- `POST /api/v1/auth/verify-email`
-- `POST /api/v1/auth/password/forgot`
-- `POST /api/v1/auth/password/reset`
-- `GET /api/v1/auth/sessions`
-- `DELETE /api/v1/auth/sessions/{id}`
-- `GET /api/v1/auth/mfa/factors`
+- Algorithme : RS256, en-tête `typ=at+jwt`, claim `token_type=access`.
+- Durée de vie : 900 secondes (15 minutes).
+- `amr` : `pwd` obligatoire ; `totp` ou `webauthn` ajouté lorsque la session
+  porte un grant step-up actif (`step_up_method`, TTL 10 minutes).
+- Révocation : l'introspection session (`identity_sessions.revoked_at`) rend le
+  token inactif immédiatement. Sans introspection, les consommateurs doivent
+  respecter `exp` ; la fenêtre résiduelle maximale est donc **15 minutes**.
+- Preuve synthétique : `synthetic-token-smoke` (audit
+  `identity.token.synthetic_proven`, sans persister le JWT).
 
-### OAuth et OIDC
+## Commandes
 
-- `POST /oauth/par`
-- `GET /oauth/authorize`
-- `GET /oauth/hosted-login/{stateId}`
-- `POST /oauth/hosted-login/{stateId}/authorize`
-- `POST /oauth/hosted-login/{stateId}/consent`
-- `POST /oauth/token`
-- `POST /oauth/introspect`
-- `POST /oauth/revoke`
-- `GET /oauth/userinfo`
-- `GET /.well-known/openid-configuration`
-- `GET /.well-known/jwks.json`
+L'activation du registre `NVBES_IDENTITY_OAUTH_CLIENTS_JSON` exige
+`NVBES_IDENTITY_RATE_LIMIT_KEY`, clé aléatoire de 32 octets encodée en base64,
+stable et partagée entre les répliques. Les quotas HTTP utilisent l'adresse de
+la connexion TCP ; les en-têtes proxy ne sont pas des preuves de source.
+Voir [les quotas et leur configuration](../../docs/architecture/identity-token-lifecycle.md#quotas-des-routes-http)
+avant d'activer les routes derrière un proxy. Les lots A à D restent en cours.
 
-Le navigateur commence par PAR, conserve `state`, `nonce` et le verifier PKCE
-en `sessionStorage`, puis suit la redirection HTTP 303 vers `identity-web`.
-Aucun secret client n'est embarqué dans les applications web publiques.
+Les routes PAR, token et UserInfo autorisent CORS pour les origines exactes des
+`redirect_uris` du registre validé, sans cookies interorigines. Les requêtes
+peuvent porter `Content-Type`, `Authorization` et `DPoP` ; les réponses exposent
+`WWW-Authenticate` et `DPoP-Nonce`. Discovery et JWKS sont lisibles depuis toute
+origine, sans credentials. Les routes de session, login et introspection ne
+reçoivent pas cette politique CORS. Cela ne remplace aucune vérification de
+client, de jeton, de preuve DPoP ou de CSRF.
 
-## Configuration locale
-
-Les scripts locaux adaptent les variables dédiées au runtime commun :
-
-```dotenv
-NVBES_IDENTITY_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nvbes_identity
-NVBES_IDENTITY_SERVICE_BASE_URL=http://localhost:4000
-NVBES_IDENTITY_SERVICE_PORT=4000
-NVBES_IDENTITY_WEB_BASE_URL=http://localhost:3000
-NVBES_IDENTITY_GRPC_PORT=4010
-```
-
-## Lancement et validation
+Pour terminer le consentement depuis l'interface Identity, les POST JSON vers
+`/oauth/authorize/approve` et `/oauth/authorize/deny` acceptent le header exact
+`Accept: application/json`. Ils répondent alors 200 avec `{ "redirect_uri": "…" }`,
+que l'interface utilise pour une navigation de premier niveau. Sans cette
+demande explicite, la réponse reste une redirection 303. La destination provient
+uniquement de l'interaction validée côté serveur ; les contrôles Origin, CSRF,
+session et consommation unique sont identiques. La réponse est `no-store`.
+Cette surface est réservée à l'origine Identity, sans CORS vers les sites clients.
 
 ```bash
-pnpm dev:identity-service
-pnpm dev:identity-web
-pnpm exec nx run identity-service:check
-pnpm exec nx run identity-service:test-contract
+pnpm nx run identity-service:check
+pnpm nx run identity-service:test
+DATABASE_URL=postgres://localhost/nvbes_identity_test \
+  pnpm nx run identity-service:test:database
+NVBES_IDENTITY_DATABASE_URL=postgres://localhost/nvbes_identity \
+  cargo run -p nvbes-identity-service -- migrate
 ```
 
-Les migrations Identity sont exclusivement dans
-`apps/identity-service/migrations`. Les données Account utilisent une base et
-un historique de migrations distincts.
+Le smoke exige en plus `NVBES_IDENTITY_SYNTHETIC_EMAIL`,
+`NVBES_IDENTITY_SYNTHETIC_PASSWORD` et
+`NVBES_IDENTITY_SYNTHETIC_RECOVERED_PASSWORD`. Il ne journalise aucun de ces
+secrets ni les tokens éphémères.
+
+### Test avec les API Account et Billing
+
+Le parcours HTTPS dans Chromium est décrit dans la
+[preuve navigateur](../../docs/architecture/identity-browser-protocol-proof.md).
+La cible `identity-service:test:https-browser-fixture` prépare ses trois services
+isolés ; le scénario Playwright doit ensuite être exécuté pour valider le parcours.
+
+Avec Docker actif et l'image `postgres:17-alpine` déjà présente localement :
+
+```bash
+pnpm nx run identity-service:test:resource-runtimes
+```
+
+Cette cible compile les trois binaires puis crée ses propres bases, clés,
+credentials et ports temporaires. Elle ne lit pas les fichiers `.env` et ne
+nécessite aucun `DATABASE_URL`. Le compte synthétique n'envoie aucun email et
+le test ne déclenche aucun paiement. Les processus et le conteneur éphémère
+sont nettoyés à la fin, succès ou échec.
+
+Le parcours vérifie Code/PKCE, les audiences des API, la révocation par logout
+et les réponses 503 pendant une panne d'Identity, suivies de la reprise. Il
+utilise HTTP sur loopback avec un cookie jar Node : il ne remplace pas les
+tests navigateur HTTPS, DPoP ou d'autorisation entre comptes.
+
+`synthetic-mfa-smoke` exige aussi `NVBES_IDENTITY_MFA_ENCRYPTION_KEY`, clé de
+32 octets encodée en base64. Hors développement, le runtime refuse de démarrer
+sans cette clé. Le smoke ne restitue jamais le secret TOTP.
+
+La rotation utilise `NVBES_IDENTITY_MFA_KEY_VERSION` pour la clé active et la
+paire optionnelle `NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY` /
+`NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION`. Exécuter `rotate-mfa-key`, vérifier
+que le résultat couvre tous les facteurs de l'ancienne version, puis seulement
+retirer la clé précédente. La rotation est transactionnelle et auditée.
+
+`synthetic-invitation-smoke` exige `NVBES_IDENTITY_SYNTHETIC_INVITER_EMAIL`,
+`NVBES_IDENTITY_SYNTHETIC_INVITED_EMAIL` et `NVBES_IDENTITY_SYNTHETIC_PASSWORD`.
+Il prouve qu'un code d'invitation n'est jamais stocké en clair et qu'une
+acceptation est à usage unique.
+
+`synthetic-token-smoke` exige en plus `NVBES_IDENTITY_TOKEN_ISSUER`,
+`NVBES_IDENTITY_TOKEN_KEY_ID`, `NVBES_IDENTITY_TOKEN_PRIVATE_KEY_PEM`,
+`NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM`, `NVBES_IDENTITY_TOKEN_AUDIENCES` et
+`NVBES_IDENTITY_SYNTHETIC_TOKEN_AUDIENCE` (`nvbes-account-service` en production).
+
+`synthetic-auth-email-smoke` ajoute la preuve Identity → Email. Il exige
+`NVBES_IDENTITY_RECOVERY_BASE_URL` en HTTPS ainsi que la configuration standard
+`NVBES_EMAIL_GRPC_ENDPOINT` et `NVBES_EMAIL_GRPC_AUTH_TOKEN`. La récupération
+n'est consommée qu'après l'acceptation durable de la commande par Email.
+
+L'image OCI reproductible s'exécute sans privilèges sous l'UID/GID `10001`.
+Hors développement, le runtime exige également
+`NVBES_IDENTITY_METRICS_TOKEN`, `SENTRY_DSN`, `NVBES_OTLP_ENDPOINT` et
+`NVBES_OTLP_AUTHORIZATION_HEADER`. `/metrics` refuse toute requête sans bearer
+token exact ; `/health/ready` refuse le trafic lorsque PostgreSQL est
+indisponible, tandis que `/health/live` reste superficielle.

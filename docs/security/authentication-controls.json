@@ -14,7 +14,7 @@
 					"description": "Use UUID-based principals/session identifiers, normalize email addresses, and keep email verification state explicit.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": [
 								"normalize_email",
 								"Uuid::new_v4()",
@@ -26,7 +26,7 @@
 							"includes": ["normalize_email", "validate_email"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.invitations.rs",
+							"path": "libs/rust/identity/src/identity.invitations.rs",
 							"includes": [
 								"normalize_email",
 								"Uuid::new_v4()",
@@ -57,7 +57,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.recovery.rs",
+							"path": "libs/rust/identity/src/identity.recovery.rs",
 							"includes": ["validate_password", "validate_password_pair"]
 						}
 					]
@@ -68,7 +68,7 @@
 					"description": "Execute constant-time dummy verification when accounts are missing or credentials fail.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["dummy_verify_password", "authentication failed"]
 						},
 						{
@@ -110,7 +110,7 @@
 							"includes": ["PasswordHash::new", "verify_password"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["verify_password", "dummy_verify_password"]
 						}
 					]
@@ -136,7 +136,7 @@
 					"description": "Do not expire passwords periodically; require password changes only through explicit recovery, compromise, or user-initiated flows.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.recovery.rs",
+							"path": "libs/rust/identity/src/identity.recovery.rs",
 							"includes": [
 								"changed_at = clock_timestamp()",
 								"compromised_at = NULL",
@@ -158,7 +158,7 @@
 					"description": "Issue single-use recovery challenges with bounded expiry.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.recovery.rs",
+							"path": "libs/rust/identity/src/identity.recovery.rs",
 							"includes": [
 								"request_recovery",
 								"clock_timestamp()+interval '15 minutes'",
@@ -173,7 +173,7 @@
 					"description": "Consume reset tokens, enforce expiry, block password reuse, and revoke sessions after reset.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.recovery.rs",
+							"path": "libs/rust/identity/src/identity.recovery.rs",
 							"includes": [
 								"reset_password",
 								"consumed_at = clock_timestamp()",
@@ -181,7 +181,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.synthetic.rs",
+							"path": "libs/rust/identity/src/identity.synthetic.rs",
 							"includes": [
 								"session_rotated",
 								"recovery_consumed",
@@ -196,7 +196,7 @@
 					"description": "Require new password to differ from current password.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.recovery.rs",
+							"path": "libs/rust/identity/src/identity.recovery.rs",
 							"includes": [
 								"validate_password_pair",
 								"recovered password must differ from the initial password"
@@ -217,7 +217,7 @@
 					"description": "Validate token structure and bounded lifespan for bearer sessions.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.tokens.rs",
+							"path": "libs/rust/identity/src/identity.tokens.rs",
 							"includes": [
 								"AccessTokenClaims",
 								"token_type",
@@ -225,7 +225,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.session.rs",
+							"path": "libs/rust/identity/src/identity.session.rs",
 							"includes": ["Bearer ", "session_token"]
 						}
 					]
@@ -265,7 +265,7 @@
 					"description": "Require recent step-up authentication for sensitive actions and store bounded step-up state.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.mfa.rs",
+							"path": "libs/rust/identity/src/identity.mfa.rs",
 							"includes": [
 								"STEP_UP_TTL_MINUTES",
 								"grant_step_up",
@@ -287,7 +287,7 @@
 					"description": "Verify that step-up grants reject replayed codes and enforce bounded TTL.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.mfa.rs",
+							"path": "libs/rust/identity/src/identity.mfa.rs",
 							"includes": [
 								"run_synthetic_smoke",
 								"replay_rejected",
@@ -309,11 +309,11 @@
 					"description": "Return generic invalid-credential errors for unknown accounts or invalid passwords.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["dummy_verify_password", "authentication failed"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["authentication failed", "dummy_verify_password"]
 						}
 					]
@@ -328,7 +328,7 @@
 							"includes": ["dummy_verify_password", "constant computation time"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["dummy_verify_password"]
 						}
 					]
@@ -375,7 +375,7 @@
 					"description": "Support TOTP factors, encrypted secret storage, and step-up verification.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.mfa.rs",
+							"path": "libs/rust/identity/src/identity.mfa.rs",
 							"includes": [
 								"enroll_totp",
 								"confirm_enrollment",
@@ -384,7 +384,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.mfa.crypto.rs",
+							"path": "libs/rust/identity/src/identity.mfa.crypto.rs",
 							"includes": [
 								"pub struct MfaCrypto",
 								"pub fn seal",
@@ -399,7 +399,7 @@
 					"description": "Enforce replay protection on TOTP code usage.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.mfa.rs",
+							"path": "libs/rust/identity/src/identity.mfa.rs",
 							"includes": ["replay_rejected", "identity_auth_factors"]
 						}
 					]
@@ -417,7 +417,7 @@
 					"description": "Validate token structure and claims.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.tokens.rs",
+							"path": "libs/rust/identity/src/identity.tokens.rs",
 							"includes": ["AccessTokenClaims", "decode", "Validation"]
 						}
 					]
@@ -428,7 +428,7 @@
 					"description": "Issue tokens with standard claims.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.tokens.claims.rs",
+							"path": "libs/rust/identity/src/identity.tokens.claims.rs",
 							"includes": ["jti", "sid", "iss", "aud", "exp", "nbf", "sub"]
 						}
 					]
@@ -439,7 +439,7 @@
 					"description": "Expose OIDC/OAuth metadata and require PKCE S256.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.oauth.metadata.rs",
+							"path": "libs/rust/identity/src/identity.oauth.metadata.rs",
 							"includes": [
 								"ProviderMetadata",
 								"jwks_uri",
@@ -447,7 +447,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.test.fixtures.rs",
+							"path": "libs/rust/identity/src/identity.test.fixtures.rs",
 							"includes": ["code_challenge", "code_challenge_method", "S256"]
 						}
 					]
@@ -465,22 +465,22 @@
 					"description": "Record login, registration, recovery, and risk events.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.recovery.rs",
+							"path": "libs/rust/identity/src/identity.recovery.rs",
 							"includes": [
 								"identity.recovery_requested",
 								"identity.password_recovered"
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["identity.authenticated"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.oauth.store.rs",
+							"path": "libs/rust/identity/src/identity.oauth.store.rs",
 							"includes": ["identity_audit_events"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.invitations.rs",
+							"path": "libs/rust/identity/src/identity.invitations.rs",
 							"includes": [
 								"identity.invitation.created",
 								"identity.invitation.accepted"

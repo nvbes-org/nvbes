@@ -19,11 +19,11 @@
 							"tests": ["security_headers_request_all_user_agent_client_hints"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.oauth.http.rs",
+							"path": "libs/rust/identity/src/identity.oauth.http.rs",
 							"includes": ["LoginForm", "session_token", "set-cookie"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["authenticate", "hash_token"],
 							"tests": [
 								"opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"
@@ -44,7 +44,7 @@
 					"description": "PostgreSQL stores hashed session tokens with strict expiration and principal mapping.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": [
 								"identity_sessions",
 								"hash_token(&token)",
@@ -92,7 +92,7 @@
 					"description": "Token service decodes and validates claims including subject, issuer, audience, and expiration.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.tokens.rs",
+							"path": "libs/rust/identity/src/identity.tokens.rs",
 							"includes": [
 								"AccessTokenClaims",
 								"TokenService",
@@ -130,7 +130,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.recovery.rs",
+							"path": "libs/rust/identity/src/identity.recovery.rs",
 							"includes": ["reset_password", "consumed_at"]
 						}
 					]
@@ -148,7 +148,7 @@
 					"description": "Suspicious events and authentication decisions are recorded in transactional audit logs.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": [
 								"identity.authenticated",
 								"audit(tx, principal_id, \"identity.authenticated\")"
@@ -159,7 +159,7 @@
 							"includes": ["AuditEvent"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.recovery.rs",
+							"path": "libs/rust/identity/src/identity.recovery.rs",
 							"includes": ["identity.recovery_requested"]
 						}
 					]

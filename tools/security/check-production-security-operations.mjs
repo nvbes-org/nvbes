@@ -76,7 +76,7 @@ const requirements = [
     ],
   },
   {
-    file: 'apps/identity-service/src/identity.mfa.rs',
+    file: 'libs/rust/identity/src/identity.mfa.rs',
     evidence: [
       'step_up_expires_at',
       'grant_step_up',

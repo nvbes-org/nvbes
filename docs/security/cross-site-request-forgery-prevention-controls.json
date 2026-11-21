@@ -14,7 +14,7 @@
 					"description": "The readable CSRF cookie stores a versioned nonce plus HMAC signature bound to the opaque session cookie value.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.http.cookies.rs",
+							"path": "libs/rust/identity/src/identity.http.cookies.rs",
 							"includes": [
 								"generate_csrf_token(session_token: &str, secret: &str)",
 								"verify_csrf_token",
@@ -24,7 +24,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.http.middleware.csrf.rs",
+							"path": "libs/rust/identity/src/identity.http.middleware.csrf.rs",
 							"includes": [
 								"validate_signed_double_submit_csrf",
 								"csrf_token_mismatch",
@@ -46,7 +46,7 @@
 					"description": "The account API requires the scoped CSRF cookie and matching X-CSRF-Token header for authenticated POST, PUT, PATCH, and DELETE requests.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.http.middleware.csrf.rs",
+							"path": "libs/rust/identity/src/identity.http.middleware.csrf.rs",
 							"includes": [
 								"is_mutating_method",
 								"Method::POST",
@@ -123,7 +123,7 @@
 					"description": "Cookie-authenticated mutating requests must originate from configured first-party origins or registered browser OAuth redirect origins.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.http.middleware.origin.rs",
+							"path": "libs/rust/identity/src/identity.http.middleware.origin.rs",
 							"includes": [
 								"origin_guard",
 								"header::ORIGIN",
@@ -133,7 +133,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.http.cors.rs",
+							"path": "libs/rust/identity/src/identity.http.cors.rs",
 							"includes": [
 								"AllowedOriginRegistry",
 								"origin_from_redirect_uri",
@@ -155,7 +155,7 @@
 					"description": "Authenticated mutating requests reject cross-site, no-cors, and subresource destinations before token validation succeeds.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.http.middleware.csrf.rs",
+							"path": "libs/rust/identity/src/identity.http.middleware.csrf.rs",
 							"includes": [
 								"reject_cross_site_fetch_metadata",
 								"Sec-Fetch-Site",
@@ -181,7 +181,7 @@
 					"description": "Session cookies are HttpOnly, SameSite=Strict, Secure in non-development, and host-prefixed; CSRF cookies are readable but SameSite=Strict and host-prefixed.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.http.cookies.rs",
+							"path": "libs/rust/identity/src/identity.http.cookies.rs",
 							"includes": [
 								"HttpOnly; SameSite=Strict",
 								"SameSite=Strict; Path=/",
@@ -190,7 +190,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.domains.auth.routes.login.rs",
+							"path": "libs/rust/identity/src/identity.domains.auth.routes.login.rs",
 							"includes": [
 								"auth_cookie_name_with_user(\"session\"",
 								"auth_cookie_name_with_user(\"csrf_token\"",
@@ -198,7 +198,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.domains.auth.routes.session_mgmt.step_up.rs",
+							"path": "libs/rust/identity/src/identity.domains.auth.routes.session_mgmt.step_up.rs",
 							"includes": [
 								"auth_cookie_name_with_user(\"session\"",
 								"csrf_cookie_name",
@@ -221,7 +221,7 @@
 					"description": "CORS reflects only registered same-origin matches, allows credentials only for those origins, and permits X-CSRF-Token for preflighted API requests.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.http.cors.rs",
+							"path": "libs/rust/identity/src/identity.http.cors.rs",
 							"includes": [
 								"ALLOWED_HEADERS",
 								"x-csrf-token",
@@ -245,7 +245,7 @@
 					"description": "OAuth token, introspection, revocation, and pushed-authorization endpoints are excluded from cookie CSRF middleware because they are client-authenticated protocol endpoints.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.http.middleware.csrf.rs",
+							"path": "libs/rust/identity/src/identity.http.middleware.csrf.rs",
 							"includes": [
 								"CSRF_SKIP_PATHS",
 								"/oauth/token",
@@ -255,7 +255,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.http.middleware.origin.rs",
+							"path": "libs/rust/identity/src/identity.http.middleware.origin.rs",
 							"includes": ["ORIGIN_SKIP_PATHS", "header::AUTHORIZATION"]
 						}
 					]
@@ -273,7 +273,7 @@
 					"description": "The root check path validates signed token generation, middleware enforcement, Fetch Metadata, Origin/Referer, cookie attributes, CORS, client token attachment, and tests.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.http.middleware.csrf.rs",
+							"path": "libs/rust/identity/src/identity.http.middleware.csrf.rs",
 							"includes": [
 								"signed_double_submit_accepts_token_bound_to_session",
 								"signed_double_submit_rejects_token_from_other_session",
@@ -281,7 +281,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.http.cookies.rs",
+							"path": "libs/rust/identity/src/identity.http.cookies.rs",
 							"includes": ["csrf_token_is_bound_to_session_token"]
 						},
 						{

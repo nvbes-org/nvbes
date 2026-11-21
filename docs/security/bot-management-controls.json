@@ -14,7 +14,7 @@
 					"description": "Protect account creation and login flows with password strength validation, normalized identifiers, and audit logging.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": [
 								"normalize_email",
 								"validate_password",
@@ -22,11 +22,11 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.oauth.http.rs",
+							"path": "libs/rust/identity/src/identity.oauth.http.rs",
 							"includes": ["LoginForm", "authenticate"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.invitations.rs",
+							"path": "libs/rust/identity/src/identity.invitations.rs",
 							"includes": ["normalize_email", "create", "accept"]
 						}
 					]
@@ -53,7 +53,7 @@
 							"tests": ["rate_limiter_blocks_after_limit"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["authenticate", "hash_password"]
 						},
 						{
@@ -127,7 +127,7 @@
 					"description": "Issue and verify TOTP codes and challenge step-up proofs for sensitive workflows.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.mfa.rs",
+							"path": "libs/rust/identity/src/identity.mfa.rs",
 							"includes": ["enroll_totp", "confirm_enrollment", "grant_step_up"]
 						},
 						{
@@ -157,7 +157,7 @@
 					"description": "Mitigate enumeration attacks through constant-time dummy hashing on unknown identities.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["dummy_verify_password", "authentication failed"]
 						},
 						{
@@ -179,7 +179,7 @@
 					"description": "Protect APIs with verified tokens and idempotent request signing.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.tokens.rs",
+							"path": "libs/rust/identity/src/identity.tokens.rs",
 							"includes": [
 								"AccessTokenClaims",
 								"TokenService",
@@ -239,7 +239,7 @@
 					"description": "Record security and risk assessment events in append-only audit tables.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": [
 								"audit(tx, principal_id, \"identity.authenticated\")"
 							]

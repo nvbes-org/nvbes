@@ -1,0 +1,162 @@
+use crate::database::database_test_support::test_env_lock;
+
+use super::{IdentityConfig, mfa_runtime_config_from_env};
+
+const TEST_MFA_KEY: &str = "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=";
+
+fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+    test_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn set_test_mfa_env() {
+    unsafe {
+        std::env::set_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY", TEST_MFA_KEY);
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+    }
+}
+
+#[test]
+fn production_requires_an_explicit_database() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::remove_var("NVBES_IDENTITY_DATABASE_URL");
+        std::env::remove_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_KEY_VERSION");
+    }
+    let error = IdentityConfig::from_env().expect_err("production must fail closed");
+    assert!(error.to_string().contains("NVBES_IDENTITY_DATABASE_URL"));
+    unsafe { std::env::remove_var("NVBES_ENVIRONMENT") };
+}
+
+#[test]
+fn production_requires_an_exact_32_byte_mfa_key() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var("NVBES_IDENTITY_DATABASE_URL", "postgres://identity.test/db");
+        std::env::set_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY", "too-short");
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+    }
+    let error = IdentityConfig::from_env().expect_err("invalid encryption key must fail closed");
+    assert!(
+        error
+            .to_string()
+            .contains("NVBES_IDENTITY_MFA_ENCRYPTION_KEY")
+    );
+    unsafe {
+        std::env::remove_var("NVBES_ENVIRONMENT");
+        std::env::remove_var("NVBES_IDENTITY_DATABASE_URL");
+        std::env::remove_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_KEY_VERSION");
+    }
+}
+
+#[test]
+fn previous_mfa_key_requires_a_distinct_complete_pair() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "test");
+        set_test_mfa_env();
+        std::env::set_var(
+            "NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY",
+            "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        );
+        std::env::remove_var("NVBES_IDENTITY_MFA_PREVIOUS_KEY_VERSION");
+    }
+    assert!(IdentityConfig::from_env().is_err());
+    unsafe {
+        std::env::remove_var("NVBES_ENVIRONMENT");
+        std::env::remove_var("NVBES_IDENTITY_MFA_PREVIOUS_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_KEY_VERSION");
+    }
+}
+
+#[test]
+fn database_pool_is_bounded() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "test");
+        set_test_mfa_env();
+        std::env::set_var("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS", "21");
+    }
+    let error = IdentityConfig::from_env().expect_err("oversized pool must fail");
+    assert!(
+        error
+            .to_string()
+            .contains("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS")
+    );
+    unsafe {
+        std::env::remove_var("NVBES_ENVIRONMENT");
+        std::env::remove_var("NVBES_IDENTITY_DATABASE_MAX_CONNECTIONS");
+        std::env::remove_var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY");
+        std::env::remove_var("NVBES_IDENTITY_MFA_KEY_VERSION");
+    }
+}
+
+#[test]
+fn production_requires_authenticated_observability() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var(
+            "NVBES_IDENTITY_DATABASE_URL",
+            "postgres://identity.test/identity",
+        );
+        std::env::set_var(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        );
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+        std::env::remove_var("NVBES_IDENTITY_METRICS_TOKEN");
+    }
+    let error = IdentityConfig::from_env().expect_err("production metrics must fail closed");
+    assert!(error.to_string().contains("NVBES_IDENTITY_METRICS_TOKEN"));
+    unsafe {
+        for name in [
+            "NVBES_ENVIRONMENT",
+            "NVBES_IDENTITY_DATABASE_URL",
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "NVBES_IDENTITY_MFA_KEY_VERSION",
+        ] {
+            std::env::remove_var(name);
+        }
+    }
+}
+
+#[test]
+fn private_mfa_job_requires_only_database_and_mfa_configuration() {
+    let _guard = env_lock();
+    unsafe {
+        std::env::set_var("NVBES_ENVIRONMENT", "production");
+        std::env::set_var(
+            "NVBES_IDENTITY_DATABASE_URL",
+            "postgres://identity.test/identity",
+        );
+        std::env::set_var(
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        );
+        std::env::set_var("NVBES_IDENTITY_MFA_KEY_VERSION", "1");
+        std::env::remove_var("NVBES_IDENTITY_METRICS_TOKEN");
+        std::env::remove_var("SENTRY_DSN");
+        std::env::remove_var("NVBES_OTLP_ENDPOINT");
+        std::env::remove_var("NVBES_OTLP_AUTHORIZATION_HEADER");
+    }
+    let config = mfa_runtime_config_from_env().expect("private MFA job configuration");
+    assert_eq!(config.key_version, 1);
+    assert_eq!(config.database_url, "postgres://identity.test/identity");
+    unsafe {
+        for name in [
+            "NVBES_ENVIRONMENT",
+            "NVBES_IDENTITY_DATABASE_URL",
+            "NVBES_IDENTITY_MFA_ENCRYPTION_KEY",
+            "NVBES_IDENTITY_MFA_KEY_VERSION",
+        ] {
+            std::env::remove_var(name);
+        }
+    }
+}

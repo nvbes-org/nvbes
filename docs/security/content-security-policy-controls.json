@@ -170,11 +170,11 @@
 					"description": "Policies report violations to /csp-report and the account service logs blocked URI, document URI, violated directive, effective directive, and source file.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.http.routes.rs",
+							"path": "libs/rust/identity/src/identity.http.routes.rs",
 							"includes": ["/csp-report", "csp_report_handler"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.http.routes.csp_report.rs",
+							"path": "libs/rust/identity/src/identity.http.routes.csp_report.rs",
 							"includes": [
 								"blocked-uri",
 								"violated-directive",

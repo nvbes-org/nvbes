@@ -4,7 +4,7 @@ members = [
   "apps/api",
   "apps/worker",
   "libs/rust/billing-service",
-  "apps/identity-service",
+  "libs/rust/identity",
   "apps/trust-risk-service",
   "libs/rust/account",
   "libs/rust/audit",

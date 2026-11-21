@@ -33,7 +33,7 @@ runControlsRegistryCheck({
 
     function assertLayeredDefenses() {
       requireFileIncludes(
-        'apps/identity-service/src/identity.auth.rs',
+        'libs/rust/identity/src/identity.auth.rs',
         ['dummy_verify_password', 'normalize_email', 'authentication failed'],
         'identity.auth.rs',
       );

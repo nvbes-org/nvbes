@@ -22,7 +22,7 @@ nvbes-account-service = { path = "../../libs/rust/account" }
 nvbes-billing-service = { path = "../../libs/rust/billing-service" }
 nvbes-consent = { path = "../../libs/rust/consent" }
 nvbes-core = { path = "../../libs/rust/core" }
-nvbes-identity-service = { path = "../identity-service" }
+nvbes-identity-service = { path = "../../libs/rust/identity" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
 serde.workspace = true
 serde_json.workspace = true

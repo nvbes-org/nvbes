@@ -143,7 +143,7 @@
 					"description": "Require action-specific token scopes and reject requests outside their authenticated scope.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.tokens.rs",
+							"path": "libs/rust/identity/src/identity.tokens.rs",
 							"includes": [
 								"validate_scopes",
 								"AccessTokenClaims",
@@ -151,7 +151,7 @@
 							]
 						},
 						{
-							"path": "apps/identity-service/src/identity.tokens.policy.rs",
+							"path": "libs/rust/identity/src/identity.tokens.policy.rs",
 							"includes": ["validate_scopes", "requested.is_empty()"]
 						},
 						{
@@ -190,7 +190,7 @@
 							"tests": ["sensitive_actions_require_step_up"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.mfa.rs",
+							"path": "libs/rust/identity/src/identity.mfa.rs",
 							"includes": ["grant_step_up", "STEP_UP_TTL_MINUTES"]
 						},
 						{
@@ -293,7 +293,7 @@
 					"description": "Record denied authorization and security events with structured audit entries.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["identity_audit_events", "identity.authenticated"]
 						},
 						{

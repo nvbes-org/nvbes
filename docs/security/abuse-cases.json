@@ -124,7 +124,7 @@
 			"countermeasures": ["DEFENSE_001", "DEFENSE_002", "DEFENSE_010"],
 			"validation": [
 				{
-					"path": "apps/identity-service/src/identity.auth.rs",
+					"path": "libs/rust/identity/src/identity.auth.rs",
 					"includes": ["authenticate", "dummy_verify_password", "audit"]
 				},
 				{
@@ -144,7 +144,7 @@
 			"countermeasures": ["DEFENSE_002", "DEFENSE_010"],
 			"validation": [
 				{
-					"path": "apps/identity-service/src/identity.mfa.rs",
+					"path": "libs/rust/identity/src/identity.mfa.rs",
 					"includes": [
 						"enroll_totp",
 						"confirm_enrollment",
@@ -348,7 +348,7 @@
 			"countermeasures": ["DEFENSE_010"],
 			"validation": [
 				{
-					"path": "apps/identity-service/migrations/0001_identity_foundation.sql",
+					"path": "libs/rust/identity/migrations/0001_identity_foundation.sql",
 					"includes": ["CREATE TABLE identity_audit_events"]
 				},
 				{

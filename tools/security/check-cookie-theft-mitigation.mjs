@@ -15,7 +15,7 @@ runControlsRegistryCheck({
   runDomainAssertions({ requireFileIncludes, requireNamedTests }) {
     function assertImplementation() {
       requireFileIncludes(
-        'apps/identity-service/src/identity.auth.rs',
+        'libs/rust/identity/src/identity.auth.rs',
         ['identity_sessions', 'hash_token', 'expires_at', 'SESSION_TTL_HOURS'],
         'identity.auth.rs',
       );
@@ -25,12 +25,12 @@ runControlsRegistryCheck({
         'security.headers.rs',
       );
       requireFileIncludes(
-        'apps/identity-service/src/identity.oauth.http.rs',
+        'libs/rust/identity/src/identity.oauth.http.rs',
         ['LoginForm', 'session_token', 'set-cookie'],
         'login routes',
       );
       requireFileIncludes(
-        'apps/identity-service/src/identity.tokens.rs',
+        'libs/rust/identity/src/identity.tokens.rs',
         ['AccessTokenClaims', 'TokenService', 'pub fn verify('],
         'session tokens',
       );
@@ -44,7 +44,7 @@ runControlsRegistryCheck({
         'http.error.rs',
       );
       requireFileIncludes(
-        'apps/identity-service/src/identity.auth.rs',
+        'libs/rust/identity/src/identity.auth.rs',
         ['identity.authenticated', 'audit(tx, principal_id, "identity.authenticated")'],
         'identity.auth.rs',
       );

@@ -28,7 +28,7 @@
 							"includes": ["create_checkout_handler", "idempotency_key"]
 						},
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": [
 								"normalize_email",
 								"validate_password",
@@ -50,7 +50,7 @@
 					"description": "Persist short-lived challenges with single-use tokens and process external events transactionally.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.recovery.rs",
+							"path": "libs/rust/identity/src/identity.recovery.rs",
 							"includes": ["request_recovery", "reset_password", "consumed_at"]
 						},
 						{
@@ -168,7 +168,7 @@
 					"description": "Validate email semantics and length boundaries server-side before execution.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["normalize_email", "validate_password"]
 						},
 						{
@@ -202,7 +202,7 @@
 					"description": "Record authentication and billing decisions so business-logic events are visible in audit tables.",
 					"evidence": [
 						{
-							"path": "apps/identity-service/src/identity.auth.rs",
+							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": [
 								"audit(tx, principal_id, \"identity.authenticated\")"
 							]
