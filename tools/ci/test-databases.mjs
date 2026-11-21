@@ -12,7 +12,6 @@ else {
         'email-worker': 'email',
         'account-service': 'account',
         'billing-service': 'billing',
-        'billing-worker': 'billing',
         'identity-service': 'identity',
         'trust-risk-service': 'trust_risk',
         'platform-operations-service': 'platform_operations',

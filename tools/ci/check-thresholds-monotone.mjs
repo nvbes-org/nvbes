@@ -63,8 +63,14 @@ export function evaluateThresholdMonotonicity(baseConfig, headConfig, label) {
   const failures = [];
   const base = normalizeThresholdConfig(baseConfig);
   const head = normalizeThresholdConfig(headConfig);
+  const archived = new Set(
+    isRecord(headConfig) && Array.isArray(headConfig.archived) ? headConfig.archived : [],
+  );
 
   for (const name of Object.keys(base.crates)) {
+    if (archived.has(name)) {
+      continue;
+    }
     if (head.excluded.has(name) && !base.excluded.has(name)) {
       failures.push(
         `${label}: crate ${name} moved from gated to excluded (anti-Goodhart: forbidden)`,

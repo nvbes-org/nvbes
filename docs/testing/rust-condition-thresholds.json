@@ -151,5 +151,8 @@
         "covered": 41
       }
     }
+  ],
+  "archived": [
+    "nvbes-billing-worker"
   ]
 }

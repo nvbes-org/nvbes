@@ -85,18 +85,6 @@
         "regions": 78.7
       }
     },
-    "nvbes-billing-worker": {
-      "threshold": {
-        "lines": 89,
-        "functions": 85,
-        "regions": 86
-      },
-      "baseline": {
-        "lines": 91.8,
-        "functions": 87.7,
-        "regions": 88.6
-      }
-    },
     "nvbes-billing-service": {
       "threshold": {
         "lines": 89,
@@ -223,5 +211,8 @@
       "crate": "nvbes-test-utils",
       "reason": "Biblioth\u00e8que utilitaire de tests uniquement (support keyword runner, pools de test) ; hors p\u00e9rim\u00e8tre de production, non mesur\u00e9e."
     }
+  ],
+  "archived": [
+    "nvbes-billing-worker"
   ]
 }

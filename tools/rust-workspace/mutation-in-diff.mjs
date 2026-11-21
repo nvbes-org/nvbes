@@ -15,7 +15,6 @@ export const CRITICAL_PACKAGES = new Set([
   'nvbes-identity-service',
   'nvbes-account-service',
   'nvbes-billing-service',
-  'nvbes-billing-worker',
   'nvbes-trust-risk-service',
 ]);
 

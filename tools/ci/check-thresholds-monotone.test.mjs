@@ -43,6 +43,23 @@ test('evaluateThresholdMonotonicity refuses gated -> excluded', () => {
   assert.match(failures[0], /excluded/);
 });
 
+test('evaluateThresholdMonotonicity allows retired archived crates', () => {
+  const base = {
+    crates: {
+      'nvbes-core': { threshold: 90 },
+      'nvbes-billing-worker': { threshold: 90 },
+    },
+    excluded: [],
+  };
+  const head = {
+    crates: { 'nvbes-core': { threshold: 90 } },
+    excluded: [],
+    archived: ['nvbes-billing-worker'],
+  };
+  const failures = evaluateThresholdMonotonicity(base, head, 'archived');
+  assert.equal(failures.length, 0);
+});
+
 test('normalizeThresholdConfig tolerates empty input', () => {
   assert.deepEqual(normalizeThresholdConfig(null), { crates: {}, excluded: new Set() });
 });

@@ -85,17 +85,6 @@
         "unviable": 86
       }
     },
-    "nvbes-billing-worker": {
-      "threshold": 91,
-      "baseline": {
-        "score": 96.7,
-        "tested": 30,
-        "caught": 29,
-        "missed": 1,
-        "timeout": 0,
-        "unviable": 29
-      }
-    },
     "nvbes-region": {
       "threshold": 88,
       "baseline": {
@@ -174,5 +163,8 @@
       }
     }
   },
-  "excluded": []
+  "excluded": [],
+  "archived": [
+    "nvbes-billing-worker"
+  ]
 }

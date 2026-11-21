@@ -1,112 +1,173 @@
-use nvbes_core::config::AppConfig;
-use nvbes_observability::{
-    capture_error_reporting_smoke, init_error_reporting_for_service, init_tracing,
-    install_safe_panic_hook, start_continuous_profiling,
-};
-use tracing::info;
+use tokio::sync::watch;
 
-#[path = "billing.worker.rs"]
-mod worker;
+#[path = "billing.worker.config.rs"]
+mod config;
+#[path = "billing.worker.database.rs"]
+mod database;
+#[path = "billing.worker.dispatcher.rs"]
+mod dispatcher;
+#[path = "billing.worker.email.rs"]
+mod email;
+#[path = "billing.worker.health.rs"]
+mod health;
+#[path = "billing.worker.metrics.rs"]
+mod metrics;
+#[path = "billing.worker.queue.rs"]
+mod queue;
+#[path = "billing.worker.queue.trigger.rs"]
+mod queue_trigger;
+#[path = "billing.worker.state.rs"]
+mod state;
+#[path = "billing.worker.synthetic.rs"]
+mod synthetic;
 
-const BILLING_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_BILLING_WORKER_METRICS_BIND_ADDR";
-const DEFAULT_BILLING_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4104";
+#[cfg(test)]
+#[path = "billing.worker.test_support.rs"]
+mod test_support;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
-    config
-        .resolve_from_secret_manager()
-        .await
-        .map_err(anyhow::Error::msg)?;
+    run(std::env::args().skip(1).collect()).await
+}
 
-    let _error_reporting_guard = init_error_reporting_for_service(&config, "billing-worker");
-    install_safe_panic_hook();
-    init_tracing(&config);
+async fn run(command: Vec<String>) -> anyhow::Result<()> {
+    if matches!(command.as_slice(), [action] if action == "deployment-bootstrap") {
+        return run_deployment_bootstrap().await;
+    }
 
-    let arg1 = std::env::args().nth(1);
+    if matches!(command.as_slice(), [action] if action == "migrate") {
+        let config = config::BillingWorkerConfig::from_env()?;
+        let pool = database::connect(&config.database_url, 2).await?;
+        database::migrate(&pool).await?;
+        println!("billing database migrations applied");
+        return Ok(());
+    }
 
-    if matches!(arg1.as_deref(), Some("error-reporting-smoke")) {
-        let result = capture_error_reporting_smoke(
-            "billing-worker",
-            &config.environment,
-            "worker",
-            config.sentry_dsn.is_some(),
-        );
+    if matches!(command.as_slice(), [action] if action == "synthetic-smoke") {
+        let config = config::BillingWorkerConfig::from_env()?;
+        let pool = database::connect(&config.database_url, 2).await?;
+        let result = synthetic::run(&pool, &config).await?;
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
 
-    let _profiling_guard =
-        start_continuous_profiling(&config, "billing-worker").map_err(anyhow::Error::msg)?;
-
-    let db = nvbes_billing_service::database::connect_pool(&config).await?;
-    nvbes_billing_service::database::run_migrations(&db).await?;
-    let redis = nvbes_core::redis_runtime::require_redis_pool(&config).await?;
-    let email = nvbes_email::EmailClient::connect(nvbes_email::EmailClientConfig::from_env(
-        &config.environment,
-    )?)
-    .await?;
-    let product_analytics = build_product_analytics(&config)?;
-    let state =
-        worker::BillingWorkerState::new(config.clone(), db, redis, email, product_analytics);
-
-    if matches!(arg1.as_deref(), Some("run-billing-jobs")) {
-        tracing::info!("running billing-worker in Serverless Job mode: run-billing-jobs");
-        return worker::run_billing_jobs_once(&state).await;
+    let config = config::BillingWorkerConfig::from_env()?;
+    if matches!(command.as_slice(), [action] if action == "validate-runtime") {
+        database::connect_lazy(&config.database_url, 2)?;
+        println!("billing worker runtime configuration is valid");
+        return Ok(());
     }
 
-    let metrics_bind_addr = billing_worker_metrics_bind_addr();
-    let _metrics_server = nvbes_observability::start_metrics_server(
-        &config,
-        state.observability.clone(),
-        &metrics_bind_addr,
-    )
-    .await?;
+    if !command.is_empty() && command[0] != "serve" {
+        anyhow::bail!(
+            "usage: nvbes-billing-worker [serve|migrate|validate-runtime|synthetic-smoke|deployment-bootstrap]"
+        );
+    }
 
-    tracing::info!(
-        app = %config.app_name,
-        environment = %config.environment,
-        "starting nvbes Billing worker"
+    let _metrics_handle = metrics::install();
+    nvbes_observability::install_safe_panic_hook();
+    nvbes_observability::init_tracing_with_config(
+        nvbes_observability::TracingConfig {
+            environment: &config.environment,
+            otlp_endpoint: config.otlp_endpoint.as_deref(),
+            otlp_authorization_header: config.otlp_authorization_header.as_deref(),
+            protocol: nvbes_observability::OtlpProtocol::Grpc,
+        },
+        "billing-worker",
     );
 
-    worker::run_loop_until_shutdown(state, async {
-        let _ = tokio::signal::ctrl_c().await;
-    })
-    .await
+    let db = database::connect(&config.database_url, 5).await?;
+    let state = state::BillingWorkerState::new(config.clone(), db.clone()).await?;
+    let listener = tokio::net::TcpListener::bind(state.config.http_bind_addr).await?;
+    serve(state, db, listener, process_shutdown_signal()).await
 }
 
-fn billing_worker_metrics_bind_addr() -> String {
-    std::env::var(BILLING_WORKER_METRICS_BIND_ADDR_ENV)
-        .unwrap_or_else(|_| DEFAULT_BILLING_WORKER_METRICS_BIND_ADDR.to_string())
-}
+async fn serve(
+    state: state::BillingWorkerState,
+    db: sqlx::PgPool,
+    listener: tokio::net::TcpListener,
+    shutdown_signal: impl std::future::Future<Output = ()>,
+) -> anyhow::Result<()> {
+    let bind_addr = listener.local_addr()?;
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let local_receiver = state.take_local_dispatch_receiver().await;
+    let local_dispatcher = local_receiver.map(|receiver| {
+        tokio::spawn(dispatcher::run_local(
+            state.clone(),
+            receiver,
+            shutdown_rx.clone(),
+        ))
+    });
 
-fn build_product_analytics(
-    config: &AppConfig,
-) -> anyhow::Result<nvbes_product_analytics::ProductAnalytics> {
-    let analytics_config = nvbes_product_analytics::ProductAnalyticsConfig {
-        enabled: config.product_analytics_enabled,
-        analytics_id_salt: config.analytics_id_salt.clone(),
-    };
+    let app = axum::Router::new()
+        .merge(health::router(state.clone()))
+        .merge(metrics::router(state.clone()))
+        .merge(queue_trigger::router(state.clone()));
 
-    if !config.product_analytics_enabled {
-        info!("Billing product analytics disabled");
-        return Ok(nvbes_product_analytics::ProductAnalytics::disabled());
+    tracing::info!(
+        %bind_addr,
+        environment = %state.config.environment,
+        dispatch_mode = ?state.config.dispatch_mode,
+        "starting nvbes billing worker"
+    );
+
+    let server =
+        axum::serve(listener, app).with_graceful_shutdown(server_shutdown(shutdown_rx.clone()));
+
+    tokio::select! {
+        result = server => result?,
+        _ = shutdown_signal => {},
     }
 
-    let sink = nvbes_analytics_posthog::PostHogAnalyticsSink::new(
-        nvbes_analytics_posthog::PostHogAnalyticsConfig {
-            host: config.posthog_host.clone(),
-            project_token: config.product_analytics_token.clone().ok_or_else(|| {
-                anyhow::anyhow!(
-                    "NVBES_PRODUCT_ANALYTICS_TOKEN is required when product analytics is enabled"
-                )
-            })?,
-        },
-    )?;
-    info!("Billing product analytics enabled with PostHog");
+    let _ = shutdown_tx.send(true);
+    if let Some(dispatcher) = local_dispatcher {
+        let _ = dispatcher.await;
+    }
 
-    Ok(nvbes_product_analytics::ProductAnalytics::with_sink(
-        analytics_config,
-        std::sync::Arc::new(sink),
-    )?)
+    db.close().await;
+    Ok(())
 }
+
+async fn run_deployment_bootstrap() -> anyhow::Result<()> {
+    let bind_addr: std::net::SocketAddr = std::env::var("NVBES_BILLING_HTTP_BIND_ADDR")
+        .or_else(|_| std::env::var("NVBES_BILLING_BIND_ADDR"))
+        .unwrap_or_else(|_| "0.0.0.0:8080".to_string())
+        .parse()
+        .map_err(|error| anyhow::anyhow!("NVBES_BILLING_HTTP_BIND_ADDR is invalid: {error}"))?;
+    let listener = tokio::net::TcpListener::bind(bind_addr).await?;
+    let router = axum::Router::new().route(
+        "/health/live",
+        axum::routing::get(|| async { axum::http::StatusCode::NO_CONTENT }),
+    );
+
+    axum::serve(listener, router)
+        .with_graceful_shutdown(process_shutdown_signal())
+        .await?;
+    Ok(())
+}
+
+async fn server_shutdown(mut shutdown: watch::Receiver<bool>) {
+    while !*shutdown.borrow() {
+        if shutdown.changed().await.is_err() {
+            break;
+        }
+    }
+}
+
+async fn process_shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+        let mut terminate = signal(SignalKind::terminate()).expect("SIGTERM handler must register");
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {},
+            _ = terminate.recv() => {},
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = tokio::signal::ctrl_c().await;
+}
+
+#[cfg(test)]
+#[path = "billing.worker.main.tests.rs"]
+mod main_tests;
