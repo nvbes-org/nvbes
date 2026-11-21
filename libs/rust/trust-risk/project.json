@@ -3,5 +3,39 @@
   "projectType": "library",
   "root": "libs/rust/trust-risk",
   "sourceRoot": "libs/rust/trust-risk/src",
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "command": "cargo check --locked --package nvbes-trust-risk --all-targets",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "cargo nextest run --locked --package nvbes-trust-risk",
+        "cwd": "."
+      }
+    },
+    "test:database": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "cargo nextest run --locked --package nvbes-trust-risk",
+        "cwd": "."
+      }
+    },
+    "test:contract": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "node --test archive/apps/trust-risk-service/tests/container-contract.test.mjs",
+        "cwd": "."
+      }
+    }
+  },
   "tags": ["scope:oss", "type:lib", "domain:trust-risk", "layer:sdk"]
 }

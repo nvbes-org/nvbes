@@ -63,7 +63,10 @@ test('idle queue reconciliation changes only no-data handling and fails closed o
 });
 
 test('the production ledger accepts bounded operational validation messages', () => {
-  const migration = read('apps/email-worker/migrations/0004_email_operational_category.sql');
+  const migrationPath = existsSync('libs/rust/email/migrations/0004_email_operational_category.sql')
+    ? 'libs/rust/email/migrations/0004_email_operational_category.sql'
+    : 'archive/apps/email-worker/migrations/0004_email_operational_category.sql';
+  const migration = read(migrationPath);
   assert.match(migration, /ALTER TYPE email_category ADD VALUE IF NOT EXISTS 'operational';/u);
 });
 

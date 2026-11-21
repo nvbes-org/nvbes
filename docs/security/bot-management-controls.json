@@ -245,7 +245,7 @@
 							]
 						},
 						{
-							"path": "apps/trust-risk-service/src/trust_risk.audit.rs",
+							"path": "archive/apps/trust-risk-service/src/trust_risk.audit.rs",
 							"includes": ["trust_risk_audit_events", "AuditEvent"]
 						}
 					]

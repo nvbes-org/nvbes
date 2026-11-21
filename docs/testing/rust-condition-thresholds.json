@@ -89,15 +89,6 @@
       }
     },
     {
-      "crate": "nvbes-email-worker",
-      "reason": "Couverture de condition mesur\u00e9e 49.1% (112/228), sous le plancher de 50% : failover/d\u00e9livrabilit\u00e9 majoritairement couverts par des tests d'int\u00e9gration avec services externes. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": {
-        "score": 49.1,
-        "count": 228,
-        "covered": 112
-      }
-    },
-    {
       "crate": "nvbes-identity-service",
       "reason": "Couverture de condition mesur\u00e9e 46.8% (44/94), sous le plancher de 50% : routes web du service Identity couvertes par des tests d'int\u00e9gration HTTP d\u00e9pendants de la base. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
       "baseline": {
@@ -141,18 +132,11 @@
         "count": 166,
         "covered": 90
       }
-    },
-    {
-      "crate": "nvbes-trust-risk-service",
-      "reason": "Couverture de condition mesur\u00e9e 27.0% (41/152), sous le plancher de 50% : pipelines de scoring/scans exerc\u00e9s par des tests d'int\u00e9gration avec service Redis/queue non provisionn\u00e9s en CI. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
-      "baseline": {
-        "score": 27.0,
-        "count": 152,
-        "covered": 41
-      }
     }
   ],
   "archived": [
-    "nvbes-billing-worker"
+    "nvbes-billing-worker",
+    "nvbes-email-worker",
+    "nvbes-trust-risk-service"
   ]
 }

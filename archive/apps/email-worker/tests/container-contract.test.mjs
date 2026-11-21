@@ -5,7 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const workerRoot = join(workspaceRoot, 'apps/email-worker');
+const workerRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dockerfile = readFileSync(join(workerRoot, 'Dockerfile'), 'utf8');
 const manifest = readFileSync(join(workerRoot, 'Cargo.toml'), 'utf8');
 const mainSource = readFileSync(join(workerRoot, 'src/main.rs'), 'utf8');

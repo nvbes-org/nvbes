@@ -37,18 +37,6 @@
         "regions": 94.4
       }
     },
-    "nvbes-email-worker": {
-      "threshold": {
-        "lines": 90,
-        "functions": 88,
-        "regions": 83
-      },
-      "baseline": {
-        "lines": 92.7,
-        "functions": 90.1,
-        "regions": 85.5
-      }
-    },
     "nvbes-platform": {
       "threshold": {
         "lines": 87,
@@ -119,18 +107,6 @@
         "lines": 91.4,
         "functions": 87.5,
         "regions": 85.5
-      }
-    },
-    "nvbes-trust-risk-service": {
-      "threshold": {
-        "lines": 88,
-        "functions": 88,
-        "regions": 83
-      },
-      "baseline": {
-        "lines": 90.1,
-        "functions": 90.2,
-        "regions": 85.7
       }
     },
     "nvbes-billing": {
@@ -213,6 +189,8 @@
     }
   ],
   "archived": [
-    "nvbes-billing-worker"
+    "nvbes-billing-worker",
+    "nvbes-email-worker",
+    "nvbes-trust-risk-service"
   ]
 }

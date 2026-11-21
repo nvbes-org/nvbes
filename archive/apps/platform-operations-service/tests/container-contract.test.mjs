@@ -5,7 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const serviceRoot = join(workspaceRoot, 'apps/platform-operations-service');
+const serviceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dockerfile = readFileSync(join(serviceRoot, 'Dockerfile'), 'utf8');
 
 test('image builds and runs the Platform Operations service as non-root', () => {

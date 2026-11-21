@@ -1,11 +1,9 @@
 [workspace]
 members = [
-  "apps/email-worker",
   "apps/api",
   "apps/worker",
   "libs/rust/billing-service",
   "libs/rust/identity",
-  "apps/trust-risk-service",
   "libs/rust/account",
   "libs/rust/audit",
   "libs/rust/billing",

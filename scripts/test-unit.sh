@@ -3,5 +3,6 @@
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+export NX_DAEMON=false
 # No dotenv loading, service provisioning, or package installation in this lane.
 exec pnpm --config.verify-deps-before-run=false exec nx run rust-workspace:micro-test

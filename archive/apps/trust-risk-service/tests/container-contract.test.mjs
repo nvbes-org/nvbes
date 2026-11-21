@@ -5,7 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const serviceRoot = join(workspaceRoot, 'apps/trust-risk-service');
+const serviceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dockerfile = readFileSync(join(serviceRoot, 'Dockerfile'), 'utf8');
 const manifest = readFileSync(join(serviceRoot, 'Cargo.toml'), 'utf8');
 const mainSource = readFileSync(join(serviceRoot, 'src/main.rs'), 'utf8');

@@ -3,7 +3,6 @@
   "projectType": "library",
   "root": "tools/ci",
   "implicitDependencies": [
-    "email-worker",
     "terraform-email-production",
     "terraform-email-legacy-stack"
   ],

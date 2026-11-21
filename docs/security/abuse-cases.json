@@ -266,11 +266,11 @@
 			"countermeasures": ["DEFENSE_007", "DEFENSE_010"],
 			"validation": [
 				{
-					"path": "apps/email-worker/src/email.worker.webhook.verify.rs",
+					"path": "archive/apps/email-worker/src/email.worker.webhook.verify.rs",
 					"includes": ["SnsMessage", "SnsVerificationError", "MAX_MESSAGE_AGE"]
 				},
 				{
-					"path": "apps/email-worker/src/email.worker.dispatcher.rs",
+					"path": "archive/apps/email-worker/src/email.worker.dispatcher.rs",
 					"includes": ["dispatch"]
 				}
 			]

@@ -115,16 +115,16 @@ pre-commit:
       run: node tools/ci/nx-guard.mjs && NX_DAEMON=false pnpm test
       fail_text: 'BLOCKED nx test KO. Zero test rouge tolere.'
     52-ci-contract:
-      run: pnpm exec nx run ci-contracts:test:ci-contract
+      run: NX_DAEMON=false pnpm exec nx run ci-contracts:test:ci-contract
       fail_text: 'BLOCKED test-ci-contract KO.'
     53-lockfile-integration:
-      run: pnpm exec nx run ci-contracts:test:lockfile-integration
+      run: NX_DAEMON=false pnpm exec nx run ci-contracts:test:lockfile-integration
       fail_text: 'BLOCKED test-lockfile-integration KO.'
     54-v1-catalogue:
-      run: pnpm check:v1-catalogue
+      run: NX_DAEMON=false pnpm check:v1-catalogue
       fail_text: 'BLOCKED v1-catalogue KO.'
     55-test-summary:
-      run: pnpm test:test-summary
+      run: NX_DAEMON=false pnpm test:test-summary
       fail_text: 'BLOCKED test-summary KO.'
     # Last step: restore index from NVBES_STAGED_TREE when a concurrent
     # IDE/fsmonitor/fetch race cleared staged paths during long hooks.

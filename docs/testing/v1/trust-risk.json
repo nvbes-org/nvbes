@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "domain": "trust-risk",
-  "project": "trust-risk-service",
-  "cargoPackage": "nvbes-trust-risk-service",
+  "project": "trust-risk",
+  "cargoPackage": "nvbes-trust-risk",
   "suites": [
     {
       "id": "trust-risk.unit",
       "requirement": "trust-risk: unit behavior",
       "risk": "Regression in production code or shared dependencies",
       "execution": "automated",
-      "target": "trust-risk-service:test",
+      "target": "trust-risk:test",
       "cases": ["trust-risk.unit.complete-run"]
     },
     {
@@ -17,7 +17,7 @@
       "requirement": "trust-risk: compilation",
       "risk": "Regression in production code or shared dependencies",
       "execution": "automated",
-      "target": "trust-risk-service:check",
+      "target": "trust-risk:check",
       "cases": ["trust-risk.check.complete-run"]
     },
     {
@@ -25,7 +25,7 @@
       "requirement": "trust-risk: persistent business invariants",
       "risk": "Unauthorized access, corrupted state or lost events",
       "execution": "automated",
-      "target": "trust-risk-service:test:database",
+      "target": "trust-risk:test:database",
       "cases": [
         "trust-risk.signals",
         "trust-risk.shadow-decision",
@@ -38,7 +38,7 @@
       "requirement": "trust-risk: deployable runtime contract",
       "risk": "Invalid runtime or exposed unsupported interface",
       "execution": "automated",
-      "target": "trust-risk-service:test:contract",
+      "target": "trust-risk:test:contract",
       "cases": ["trust-risk.runtime-contract"]
     },
     {

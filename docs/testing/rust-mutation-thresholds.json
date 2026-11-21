@@ -74,17 +74,6 @@
         "unviable": 64
       }
     },
-    "nvbes-email-worker": {
-      "threshold": 93,
-      "baseline": {
-        "score": 98.2,
-        "tested": 341,
-        "caught": 335,
-        "missed": 4,
-        "timeout": 2,
-        "unviable": 86
-      }
-    },
     "nvbes-region": {
       "threshold": 88,
       "baseline": {
@@ -94,17 +83,6 @@
         "missed": 23,
         "timeout": 0,
         "unviable": 90
-      }
-    },
-    "nvbes-trust-risk-service": {
-      "threshold": 93,
-      "baseline": {
-        "score": 98.6,
-        "tested": 352,
-        "caught": 347,
-        "missed": 4,
-        "timeout": 1,
-        "unviable": 93
       }
     },
     "nvbes-identity-service": {
@@ -165,6 +143,8 @@
   },
   "excluded": [],
   "archived": [
-    "nvbes-billing-worker"
+    "nvbes-billing-worker",
+    "nvbes-email-worker",
+    "nvbes-trust-risk-service"
   ]
 }

@@ -161,7 +161,7 @@ async fn real_mfa_notifications_cross_grpc_and_survive_email_restart_without_dup
     url.query_pairs_mut()
         .append_pair("options", &format!("-csearch_path={schema}"));
     let email = PgPool::connect(url.as_str()).await.unwrap();
-    sqlx::migrate!("../../../apps/email-worker/migrations")
+    sqlx::migrate!("../email/migrations")
         .run(&email)
         .await
         .unwrap();
