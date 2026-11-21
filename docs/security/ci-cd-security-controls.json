@@ -254,7 +254,7 @@
 							"path": ".github/workflows/stripe-sandbox.yml",
 							"includes": [
 								"dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4",
-								"cargo build --locked --manifest-path apps/billing-service/Cargo.toml"
+								"cargo build --locked --manifest-path libs/rust/billing-service/Cargo.toml"
 							]
 						}
 					]

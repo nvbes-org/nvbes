@@ -8,7 +8,6 @@
     "dev:hot": "bash scripts/dev-hot.sh",
     "dev:api": "bash scripts/dev-api.sh",
     "dev:worker": "bash scripts/dev-worker.sh",
-    "dev:billing-service": "bash scripts/dev-billing-service.sh",
     "dev:email-worker": "bash scripts/dev-email-worker.sh",
     "dev:identity-service": "bash scripts/dev-identity-service.sh",
     "dev:identity-web": "pnpm exec nx run identity-web:dev",

@@ -298,7 +298,7 @@
 					"includes": ["verify_stripe_signature"]
 				},
 				{
-					"path": "apps/billing-service/src/billing.webhooks.rs",
+					"path": "libs/rust/billing-service/src/billing.webhooks.rs",
 					"includes": [
 						"stripe_webhook_handler",
 						"stripe-signature",
@@ -369,7 +369,7 @@
 					]
 				},
 				{
-					"path": "apps/billing-service/src/billing.audit.rs",
+					"path": "libs/rust/billing-service/src/billing.audit.rs",
 					"includes": ["INSERT INTO billing_audit_events", "record_audit_event"]
 				}
 			]

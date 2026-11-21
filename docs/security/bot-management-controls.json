@@ -87,7 +87,7 @@
 							]
 						},
 						{
-							"path": "apps/billing-service/src/billing.webhooks.rs",
+							"path": "libs/rust/billing-service/src/billing.webhooks.rs",
 							"includes": ["stripe-signature", "stripe_webhook_handler"]
 						}
 					]

@@ -51,7 +51,7 @@ critical_assets:
     owner: payment_security
     classification: confidential
     repositories:
-      - apps/billing-service
+      - libs/rust/billing-service
       - apps/billing-worker
     dependencies:
       - postgresql-billing

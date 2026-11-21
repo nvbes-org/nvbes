@@ -61,7 +61,7 @@ jobs:
         run: |
           node --test scripts/stripe-dev.test.mjs
           pnpm nx run billing-service:test:database
-          cargo build --locked --manifest-path apps/billing-service/Cargo.toml
+          cargo build --locked --manifest-path libs/rust/billing-service/Cargo.toml
       - name: Exercise the dedicated Stripe sandbox
         env:
           NVBES_STRIPE_SECRET_KEY: ${{ secrets.STRIPE_CI_SECRET_KEY }}

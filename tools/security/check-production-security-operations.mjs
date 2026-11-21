@@ -6,7 +6,7 @@ const requirements = [
     evidence: ['AuditEventInput', 'action_key', 'is_workspace_scoped', 'has_network_context'],
   },
   {
-    file: 'apps/billing-service/src/billing.audit.rs',
+    file: 'libs/rust/billing-service/src/billing.audit.rs',
     evidence: ['INSERT INTO billing_audit_events', 'record_audit_event'],
   },
   {

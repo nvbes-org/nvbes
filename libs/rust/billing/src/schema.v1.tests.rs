@@ -9,7 +9,7 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-#[sqlx::test(migrations = "../../../apps/billing-service/migrations")]
+#[sqlx::test(migrations = "../billing-service/migrations")]
 async fn v1_foundation_tables_accept_roundtrip_rows(pool: PgPool) {
     let account_id = Uuid::new_v4();
     let customer_id = format!("cus_lib_{}", Uuid::new_v4().simple());

@@ -1,17 +1,36 @@
-use nvbes_core::{
-    config::AppConfig,
-    postgres_runtime::{PostgresPoolSettings, connect_pool_with_url},
-};
-use sqlx::PgPool;
+use sqlx::{PgPool, postgres::PgPoolOptions};
 
-pub type Database = PgPool;
-
-pub async fn connect_pool(config: &AppConfig) -> Result<Database, sqlx::Error> {
-    let settings = PostgresPoolSettings::from_app_config(config);
-    connect_pool_with_url(settings, config.billing_database_url()).await
+pub fn connect_lazy(database_url: &str, max_connections: u32) -> Result<PgPool, sqlx::Error> {
+    PgPoolOptions::new()
+        .min_connections(0)
+        .max_connections(max_connections)
+        .connect_lazy(database_url)
 }
 
-pub async fn run_migrations(pool: &Database) -> anyhow::Result<()> {
-    sqlx::migrate!("./migrations").run(pool).await?;
-    Ok(())
+pub async fn connect(database_url: &str, max_connections: u32) -> Result<PgPool, sqlx::Error> {
+    PgPoolOptions::new()
+        .min_connections(0)
+        .max_connections(max_connections)
+        .connect(database_url)
+        .await
 }
+
+pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
+    sqlx::migrate!("./migrations").run(pool).await
+}
+
+#[cfg(test)]
+#[path = "billing.database.test_support.rs"]
+#[allow(
+    dead_code,
+    reason = "consumed by metrics/health/customer/webhook tests (some feature-gated)"
+)]
+pub mod test_support;
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.http.test_support.rs"]
+pub mod http_test_support;
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "billing.database.tests.rs"]
+mod tests;
