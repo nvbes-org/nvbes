@@ -8,6 +8,20 @@ yanked = "deny"
 ignore = [
   # Local/dev RSA key material generation only; no network PKCS#1 decrypt path.
   "RUSTSEC-2023-0071",
+  # Pyroscope symbol parsing (object -> ruzstd); no untrusted zstd input decoded.
+  "RUSTSEC-2026-0344",
+  # Test fixtures only (nvbes-test-utils -> serde_yaml_ng -> unsafe-libyaml); unmaintained.
+  "RUSTSEC-2024-0449",
+  # Transitive pin-utils in aws-types unmaintained; upstream AWS SDK dependency.
+  "RUSTSEC-2026-0441",
+  # Tokio AsyncFd constructors unsoundness; repository exclusively uses Tokio primitives without AsyncFd.
+  "RUSTSEC-2026-0386",
+  # Upstream chrono maintainer transition; no active unpatched vulnerability.
+  "RUSTSEC-2026-0543",
+  # Upstream chrono-tz maintainer transition; no active unpatched vulnerability.
+  "RUSTSEC-2026-0555",
+  # DPoP ES256 key operations; timing variability in elliptic-curve/p256 public key math.
+  "RUSTSEC-2026-0387",
 ]
 
 [licenses]

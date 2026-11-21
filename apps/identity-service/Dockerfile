@@ -9,6 +9,7 @@ ENV LC_ALL=C \
     CARGO_INCREMENTAL=0 \
     CARGO_BUILD_JOBS=1 \
     CMAKE_BUILD_PARALLEL_LEVEL=1 \
+    SQLX_OFFLINE=true \
     RUSTFLAGS="--remap-path-prefix=/usr/src/nvbes=/src"
 
 WORKDIR /usr/src/nvbes
@@ -18,6 +19,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY Cargo.toml Cargo.lock ./
+COPY .cargo ./.cargo
+COPY .sqlx ./.sqlx
 COPY apps ./apps
 COPY contracts ./contracts
 COPY libs ./libs
