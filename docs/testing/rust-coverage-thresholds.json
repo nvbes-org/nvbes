@@ -180,6 +180,42 @@
         "functions": 25.6,
         "regions": 38.2
       }
+    },
+    "nvbes-api": {
+      "threshold": {
+        "lines": 42,
+        "functions": 48,
+        "regions": 50
+      },
+      "baseline": {
+        "lines": 44.3,
+        "functions": 50.0,
+        "regions": 52.7
+      }
+    },
+    "nvbes-worker": {
+      "threshold": {
+        "lines": 31,
+        "functions": 33,
+        "regions": 33
+      },
+      "baseline": {
+        "lines": 33.3,
+        "functions": 35.7,
+        "regions": 35.3
+      }
+    },
+    "nvbes-consent": {
+      "threshold": {
+        "lines": 8,
+        "functions": 8,
+        "regions": 13
+      },
+      "baseline": {
+        "lines": 10.2,
+        "functions": 10.6,
+        "regions": 15.0
+      }
     }
   },
   "excluded": [

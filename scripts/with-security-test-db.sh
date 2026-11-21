@@ -54,6 +54,9 @@ ensure_coverage_database_url() {
   base="$(printf '%s' "$security_url" | sed -E 's#/[^/]+/?$##')"
   local coverage_url="${base}/${COVERAGE_DB}"
   if command -v docker >/dev/null 2>&1 && docker inspect "$CONTAINER" >/dev/null 2>&1; then
+    if [[ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER")" != "true" ]]; then
+      docker start "$CONTAINER" >/dev/null
+    fi
     docker exec "$CONTAINER" psql -U postgres -h 127.0.0.1 -tc \
       "SELECT 1 FROM pg_database WHERE datname='${COVERAGE_DB}'" | grep -q 1 \
       || docker exec "$CONTAINER" psql -U postgres -h 127.0.0.1 -c "CREATE DATABASE ${COVERAGE_DB}" >/dev/null

@@ -136,3 +136,98 @@ fn production_accepts_https_and_configures_tls() {
         format!("Bearer {TOKEN}")
     );
 }
+
+#[test]
+fn from_env_requires_endpoint_and_token() {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _guard = LOCK.lock().unwrap();
+
+    let old_endpoint = std::env::var("NVBES_TRUST_RISK_GRPC_ENDPOINT").ok();
+    let old_token = std::env::var("NVBES_TRUST_RISK_GRPC_AUTH_TOKEN").ok();
+
+    // SAFETY: static mutex guard serializes test environment variable mutations.
+    unsafe {
+        std::env::remove_var("NVBES_TRUST_RISK_GRPC_ENDPOINT");
+        std::env::remove_var("NVBES_TRUST_RISK_GRPC_AUTH_TOKEN");
+    }
+    let err = TrustRiskClientConfig::from_env("development").unwrap_err();
+    assert!(matches!(err, TrustRiskClientError::Configuration(_)));
+
+    // SAFETY: static mutex guard serializes test environment variable mutations.
+    unsafe {
+        std::env::set_var("NVBES_TRUST_RISK_GRPC_ENDPOINT", "http://127.0.0.1:3050");
+    }
+    let err2 = TrustRiskClientConfig::from_env("development").unwrap_err();
+    assert!(matches!(err2, TrustRiskClientError::Configuration(_)));
+
+    // SAFETY: static mutex guard serializes test environment variable mutations.
+    unsafe {
+        std::env::set_var("NVBES_TRUST_RISK_GRPC_AUTH_TOKEN", TOKEN);
+    }
+    let config = TrustRiskClientConfig::from_env("development").unwrap();
+    assert_eq!(config.assessment_timeout, Duration::from_millis(100));
+    assert_eq!(
+        config.authorization.to_str().unwrap(),
+        format!("Bearer {TOKEN}")
+    );
+
+    // SAFETY: static mutex guard serializes test environment variable mutations.
+    unsafe {
+        match old_endpoint {
+            Some(val) => std::env::set_var("NVBES_TRUST_RISK_GRPC_ENDPOINT", val),
+            None => std::env::remove_var("NVBES_TRUST_RISK_GRPC_ENDPOINT"),
+        }
+        match old_token {
+            Some(val) => std::env::set_var("NVBES_TRUST_RISK_GRPC_AUTH_TOKEN", val),
+            None => std::env::remove_var("NVBES_TRUST_RISK_GRPC_AUTH_TOKEN"),
+        }
+    }
+}
+
+#[tokio::test]
+async fn connect_to_unreachable_endpoint_returns_unavailable() {
+    let config = TrustRiskClientConfig::from_values(
+        "development",
+        "http://127.0.0.1:9".to_string(),
+        TOKEN.to_string(),
+        Duration::from_millis(50),
+    )
+    .unwrap();
+    let res = super::TrustRiskClient::connect(config).await;
+    assert!(matches!(res, Err(TrustRiskClientError::Unavailable)));
+}
+
+#[tokio::test]
+async fn lazy_client_request_construction_and_unavailable_network_call() {
+    let config = TrustRiskClientConfig::from_values(
+        "development",
+        "http://127.0.0.1:9".to_string(),
+        TOKEN.to_string(),
+        Duration::from_millis(50),
+    )
+    .unwrap();
+    let client = super::TrustRiskClient::connect_lazy(config);
+    let req = client.request("test_payload", Duration::from_millis(100));
+    assert_eq!(
+        req.metadata().get("authorization").unwrap(),
+        &format!("Bearer {TOKEN}")
+    );
+
+    let err = client
+        .assess_risk(crate::proto::nvbes::trust_risk::v1::AssessRiskRequest::default())
+        .await
+        .unwrap_err();
+    assert!(matches!(err, TrustRiskClientError::Unavailable));
+
+    let err2 = client
+        .submit_signals(crate::proto::nvbes::trust_risk::v1::SubmitSignalsRequest::default())
+        .await
+        .unwrap_err();
+    assert!(matches!(err2, TrustRiskClientError::Unavailable));
+
+    let err3 = client
+        .submit_labels(crate::proto::nvbes::trust_risk::v1::SubmitLabelsRequest::default())
+        .await
+        .unwrap_err();
+    assert!(matches!(err3, TrustRiskClientError::Unavailable));
+}

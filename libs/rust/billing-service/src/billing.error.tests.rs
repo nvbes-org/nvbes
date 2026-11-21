@@ -19,6 +19,26 @@ async fn maps_error_variants_to_http_status() {
         StatusCode::UNAUTHORIZED
     );
     assert_eq!(
+        status_of(BillingError::IdentityUnavailable).await,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(
+        status_of(BillingError::InvalidProof).await,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        status_of(BillingError::ProofUnavailable).await,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(
+        status_of(BillingError::AccountUnavailable).await,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(
+        status_of(BillingError::AccountForbidden).await,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
         status_of(BillingError::Forbidden).await,
         StatusCode::FORBIDDEN
     );
@@ -38,6 +58,28 @@ async fn maps_error_variants_to_http_status() {
         status_of(BillingError::Stripe("down".into())).await,
         StatusCode::BAD_GATEWAY
     );
+}
+
+#[test]
+fn from_dpop_resource_error() {
+    let err_invalid: BillingError = nvbes_dpop::resource::ResourceError::Invalid.into();
+    assert!(matches!(err_invalid, BillingError::InvalidProof));
+
+    let err_unavailable: BillingError = nvbes_dpop::resource::ResourceError::Unavailable.into();
+    assert!(matches!(err_unavailable, BillingError::ProofUnavailable));
+}
+
+#[tokio::test]
+async fn invalid_proof_challenge_header() {
+    let response = BillingError::InvalidProof.into_response();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    let header = response
+        .headers()
+        .get("www-authenticate")
+        .expect("challenge header")
+        .to_str()
+        .expect("to_str");
+    assert!(header.contains("invalid_dpop_proof"));
 }
 
 #[tokio::test]

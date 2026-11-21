@@ -27,3 +27,10 @@ async fn lists_active_plans_sorted_by_price(pool: PgPool) {
         plans[0]["amount_cents"].as_i64().unwrap() <= plans[1]["amount_cents"].as_i64().unwrap()
     );
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn check_stripe_mappings_in_process(pool: PgPool) {
+    let report = crate::plans::check_stripe_mappings(&pool).await.unwrap();
+    assert!(report.plans_checked >= 3);
+    assert_eq!(report.failures.len(), 0);
+}
