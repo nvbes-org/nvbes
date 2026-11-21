@@ -19,7 +19,7 @@ axum.workspace = true
 chrono.workspace = true
 metrics.workspace = true
 metrics-exporter-prometheus.workspace = true
-nvbes-account-service = { path = "../account-service" }
+nvbes-account-service = { path = "../../libs/rust/account" }
 nvbes-billing-service = { path = "../billing-service" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-email = { path = "../../libs/rust/email" }

@@ -1,264 +1,247 @@
 {
-  "schemaVersion": 1,
-  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html",
-  "reviewCadence": "At every business workflow, authorization policy, quota, idempotency, billing, signup, login, or sensitive state-transition change.",
-  "requirements": [
-    {
-      "id": "BLS_REQ_001",
-      "name": "Re-derive security-relevant values server-side",
-      "owasp": "Never trust client-side decisions; derive prices, limits, regions, roles, and status from authoritative data.",
-      "controls": [
-        {
-          "id": "BLS_CTRL_001",
-          "name": "Checkout and registration server decisions",
-          "description": "Block client-controlled business outcomes by deriving billing lock state, subscription status, and credential validation on the server.",
-          "evidence": [
-            {
-              "path": "libs/rust/billing/src/shared.rs",
-              "includes": [
-                "subscription_status_requires_lock",
-                "validate_plan_code"
-              ],
-              "tests": [
-                "subscription_status_requires_lock_blocks_degraded_states"
-              ]
-            },
-            {
-              "path": "apps/billing-service/src/billing.checkout.rs",
-              "includes": [
-                "create_checkout_handler",
-                "idempotency_key"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "normalize_email",
-                "validate_password",
-                "hash_password"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "BLS_REQ_002",
-      "name": "Model sensitive workflows as server state machines",
-      "owasp": "Enforce expected steps, expiry, and transitions server-side instead of trusting the UI path.",
-      "controls": [
-        {
-          "id": "BLS_CTRL_002",
-          "name": "Authentication and billing event state lifecycle",
-          "description": "Persist short-lived challenges with single-use tokens and process external events transactionally.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.recovery.rs",
-              "includes": [
-                "request_recovery",
-                "reset_password",
-                "consumed_at"
-              ]
-            },
-            {
-              "path": "apps/billing-service/src/billing.webhooks.rs",
-              "includes": [
-                "stripe_webhook_handler",
-                "apply_subscription_event_on_connection"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "BLS_REQ_003",
-      "name": "Reject replay and concurrent double execution",
-      "owasp": "Treat replay, duplicate submission, and timing races as business logic attacks.",
-      "controls": [
-        {
-          "id": "BLS_CTRL_003",
-          "name": "Idempotency validation and reconciliation tracking",
-          "description": "Enforce idempotency keys, hash request bodies, and deduplicate inbound events.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/idempotency.rs",
-              "includes": [
-                "validate_key",
-                "derive_scope",
-                "hash_request_body",
-                "IdempotencyScope"
-              ]
-            },
-            {
-              "path": "apps/billing-service/src/billing.webhooks.rs",
-              "includes": [
-                "record_reconciliation_item"
-              ]
-            },
-            {
-              "path": "apps/billing-service/src/billing.checkout.tests.rs",
-              "tests": [
-                "checkout_rejects_empty_idempotency_key",
-                "checkout_rejects_oversized_idempotency_key"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "BLS_REQ_004",
-      "name": "Constrain abuse-friendly features",
-      "owasp": "Rate-limit and monitor workflows attackers can profit from at scale.",
-      "controls": [
-        {
-          "id": "BLS_CTRL_004",
-          "name": "Multi-key rate limits and bot controls",
-          "description": "Apply independent IP and scoped-key rate limits to sensitive flows and maintain anti-automation controls.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/limiter.rs",
-              "includes": [
-                "pub async fn check_dual_rate_limit",
-                "format!(\"ip:{ip_key}\")",
-                "format!(\"key:{scoped_key}\")"
-              ]
-            },
-            {
-              "path": "docs/security/bot-management-controls.json",
-              "includes": [
-                "Rate Limiting and Quotas",
-                "Public APIs"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "BLS_REQ_005",
-      "name": "Authorize from business context",
-      "owasp": "Avoid implicit permissions; combine actor role, resource ownership, target role, and active policy.",
-      "controls": [
-        {
-          "id": "BLS_CTRL_005",
-          "name": "Contextual workspace authorization",
-          "description": "Evaluate business permissions from action, actor role, ownership, target role, and workspace policy.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/authz.policy.rs",
-              "includes": [
-                "ctx.target_role",
-                "ctx.owns_resource",
-                "ctx.member_share_links_enabled"
-              ]
-            },
-            {
-              "path": "libs/rust/core/src/authz.policy.tests.rs",
-              "includes": [
-                "workspace_membership_roles_cover_expected_permission_boundaries",
-                "member_can_only_modify_owned_objects"
-              ],
-              "tests": [
-                "workspace_membership_roles_cover_expected_permission_boundaries",
-                "member_can_only_modify_owned_objects"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "BLS_REQ_006",
-      "name": "Validate business meaning, not just type shape",
-      "owasp": "Reject values and combinations that are syntactically valid but invalid for the business process.",
-      "controls": [
-        {
-          "id": "BLS_CTRL_006",
-          "name": "Semantic registration and password validation",
-          "description": "Validate email semantics and length boundaries server-side before execution.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "normalize_email",
-                "validate_password"
-              ]
-            },
-            {
-              "path": "libs/rust/core/src/auth.helpers.validation.rs",
-              "includes": [
-                "validate_email",
-                "validate_password",
-                "MIN_PASSWORD_LENGTH"
-              ]
-            },
-            {
-              "path": "libs/rust/core/src/auth.helpers.tests.rs",
-              "tests": [
-                "validate_password_accepts_strong_password",
-                "validate_password_rejects_short_passwords",
-                "validate_password_rejects_weak_passwords"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "BLS_REQ_007",
-      "name": "Observe business security decisions",
-      "owasp": "Log and monitor denied, risky, or unusual business-flow decisions.",
-      "controls": [
-        {
-          "id": "BLS_CTRL_007",
-          "name": "Audit event evidence across domains",
-          "description": "Record authentication and billing decisions so business-logic events are visible in audit tables.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "audit(tx, principal_id, \"identity.authenticated\")"
-              ]
-            },
-            {
-              "path": "apps/billing-service/src/billing.audit.rs",
-              "includes": [
-                "record_audit_event",
-                "INSERT INTO billing_audit_events"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "BLS_REQ_008",
-      "name": "Regression-test business invariants",
-      "owasp": "Turn abuse-oriented business invariants into automated regression checks.",
-      "controls": [
-        {
-          "id": "BLS_CTRL_008",
-          "name": "Business security registry gate",
-          "description": "Fail the root check when business-logic controls or evidence markers are removed.",
-          "evidence": [
-            {
-              "path": "docs/security/authorization-regression-tests.json",
-              "includes": [
-                "Actor-resource-action matrix"
-              ]
-            },
-            {
-              "path": "package.json",
-              "includes": [
-                "check:business-logic-security",
-                "tools/security/check-business-logic-security.mjs"
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ]
+	"schemaVersion": 1,
+	"source": "https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html",
+	"reviewCadence": "At every business workflow, authorization policy, quota, idempotency, billing, signup, login, or sensitive state-transition change.",
+	"requirements": [
+		{
+			"id": "BLS_REQ_001",
+			"name": "Re-derive security-relevant values server-side",
+			"owasp": "Never trust client-side decisions; derive prices, limits, regions, roles, and status from authoritative data.",
+			"controls": [
+				{
+					"id": "BLS_CTRL_001",
+					"name": "Checkout and registration server decisions",
+					"description": "Block client-controlled business outcomes by deriving billing lock state, subscription status, and credential validation on the server.",
+					"evidence": [
+						{
+							"path": "libs/rust/billing/src/shared.rs",
+							"includes": [
+								"subscription_status_requires_lock",
+								"validate_plan_code"
+							],
+							"tests": [
+								"subscription_status_requires_lock_blocks_degraded_states"
+							]
+						},
+						{
+							"path": "apps/billing-service/src/billing.checkout.rs",
+							"includes": ["create_checkout_handler", "idempotency_key"]
+						},
+						{
+							"path": "apps/identity-service/src/identity.auth.rs",
+							"includes": [
+								"normalize_email",
+								"validate_password",
+								"hash_password"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "BLS_REQ_002",
+			"name": "Model sensitive workflows as server state machines",
+			"owasp": "Enforce expected steps, expiry, and transitions server-side instead of trusting the UI path.",
+			"controls": [
+				{
+					"id": "BLS_CTRL_002",
+					"name": "Authentication and billing event state lifecycle",
+					"description": "Persist short-lived challenges with single-use tokens and process external events transactionally.",
+					"evidence": [
+						{
+							"path": "apps/identity-service/src/identity.recovery.rs",
+							"includes": ["request_recovery", "reset_password", "consumed_at"]
+						},
+						{
+							"path": "apps/billing-service/src/billing.webhooks.rs",
+							"includes": [
+								"stripe_webhook_handler",
+								"apply_subscription_event_on_connection"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "BLS_REQ_003",
+			"name": "Reject replay and concurrent double execution",
+			"owasp": "Treat replay, duplicate submission, and timing races as business logic attacks.",
+			"controls": [
+				{
+					"id": "BLS_CTRL_003",
+					"name": "Idempotency validation and reconciliation tracking",
+					"description": "Enforce idempotency keys, hash request bodies, and deduplicate inbound events.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/idempotency.rs",
+							"includes": [
+								"validate_key",
+								"derive_scope",
+								"hash_request_body",
+								"IdempotencyScope"
+							]
+						},
+						{
+							"path": "apps/billing-service/src/billing.webhooks.rs",
+							"includes": ["record_reconciliation_item"]
+						},
+						{
+							"path": "apps/billing-service/src/billing.checkout.tests.rs",
+							"tests": [
+								"checkout_rejects_empty_idempotency_key",
+								"checkout_rejects_oversized_idempotency_key"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "BLS_REQ_004",
+			"name": "Constrain abuse-friendly features",
+			"owasp": "Rate-limit and monitor workflows attackers can profit from at scale.",
+			"controls": [
+				{
+					"id": "BLS_CTRL_004",
+					"name": "Multi-key rate limits and bot controls",
+					"description": "Apply independent IP and scoped-key rate limits to sensitive flows and maintain anti-automation controls.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/limiter.rs",
+							"includes": [
+								"pub async fn check_dual_rate_limit",
+								"format!(\"ip:{ip_key}\")",
+								"format!(\"key:{scoped_key}\")"
+							]
+						},
+						{
+							"path": "docs/security/bot-management-controls.json",
+							"includes": ["Rate Limiting and Quotas", "Public APIs"]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "BLS_REQ_005",
+			"name": "Authorize from business context",
+			"owasp": "Avoid implicit permissions; combine actor role, resource ownership, target role, and active policy.",
+			"controls": [
+				{
+					"id": "BLS_CTRL_005",
+					"name": "Contextual workspace authorization",
+					"description": "Evaluate business permissions from action, actor role, ownership, target role, and workspace policy.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/authz.policy.rs",
+							"includes": [
+								"ctx.target_role",
+								"ctx.owns_resource",
+								"ctx.member_share_links_enabled"
+							]
+						},
+						{
+							"path": "libs/rust/core/src/authz.policy.tests.rs",
+							"includes": [
+								"workspace_membership_roles_cover_expected_permission_boundaries",
+								"member_can_only_modify_owned_objects"
+							],
+							"tests": [
+								"workspace_membership_roles_cover_expected_permission_boundaries",
+								"member_can_only_modify_owned_objects"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "BLS_REQ_006",
+			"name": "Validate business meaning, not just type shape",
+			"owasp": "Reject values and combinations that are syntactically valid but invalid for the business process.",
+			"controls": [
+				{
+					"id": "BLS_CTRL_006",
+					"name": "Semantic registration and password validation",
+					"description": "Validate email semantics and length boundaries server-side before execution.",
+					"evidence": [
+						{
+							"path": "apps/identity-service/src/identity.auth.rs",
+							"includes": ["normalize_email", "validate_password"]
+						},
+						{
+							"path": "libs/rust/core/src/auth.helpers.validation.rs",
+							"includes": [
+								"validate_email",
+								"validate_password",
+								"MIN_PASSWORD_LENGTH"
+							]
+						},
+						{
+							"path": "libs/rust/core/src/auth.helpers.tests.rs",
+							"tests": [
+								"validate_password_accepts_strong_password",
+								"validate_password_rejects_short_passwords",
+								"validate_password_rejects_weak_passwords"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "BLS_REQ_007",
+			"name": "Observe business security decisions",
+			"owasp": "Log and monitor denied, risky, or unusual business-flow decisions.",
+			"controls": [
+				{
+					"id": "BLS_CTRL_007",
+					"name": "Audit event evidence across domains",
+					"description": "Record authentication and billing decisions so business-logic events are visible in audit tables.",
+					"evidence": [
+						{
+							"path": "apps/identity-service/src/identity.auth.rs",
+							"includes": [
+								"audit(tx, principal_id, \"identity.authenticated\")"
+							]
+						},
+						{
+							"path": "apps/billing-service/src/billing.audit.rs",
+							"includes": [
+								"record_audit_event",
+								"INSERT INTO billing_audit_events"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "BLS_REQ_008",
+			"name": "Regression-test business invariants",
+			"owasp": "Turn abuse-oriented business invariants into automated regression checks.",
+			"controls": [
+				{
+					"id": "BLS_CTRL_008",
+					"name": "Business security registry gate",
+					"description": "Fail the root check when business-logic controls or evidence markers are removed.",
+					"evidence": [
+						{
+							"path": "docs/security/authorization-regression-tests.json",
+							"includes": ["Actor-resource-action matrix"]
+						},
+						{
+							"path": "package.json",
+							"includes": [
+								"check:business-logic-security",
+								"tools/security/check-business-logic-security.mjs"
+							]
+						}
+					]
+				}
+			]
+		}
+	]
 }

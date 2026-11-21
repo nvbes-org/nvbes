@@ -1,0 +1,31 @@
+{
+  "name": "account-service",
+  "projectType": "library",
+  "root": "libs/rust/account",
+  "sourceRoot": "libs/rust/account/src",
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/libs/rust/observability/**/*"
+      ],
+      "options": {
+        "command": "cargo check --locked --package nvbes-account-service --all-targets",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "cargo nextest run --locked --package nvbes-account-service",
+        "cwd": "."
+      }
+    }
+  },
+  "tags": ["scope:platform", "type:lib", "domain:account", "layer:domain"]
+}

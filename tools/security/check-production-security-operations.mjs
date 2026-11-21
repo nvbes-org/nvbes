@@ -10,7 +10,7 @@ const requirements = [
     evidence: ['INSERT INTO billing_audit_events', 'record_audit_event'],
   },
   {
-    file: 'apps/account-service/src/account.audit.rs',
+    file: 'libs/rust/account/src/account.audit.rs',
     evidence: ['INSERT INTO account_audit_events', 'AuditInput', 'record'],
   },
   {

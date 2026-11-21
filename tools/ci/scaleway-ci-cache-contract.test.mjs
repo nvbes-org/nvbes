@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { compilationCacheEnvironment } from './configure-sccache.core.mjs';
 
@@ -42,7 +42,10 @@ test('Rust Dockerfiles use stable, platform-scoped BuildKit cache mounts', () =>
     'platform-operations-service',
     'trust-risk-service',
   ]) {
-    const dockerfile = readFileSync(`apps/${service}/Dockerfile`, 'utf8');
+    const path = existsSync(`apps/${service}/Dockerfile`)
+      ? `apps/${service}/Dockerfile`
+      : `archive/apps/${service}/Dockerfile`;
+    const dockerfile = readFileSync(path, 'utf8');
     assert.match(dockerfile, /id=nvbes-cargo-registry-rust-1\.98\.1-\$\{TARGETPLATFORM\}/u);
     assert.match(dockerfile, /id=nvbes-cargo-git-rust-1\.98\.1-\$\{TARGETPLATFORM\}/u);
     assert.match(dockerfile, /sharing=locked/u);

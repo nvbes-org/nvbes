@@ -44,8 +44,12 @@ const catalog = existsSync(catalogPath)
   : { rust: [] };
 const dockerfiles = [
   ...new Set([
-    ...catalog.rust.map(({ dockerfile }) => dockerfile),
-    'apps/platform-operations-service/Dockerfile',
+    ...catalog.rust.map(({ dockerfile }) =>
+      existsSync(dockerfile) ? dockerfile : `archive/${dockerfile}`,
+    ),
+    existsSync('apps/platform-operations-service/Dockerfile')
+      ? 'apps/platform-operations-service/Dockerfile'
+      : 'archive/apps/platform-operations-service/Dockerfile',
   ]),
 ];
 

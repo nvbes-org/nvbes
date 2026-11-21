@@ -25,7 +25,7 @@ critical_assets:
     owner: identity_security
     classification: restricted
     repositories:
-      - apps/account-service
+      - libs/rust/account
       - apps/account-worker
       - libs/ts/identity-sdk-web
     dependencies:

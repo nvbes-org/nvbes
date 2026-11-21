@@ -97,11 +97,6 @@
     "authorization::tests::account_decisions_are_authenticated_bound_uncached_and_fail_closed": "HTTP Account billing-authorize loopback transport blocked in micro-test sandbox"
   },
   "nvbes-account-service": {
-    "main_tests::run_without_arguments_starts_runtime_until_stopped": "TCP bind for service bootstrap is blocked in micro-test sandbox",
-    "main_tests::serve_exposes_live_health_until_stopped": "TCP bind/connect for serve health smoke is blocked in micro-test sandbox",
-    "main_tests::run_migrate_applies_schema_when_database_is_available": "PostgreSQL migrate requires network syscalls blocked in micro-test sandbox",
-    "main_tests::run_migrate_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
-    "main_tests::run_process_privacy_jobs_fails_for_unreachable_database": "PostgreSQL connect attempt requires network syscalls blocked in micro-test sandbox",
     "auth::tokens::tests::account_http_guard_requires_live_identity_and_refuses_duplicate_headers": "HTTP identity introspection loopback transport blocked in micro-test sandbox"
   },
   "nvbes-identity-sdk": {
