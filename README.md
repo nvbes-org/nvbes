@@ -33,7 +33,9 @@ Le dépôt est orchestré avec pnpm workspaces, Cargo workspace et Nx.
 ```text
 nvbes/
 ├── apps/
-│   ├── email-worker/         # Runtime Email actif
+│   ├── api/                  # API Monolithe Modulaire HTTP serverless
+│   ├── worker/               # Worker d'arrière-plan unifié (outbox/purges)
+│   ├── email-worker/         # Runtime Email actif (en cours de convergence)
 │   └── trust-risk-service/   # Runtime Trust/Risk actif
 ├── libs/
 │   ├── rust/                 # Domaines, ports, adaptateurs et primitives partagés
@@ -75,6 +77,8 @@ pnpm dev              # Email + Trust/Risk + Identity + Account + Billing
 Commandes principales :
 
 ```bash
+pnpm dev:api                  # API Monolithique Modulaire
+pnpm dev:worker               # Worker unifié (outbox/purges)
 pnpm dev:identity-service      # Identity seul
 pnpm dev:account-service       # Account seul
 pnpm dev:billing-service       # Billing seul

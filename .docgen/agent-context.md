@@ -1,7 +1,7 @@
 # Monorepo nvbes - Agent Context Pack
 
 > Fiche de contexte ultra-synthétique auto-générée pour agents IA (Cursor, Antigravity, Claude Code).
-> Générée le : `2026-11-21T13:52:36.832Z`
+> Générée le : `2026-11-21T15:01:15.203Z`
 
 ## 1. Direction V1
 - Livrer uniquement le socle Identity, Account, Billing, Email, Trust/Risk et Platform Operations.

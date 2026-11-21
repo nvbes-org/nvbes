@@ -36,3 +36,14 @@ Unified production HTTP API serving Identity, Account, Consent, and Billing capa
 - `NVBES_ENVIRONMENT`: `production`, `development`, or `test`.
 - `NVBES_API_DATABASE_MAX_CONNECTIONS`: Maximum database connections (default `10`).
 - `NVBES_API_DATABASE_MIN_CONNECTIONS`: Minimum database connections (default `0` for scale-to-zero).
+
+## Local Development
+
+```bash
+# Run API locally with hot reload
+pnpm dev:api
+
+# Run tests
+pnpm nx test api
+```
+

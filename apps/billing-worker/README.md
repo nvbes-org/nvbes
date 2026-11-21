@@ -1,6 +1,9 @@
-# nvbes-billing-worker
+# nvbes-billing-worker [DEPRECATED]
 
-Worker d'arrière-plan autonome et scale-to-zero pour le traitement asynchrone des événements de facturation (nvbes Billing v1).
+> **Avertissement d'Architecture (ADR 0013)** : Ce composant d'arrière-plan autonome est **déprécié** au profit du worker centralisé serverless [apps/worker](../worker/README.md) (`nvbes-worker`).
+> Il est conservé temporairement pour assurer la stabilité des métriques et des seuils de couverture CI, mais ne doit plus recevoir de nouvelles fonctionnalités.
+
+Worker d'arrière-plan legacy pour le traitement asynchrone des événements de facturation (nvbes Billing v1).
 
 ## Rôle & Architecture
 

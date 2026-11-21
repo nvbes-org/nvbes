@@ -58,7 +58,9 @@ sur les anciens PRD, blueprints et plans :
 ```
 nvbes/
 ├── apps/
-│   ├── email-worker/       # Runtime Email actif
+│   ├── api/                # API Monolithe Modulaire HTTP serverless
+│   ├── worker/             # Worker d'arrière-plan unifié (outbox/purges)
+│   ├── email-worker/       # Runtime Email (en cours de convergence)
 │   ├── identity-web/       # UI hébergée Identity (OAuth/MFA)
 │   ├── account-web/        # UI Account (session, logout RP)
 │   └── trust-risk-service/ # Runtime Trust/Risk actif
@@ -145,6 +147,8 @@ Fichiers sous 300 lignes = contexte LLM optimal. Le LLM peut lire un fichier ent
 
 ```bash
 pnpm dev              # Runtimes locaux principaux
+pnpm dev:api          # API Monolithique Modulaire
+pnpm dev:worker       # Worker unifié (outbox/purges)
 pnpm dev:identity-service
 pnpm dev:account-service
 pnpm dev:billing-service

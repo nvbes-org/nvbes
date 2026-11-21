@@ -1,5 +1,7 @@
 # nvbes Email Worker
 
+> **Note d'Architecture (ADR 0013)** : Le dispatching des emails transactionnels Scaleway TEM et la gestion de la Transactional Outbox convergent vers le worker centralisé serverless [apps/worker](../worker/README.md) (`nvbes-worker`).
+
 Worker d'envoi et d'orchestration des emails transactionnels nvbes.
 
 ## Responsabilités

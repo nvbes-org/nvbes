@@ -4,7 +4,7 @@ description: Inventaire auto-généré des runtimes actifs et des applications a
 ---
 
 > Ce document est généré automatiquement de manière déterministe à partir de l'état réel du monorepo.
-> Dernière mise à jour : `2026-11-21T13:52:36.832Z`
+> Dernière mise à jour : `2026-11-21T15:01:15.203Z`
 
 ## Vue d'ensemble
 
