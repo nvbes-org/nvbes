@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "apps/email-worker",
+  "apps/api",
   "apps/account-service",
   "apps/billing-service",
   "apps/billing-worker",
@@ -80,7 +81,6 @@ tonic-health = "0.14.6"
 tower = "0.5"
 tower-http = { version = "0.7.1", features = ["cors", "timeout", "compression-full"] }
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
-utoipa-swagger-ui = { version = "9", features = ["axum"] }
 zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
 serde_yaml_ng = "0.10"
 async-trait = "0.1"

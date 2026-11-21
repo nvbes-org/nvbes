@@ -8,6 +8,10 @@ publish.workspace = true
 [features]
 database-tests = []
 
+[lib]
+name = "nvbes_account_service"
+path = "src/lib.rs"
+
 [[bin]]
 name = "nvbes-account-service"
 path = "src/main.rs"

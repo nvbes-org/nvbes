@@ -1,0 +1,31 @@
+{
+	"name": "api",
+	"projectType": "application",
+	"root": "apps/api",
+	"sourceRoot": "apps/api/src",
+	"targets": {
+		"check": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/**/*",
+				"{workspaceRoot}/Cargo.toml",
+				"{workspaceRoot}/Cargo.lock",
+				"{workspaceRoot}/libs/rust/**/*"
+			],
+			"options": {
+				"command": "cargo check --locked --package nvbes-api --all-targets",
+				"cwd": "."
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "cargo test --locked --package nvbes-api",
+				"cwd": "."
+			}
+		}
+	},
+	"tags": ["scope:platform", "type:app", "domain:api", "layer:app"]
+}

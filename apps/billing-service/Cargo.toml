@@ -8,6 +8,10 @@ publish.workspace = true
 [features]
 database-tests = []
 
+[lib]
+name = "nvbes_billing_service"
+path = "src/lib.rs"
+
 [[bin]]
 name = "nvbes-billing-service"
 path = "src/main.rs"

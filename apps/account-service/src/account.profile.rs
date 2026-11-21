@@ -106,7 +106,7 @@ async fn update_profile(
     Ok(Json(ProfileEnvelope { user: row.into() }))
 }
 
-pub async fn ensure_profile(db: &PgPool, principal_id: Uuid) -> AccountResult<ProfileRow> {
+pub(crate) async fn ensure_profile(db: &PgPool, principal_id: Uuid) -> AccountResult<ProfileRow> {
     let mut tx = db.begin().await?;
     let row = ensure_profile_in_transaction(&mut tx, principal_id).await?;
     tx.commit().await?;

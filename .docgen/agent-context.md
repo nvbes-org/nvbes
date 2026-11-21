@@ -1,7 +1,7 @@
 # Monorepo nvbes - Agent Context Pack
 
 > Fiche de contexte ultra-synthétique auto-générée pour agents IA (Cursor, Antigravity, Claude Code).
-> Générée le : `2026-11-21T12:54:31.951Z`
+> Générée le : `2026-11-21T13:15:04.752Z`
 
 ## 1. Direction V1
 - Livrer uniquement le socle Identity, Account, Billing, Email, Trust/Risk et Platform Operations.
@@ -20,6 +20,7 @@
 | Service | Chemin | Endpoints OpenAPI |
 | :--- | :--- | :--- |
 | `nvbes-account-service` | `apps/account-service` | 20 endpoints |
+| `nvbes-api` | `apps/api` | 20 endpoints |
 | `nvbes-billing-service` | `apps/billing-service` | - endpoints |
 | `nvbes-billing-worker` | `apps/billing-worker` | - endpoints |
 | `nvbes-email-worker` | `apps/email-worker` | - endpoints |

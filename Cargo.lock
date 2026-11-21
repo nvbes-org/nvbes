@@ -3002,6 +3002,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvbes-api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "metrics-exporter-prometheus",
+ "nvbes-account-service",
+ "nvbes-billing-service",
+ "nvbes-consent",
+ "nvbes-core",
+ "nvbes-identity-service",
+ "nvbes-observability",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.21",
+ "tokio",
+ "tower",
+ "tower-http 0.7.1",
+ "tracing",
+ "utoipa",
+]
+
+[[package]]
 name = "nvbes-audit"
 version = "0.1.0"
 dependencies = [
@@ -5917,6 +5942,7 @@ dependencies = [
  "tokio-util",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]

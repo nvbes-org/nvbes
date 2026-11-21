@@ -1,9 +1,9 @@
 {
-  "extractedAt": "2026-11-21T12:54:31.951Z",
+  "extractedAt": "2026-11-21T13:15:04.752Z",
   "monorepo": {
-    "totalProjects": 66,
+    "totalProjects": 67,
     "totalTsPackages": 24,
-    "totalRustCrates": 48,
+    "totalRustCrates": 49,
     "totalOpenApiServices": 10,
     "totalAdrs": 12
   },
@@ -19,6 +19,18 @@
         "layer:app"
       ],
       "sourceRoot": "apps/account-service/src"
+    },
+    {
+      "name": "api",
+      "projectType": "application",
+      "root": "apps/api",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:api",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/api/src"
     },
     {
       "name": "billing-service",
@@ -1647,6 +1659,22 @@
         "nvbes-core",
         "nvbes-dpop",
         "nvbes-observability"
+      ]
+    },
+    {
+      "name": "nvbes-api",
+      "version": "0.1.0",
+      "path": "apps/api",
+      "isApp": true,
+      "isLib": false,
+      "internalDependencies": [
+        "nvbes-account-service",
+        "nvbes-billing-service",
+        "nvbes-consent",
+        "nvbes-core",
+        "nvbes-identity-service",
+        "nvbes-observability",
+        "tower-http"
       ]
     },
     {

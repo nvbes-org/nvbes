@@ -11,6 +11,7 @@ Le diagramme ci-dessous illustre les liaisons déterministes entre les services 
 flowchart TD
     subgraph Applications ["Services & Workers"]
         nvbes_account_service["nvbes-account-service"]
+        nvbes_api["nvbes-api"]
         nvbes_billing_service["nvbes-billing-service"]
         nvbes_billing_worker["nvbes-billing-worker"]
         nvbes_email_worker["nvbes-email-worker"]
@@ -38,6 +39,13 @@ flowchart TD
     nvbes_account_service --> nvbes_core
     nvbes_account_service --> nvbes_dpop
     nvbes_account_service --> nvbes_observability
+    nvbes_api --> nvbes_account_service
+    nvbes_api --> nvbes_billing_service
+    nvbes_api --> nvbes_consent
+    nvbes_api --> nvbes_core
+    nvbes_api --> nvbes_identity_service
+    nvbes_api --> nvbes_observability
+    nvbes_api --> tower_http
     nvbes_billing_service --> nvbes_billing
     nvbes_billing_service --> nvbes_core
     nvbes_billing_service --> nvbes_identity_sdk

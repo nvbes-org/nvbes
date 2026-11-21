@@ -4,15 +4,16 @@ description: Inventaire auto-généré des runtimes actifs et des applications a
 ---
 
 > Ce document est généré automatiquement de manière déterministe à partir de l'état réel du monorepo.
-> Dernière mise à jour : `2026-11-21T12:54:31.951Z`
+> Dernière mise à jour : `2026-11-21T13:15:04.752Z`
 
 ## Vue d'ensemble
 
-Le runtime actif contient **7 applications et services**. Les projets sous `archive/` sont exclus de ce total et ne constituent pas une roadmap produit.
+Le runtime actif contient **8 applications et services**. Les projets sous `archive/` sont exclus de ce total et ne constituent pas une roadmap produit.
 
 | Application / Service | Domaine | Scope | Type | Emplacement |
 | :--- | :--- | :--- | :--- | :--- |
 | **`account-service`** | `account` | `platform` | ⚙️ Backend (Rust/Axum) | `apps/account-service` |
+| **`api`** | `api` | `platform` | 💻 Frontend (React/Vite) | `apps/api` |
 | **`billing-service`** | `billing` | `platform` | ⚙️ Backend (Rust/Axum) | `apps/billing-service` |
 | **`billing-worker`** | `billing` | `platform` | ⚙️ Backend (Rust/Axum) | `apps/billing-worker` |
 | **`email-worker`** | `email` | `platform` | ⚙️ Backend (Rust/Axum) | `apps/email-worker` |
@@ -52,6 +53,11 @@ Les **19 projets** ci-dessous sont conservés comme historique. Ils ne sont ni d
 - **Chemin** : `apps/account-service`
 - **Version** : `10.3.0`
 - **Dépendances internes** : `nvbes-identity-sdk`, `nvbes-core`, `nvbes-dpop`, `nvbes-observability`
+
+### `nvbes-api`
+- **Chemin** : `apps/api`
+- **Version** : `0.1.0`
+- **Dépendances internes** : `nvbes-account-service`, `nvbes-billing-service`, `nvbes-consent`, `nvbes-core`, `nvbes-identity-service`, `nvbes-observability`, `tower-http`
 
 ### `nvbes-billing-service`
 - **Chemin** : `apps/billing-service`
