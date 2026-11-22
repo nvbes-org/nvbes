@@ -35,7 +35,7 @@
 La présence d'une bibliothèque Cloud, Drive, Backoffice, Developer ou Enterprise ne la rend pas active. Vérifier la direction produit avant usage.
 
 ## 6. Règles Impératives du Codebase
-1. **Fichiers < 300 lignes** : Tout fichier dépassant 300 lignes doit être découpé. Limite stricte à 500 lignes.
+1. **Fichiers < 400 lignes** : Tout fichier dépassant 400 lignes doit être découpé. Limite stricte à 800 lignes.
 2. **Flat Dot-Notation (Rust)** : Tous les fichiers `.rs` sont à la racine de `src/` (ex: `identity.domains.auth.service.rs`).
 3. **Zéro Dette Technique** : Pas de types `any` en TypeScript, pas de `#[allow(unused)]` sans justification en Rust.
 4. **Pas de Service Locator** : Passer explicitement les dépendances (`&PgPool`, `&Config`) plutôt que l'objet global AppState.

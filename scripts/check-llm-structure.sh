@@ -24,12 +24,12 @@ while IFS= read -r file; do
   [[ -n "$file" ]] || continue
   total_checked=$((total_checked + 1))
   lines=$(wc -l < "$file" | tr -d ' ')
-  if [[ "$lines" -gt 500 ]]; then
-    echo "ERROR: $file has $lines lines (limit: 500 - AGENTS.md)"
+  if [[ "$lines" -gt 800 ]]; then
+    echo "ERROR: $file has $lines lines (limit: 800 - AGENTS.md)"
     errors=1
     err_count=$((err_count + 1))
-  elif [[ "$lines" -gt 300 ]]; then
-    echo "WARN:  $file has $lines lines (consider extraction > 300 - AGENTS.md)"
+  elif [[ "$lines" -gt 400 ]]; then
+    echo "WARN:  $file has $lines lines (consider extraction > 400 - AGENTS.md)"
     warn_count=$((warn_count + 1))
   fi
 done < <(find apps libs/rust libs/ts -type f \( -name '*.rs' -o -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.js' \) \

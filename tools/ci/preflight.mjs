@@ -8,7 +8,7 @@
  *  1. SonarQube & CodeQL Upstream Rules (SQL WHERE, Array sort, Promise Error, ReDoS, parseInt, Math.random, async blocking)
  *  2. NVBES Monotone Thresholds & Ratchets (No lowered coverage, no unwrap in prod, no sqlx::query, no weak assertions)
  *  3. Secrets & Security Pre-Checks (Secret scan, license checks, cargo deny)
- *  4. Structure & Boundaries (dot-notation, file limits < 300/500 lines, monorepo boundaries)
+ *  4. Structure & Boundaries (dot-notation, file limits < 400/800 lines, monorepo boundaries)
  *  5. Formatting & Linters (Biome / vp format check, env check, workflows lint)
  *  6. Compilation (Web typecheck / lint, cargo check --workspace)
  *

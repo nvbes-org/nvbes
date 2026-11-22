@@ -47,4 +47,4 @@ pnpm build:docs
 
 1. **Faits certifiés (Grounding)** : Les LLMs doivent toujours interroger `.docgen/workspace-ir.json` pour vérifier les noms des crates et les routes OpenAPI réelles.
 2. **Diagrammes Mermaid** : Tout acteur ou participant avec espaces doit être entouré de guillemets doubles (`participant DB as "PostgreSQL (Billing DB)"`).
-3. **Format des fichiers** : Conserver les fichiers sous la limite de **300 lignes** pour garantir un contexte LLM optimal.
+3. **Format des fichiers** : Conserver les fichiers sous la limite de **400 lignes** (max 800) pour garantir un contexte LLM optimal.

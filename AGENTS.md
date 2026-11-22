@@ -132,10 +132,10 @@ pub mod routes;
 
 | Seuil      | Action                    |
 | ---------- | ------------------------- |
-| 300 lignes | Envisager l'extraction    |
-| 500 lignes | **Obligation** d'extraire |
+| 400 lignes | Envisager l'extraction    |
+| 800 lignes | **Obligation** d'extraire |
 
-Fichiers sous 300 lignes = contexte LLM optimal. Le LLM peut lire un fichier entièrement sans diluer son attention.
+Fichiers sous 400 lignes = contexte LLM optimal. Le LLM peut lire un fichier entièrement sans diluer son attention.
 
 ## Philosophie d'architecture
 
@@ -223,7 +223,7 @@ pnpm nx:affected
 
 Le codebase est conçu pour être navigable par des LLMs (Claude Code, Cursor) :
 
-- **Fichiers < 300 lignes** : lecture complète en un appel, pas de dilution d'attention
+- **Fichiers < 400 lignes** : lecture complète en un appel, pas de dilution d'attention
 - **Noms auto-documentants** : le nom du fichier dit exactement ce qu'il contient
 - **Structure plate** : pas de nesting profond, le LLM trouve les fichiers en 1 Glob
 - **Modules explicites** : `mod.rs` avec `#[path]` fait le lien entre le fichier plat et le module Rust
