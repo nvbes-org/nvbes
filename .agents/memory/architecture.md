@@ -1,23 +1,24 @@
 # Architecture Memory
 
-## Agent Operating System
+## Canonical Instructions
 
-The repo uses `docs/agent/*` as canonical instructions. Tool-specific surfaces
-such as `AGENTS.md`, `.codex/instructions.md`, and `antigravity.json` are synchronized
-or aligned with canonical docs.
+`AGENTS.md` is the canonical source of truth for all LLM agents and developers.
 
-## Agent Topology
+## V1 Ultra-Restricted Architecture (Small Building)
 
-- Prefer deterministic workflows for known engineering tasks.
-- Use manager routing to select profile, workflow, and skills.
-- Use subagents only for context isolation on broad reviews or audits.
+- **Monolithic API** (`apps/api`): Axum HTTP service bundling Identity/OAuth 2.0 (PKCE,
+  authorization code flow, tokens), Consent management, and User Profile.
+- **Monolithic Web** (`apps/web` / dev UI): React 19 + Vite + Tailwind + shadcn/ui.
+  Provides Register, Login, Consent prompt, and Profile views. No marketing pages.
+- **Data Persistence**: Standard PostgreSQL database (single connection pool, isolated schemas).
+- **Two Major Principles**:
+  1. *Frugality & Market Efficiency*: Tiny RAM footprint (< 20MB), free tier CDN (Cloudflare Pages),
+     low-cost managed DB. Monthly spend strictly < 30 EUR TTC.
+  2. *OSS Migration Readiness*: Zero vendor lock-in. Architecture directly swappable with
+     self-hosted open-source components (PostgreSQL bare-metal/dedicated, Nginx/Caddy, SMTP).
 
-## Platform Boundaries
+## Platform Boundaries & Dormant Modules
 
-- Identity, Account, Billing, Email, Trust/Risk, and Platform Operations retain
-  distinct ownership even when physical infrastructure is shared.
-- The platform foundation must work without Cloud/Drive or any final product.
-- Team primitives belong to the B2C Account boundary; Enterprise governance and
-  compliance remain future extensions.
-- FinOps, audit, outbox, idempotence, observability, and feature controls remain
-  shared modules or contracts until measured evidence justifies extraction.
+- Billing (Stripe), Trust/Risk engine, and separate background workers are paused/dormant in V1.
+- In-process background tasks use Tokio tasks rather than distributed queues.
+- Enterprise governance, SAML/SCIM, and complex multi-tenancy remain future extensions.

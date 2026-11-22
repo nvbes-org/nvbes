@@ -4,7 +4,7 @@ description: Inventaire auto-généré des runtimes actifs et des applications a
 ---
 
 > Ce document est généré automatiquement de manière déterministe à partir de l'état réel du monorepo.
-> Dernière mise à jour : `2026-11-21T18:27:12.321Z`
+> Dernière mise à jour : `2026-11-22T02:53:20.406Z`
 
 ## Vue d'ensemble
 
@@ -51,8 +51,8 @@ Les **23 projets** ci-dessous sont conservés comme historique. Ils ne sont ni d
 
 ### `nvbes-api`
 - **Chemin** : `apps/api`
-- **Version** : `0.1.0`
-- **Dépendances internes** : `nvbes-account-service`, `nvbes-billing-service`, `nvbes-consent`, `nvbes-core`, `nvbes-identity-service`, `nvbes-observability`, `tower-http`
+- **Version** : `0.9.10`
+- **Dépendances internes** : `nvbes-account-service`, `nvbes-billing-service`, `nvbes-consent`, `nvbes-core`, `nvbes-identity-service`, `nvbes-observability`, `tower`, `tower-http`
 
 ### `nvbes-worker`
 - **Chemin** : `apps/worker`

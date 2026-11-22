@@ -8,11 +8,20 @@ Ce fichier est la **source de vérité unique et consolidée** pour tous les ass
 
 La [direction produit canonique](docs/product/nvbes-product-strategy.md) prévaut impérativement sur tous les anciens PRD, blueprints et plans historiques :
 
-- **Socle V1 modulaire réutilisable** : La V1 livre exclusivement Identity, Account, Billing, Consent, Email, Trust/Risk et Platform Operations.
-- **Cible B2C** : Tout public avec collaboration d'équipes. Pas d'offre B2B/Enterprise, pas de SSO/SCIM d'entreprise, ni de conformité avancée en V1.
-- **Hors périmètre V1** : Cloud/Drive n'est pas le premier produit implicite et reste strictement hors périmètre actif.
+- **Mission Nvbes** : Nvbes est une entité destinée à offrir des outils et des logiciels aux développeurs, le tout en **open-source**, financé par son futur cloud.
+- **V1 Ultra-Restreinte ("Small Building")** : La V1 sert exclusivement de service d'identité et de compte pour les développeurs utilisant les outils Nvbes, avec une configuration interne et manuelle (pas de portail d'enregistrement d'apps complexe en V1) :
+  - **Une API monolithique** (`apps/api`) : Création de compte, Connexion et maintien de session le tout en **OAuth 2** (PKCE, RFC 6749), gestion des consentements (scopes) et profil utilisateur basique.
+  - **Un site web monolithique** (`apps/identity-web` / `apps/account-web` unifiés) : Inscription, Connexion en OAuth2, écran de consentement, page de profil (infos, sessions actives). Destiné uniquement aux développeurs : **aucun front-end marketing en V1**.
+- **Deux Principes Majeurs** :
+  1. **Rentabilité maximale & technologies les moins chères du marché** : Exploiter au maximum la gratuité et l'ultra-légèreté (Rust/Axum < 20Mo RAM, Cloudflare Pages gratuit pour le front, PostgreSQL managé ou low-cost).
+  2. **Migration vers l'Open Source auto-géré** : Chaque brique et choix technologique doit être conçu pour permettre une migration fluide vers des solutions OSS auto-hébergées dans le futur (PostgreSQL natif, reverse proxy Nginx/Caddy, zéro lock-in propriétaire).
+- **Hors périmètre actif V1 (Gelé / Mis en pause)** :
+  - ❌ Pas de **Billing (Stripe)** pour l'instant (activé ultérieurement lors du lancement du cloud payant).
+  - ❌ Pas de **Trust/Risk engine** ni de workers distribués séparés (les tâches asynchrones sont gérées en interne par l'API ou des jobs légers).
+  - ❌ Pas de **front-end marketing** ni de gestion complexe d'organisations/équipes B2B.
+  - ❌ **Souveraineté et conformité avancée non exigées en V1** : préparées dans les abstractions, mais sans surcoût ni complexité bloquante pour démarrer.
 - **Plafond FinOps impératif** : Le coût récurrent total de l'infrastructure ne doit jamais dépasser **30 EUR TTC par mois** (cible opérationnelle à 20 EUR). FinOps est une contrainte de conception et un gate de livraison non négociable.
-- **Opérateur solo** : L'administration, le support, la lutte anti-fraude et la modération restent manuels par défaut. Une automatisation n'est recevable que sur un besoin mesuré, sécurisé, réversible et compatible avec le budget.
+- **Opérateur solo** : L'administration, le support et la maintenance restent manuels par défaut. Une automatisation n'est recevable que sur un besoin mesuré, sécurisé, réversible et compatible avec le budget.
 - **Zéro dette technique livrée** : Aucune dette structurelle ou temporaire n'est acceptée dans le périmètre V1 livré. Si un design est bancal, le **redesign complet** est hautement encouragé. Après V1, toute dette doit avoir un propriétaire, un impact mesuré, une date de revue et une condition de résolution.
 - **Production progressive** : Les déploiements sont mesurés, progressifs et immédiatement réversibles.
 
@@ -28,8 +37,9 @@ La [direction produit canonique](docs/product/nvbes-product-strategy.md) prévau
 - **Hooks Git** : Lefthook
 - **Backend** : Rust stable (2021), Axum, SQLx (mode offline `query!`), PostgreSQL
 - **Frontend** : React 19, Vite, TanStack Router, TanStack Query, Effect, Tailwind CSS, shadcn/ui
-- **Auth** : nvbes Identity (web OAuth 2.1 / WebAuthn / Passkeys), JWT & DPoP (API)
-- **Billing** : Stripe (abonnements B2C / équipe)
+- **Auth** : nvbes OAuth 2.0 / PKCE (RFC 6749, RFC 7636), Sessions, Consentement, JWT & DPoP
+- **Hébergement & Infra** : Cloudflare Pages (Frontend gratuit), Runtimes ultra-frugaux (Axum < 20Mo RAM), PostgreSQL managé / low-cost
+- **Billing** : Hors périmètre actif V1 (gelé jusqu'au lancement commercial du Cloud)
 
 ### Structure du Dépôt
 

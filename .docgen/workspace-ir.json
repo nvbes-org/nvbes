@@ -1,7 +1,7 @@
 {
-  "extractedAt": "2026-11-21T18:27:12.321Z",
+  "extractedAt": "2026-11-22T02:53:20.406Z",
   "monorepo": {
-    "totalProjects": 71,
+    "totalProjects": 73,
     "totalTsPackages": 24,
     "totalRustCrates": 50,
     "totalOpenApiServices": 9,
@@ -487,6 +487,17 @@
       "sourceRoot": "infrastructure/environments/account-production"
     },
     {
+      "name": "terraform-api-production",
+      "projectType": "application",
+      "root": "infrastructure/environments/api-production",
+      "tags": [
+        "scope:infrastructure",
+        "type:terraform",
+        "domain:platform"
+      ],
+      "sourceRoot": "infrastructure/environments/api-production"
+    },
+    {
       "name": "terraform-billing-production",
       "projectType": "application",
       "root": "infrastructure/environments/billing-production",
@@ -551,6 +562,17 @@
         "domain:trust-risk"
       ],
       "sourceRoot": "infrastructure/environments/trust-risk-production"
+    },
+    {
+      "name": "terraform-worker-production",
+      "projectType": "application",
+      "root": "infrastructure/environments/worker-production",
+      "tags": [
+        "scope:infrastructure",
+        "type:terraform",
+        "domain:platform"
+      ],
+      "sourceRoot": "infrastructure/environments/worker-production"
     },
     {
       "name": "terraform-modules",
@@ -1698,7 +1720,7 @@
   "rustCrates": [
     {
       "name": "nvbes-api",
-      "version": "0.1.0",
+      "version": "0.9.10",
       "path": "apps/api",
       "isApp": true,
       "isLib": false,
@@ -1709,6 +1731,7 @@
         "nvbes-core",
         "nvbes-identity-service",
         "nvbes-observability",
+        "tower",
         "tower-http"
       ]
     },

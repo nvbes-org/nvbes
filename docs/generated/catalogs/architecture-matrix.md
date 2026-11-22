@@ -39,6 +39,7 @@ flowchart TD
     nvbes_api --> nvbes_core
     nvbes_api --> nvbes_identity_service
     nvbes_api --> nvbes_observability
+    nvbes_api --> tower
     nvbes_api --> tower_http
     nvbes_worker --> nvbes_account_service
     nvbes_worker --> nvbes_billing_service
