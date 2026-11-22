@@ -21,7 +21,7 @@ Nx, and a Cargo workspace.
 
 ## Stable Boundaries
 
-- `apps/email-worker` and `apps/trust-risk-service` are the active runtimes.
+- `apps/api` and `apps/worker` are the active backend runtimes.
 - Historical product applications live under `archive/apps` and are not active
   implementation bases.
 - `libs/rust/*` contains shared Rust primitives, adapters, and domain libraries.
