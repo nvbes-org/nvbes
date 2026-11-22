@@ -24,7 +24,7 @@ pub async fn run_worker(config: WorkerConfig) -> anyhow::Result<()> {
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     // Spawn HTTP health server for liveness and readiness probes
-    let health_router = health::router().with_state(pool.clone());
+    let health_router = health::router(pool.clone(), &config);
     let listener = TcpListener::bind(config.bind_addr).await.with_context(|| {
         format!(
             "failed to bind worker health server to {}",
@@ -70,6 +70,9 @@ pub async fn run_worker(config: WorkerConfig) -> anyhow::Result<()> {
     info!("worker shutdown complete, closing database connections");
     pool.close().await;
 
+    nvbes_observability::shutdown_tracing();
+    let _ = nvbes_observability::flush_error_reporting(Duration::from_secs(1));
+
     Ok(())
 }
 
@@ -85,10 +88,28 @@ async fn run_worker_loop(
     loop {
         tokio::select! {
             _ = outbox_interval.tick() => {
-                outbox::run_outbox_tick(&pool).await;
+                let pool = pool.clone();
+                let env = config.environment.clone();
+                let task = tokio::spawn(async move {
+                    outbox::run_outbox_tick(&pool, &env).await;
+                });
+                if let Err(err) = task.await
+                    && err.is_panic()
+                {
+                    tracing::error!("worker outbox tick panicked, worker loop continuing safely");
+                }
             }
             _ = privacy_interval.tick() => {
-                privacy::run_privacy_tick(&pool).await;
+                let pool = pool.clone();
+                let env = config.environment.clone();
+                let task = tokio::spawn(async move {
+                    privacy::run_privacy_tick(&pool, &env).await;
+                });
+                if let Err(err) = task.await
+                    && err.is_panic()
+                {
+                    tracing::error!("worker privacy tick panicked, worker loop continuing safely");
+                }
             }
             changed = shutdown.changed() => {
                 if changed.is_err() || *shutdown.borrow() {

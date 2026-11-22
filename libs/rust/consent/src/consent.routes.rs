@@ -10,6 +10,7 @@ use axum::{
 use serde::Deserialize;
 use uuid::Uuid;
 
+use crate::error::ConsentError;
 use crate::models::{
     ReconcileConsentRequest, RecordAgreementRequest, UpdateCookiePreferencesRequest,
 };
@@ -60,12 +61,9 @@ async fn get_consent_status(
     State(service): State<Arc<ConsentService>>,
     headers: HeaderMap,
     Query(query): Query<ConsentQuery>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, ConsentError> {
     let subject_id = resolve_subject_id(&headers, &query);
-    let status = service
-        .get_consent_status(subject_id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let status = service.get_consent_status(subject_id).await?;
 
     Ok((StatusCode::OK, Json(status)))
 }
@@ -75,11 +73,10 @@ async fn record_legal_agreement(
     headers: HeaderMap,
     Query(query): Query<ConsentQuery>,
     Json(payload): Json<RecordAgreementRequest>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, ConsentError> {
     let subject_id = resolve_subject_id(&headers, &query);
     if subject_id == Uuid::nil() {
-        return Err((
-            StatusCode::BAD_REQUEST,
+        return Err(ConsentError::InvalidInput(
             "Subject ID required to record agreement".to_string(),
         ));
     }
@@ -102,8 +99,7 @@ async fn record_legal_agreement(
             ip,
             user_agent,
         )
-        .await
-        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+        .await?;
 
     Ok((StatusCode::CREATED, Json(recorded)))
 }
@@ -113,11 +109,10 @@ async fn update_cookies(
     headers: HeaderMap,
     Query(query): Query<ConsentQuery>,
     Json(payload): Json<UpdateCookiePreferencesRequest>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, ConsentError> {
     let subject_id = resolve_subject_id(&headers, &query);
     if subject_id == Uuid::nil() {
-        return Err((
-            StatusCode::BAD_REQUEST,
+        return Err(ConsentError::InvalidInput(
             "Subject ID required to update cookie preferences".to_string(),
         ));
     }
@@ -126,8 +121,7 @@ async fn update_cookies(
 
     let prefs = service
         .upsert_cookie_preferences(subject_id, payload.analytics, payload.marketing, gpc_signal)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .await?;
 
     Ok((StatusCode::OK, Json(prefs)))
 }
@@ -137,19 +131,17 @@ async fn reconcile_consent(
     headers: HeaderMap,
     Query(query): Query<ConsentQuery>,
     Json(payload): Json<ReconcileConsentRequest>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> Result<impl IntoResponse, ConsentError> {
     let authenticated_id = resolve_subject_id(&headers, &query);
     if authenticated_id == Uuid::nil() {
-        return Err((
-            StatusCode::UNAUTHORIZED,
+        return Err(ConsentError::InvalidInput(
             "Authenticated subject ID required".to_string(),
         ));
     }
 
     service
         .reconcile_anonymous_consent(payload.anonymous_subject_id, authenticated_id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .await?;
 
     Ok((StatusCode::NO_CONTENT, ()))
 }

@@ -25,12 +25,36 @@ async fn healthz_returns_pass() {
         .connect_lazy("postgres://localhost/nvbes_test")
         .unwrap();
 
-    let router = health::router().with_state(pool);
+    let config = WorkerConfig::from_env().unwrap();
+    let router = health::router(pool, &config);
 
     let response = router
         .oneshot(
             Request::builder()
                 .uri("/healthz")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn metrics_returns_pass() {
+    let pool = PgPoolOptions::new()
+        .min_connections(0)
+        .connect_lazy("postgres://localhost/nvbes_test")
+        .unwrap();
+
+    let config = WorkerConfig::from_env().unwrap();
+    let router = health::router(pool, &config);
+
+    let response = router
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -47,7 +71,8 @@ async fn root_returns_metadata() {
         .connect_lazy("postgres://localhost/nvbes_test")
         .unwrap();
 
-    let router = health::router().with_state(pool);
+    let config = WorkerConfig::from_env().unwrap();
+    let router = health::router(pool, &config);
 
     let response = router
         .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())

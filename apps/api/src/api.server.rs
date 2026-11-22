@@ -47,6 +47,9 @@ pub async fn run_server(config: ApiConfig) -> anyhow::Result<()> {
     info!("server shutdown complete, closing database connections");
     pool.close().await;
 
+    nvbes_observability::shutdown_tracing();
+    let _ = nvbes_observability::flush_error_reporting(Duration::from_secs(1));
+
     Ok(())
 }
 

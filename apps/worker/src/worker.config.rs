@@ -21,6 +21,7 @@ pub struct WorkerConfig {
     pub sentry_traces_sample_rate: f32,
     pub otlp_endpoint: Option<String>,
     pub otlp_authorization_header: Option<String>,
+    pub observability_internal_token: Option<String>,
 }
 
 impl WorkerConfig {
@@ -84,6 +85,8 @@ impl WorkerConfig {
             .or_else(|| optional("NVBES_WORKER_OTLP_ENDPOINT"));
         let otlp_authorization_header = optional("OTEL_EXPORTER_OTLP_HEADERS")
             .or_else(|| optional("NVBES_WORKER_OTLP_AUTHORIZATION"));
+        let observability_internal_token = optional("NVBES_OBSERVABILITY_INTERNAL_TOKEN")
+            .or_else(|| optional("OBSERVABILITY_INTERNAL_TOKEN"));
 
         Ok(Self {
             bind_addr,
@@ -97,6 +100,7 @@ impl WorkerConfig {
             sentry_traces_sample_rate,
             otlp_endpoint,
             otlp_authorization_header,
+            observability_internal_token,
         })
     }
 }

@@ -31,6 +31,9 @@ struct ErrorBody {
 
 impl IntoResponse for AccountError {
     fn into_response(self) -> axum::response::Response {
+        if let Self::Database(ref err) = self {
+            tracing::error!(error = %err, "database error in account service");
+        }
         let (status, code) = match self {
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, "authentication_required"),
             Self::IdentityUnavailable => (StatusCode::SERVICE_UNAVAILABLE, "identity_unavailable"),

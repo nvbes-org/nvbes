@@ -1,6 +1,12 @@
 use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
+use nvbes_core::http::internal_observability::{
+    InternalObservabilityConfig, internal_observability_guard_with_config,
+};
+use nvbes_observability::metrics::HttpMetrics;
 use serde::Serialize;
 use sqlx::PgPool;
+
+use crate::config::WorkerConfig;
 
 #[derive(Debug, Serialize)]
 pub struct WorkerHealthStatus {
@@ -15,13 +21,30 @@ pub struct WorkerReadinessStatus {
     pub database: &'static str,
 }
 
-pub fn router() -> Router<PgPool> {
-    Router::new()
+pub fn router(pool: PgPool, config: &WorkerConfig) -> Router {
+    let http_metrics = HttpMetrics::new();
+    let observability_config = InternalObservabilityConfig::new(
+        &config.environment,
+        config.observability_internal_token.as_deref(),
+    );
+
+    let metrics_router = Router::new()
+        .route("/metrics", get(nvbes_observability::metrics_handler))
+        .layer(axum::middleware::from_fn_with_state(
+            observability_config,
+            internal_observability_guard_with_config,
+        ))
+        .with_state(http_metrics);
+
+    let health_router = Router::new()
         .route("/healthz", get(healthz_handler))
         .route("/health/live", get(healthz_handler))
         .route("/readyz", get(readyz_handler))
         .route("/health/ready", get(readyz_handler))
         .route("/", get(root_handler))
+        .with_state(pool);
+
+    health_router.merge(metrics_router)
 }
 
 async fn healthz_handler() -> impl IntoResponse {

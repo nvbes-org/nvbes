@@ -1,12 +1,18 @@
-use axum::Router;
+use axum::{Router, routing::get};
+use nvbes_core::http::internal_observability::{
+    InternalObservabilityConfig, internal_observability_guard_with_config,
+};
+use nvbes_observability::metrics::HttpMetrics;
+use nvbes_observability::middleware::observe_request;
 use sqlx::PgPool;
 use std::sync::Arc;
+use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::TraceLayer;
 
 use crate::{config::ApiConfig, health, identity, openapi};
 
 pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
+    let http_metrics = HttpMetrics::new();
     let consent_service = Arc::new(nvbes_consent::service::ConsentService::new(
         pool.clone(),
         "nvbes_consent_ip_salt",
@@ -18,8 +24,21 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
 
     let (identity_router, _token_service) = identity::build_router(pool.clone(), config);
 
+    let observability_config = InternalObservabilityConfig::new(
+        &config.environment,
+        config.observability_internal_token.as_deref(),
+    );
+    let metrics_router = Router::new()
+        .route("/metrics", get(nvbes_observability::metrics_handler))
+        .layer(axum::middleware::from_fn_with_state(
+            observability_config,
+            internal_observability_guard_with_config,
+        ))
+        .with_state(http_metrics.clone());
+
     let mut router = Router::new()
         .merge(health::router().with_state(pool.clone()))
+        .merge(metrics_router)
         .merge(openapi::router())
         .merge(consent_router)
         .merge(identity_router);
@@ -41,15 +60,12 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
 
     // Integrate Billing domain if configuration is present
     if let Ok(billing_config) = nvbes_billing_service::BillingConfig::from_env() {
-        let metrics = metrics_exporter_prometheus::PrometheusBuilder::new()
-            .build_recorder()
-            .handle();
         match nvbes_billing_service::auth::TokenVerifier::new(&billing_config) {
             Ok(tokens) => {
                 let billing_state = nvbes_billing_service::BillingState {
                     db: pool.clone(),
                     config: billing_config,
-                    metrics: Arc::new(metrics),
+                    metrics: http_metrics.handle.clone(),
                     tokens,
                     email_client: None,
                 };
@@ -69,5 +85,11 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    router.layer(cors).layer(TraceLayer::new_for_http())
+    router
+        .layer(axum::middleware::from_fn_with_state(
+            http_metrics,
+            observe_request,
+        ))
+        .layer(CatchPanicLayer::new())
+        .layer(cors)
 }

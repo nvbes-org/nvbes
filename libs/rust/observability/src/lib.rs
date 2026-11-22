@@ -30,7 +30,7 @@ pub use trace_context::{
 };
 pub use tracing::{
     OtlpProtocol, TracingConfig, init_tracing, init_tracing_for_service, init_tracing_with_config,
-    otlp_http_signal_endpoint,
+    otlp_http_signal_endpoint, shutdown_tracing,
 };
 pub use worker_error_reporting::{
     ErrorReportingSmokeResult, WorkerJobContext, WorkerMonitorSchedule, WorkerOperationContext,

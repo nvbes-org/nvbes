@@ -78,6 +78,10 @@ fn use_json_logs(environment: &str) -> bool {
 }
 
 #[cfg(feature = "otlp")]
+static TRACER_PROVIDER: std::sync::OnceLock<opentelemetry_sdk::trace::SdkTracerProvider> =
+    std::sync::OnceLock::new();
+
+#[cfg(feature = "otlp")]
 fn otlp_layer<S>(
     config: TracingConfig<'_>,
     service_name: &str,
@@ -93,7 +97,7 @@ where
     use opentelemetry_sdk::Resource;
     use opentelemetry_sdk::trace::SdkTracerProvider;
 
-    let exporter = match config.protocol {
+    let exporter_res = match config.protocol {
         OtlpProtocol::Grpc => {
             let mut exporter = opentelemetry_otlp::SpanExporter::builder()
                 .with_tonic()
@@ -108,8 +112,15 @@ where
             .with_endpoint(otlp_http_signal_endpoint(endpoint, "v1/traces"))
             .with_headers(otlp_headers(config))
             .build(),
-    }
-    .expect("failed to create OTLP exporter");
+    };
+
+    let exporter = match exporter_res {
+        Ok(exporter) => exporter,
+        Err(err) => {
+            tracing::warn!(error = %err, "failed to create OTLP exporter, skipping OTLP layer");
+            return None;
+        }
+    };
 
     let provider = SdkTracerProvider::builder()
         .with_batch_exporter(exporter)
@@ -127,6 +138,7 @@ where
         .build();
 
     // Set the global tracer provider so other parts of the app can use it.
+    TRACER_PROVIDER.get_or_init(|| provider.clone());
     opentelemetry::global::set_tracer_provider(provider.clone());
 
     let tracer = provider.tracer("nvbes");
@@ -160,12 +172,30 @@ fn otlp_metadata(config: TracingConfig<'_>) -> Option<tonic::metadata::MetadataM
         return None;
     }
 
-    let value = tonic::metadata::MetadataValue::try_from(authorization)
-        .expect("NVBES_OTLP_AUTHORIZATION_HEADER must be valid gRPC metadata");
+    let value = match tonic::metadata::MetadataValue::try_from(authorization) {
+        Ok(v) => v,
+        Err(err) => {
+            tracing::warn!(error = %err, "invalid gRPC metadata in OTLP authorization header");
+            return None;
+        }
+    };
 
     let mut metadata = tonic::metadata::MetadataMap::new();
     metadata.insert("authorization", value);
     Some(metadata)
+}
+
+pub fn shutdown_tracing() {
+    #[cfg(feature = "otlp")]
+    {
+        if let Some(provider) = TRACER_PROVIDER.get() {
+            if let Err(err) = provider.shutdown() {
+                tracing::warn!(error = ?err, "failed to shutdown OpenTelemetry tracer provider");
+            } else {
+                tracing::info!("OpenTelemetry tracer provider shutdown complete");
+            }
+        }
+    }
 }
 
 #[cfg(test)]

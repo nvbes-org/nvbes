@@ -37,6 +37,15 @@ struct ErrorBody {
 
 impl IntoResponse for BillingError {
     fn into_response(self) -> axum::response::Response {
+        match self {
+            Self::Database(ref err) => {
+                tracing::error!(error = %err, "database error in billing service");
+            }
+            Self::Stripe(ref msg) => {
+                tracing::error!(stripe_error = %msg, "stripe provider error in billing service");
+            }
+            _ => {}
+        }
         let (status, code) = match self {
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, "authentication_required"),
             Self::IdentityUnavailable => (StatusCode::SERVICE_UNAVAILABLE, "identity_unavailable"),

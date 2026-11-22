@@ -13,7 +13,9 @@ static ERROR_REPORTING_CONFIGURED: AtomicBool = AtomicBool::new(false);
 pub(crate) fn error_reporting_test_lock() -> std::sync::MutexGuard<'static, ()> {
     use std::sync::{Mutex, OnceLock};
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+    LOCK.get_or_init(|| Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
 }
 
 pub struct ErrorReportingGuard {
@@ -128,7 +130,42 @@ pub fn flush_error_reporting(timeout: Duration) -> bool {
     })
 }
 
-pub fn install_safe_panic_hook() {}
+pub fn install_safe_panic_hook() {
+    static HOOK_INSTALLED: AtomicBool = AtomicBool::new(false);
+    if HOOK_INSTALLED.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        let location = panic_info
+            .location()
+            .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
+            .unwrap_or_else(|| "unknown".to_string());
+
+        let payload_str = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            (*s).to_string()
+        } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "non-string panic payload".to_string()
+        };
+
+        tracing::error!(
+            target: "panic",
+            panic_location = %location,
+            panic_message = %payload_str,
+            "fatal process panic observed"
+        );
+
+        if is_error_reporting_configured() {
+            sentry::capture_message(&format!("Panic at {location}: {payload_str}"), Level::Fatal);
+            let _ = flush_error_reporting(Duration::from_millis(500));
+        }
+
+        previous_hook(panic_info);
+    }));
+}
 
 pub(crate) fn release_name() -> Option<Cow<'static, str>> {
     std::env::var("SENTRY_RELEASE")

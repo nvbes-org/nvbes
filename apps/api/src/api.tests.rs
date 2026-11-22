@@ -198,3 +198,44 @@ async fn run_migrations_fails_closed_when_database_is_unreachable() {
     let result = crate::migrations::run_migrations(&pool).await;
     assert!(result.is_err());
 }
+
+#[tokio::test]
+async fn response_contains_observability_headers() {
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let app = build_router(pool, &config);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/healthz")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(response.headers().contains_key("x-request-id"));
+    assert!(response.headers().contains_key("traceparent"));
+    assert!(response.headers().contains_key("server-timing"));
+}
+
+#[tokio::test]
+async fn metrics_endpoint_returns_prometheus_metrics() {
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let app = build_router(pool, &config);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+}
