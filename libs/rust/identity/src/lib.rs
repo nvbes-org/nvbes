@@ -13,6 +13,8 @@ pub mod mfa;
 pub mod mfa_crypto;
 #[path = "identity.mfa.recovery.rs"]
 pub mod mfa_recovery;
+#[path = "identity.migrations.rs"]
+pub mod migrations;
 #[path = "identity.notifications.command.rs"]
 pub mod notification_command;
 #[path = "identity.notifications.dispatch.rs"]

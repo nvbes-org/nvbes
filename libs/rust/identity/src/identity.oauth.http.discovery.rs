@@ -20,6 +20,7 @@ pub fn router(issuer: &str, tokens: Arc<TokenService>) -> Router {
 pub fn router_with_logout(issuer: &str, tokens: Arc<TokenService>, logout_enabled: bool) -> Router {
     Router::new()
         .route("/.well-known/openid-configuration", get(discovery))
+        .route("/.well-known/jwks.json", get(jwks))
         .route("/oauth/jwks", get(jwks))
         .with_state(PublicProtocolState {
             logout_enabled,

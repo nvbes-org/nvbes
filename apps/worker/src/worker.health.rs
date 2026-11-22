@@ -18,7 +18,9 @@ pub struct WorkerReadinessStatus {
 pub fn router() -> Router<PgPool> {
     Router::new()
         .route("/healthz", get(healthz_handler))
+        .route("/health/live", get(healthz_handler))
         .route("/readyz", get(readyz_handler))
+        .route("/health/ready", get(readyz_handler))
         .route("/", get(root_handler))
 }
 

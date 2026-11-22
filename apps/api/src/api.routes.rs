@@ -4,9 +4,9 @@ use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
-use crate::{config::ApiConfig, health, openapi};
+use crate::{config::ApiConfig, health, identity, openapi};
 
-pub fn build_router(pool: PgPool, _config: &ApiConfig) -> Router {
+pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
     let consent_service = Arc::new(nvbes_consent::service::ConsentService::new(
         pool.clone(),
         "nvbes_consent_ip_salt",
@@ -16,17 +16,20 @@ pub fn build_router(pool: PgPool, _config: &ApiConfig) -> Router {
         nvbes_consent::routes::consent_routes(consent_service),
     );
 
+    let (identity_router, _token_service) = identity::build_router(pool.clone(), config);
+
     let mut router = Router::new()
         .merge(health::router().with_state(pool.clone()))
         .merge(openapi::router())
-        .merge(consent_router);
+        .merge(consent_router)
+        .merge(identity_router);
 
     // Integrate Account domain if configuration is present
     if let Ok(account_config) = nvbes_account_service::AccountConfig::from_env() {
         match nvbes_account_service::AccountState::new(account_config, pool.clone()) {
             Ok(account_state) => {
                 tracing::info!("mounting Account service domain router");
-                router = router.merge(nvbes_account_service::router(account_state));
+                router = router.merge(nvbes_account_service::domain_router(account_state));
             }
             Err(e) => {
                 tracing::warn!("failed to initialize Account state: {e}");
@@ -51,7 +54,7 @@ pub fn build_router(pool: PgPool, _config: &ApiConfig) -> Router {
                     email_client: None,
                 };
                 tracing::info!("mounting Billing service domain router");
-                router = router.merge(nvbes_billing_service::create_router(billing_state));
+                router = router.merge(nvbes_billing_service::domain_router(billing_state));
             }
             Err(e) => {
                 tracing::warn!("failed to initialize Billing TokenVerifier: {e}");

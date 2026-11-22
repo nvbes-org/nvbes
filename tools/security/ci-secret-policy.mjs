@@ -24,27 +24,38 @@ export function assertSecrets(
     ],
     ['NVBES_STAGING_ACCOUNT_PASSWORD', new Set(['.github/workflows/account-release.yml'])],
     ...[
+      'API_SENTRY_DSN',
       'IDENTITY_MFA_ENCRYPTION_KEY',
       'IDENTITY_METRICS_TOKEN',
       'IDENTITY_SENTRY_DSN',
       'IDENTITY_SYNTHETIC_PASSWORD',
       'IDENTITY_SYNTHETIC_RECOVERED_PASSWORD',
     ].map((secret) => [secret, new Set(['.github/workflows/deploy.yml'])]),
-    ...['IDENTITY_TERRAFORM_STATE_ACCESS_KEY', 'IDENTITY_TERRAFORM_STATE_SECRET_KEY'].map(
-      (secret) => [
-        secret,
-        new Set(['.github/workflows/deploy.yml', '.github/workflows/validate-restore.yml']),
-      ],
-    ),
-    ...['ACCOUNT_METRICS_TOKEN', 'IDENTITY_TOKEN_PUBLIC_KEY_PEM', 'ACCOUNT_SENTRY_DSN'].map(
-      (secret) => [secret, new Set(['.github/workflows/deploy.yml'])],
-    ),
-    ...['ACCOUNT_TERRAFORM_STATE_ACCESS_KEY', 'ACCOUNT_TERRAFORM_STATE_SECRET_KEY'].map(
-      (secret) => [
-        secret,
-        new Set(['.github/workflows/deploy.yml', '.github/workflows/validate-restore.yml']),
-      ],
-    ),
+    ...[
+      'API_TERRAFORM_STATE_ACCESS_KEY',
+      'API_TERRAFORM_STATE_SECRET_KEY',
+      'IDENTITY_TERRAFORM_STATE_ACCESS_KEY',
+      'IDENTITY_TERRAFORM_STATE_SECRET_KEY',
+    ].map((secret) => [
+      secret,
+      new Set(['.github/workflows/deploy.yml', '.github/workflows/validate-restore.yml']),
+    ]),
+    ...[
+      'WORKER_SENTRY_DSN',
+      'WORKER_DATABASE_URL',
+      'ACCOUNT_METRICS_TOKEN',
+      'IDENTITY_TOKEN_PUBLIC_KEY_PEM',
+      'ACCOUNT_SENTRY_DSN',
+    ].map((secret) => [secret, new Set(['.github/workflows/deploy.yml'])]),
+    ...[
+      'WORKER_TERRAFORM_STATE_ACCESS_KEY',
+      'WORKER_TERRAFORM_STATE_SECRET_KEY',
+      'ACCOUNT_TERRAFORM_STATE_ACCESS_KEY',
+      'ACCOUNT_TERRAFORM_STATE_SECRET_KEY',
+    ].map((secret) => [
+      secret,
+      new Set(['.github/workflows/deploy.yml', '.github/workflows/validate-restore.yml']),
+    ]),
     ...[
       'BILLING_METRICS_TOKEN',
       'BILLING_OPERATOR_TOKEN',
@@ -125,52 +136,34 @@ export function assertSecrets(
       text.includes('name: deploy') &&
       text.includes('ci-provenance:') &&
       text.includes('node tools/ci/verify-ci-provenance.mjs') &&
-      text.includes('name: production-account') &&
-      text.includes('name: production-billing') &&
-      text.includes('name: production-email') &&
-      text.includes('name: production-identity') &&
-      text.includes('name: production-trust-risk') &&
+      text.includes('name: production-api') &&
+      text.includes('name: production-worker') &&
       text.includes("if: github.ref == 'refs/heads/main'") &&
       text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
       text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
       text.includes(
-        `EMAIL_DEPLOY_CONFIRMATION: ${githubExpression('vars.EMAIL_DEPLOY_CONFIRMATION')}`,
+        `API_DEPLOY_CONFIRMATION: ${githubExpression('vars.API_DEPLOY_CONFIRMATION')}`,
       ) &&
       text.includes(
-        `EMAIL_DEPLOY_APPROVED_SHA: ${githubExpression('vars.EMAIL_DEPLOY_APPROVED_SHA')}`,
+        `API_DEPLOY_APPROVED_SHA: ${githubExpression('vars.API_DEPLOY_APPROVED_SHA')}`,
       ) &&
-      text.includes('[[ "$EMAIL_DEPLOY_CONFIRMATION" == "deploy-email-production" ]]') &&
-      text.includes('[[ "$EMAIL_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
-      text.includes('[[ "$EMAIL_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]') &&
+      text.includes('[[ "$API_DEPLOY_CONFIRMATION" == "deploy-api-production" ]]') &&
+      text.includes('[[ "$API_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
+      text.includes('[[ "$API_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]') &&
       text.includes(
-        `IDENTITY_DEPLOY_CONFIRMATION: ${githubExpression('vars.IDENTITY_DEPLOY_CONFIRMATION')}`,
-      ) &&
-      text.includes(
-        `IDENTITY_DEPLOY_APPROVED_SHA: ${githubExpression('vars.IDENTITY_DEPLOY_APPROVED_SHA')}`,
-      ) &&
-      text.includes('[[ "$IDENTITY_DEPLOY_CONFIRMATION" == "deploy-identity-production" ]]') &&
-      text.includes('[[ "$IDENTITY_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
-      text.includes('[[ "$IDENTITY_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]') &&
-      text.includes(
-        `ACCOUNT_DEPLOY_CONFIRMATION: ${githubExpression('vars.ACCOUNT_DEPLOY_CONFIRMATION')}`,
+        `WORKER_DEPLOY_CONFIRMATION: ${githubExpression('vars.WORKER_DEPLOY_CONFIRMATION')}`,
       ) &&
       text.includes(
-        `ACCOUNT_DEPLOY_APPROVED_SHA: ${githubExpression('vars.ACCOUNT_DEPLOY_APPROVED_SHA')}`,
+        `WORKER_DEPLOY_APPROVED_SHA: ${githubExpression('vars.WORKER_DEPLOY_APPROVED_SHA')}`,
       ) &&
-      text.includes('[[ "$ACCOUNT_DEPLOY_CONFIRMATION" == "deploy-account-production" ]]') &&
-      text.includes('[[ "$ACCOUNT_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
-      text.includes('[[ "$ACCOUNT_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]') &&
+      text.includes('[[ "$WORKER_DEPLOY_CONFIRMATION" == "deploy-worker-production" ]]') &&
+      text.includes('[[ "$WORKER_DEPLOY_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]') &&
+      text.includes('[[ "$WORKER_DEPLOY_APPROVED_SHA" == "$GITHUB_SHA" ]]') &&
       text.includes(`ref: ${githubExpression('github.sha')}`) &&
-      text.includes('production/email/terraform.tfstate') &&
-      text.includes('production/account/terraform.tfstate') &&
-      text.includes('production/billing/terraform.tfstate') &&
-      text.includes('production/identity/terraform.tfstate') &&
-      text.includes('production/trust-risk/terraform.tfstate') &&
-      text.includes('ghcr.io/nvbes-org/nvbes-email-worker') &&
-      text.includes('ghcr.io/nvbes-org/nvbes-account-service') &&
-      text.includes('ghcr.io/nvbes-org/nvbes-billing-service') &&
-      text.includes('ghcr.io/nvbes-org/nvbes-identity-service') &&
-      text.includes('ghcr.io/nvbes-org/nvbes-trust-risk-service') &&
+      text.includes('production/api/terraform.tfstate') &&
+      text.includes('production/worker/terraform.tfstate') &&
+      text.includes('ghcr.io/nvbes-org/nvbes-api') &&
+      text.includes('ghcr.io/nvbes-org/nvbes-worker') &&
       text.includes('cosign verify');
     const isValidatedRestoreWorkflow =
       path === '.github/workflows/validate-restore.yml' &&

@@ -13,7 +13,7 @@ const securityChecker =
   readFileSync('tools/security/check-ci-cd-security.mjs', 'utf8');
 
 test('deployment builds combine shared Rust and isolated Scaleway registry cache scopes', () => {
-  for (const scope of ['email-worker', 'trust-risk-service', 'billing-service']) {
+  for (const scope of ['api', 'worker']) {
     assert.match(deployWorkflow, /name: production-ci-cache/u);
     assert.match(deployWorkflow, /password: \$\{\{ secrets\.SCW_CI_CACHE_SECRET_KEY \}\}/u);
     assert.ok(
@@ -28,7 +28,7 @@ test('deployment builds combine shared Rust and isolated Scaleway registry cache
     );
   }
   assert.ok(
-    (deployWorkflow.match(/rust-builder:rust-1\.98\.1-linux-amd64/gu)?.length ?? 0) >= 6,
+    (deployWorkflow.match(/rust-builder:rust-1\.98\.1-linux-amd64/gu)?.length ?? 0) >= 4,
     'each deploy build imports and exports the shared Linux Rust cache',
   );
 });

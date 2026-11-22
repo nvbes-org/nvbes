@@ -3,6 +3,14 @@ use nvbes_api::{ApiConfig, run_server};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if std::env::args().any(|arg| arg == "--export-openapi") {
+        let spec = nvbes_api::openapi_spec();
+        let json = serde_json::to_string_pretty(&spec)
+            .context("failed to serialize OpenAPI specification")?;
+        println!("{json}");
+        return Ok(());
+    }
+
     nvbes_observability::install_safe_panic_hook();
 
     let config = ApiConfig::from_env().context("failed to load API configuration")?;

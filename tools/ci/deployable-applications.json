@@ -1,49 +1,22 @@
 {
   "rust": [
     {
-      "project": "account-service",
-      "package": "nvbes-account-service",
-      "image": "nvbes-account-service",
-      "dockerfile": "apps/account-service/Dockerfile",
-      "binary": "nvbes-account-service",
-      "appRoot": "apps/account-service",
-      "contract": "apps/account-service/tests/container-contract.test.mjs"
+      "project": "api",
+      "package": "nvbes-api",
+      "image": "nvbes-api",
+      "dockerfile": "apps/api/Dockerfile",
+      "binary": "nvbes-api",
+      "appRoot": "apps/api",
+      "contract": "apps/api/tests/container-contract.test.mjs"
     },
     {
-      "project": "billing-service",
-      "package": "nvbes-billing-service",
-      "image": "nvbes-billing-service",
-      "dockerfile": "apps/billing-service/Dockerfile",
-      "binary": "nvbes-billing-service",
-      "appRoot": "apps/billing-service",
-      "contract": "apps/billing-service/tests/container-contract.test.mjs"
-    },
-    {
-      "project": "email-worker",
-      "package": "nvbes-email-worker",
-      "image": "nvbes-email-worker",
-      "dockerfile": "apps/email-worker/Dockerfile",
-      "binary": "nvbes-email-worker",
-      "appRoot": "apps/email-worker",
-      "contract": "apps/email-worker/tests/container-contract.test.mjs"
-    },
-    {
-      "project": "identity-service",
-      "package": "nvbes-identity-service",
-      "image": "nvbes-identity-service",
-      "dockerfile": "apps/identity-service/Dockerfile",
-      "binary": "nvbes-identity-service",
-      "appRoot": "apps/identity-service",
-      "contract": "apps/identity-service/tests/container-contract.test.mjs"
-    },
-    {
-      "project": "trust-risk-service",
-      "package": "nvbes-trust-risk-service",
-      "image": "nvbes-trust-risk-service",
-      "dockerfile": "apps/trust-risk-service/Dockerfile",
-      "binary": "nvbes-trust-risk-service",
-      "appRoot": "apps/trust-risk-service",
-      "contract": "apps/trust-risk-service/tests/container-contract.test.mjs"
+      "project": "worker",
+      "package": "nvbes-worker",
+      "image": "nvbes-worker",
+      "dockerfile": "apps/worker/Dockerfile",
+      "binary": "nvbes-worker",
+      "appRoot": "apps/worker",
+      "contract": "apps/worker/tests/container-contract.test.mjs"
     }
   ],
   "web": []

@@ -434,14 +434,22 @@ jobs:
         uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
         with:
           sarif_file: osv-results.sarif
-      - name: Scan the complete Git history with Gitleaks
+      - name: Scan Git history with Gitleaks
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          LOG_OPTS="--all"
+          if [[ "$EVENT_NAME" == "pull_request" && -n "$BASE_SHA" && -n "$HEAD_SHA" ]]; then
+            LOG_OPTS="$BASE_SHA..$HEAD_SHA"
+          fi
           docker run --rm \
             --volume "$PWD:/repo" \
             ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
             detect \
             --source=/repo \
-            --log-opts=--all \
+            --log-opts="$LOG_OPTS" \
             --redact
       - name: Scan filesystem, secrets and infrastructure configuration with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

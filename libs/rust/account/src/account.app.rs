@@ -26,7 +26,7 @@ impl AccountState {
     }
 }
 
-pub fn router(state: AccountState) -> Router {
+pub fn domain_router(state: AccountState) -> Router {
     let cors = state.config.browser_origins.layer(vec![
         axum::http::Method::GET,
         axum::http::Method::POST,
@@ -38,12 +38,16 @@ pub fn router(state: AccountState) -> Router {
         .merge(crate::teams::router(state.clone()))
         .merge(crate::privacy::router(state.clone()))
         .layer(cors);
+    crate::billing_authorization::router(
+        state.db.clone(),
+        state.config.billing_authorization_secret.as_deref(),
+    )
+    .merge(crate::operator::router(state.clone()))
+    .merge(browser)
+}
+
+pub fn router(state: AccountState) -> Router {
     crate::health::router(state.clone())
-        .merge(crate::billing_authorization::router(
-            state.db.clone(),
-            state.config.billing_authorization_secret.as_deref(),
-        ))
         .merge(crate::metrics::router(state.clone()))
-        .merge(crate::operator::router(state.clone()))
-        .merge(browser)
+        .merge(domain_router(state))
 }

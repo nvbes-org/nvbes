@@ -136,6 +136,8 @@ switch (lane) {
     const dbParallel = recommendedParallelism({ maxParallel: 4, memoryPerWorkerMb: 1024 });
     const targetProjects = plan.shadow ? plan.baseline.databases : plan.databases;
     const workspaceMap = {
+      api: 'nvbes-api',
+      worker: 'nvbes-worker',
       'account-service': 'nvbes-account-service',
       'billing-service': 'nvbes-billing-service',
       'identity-service': 'nvbes-identity-service',

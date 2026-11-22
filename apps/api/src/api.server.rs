@@ -17,6 +17,14 @@ pub async fn run_server(config: ApiConfig) -> anyhow::Result<()> {
         .max_connections(config.database_max_connections)
         .idle_timeout(Duration::from_secs(30))
         .acquire_timeout(Duration::from_secs(10))
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                sqlx::query("SET search_path TO identity, account, billing, consent, public") // nvbes-allow-runtime-sql
+                    .execute(conn)
+                    .await?;
+                Ok(())
+            })
+        })
         .connect_lazy(&config.database_url)
         .context("failed to configure lazy Postgres connection pool")?;
 

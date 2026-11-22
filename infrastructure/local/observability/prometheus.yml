@@ -10,25 +10,18 @@ remote_write:
     send_exemplars: true
 
 scrape_configs:
-  - job_name: 'account-service'
+  - job_name: 'api'
     static_configs:
-      - targets: ['host.docker.internal:4000']
+      - targets: ['host.docker.internal:8080']
         labels:
-          service: 'account-service'
+          service: 'api'
           environment: 'development'
 
-  - job_name: 'account-worker'
+  - job_name: 'worker'
     static_configs:
-      - targets: ['host.docker.internal:4102']
+      - targets: ['host.docker.internal:8081']
         labels:
-          service: 'account-worker'
-          environment: 'development'
-
-  - job_name: 'email-worker'
-    static_configs:
-      - targets: ['host.docker.internal:3040']
-        labels:
-          service: 'email-worker'
+          service: 'worker'
           environment: 'development'
 
   - job_name: 'grafana-stack'

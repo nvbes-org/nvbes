@@ -43,6 +43,6 @@ pub mod teams;
 #[path = "account.test_support.rs"]
 pub mod test_support;
 
-pub use app::{AccountState, router};
+pub use app::{AccountState, domain_router, router};
 pub use config::AccountConfig;
 pub use error::AccountError;

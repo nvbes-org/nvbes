@@ -147,15 +147,15 @@ faro.receiver "identity_web" {
 local.file_match "nvbes_logs" {
   path_targets = [
     {
-      "__path__"    = "/var/log/nvbes/account-service.jsonl",
-      "job"         = "account-service",
-      "service"     = "account-service",
+      "__path__"    = "/var/log/nvbes/api.jsonl",
+      "job"         = "api",
+      "service"     = "api",
       "environment" = "development",
     },
     {
-      "__path__"    = "/var/log/nvbes/account-worker.jsonl",
-      "job"         = "account-worker",
-      "service"     = "account-worker",
+      "__path__"    = "/var/log/nvbes/worker.jsonl",
+      "job"         = "worker",
+      "service"     = "worker",
       "environment" = "development",
     },
   ]

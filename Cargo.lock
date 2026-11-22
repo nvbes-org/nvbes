@@ -2734,6 +2734,9 @@ dependencies = [
  "nvbes-core",
  "nvbes-identity-service",
  "nvbes-observability",
+ "rand 0.9.5",
+ "reqwest 0.12.28",
+ "rsa",
  "serde",
  "serde_json",
  "sqlx",
@@ -2743,6 +2746,8 @@ dependencies = [
  "tower-http 0.7.1",
  "tracing",
  "utoipa",
+ "uuid",
+ "webauthn-rs",
 ]
 
 [[package]]

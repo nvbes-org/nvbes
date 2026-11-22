@@ -25,6 +25,14 @@
 				"command": "cargo test --locked --package nvbes-api",
 				"cwd": "."
 			}
+		},
+		"export-openapi": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "cargo run --quiet --package nvbes-api -- --export-openapi",
+				"cwd": "."
+			}
 		}
 	},
 	"tags": ["scope:platform", "type:app", "domain:api", "layer:app"]

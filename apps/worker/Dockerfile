@@ -49,6 +49,6 @@ USER 10001:10001
 EXPOSE 8081
 STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -f http://127.0.0.1:8081/healthz || exit 1
+    CMD curl -f http://127.0.0.1:8081/health/live || exit 1
 
 ENTRYPOINT ["/app/worker"]

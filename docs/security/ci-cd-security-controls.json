@@ -103,10 +103,9 @@
 						{
 							"path": ".github/workflows/deploy.yml",
 							"includes": [
-								"name: production-billing",
+								"name: production-api",
 								"github.ref == 'refs/heads/main'",
-								"TF_VAR_stripe_secret_key: ${{ secrets.STRIPE_SECRET_KEY }}",
-								"TF_VAR_stripe_webhook_secret: ${{ secrets.STRIPE_WEBHOOK_SECRET }}"
+								"TF_VAR_api_sentry_dsn: ${{ secrets.API_SENTRY_DSN }}"
 							]
 						},
 						{
@@ -137,71 +136,23 @@
 						{
 							"path": ".github/workflows/deploy.yml",
 							"includes": [
-								"name: production-email",
+								"name: production-api",
 								"github.ref == 'refs/heads/main'",
 								"ref: ${{ github.sha }}",
-								"production/email/terraform.tfstate",
+								"production/api/terraform.tfstate",
 								"cosign verify",
-								"email-runtime.tfplan"
+								"api-runtime.tfplan"
 							]
 						},
 						{
 							"path": ".github/workflows/deploy.yml",
 							"includes": [
-								"name: production-trust-risk",
+								"name: production-worker",
 								"github.ref == 'refs/heads/main'",
 								"ref: ${{ github.sha }}",
-								"production/trust-risk/terraform.tfstate",
+								"production/worker/terraform.tfstate",
 								"cosign verify",
-								"trust-risk-runtime.tfplan"
-							]
-						},
-						{
-							"path": ".github/workflows/deploy.yml",
-							"includes": [
-								"name: production-identity",
-								"github.ref == 'refs/heads/main'",
-								"ref: ${{ github.sha }}",
-								"production/identity/terraform.tfstate",
-								"cosign verify",
-								"identity-runtime.tfplan"
-							]
-						},
-						{
-							"path": ".github/workflows/validate-restore.yml",
-							"includes": [
-								"name: production-identity",
-								"github.ref == 'refs/heads/main'",
-								"ref: main",
-								"git merge-base --is-ancestor \"$APPROVED_SHA\" origin/main",
-								"git checkout --detach \"$APPROVED_SHA\"",
-								"validate-identity-production-restore",
-								"expected_principal_id",
-								"DELETE_RESTORE_DATABASE=true"
-							]
-						},
-						{
-							"path": ".github/workflows/deploy.yml",
-							"includes": [
-								"name: production-account",
-								"github.ref == 'refs/heads/main'",
-								"ref: ${{ github.sha }}",
-								"production/account/terraform.tfstate",
-								"cosign verify",
-								"account-runtime.tfplan"
-							]
-						},
-						{
-							"path": ".github/workflows/validate-restore.yml",
-							"includes": [
-								"name: production-account",
-								"github.ref == 'refs/heads/main'",
-								"ref: main",
-								"git merge-base --is-ancestor \"$APPROVED_SHA\" origin/main",
-								"git checkout --detach \"$APPROVED_SHA\"",
-								"validate-account-production-restore",
-								"expected_principal_id",
-								"DELETE_RESTORE_DATABASE=true"
+								"worker-runtime.tfplan"
 							]
 						},
 						{
@@ -357,6 +308,10 @@
 		"ACCOUNT_SENTRY_DSN",
 		"ACCOUNT_TERRAFORM_STATE_ACCESS_KEY",
 		"ACCOUNT_TERRAFORM_STATE_SECRET_KEY",
+		"API_METRICS_TOKEN",
+		"API_SENTRY_DSN",
+		"API_TERRAFORM_STATE_ACCESS_KEY",
+		"API_TERRAFORM_STATE_SECRET_KEY",
 		"BILLING_METRICS_TOKEN",
 		"BILLING_OPERATOR_TOKEN",
 		"BILLING_SENTRY_DSN",
@@ -411,7 +366,12 @@
 		"TRUST_RISK_PRODUCER_POLICIES",
 		"TRUST_RISK_SENTRY_DSN",
 		"TRUST_RISK_TERRAFORM_STATE_ACCESS_KEY",
-		"TRUST_RISK_TERRAFORM_STATE_SECRET_KEY"
+		"TRUST_RISK_TERRAFORM_STATE_SECRET_KEY",
+		"WORKER_DATABASE_URL",
+		"WORKER_METRICS_TOKEN",
+		"WORKER_SENTRY_DSN",
+		"WORKER_TERRAFORM_STATE_ACCESS_KEY",
+		"WORKER_TERRAFORM_STATE_SECRET_KEY"
 	],
 	"allowedContinueOnError": [],
 	"allowedWritePermissions": [

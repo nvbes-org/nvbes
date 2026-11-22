@@ -24,15 +24,20 @@ nvbes-consent = { path = "../../libs/rust/consent" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-identity-service = { path = "../../libs/rust/identity" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
+rand.workspace = true
+reqwest.workspace = true
+rsa = { version = "0.9.10", features = ["pem"] }
 serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-tower.workspace = true
+tower = { workspace = true }
 tower-http = { workspace = true, features = ["cors", "trace", "compression-full"] }
 tracing.workspace = true
 utoipa.workspace = true
+uuid.workspace = true
+webauthn-rs.workspace = true
 
 [dev-dependencies]
 tower = "0.5"

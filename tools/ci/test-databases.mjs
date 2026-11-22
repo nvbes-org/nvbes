@@ -9,6 +9,8 @@ else {
   try {
     for (const project of plan.databaseExecution) {
       const scope = {
+        api: 'api',
+        worker: 'worker',
         'email-worker': 'email',
         'account-service': 'account',
         'billing-service': 'billing',

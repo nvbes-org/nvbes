@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "node ../../node_modules/vite-plus/bin/vp lint src",
     "test": "node ../../node_modules/vite-plus/bin/vp test",
-    "test:browser": "node ../identity-service/tests/runtime-browser-hosted-runner.mjs",
+    "test:browser": "node ../../archive/apps/identity-service/tests/runtime-browser-hosted-runner.mjs",
     "format:check": "node ../../node_modules/vite-plus/bin/vp fmt --check src package.json tsconfig.json vite.config.ts index.html components.json",
     "check": "pnpm run typecheck"
   },

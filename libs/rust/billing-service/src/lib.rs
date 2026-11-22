@@ -41,6 +41,6 @@ pub mod synthetic;
 #[path = "billing.webhooks.rs"]
 pub mod webhooks;
 
-pub use app::{BillingState, create_router};
+pub use app::{BillingState, create_router, domain_router};
 pub use config::BillingConfig;
 pub use error::BillingError;

@@ -23,13 +23,7 @@ const REQUIRED_SECURITY_HEADERS = [
   'x-frame-options',
 ];
 
-const SERVICES = [
-  { name: 'identity', livePath: '/health/live', readyPath: '/health/ready' },
-  { name: 'account', livePath: '/health/live', readyPath: '/health/ready' },
-  { name: 'billing', livePath: '/health/live', readyPath: '/health/ready' },
-  { name: 'email', livePath: '/health/live', readyPath: '/health/ready' },
-  { name: 'trust-risk', livePath: '/health/live', readyPath: '/health/ready' },
-];
+const SERVICES = [{ name: 'api', livePath: '/health/live', readyPath: '/health/ready' }];
 
 function checkTlsCertificate(hostname) {
   return new Promise((resolve) => {

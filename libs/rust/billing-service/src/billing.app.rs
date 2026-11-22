@@ -36,7 +36,7 @@ impl BillingState {
     }
 }
 
-pub fn create_router(state: BillingState) -> Router {
+pub fn domain_router(state: BillingState) -> Router {
     let cors = state
         .config
         .browser_origins
@@ -70,8 +70,6 @@ pub fn create_router(state: BillingState) -> Router {
         .layer(cors);
     Router::new()
         .merge(browser)
-        .merge(health::router())
-        .merge(metrics::router())
         .route("/webhooks/stripe", post(stripe_webhook_handler))
         .route("/operator/billing/overview", get(operator_overview_handler))
         .route(
@@ -83,4 +81,12 @@ pub fn create_router(state: BillingState) -> Router {
             post(operator_resolve_reconciliation_handler),
         )
         .with_state(state)
+}
+
+pub fn create_router(state: BillingState) -> Router {
+    Router::new()
+        .merge(health::router())
+        .merge(metrics::router())
+        .with_state(state.clone())
+        .merge(domain_router(state))
 }

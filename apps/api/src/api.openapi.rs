@@ -3,9 +3,14 @@ use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(),
+    paths(
+        crate::health::healthz_handler,
+        crate::health::readyz_handler,
+    ),
     components(
         schemas(
+            crate::health::HealthStatus,
+            crate::health::ReadinessStatus,
             nvbes_consent::models::CookiePreferences,
             nvbes_consent::models::CookiePreferencesResponse,
             nvbes_consent::models::RecordAgreementRequest,
@@ -28,6 +33,10 @@ use utoipa::OpenApi;
     )
 )]
 pub struct ApiDoc;
+
+pub fn openapi_spec() -> utoipa::openapi::OpenApi {
+    ApiDoc::openapi()
+}
 
 pub fn router() -> Router {
     Router::new()

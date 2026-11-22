@@ -1,5 +1,5 @@
 locals {
-  state_stacks = ["billing", "bootstrap", "email", "identity", "platform"]
+  state_stacks = ["api", "bootstrap", "worker"]
   tags = [
     "nvbes",
     "environment:production",

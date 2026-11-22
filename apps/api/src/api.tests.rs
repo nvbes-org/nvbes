@@ -1,11 +1,24 @@
 use axum::{
-    body::Body,
+    body::{Body, to_bytes},
     http::{Request, StatusCode},
 };
 use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
 
-use crate::{build_router, config::ApiConfig};
+use crate::{
+    build_router,
+    config::ApiConfig,
+    ports::{
+        AccountPort, IdentityPort, InProcessAccountAdapter, InProcessIdentityAdapter, PortError,
+    },
+};
+
+fn test_pool() -> sqlx::PgPool {
+    PgPoolOptions::new()
+        .min_connections(0)
+        .connect_lazy("postgres://localhost/nvbes_test")
+        .unwrap()
+}
 
 #[tokio::test]
 async fn config_loads_defaults() {
@@ -18,11 +31,7 @@ async fn config_loads_defaults() {
 
 #[tokio::test]
 async fn healthz_returns_pass() {
-    let pool = PgPoolOptions::new()
-        .min_connections(0)
-        .connect_lazy("postgres://localhost/nvbes_test")
-        .unwrap();
-
+    let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
     let app = build_router(pool, &config);
 
@@ -40,12 +49,31 @@ async fn healthz_returns_pass() {
 }
 
 #[tokio::test]
-async fn root_returns_metadata() {
-    let pool = PgPoolOptions::new()
-        .min_connections(0)
-        .connect_lazy("postgres://localhost/nvbes_test")
+async fn health_live_returns_service_name() {
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let app = build_router(pool, &config);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/health/live")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
         .unwrap();
 
+    assert_eq!(response.status(), StatusCode::OK);
+    let bytes = to_bytes(response.into_body(), 1024).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(body["service"], "nvbes-api");
+    assert_eq!(body["status"], "pass");
+}
+
+#[tokio::test]
+async fn root_returns_metadata() {
+    let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
     let app = build_router(pool, &config);
 
@@ -59,11 +87,7 @@ async fn root_returns_metadata() {
 
 #[tokio::test]
 async fn openapi_spec_is_accessible() {
-    let pool = PgPoolOptions::new()
-        .min_connections(0)
-        .connect_lazy("postgres://localhost/nvbes_test")
-        .unwrap();
-
+    let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
     let app = build_router(pool, &config);
 
@@ -78,4 +102,99 @@ async fn openapi_spec_is_accessible() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn oidc_discovery_is_accessible() {
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let app = build_router(pool, &config);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/.well-known/openid-configuration")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let bytes = to_bytes(response.into_body(), 8192).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(body["issuer"], "http://localhost:8080");
+    assert_eq!(body["jwks_uri"], "http://localhost:8080/oauth/jwks");
+}
+
+#[tokio::test]
+async fn oidc_jwks_is_accessible() {
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let app = build_router(pool, &config);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/oauth/jwks")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let bytes = to_bytes(response.into_body(), 8192).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert!(body["keys"].is_array());
+}
+
+#[tokio::test]
+async fn consent_routes_are_mounted() {
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let app = build_router(pool, &config);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/consents")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    // Route exists and is mounted (returns 200 or handles request, not 404)
+    assert_ne!(response.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn in_process_identity_port_rejects_invalid_token() {
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let (_router, token_svc) = crate::identity::build_router(pool, &config);
+    let token_service = token_svc.expect("TokenService must be available in dev/test");
+
+    let adapter = InProcessIdentityAdapter::new(token_service);
+    let result = adapter.introspect_token("invalid.jwt.token", "nvbes-account-service");
+
+    assert!(matches!(result, Err(PortError::Unauthorized(_))));
+}
+
+#[tokio::test]
+async fn in_process_account_port_handles_database_error() {
+    let pool = test_pool();
+    let adapter = InProcessAccountAdapter::new(pool);
+    let result = adapter
+        .is_team_member(uuid::Uuid::new_v4(), uuid::Uuid::new_v4())
+        .await;
+    assert!(matches!(result, Err(PortError::Internal(_))));
+}
+
+#[tokio::test]
+async fn run_migrations_fails_closed_when_database_is_unreachable() {
+    let pool = test_pool();
+    let result = crate::migrations::run_migrations(&pool).await;
+    assert!(result.is_err());
 }

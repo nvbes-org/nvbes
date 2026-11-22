@@ -15,8 +15,10 @@ pub async fn connect(database_url: &str, max_connections: u32) -> Result<PgPool,
         .await
 }
 
+pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
+
 pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
-    sqlx::migrate!("./migrations").run(pool).await
+    MIGRATOR.run(pool).await
 }
 
 #[cfg(test)]
