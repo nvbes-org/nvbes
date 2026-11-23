@@ -311,3 +311,126 @@ async fn catch_panic_layer_recovers_from_panic() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }
+
+#[tokio::test]
+async fn swagger_ui_and_openapi_spec_are_accessible() {
+    let spec = crate::openapi::openapi_spec();
+    assert_eq!(spec.info.title, "NVBES Unified Monolith API");
+
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let app = build_router(pool, &config);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/docs")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let bytes = to_bytes(response.into_body(), 2048).await.unwrap();
+    let body = String::from_utf8_lossy(&bytes);
+    assert!(body.contains("NVBES API Documentation"));
+}
+
+#[tokio::test]
+async fn readiness_endpoints_work() {
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let app = build_router(pool, &config);
+
+    for uri in ["/readyz", "/health/ready"] {
+        let response = app
+            .clone()
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert!(
+            response.status() == StatusCode::OK
+                || response.status() == StatusCode::SERVICE_UNAVAILABLE
+        );
+    }
+}
+
+#[test]
+fn port_error_and_principal_contract() {
+    assert_eq!(
+        format!("{}", PortError::Unauthorized("denied".into())),
+        "unauthorized: denied"
+    );
+    assert_eq!(
+        format!("{}", PortError::InvalidArgument("bad".into())),
+        "invalid argument: bad"
+    );
+    assert_eq!(
+        format!("{}", PortError::NotFound("missing".into())),
+        "not found: missing"
+    );
+    assert_eq!(
+        format!("{}", PortError::Internal("crash".into())),
+        "internal port error: crash"
+    );
+
+    let id = uuid::Uuid::new_v4();
+    let principal = crate::ports::AuthenticatedPrincipal {
+        id,
+        scopes: vec!["account:read".into(), "account:write".into()],
+        client_id: Some("nvbes-web".into()),
+        step_up: true,
+    };
+    assert_eq!(principal.id, id);
+    assert_eq!(principal.scopes.len(), 2);
+    assert_eq!(principal.client_id.as_deref(), Some("nvbes-web"));
+    assert!(principal.step_up);
+}
+
+#[test]
+fn config_error_formatting() {
+    assert_eq!(
+        format!("{}", crate::config::ConfigError::Missing("DATABASE_URL")),
+        "missing required configuration: DATABASE_URL"
+    );
+    assert_eq!(
+        format!("{}", crate::config::ConfigError::Invalid("PORT")),
+        "invalid configuration: PORT"
+    );
+}
+
+#[tokio::test]
+async fn oauth_routes_are_mounted_on_api() {
+    let pool = test_pool();
+    let config = ApiConfig::from_env().unwrap();
+    let app = build_router(pool, &config);
+
+    // /oauth/authorize should not return 404
+    let auth = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/oauth/authorize")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_ne!(auth.status(), StatusCode::NOT_FOUND);
+
+    // /oauth/token should not return 404
+    let token = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/oauth/token")
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_ne!(token.status(), StatusCode::NOT_FOUND);
+}

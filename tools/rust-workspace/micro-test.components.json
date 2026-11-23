@@ -84,10 +84,15 @@
   "nvbes-api": {
     "tests::consent_routes_are_mounted": "Consent status route touches database (pool connection attempt)",
     "tests::in_process_account_port_handles_database_error": "Account port adapter touches database (pool connection attempt)",
-    "tests::run_migrations_fails_closed_when_database_is_unreachable": "Migration runner touches database (pool connection attempt)"
+    "tests::run_migrations_fails_closed_when_database_is_unreachable": "Migration runner touches database (pool connection attempt)",
+    "tests::readiness_endpoints_work": "Readiness probe touches database (pool connection attempt)"
   },
   "nvbes-worker": {
     "tests::readiness_endpoints_fail_when_database_is_unreachable": "Readiness probe touches database (pool connection attempt)"
+  },
+  "nvbes-trust-risk": {
+    "client::tests::connect_to_unreachable_endpoint_returns_unavailable": "gRPC connect attempt requires network syscalls blocked in micro-test sandbox",
+    "client::tests::lazy_client_request_construction_and_unavailable_network_call": "gRPC client network call requires network syscalls blocked in micro-test sandbox"
   },
   "nvbes-identity-sdk": {
     "introspection::tests::every_request_observes_current_activity_without_positive_cache": "HTTP introspection loopback transport blocked in micro-test sandbox",

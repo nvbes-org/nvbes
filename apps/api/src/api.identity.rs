@@ -189,13 +189,13 @@ fn init_clients(is_dev: bool) -> Result<ClientRegistry, anyhow::Error> {
                 "redirect_uris": ["http://localhost:5173/auth/callback", "http://localhost:3000/auth/callback"],
                 "post_logout_redirect_uris": ["http://localhost:5173", "http://localhost:3000"],
                 "resources": {
-                    "account": {
+                    "http://localhost:8080/account": {
                         "audience": "nvbes-account-service",
                         "scopes": ["account:read", "account:write"]
                     },
-                    "billing": {
+                    "http://localhost:8080/billing": {
                         "audience": "nvbes-billing-service",
-                        "scopes": ["billing:read", "billing:write"]
+                        "scopes": ["billing:read", "billing:checkout"]
                     }
                 },
                 "allow_refresh": true,
@@ -210,7 +210,7 @@ fn init_clients(is_dev: bool) -> Result<ClientRegistry, anyhow::Error> {
 
 fn init_limiter() -> Result<RateLimiter, anyhow::Error> {
     let key_b64 = std::env::var("NVBES_IDENTITY_RATE_LIMIT_KEY")
-        .unwrap_or_else(|_| "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".into());
+        .unwrap_or_else(|_| "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=".into());
     RateLimiter::from_base64(&key_b64).map_err(|e| anyhow::anyhow!("{e}"))
 }
 
