@@ -88,7 +88,7 @@
     "tests::readiness_endpoints_work": "Readiness probe touches database (pool connection attempt)"
   },
   "nvbes-worker": {
-    "tests::readiness_endpoints_fail_when_database_is_unreachable": "Readiness probe touches database (pool connection attempt)"
+    "tests::readiness_endpoints_work": "Readiness probe touches database (pool connection attempt)"
   },
   "nvbes-trust-risk": {
     "client::tests::connect_to_unreachable_endpoint_returns_unavailable": "gRPC connect attempt requires network syscalls blocked in micro-test sandbox",

@@ -14,9 +14,13 @@ use crate::{
 };
 
 fn test_pool() -> sqlx::PgPool {
+    let url = std::env::var("NVBES_SECURITY_TEST_DATABASE_URL")
+        .or_else(|_| std::env::var("DATABASE_URL"))
+        .unwrap_or_else(|_| "postgres://127.0.0.1:1/nvbes_test".into());
     PgPoolOptions::new()
         .min_connections(0)
-        .connect_lazy("postgres://localhost/nvbes_test")
+        .acquire_timeout(std::time::Duration::from_millis(500))
+        .connect_lazy(&url)
         .unwrap()
 }
 
