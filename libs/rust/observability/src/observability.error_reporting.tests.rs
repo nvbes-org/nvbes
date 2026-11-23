@@ -119,3 +119,25 @@ fn init_with_dsn_enables_capture_path() {
     });
     let _ = flush_error_reporting(Duration::from_millis(50));
 }
+
+#[test]
+fn safe_panic_hook_handles_various_payloads() {
+    let _lock = error_reporting_test_lock();
+    install_safe_panic_hook();
+    install_safe_panic_hook();
+
+    let res_str = std::panic::catch_unwind(|| {
+        panic!("str slice panic");
+    });
+    assert!(res_str.is_err());
+
+    let res_string = std::panic::catch_unwind(|| {
+        panic!("{}", "allocated string panic".to_string());
+    });
+    assert!(res_string.is_err());
+
+    let res_any = std::panic::catch_unwind(|| {
+        std::panic::panic_any(42);
+    });
+    assert!(res_any.is_err());
+}

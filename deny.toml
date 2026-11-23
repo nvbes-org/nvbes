@@ -12,8 +12,6 @@ ignore = [
   "RUSTSEC-2026-0344",
   # Test fixtures only (nvbes-test-utils -> serde_yaml_ng -> unsafe-libyaml); unmaintained.
   "RUSTSEC-2024-0449",
-  # Transitive pin-utils in aws-types unmaintained; upstream AWS SDK dependency.
-  "RUSTSEC-2026-0441",
   # Tokio AsyncFd constructors unsoundness; repository exclusively uses Tokio primitives without AsyncFd.
   "RUSTSEC-2026-0386",
   # Upstream chrono maintainer transition; no active unpatched vulnerability.

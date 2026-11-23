@@ -94,3 +94,8 @@ fn otlp_headers_and_metadata_honor_authorization_header() {
     let metadata = otlp_metadata(auth).expect("authorization metadata");
     assert!(metadata.get("authorization").is_some());
 }
+
+#[test]
+fn shutdown_tracing_runs_cleanly() {
+    super::shutdown_tracing();
+}

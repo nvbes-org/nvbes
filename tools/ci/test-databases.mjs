@@ -11,10 +11,16 @@ else {
       const scope = {
         api: 'api',
         worker: 'worker',
+        email: 'email',
         'email-worker': 'email',
+        account: 'account',
         'account-service': 'account',
+        billing: 'billing',
         'billing-service': 'billing',
+        identity: 'identity',
         'identity-service': 'identity',
+        consent: 'consent',
+        'trust-risk': 'trust_risk',
         'trust-risk-service': 'trust_risk',
         'platform-operations-service': 'platform_operations',
       }[project];

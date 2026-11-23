@@ -239,3 +239,75 @@ async fn metrics_endpoint_returns_prometheus_metrics() {
 
     assert_eq!(response.status(), StatusCode::OK);
 }
+
+#[tokio::test]
+async fn metrics_endpoint_with_internal_token_guard() {
+    let pool = test_pool();
+    let mut config = ApiConfig::from_env().unwrap();
+    config.environment = "production".to_string();
+    config.observability_internal_token = Some("api_secret_token".to_string());
+    let app = build_router(pool, &config);
+
+    // 1. Without authorization header -> 401
+    let unauth = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(unauth.status(), StatusCode::UNAUTHORIZED);
+
+    // 2. With wrong token -> 401
+    let wrong = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .header("Authorization", "Bearer wrong_token")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(wrong.status(), StatusCode::UNAUTHORIZED);
+
+    // 3. With valid token -> 200
+    let valid = app
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .header("Authorization", "Bearer api_secret_token")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(valid.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn catch_panic_layer_recovers_from_panic() {
+    async fn panic_handler() -> &'static str {
+        panic!("test handler panic");
+    }
+
+    let layer = tower_http::catch_panic::CatchPanicLayer::new();
+    let router = axum::Router::new()
+        .route("/panic", axum::routing::get(panic_handler))
+        .layer(layer);
+
+    let response = router
+        .oneshot(
+            Request::builder()
+                .uri("/panic")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+}
