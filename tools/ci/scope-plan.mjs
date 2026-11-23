@@ -81,7 +81,18 @@ export function createPlan(
         ? 'scoped'
         : 'workspace'
       : 'none',
-    paths,
+    paths:
+      rust && rolloutMode === 'affected' && !workspaceRust
+        ? paths.filter(
+            (path) =>
+              path.endsWith('.rs') ||
+              path.endsWith('Cargo.toml') ||
+              path.endsWith('Cargo.lock') ||
+              path.startsWith('.cargo/') ||
+              path.startsWith('vendor/') ||
+              path.startsWith('contracts/protobuf/'),
+          )
+        : [],
     plannedAt: Date.now(),
   };
 }
