@@ -31,6 +31,8 @@ mod notification_queue;
 mod notification_runtime_tests;
 #[path = "identity.rate_limits.rs"]
 pub mod rate_limits;
+#[path = "identity.session.context.rs"]
+pub mod session_context;
 #[path = "identity.sessions.lock.rs"]
 mod session_locks;
 #[path = "identity.totp.rs"]

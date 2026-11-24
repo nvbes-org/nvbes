@@ -24,7 +24,7 @@ pub fn build_router(
     identity: &IdentityRuntime,
 ) -> anyhow::Result<Router> {
     let http_metrics = HttpMetrics::new();
-    let identity_router = identity::build_router(pool.clone(), identity);
+    let identity_router = identity::build_router(pool.clone(), identity)?;
     let account_state = nvbes_account_service::AccountState::new(
         config.account.clone(),
         identity.trust.clone(),

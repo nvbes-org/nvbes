@@ -62,16 +62,36 @@
 			"controls": [
 				{
 					"id": "CTM_CTRL_003",
-					"name": "Trust and risk assessment",
-					"description": "Trust-Risk domain evaluates anomalies, network changes, and suspicious patterns.",
+					"name": "Keyed session environment binding",
+					"description": "Identity binds each browser session to an HMAC of the browser and OS families and the network prefix; a session presented from another environment is flagged, audited and no longer counts as freshly authenticated, so the next interaction requires a new login.",
 					"evidence": [
 						{
-							"path": "libs/rust/trust-risk/src/trust_risk.assessment.rs",
-							"includes": ["Assessment", "RiskSignal"]
+							"path": "libs/rust/identity/src/identity.session.context.rs",
+							"includes": [
+								"environment_family",
+								"network_prefix",
+								"reauth_required_at = clock_timestamp()",
+								"identity.session.context_changed"
+							]
 						},
 						{
-							"path": "libs/rust/core/src/http.client_ip.rs",
-							"includes": ["client_ip"]
+							"path": "libs/rust/identity/src/identity.oauth.session.rs",
+							"includes": ["if session.reauth_required {"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.authentication.session.rs",
+							"includes": ["let recent_primary = !reauth_required"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.session.context.database.tests.rs",
+							"tests": [
+								"another_environment_requires_reauthentication_once_and_is_audited",
+								"flagged_sessions_never_count_as_recently_authenticated"
+							]
+						},
+						{
+							"path": "apps/api/src/api.identity.rs",
+							"includes": ["session_context::enforce"]
 						}
 					]
 				}

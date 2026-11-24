@@ -66,6 +66,14 @@ impl RateLimiter {
         Ok(Self { key })
     }
 
+    /// Domain-separated subkey for other keyed pseudonyms of client data, so
+    /// they share this replica-wide secret without sharing its outputs.
+    pub(crate) fn derive(&self, label: &[u8]) -> Option<[u8; 32]> {
+        let mut mac = Hmac::<Sha256>::new_from_slice(&self.key).ok()?;
+        mac.update(label);
+        Some(mac.finalize().into_bytes().into())
+    }
+
     /// Count every admitted attempt, including successful logins. Call with the
     /// normalized identifier and trusted peer address before password hashing.
     /// Fixed-window collisions deny conservatively; no per-subject rows grow.

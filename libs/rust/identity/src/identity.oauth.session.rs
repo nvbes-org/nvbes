@@ -13,6 +13,8 @@ pub(super) struct ActiveSession {
     pub id: Uuid,
     pub principal_id: Uuid,
     pub authentication: Authentication,
+    /// Set when the session was presented from another environment.
+    pub reauth_required: bool,
 }
 
 pub(super) async fn load(
@@ -21,10 +23,10 @@ pub(super) async fn load(
 ) -> Result<Option<ActiveSession>, StoreError> {
     let Some(token) = token else { return Ok(None) };
     crate::session_locks::session(tx, token).await?;
-    let row: Option<(Uuid, Uuid, serde_json::Value)> = sqlx::query_as(
-        "SELECT s.id,s.principal_id,jsonb_build_object('authenticated_at',s.authenticated_at,'primary_amr',s.primary_amr,'step_up_method',s.step_up_method,'step_up_at',s.step_up_at,'step_up_expires_at',s.step_up_expires_at) FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' FOR UPDATE OF s,p"
+    let row: Option<(Uuid, Uuid, serde_json::Value, bool)> = sqlx::query_as(
+        "SELECT s.id,s.principal_id,jsonb_build_object('authenticated_at',s.authenticated_at,'primary_amr',s.primary_amr,'step_up_method',s.step_up_method,'step_up_at',s.step_up_at,'step_up_expires_at',s.step_up_expires_at),s.reauth_required_at IS NOT NULL FROM identity_sessions s JOIN identity_principals p ON p.id=s.principal_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND p.status='active' FOR UPDATE OF s,p"
     ).bind(hash(token)).fetch_optional(&mut **tx).await?;
-    let Some((id, principal_id, value)) = row else {
+    let Some((id, principal_id, value, reauth_required)) = row else {
         return Ok(None);
     };
     let authentication: Authentication = serde_json::from_value(value)?;
@@ -35,6 +37,7 @@ pub(super) async fn load(
         id,
         principal_id,
         authentication,
+        reauth_required,
     }))
 }
 
@@ -43,6 +46,9 @@ pub(super) fn is_fresh(
     request: &AuthorizationRequest,
     started_at: DateTime<Utc>,
 ) -> bool {
+    if session.reauth_required {
+        return false;
+    }
     let at = session.authentication.authenticated_at;
     if (request.prompt.as_deref() == Some("login") || request.max_age == Some(0)) && at < started_at
     {

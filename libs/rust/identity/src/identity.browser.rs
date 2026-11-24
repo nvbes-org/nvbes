@@ -121,6 +121,20 @@ impl BrowserSecurity {
         read_cookie(headers, self.session_name())
     }
 
+    /// The session token a response issues through `Set-Cookie`, if any. A
+    /// cleared cookie (empty value) is not an issued session.
+    pub fn issued_session_token(&self, headers: &HeaderMap) -> Option<String> {
+        let prefix = format!("{}=", self.session_name());
+        headers
+            .get_all(axum::http::header::SET_COOKIE)
+            .iter()
+            .filter_map(|value| value.to_str().ok())
+            .filter_map(|cookie| cookie.strip_prefix(prefix.as_str()))
+            .filter_map(|rest| rest.split(';').next())
+            .find(|token| is_sha256_base64url(token))
+            .map(str::to_owned)
+    }
+
     /// Hosted interaction mutations use JSON and a header CSRF token. Cross-site
     /// OAuth top-level navigation is handled separately by the authorization GET.
     pub fn verify_mutation(
