@@ -7,7 +7,6 @@ use nvbes_observability::middleware::observe_request;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tower_http::catch_panic::CatchPanicLayer;
-use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
     client_ip::{TrustedProxies, resolve_client_ip},
@@ -55,11 +54,9 @@ pub fn build_router(
         .merge(identity_router)
         .merge(nvbes_account_service::domain_router(account_state));
 
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
-
+    // No global CORS layer: Identity allows exactly its registered client
+    // origins and Account its configured browser origins. A permissive outer
+    // layer would answer preflights before either policy runs.
     Ok(router
         .layer(axum::middleware::from_fn_with_state(
             TrustedProxies::new(&config.trusted_proxy_cidrs),
@@ -69,6 +66,5 @@ pub fn build_router(
             http_metrics,
             observe_request,
         ))
-        .layer(CatchPanicLayer::new())
-        .layer(cors))
+        .layer(CatchPanicLayer::new()))
 }

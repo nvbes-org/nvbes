@@ -304,5 +304,7 @@ fn config_error_formatting() {
     );
 }
 
+#[path = "api.cors.tests.rs"]
+mod cors;
 #[path = "api.oauth.tests.rs"]
 mod oauth;
