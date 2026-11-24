@@ -9,20 +9,32 @@ use std::sync::Arc;
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::{config::ApiConfig, health, identity, openapi};
+use crate::{
+    client_ip::{TrustedProxies, resolve_client_ip},
+    config::ApiConfig,
+    health, identity,
+    identity_activity::InProcessActivity,
+    identity_runtime::IdentityRuntime,
+    openapi,
+};
 
-pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
+pub fn build_router(
+    pool: PgPool,
+    config: &ApiConfig,
+    identity: &IdentityRuntime,
+) -> anyhow::Result<Router> {
     let http_metrics = HttpMetrics::new();
-    let consent_service = Arc::new(nvbes_consent::service::ConsentService::new(
+    let identity_router = identity::build_router(pool.clone(), identity);
+    let account_state = nvbes_account_service::AccountState::new(
+        config.account.clone(),
+        identity.trust.clone(),
         pool.clone(),
-        &config.consent_ip_salt,
-    ));
-    let consent_router = Router::new().nest(
-        "/api/v1/consents",
-        nvbes_consent::routes::consent_routes(consent_service),
-    );
-
-    let identity_router = identity::build_router(pool.clone(), config);
+        Arc::new(InProcessActivity::new(
+            pool.clone(),
+            identity.clients.clone(),
+            identity.tokens.clone(),
+        )),
+    )?;
 
     let observability_config = InternalObservabilityConfig::new(
         &config.environment,
@@ -36,38 +48,27 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
         ))
         .with_state(http_metrics.clone());
 
-    let mut router = Router::new()
+    let router = Router::new()
         .merge(health::router().with_state(pool.clone()))
         .merge(metrics_router)
         .merge(openapi::router())
-        .merge(consent_router)
-        .merge(identity_router);
-
-    // Integrate Account domain if configuration is present
-    if let Ok(account_config) = nvbes_account_service::AccountConfig::from_env() {
-        match nvbes_account_service::AccountState::new(account_config, pool.clone()) {
-            Ok(account_state) => {
-                tracing::info!("mounting Account service domain router");
-                router = router.merge(nvbes_account_service::domain_router(account_state));
-            }
-            Err(e) => {
-                tracing::warn!("failed to initialize Account state: {e}");
-            }
-        }
-    } else {
-        tracing::info!("Account configuration not set, skipping Account router mounting");
-    }
+        .merge(identity_router)
+        .merge(nvbes_account_service::domain_router(account_state));
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
-    router
+    Ok(router
+        .layer(axum::middleware::from_fn_with_state(
+            TrustedProxies::new(&config.trusted_proxy_cidrs),
+            resolve_client_ip,
+        ))
         .layer(axum::middleware::from_fn_with_state(
             http_metrics,
             observe_request,
         ))
         .layer(CatchPanicLayer::new())
-        .layer(cors)
+        .layer(cors))
 }

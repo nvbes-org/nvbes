@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 #[path = "account.auth.tokens.rs"]
 mod tokens;
-pub use tokens::TokenVerifier;
+pub use tokens::{ACCOUNT_AUDIENCE, TokenTrust, TokenVerifier};
 
 #[derive(Debug, Clone)]
 pub struct Principal {

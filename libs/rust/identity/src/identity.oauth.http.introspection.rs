@@ -113,7 +113,7 @@ async fn introspect(
     let value = match claims {
         None => serde_json::json!({"active":false}),
         Some(claims) => {
-            let mut value = serde_json::json!({"active":true,"sub":claims.sub,"aud":claims.aud,"iss":claims.iss,"client_id":claims.client_id,"scope":claims.scope,"exp":claims.exp,"iat":claims.iat,"nbf":claims.nbf,"jti":claims.jti,"sid":claims.sid,"grant_id":claims.grant_id,"token_type":if claims.cnf.is_some() {"DPoP"} else {"Bearer"}});
+            let mut value = serde_json::json!({"active":true,"sub":claims.sub,"aud":claims.aud,"iss":claims.iss,"client_id":claims.client_id,"scope":claims.scope,"exp":claims.exp,"iat":claims.iat,"nbf":claims.nbf,"jti":claims.jti,"sid":claims.sid,"grant_id":claims.grant_id,"token_type":claims.presentation_type()});
             if let Some(confirmation) = claims.cnf {
                 value["cnf"] = serde_json::to_value(confirmation)
                     .map_err(|_| ProtocolError::OAuth(OAuthError::Unavailable))?;

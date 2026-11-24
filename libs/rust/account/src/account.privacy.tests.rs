@@ -173,7 +173,7 @@ async fn privacy_routes_reject_unauthenticated_calls() {
         .acquire_timeout(std::time::Duration::from_millis(10))
         .connect_lazy(database_url)
         .unwrap();
-    let state = crate::app::AccountState::new(crate::test_support::account_config(), db).unwrap();
+    let state = crate::test_support::state_with_pool(db);
     let response = router(state)
         .oneshot(
             Request::builder()

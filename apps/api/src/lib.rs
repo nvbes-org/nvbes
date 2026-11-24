@@ -1,11 +1,17 @@
 //! NVBES Modular Monolith Serverless API.
 
+#[path = "api.client_ip.rs"]
+pub mod client_ip;
 #[path = "api.config.rs"]
 pub mod config;
 #[path = "api.health.rs"]
 pub mod health;
 #[path = "api.identity.rs"]
 pub mod identity;
+#[path = "api.identity.activity.rs"]
+pub mod identity_activity;
+#[path = "api.identity.runtime.rs"]
+pub mod identity_runtime;
 #[path = "api.migrations.rs"]
 pub mod migrations;
 #[path = "api.openapi.rs"]
@@ -16,6 +22,7 @@ pub mod routes;
 pub mod server;
 
 pub use config::ApiConfig;
+pub use identity_runtime::IdentityRuntime;
 pub use openapi::openapi_spec;
 pub use routes::build_router;
 pub use server::run_server;

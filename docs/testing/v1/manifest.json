@@ -14,7 +14,7 @@
     "productionLoadTestingAllowed": false
   },
   "cargoManifests": ["Cargo.toml"],
-  "sharedCargoPackages": ["nvbes-audit", "nvbes-worker"],
+  "sharedCargoPackages": ["nvbes-worker"],
   "typescriptExclusions": {
     "@nvbes/identity-sdk-core": "OpenAPI and generated declarations only; contract tests remain mandatory.",
     "@nvbes/account-sdk-core": "OpenAPI and generated declarations only; contract tests remain mandatory."

@@ -9,8 +9,6 @@ import { resolve } from 'node:path';
 
 export const CRITICAL_PACKAGES = new Set([
   'nvbes-core',
-  'nvbes-audit',
-  'nvbes-consent',
   'nvbes-dpop',
   'nvbes-identity-service',
   'nvbes-account-service',

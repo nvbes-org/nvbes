@@ -111,18 +111,18 @@ fn require_operator(
         .ok_or(AccountError::Unauthorized)?;
     let header = decode_header(token).map_err(|_| AccountError::Unauthorized)?;
     if header.alg != Algorithm::RS256
-        || header.kid.as_deref() != Some(&state.config.token_key_id)
+        || header.kid.as_deref() != Some(&state.trust.key_id)
         || header.typ.as_deref() != Some("operator+jwt")
     {
         return Err(AccountError::Unauthorized);
     }
     let mut validation = Validation::new(Algorithm::RS256);
-    validation.set_issuer(&[&state.config.token_issuer]);
+    validation.set_issuer(&[&state.trust.issuer]);
     validation.set_audience(&[OPERATOR_AUDIENCE]);
     validation.set_required_spec_claims(&["exp", "iat", "iss", "aud", "sub", "nbf"]);
     validation.validate_nbf = true;
     validation.leeway = 0;
-    let key = DecodingKey::from_rsa_pem(state.config.token_public_key_pem.as_bytes())
+    let key = DecodingKey::from_rsa_pem(state.trust.public_key_pem.as_bytes())
         .map_err(|_| AccountError::Unauthorized)?;
     let claims = decode::<OperatorClaims>(token, &key, &validation)
         .map_err(|_| AccountError::Unauthorized)?

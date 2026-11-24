@@ -11,19 +11,12 @@ use utoipa::OpenApi;
         schemas(
             crate::health::HealthStatus,
             crate::health::ReadinessStatus,
-            nvbes_consent::models::CookiePreferences,
-            nvbes_consent::models::CookiePreferencesResponse,
-            nvbes_consent::models::RecordAgreementRequest,
-            nvbes_consent::models::UpdateCookiePreferencesRequest,
-            nvbes_consent::models::ReconcileConsentRequest,
-            nvbes_consent::models::ConsentStatusResponse,
         )
     ),
     tags(
         (name = "Health", description = "Liveness and readiness probes"),
-        (name = "Consent", description = "Legal agreements and cookie preferences with GPC"),
         (name = "Identity", description = "OAuth2 / OIDC authentication and sessions"),
-        (name = "Account", description = "Profile, settings, and team management"),
+        (name = "Account", description = "Profile, preferences, legal acceptances and privacy lifecycle"),
     ),
     info(
         title = "NVBES Unified Monolith API",

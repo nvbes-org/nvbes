@@ -8,17 +8,6 @@
   },
   "inclusionFloor": 50,
   "crates": {
-    "nvbes-audit": {
-      "threshold": 95,
-      "baseline": {
-        "score": 100.0,
-        "tested": 11,
-        "caught": 11,
-        "missed": 0,
-        "timeout": 0,
-        "unviable": 0
-      }
-    },
     "nvbes-email": {
       "threshold": 87,
       "baseline": {
@@ -95,6 +84,8 @@
     "nvbes-billing-service",
     "nvbes-trust-risk",
     "nvbes-region",
-    "nvbes-platform"
+    "nvbes-platform",
+    "nvbes-consent",
+    "nvbes-audit"
   ]
 }

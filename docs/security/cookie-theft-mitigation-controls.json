@@ -25,9 +25,7 @@
 						{
 							"path": "libs/rust/identity/src/identity.auth.rs",
 							"includes": ["authenticate", "hash_token"],
-							"tests": [
-								"opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"
-							]
+							"tests": ["opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"]
 						}
 					]
 				}
@@ -51,9 +49,7 @@
 								"expires_at",
 								"SESSION_TTL_HOURS"
 							],
-							"tests": [
-								"opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"
-							]
+							"tests": ["opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest"]
 						}
 					]
 				}
@@ -93,11 +89,7 @@
 					"evidence": [
 						{
 							"path": "libs/rust/identity/src/identity.tokens.rs",
-							"includes": [
-								"AccessTokenClaims",
-								"TokenService",
-								"pub fn verify("
-							],
+							"includes": ["AccessTokenClaims", "TokenService", "pub fn verify("],
 							"tests": [
 								"oidc_and_api_tokens_have_distinct_audiences_and_types",
 								"hostile_claims_and_scope_escalation_fail_validation"
@@ -155,8 +147,8 @@
 							]
 						},
 						{
-							"path": "libs/rust/audit/src/lib.rs",
-							"includes": ["AuditEvent"]
+							"path": "libs/rust/account/src/account.audit.rs",
+							"includes": ["INSERT INTO account_audit_events", "AuditInput"]
 						},
 						{
 							"path": "libs/rust/identity/src/identity.recovery.rs",

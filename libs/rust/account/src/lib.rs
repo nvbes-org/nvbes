@@ -12,10 +12,6 @@ pub mod consents;
 pub mod database;
 #[path = "account.error.rs"]
 pub mod error;
-#[path = "account.health.rs"]
-pub mod health;
-#[path = "account.metrics.rs"]
-pub mod metrics;
 #[path = "account.operator.rs"]
 pub mod operator;
 #[path = "account.outbox.rs"]
@@ -37,6 +33,7 @@ pub mod profile;
 #[path = "account.test_support.rs"]
 pub mod test_support;
 
-pub use app::{AccountState, domain_router, router};
+pub use app::{AccountState, domain_router};
+pub use auth::{ACCOUNT_AUDIENCE, TokenTrust};
 pub use config::AccountConfig;
 pub use error::AccountError;

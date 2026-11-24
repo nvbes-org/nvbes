@@ -1,12 +1,24 @@
 use super::Principal;
-use crate::{config::AccountConfig, error::AccountError};
+use crate::error::AccountError;
 use jsonwebtoken::{Algorithm, Validation, decode, decode_header};
 use nvbes_dpop::resource::{Credentials, ResourceVerifier, binding};
-use nvbes_identity_sdk::introspection::{ExpectedToken, IntrospectionClient};
+use nvbes_identity_sdk::introspection::{ActivityVerifier, ExpectedToken};
 use nvbes_identity_sdk::pinned_keys::PinnedKeySet;
 use serde::Deserialize;
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, sync::Arc};
 use uuid::Uuid;
+
+pub const ACCOUNT_AUDIENCE: &str = "nvbes-account-service";
+
+/// Signing trust published by the Identity issuer of this runtime.
+#[derive(Clone, PartialEq, Eq)]
+pub struct TokenTrust {
+    pub issuer: String,
+    pub key_id: String,
+    pub public_key_pem: String,
+    /// Overlap keys as a JSON array of `{kid, public_key_pem, accept_until}`.
+    pub verification_keys: String,
+}
 
 #[derive(Deserialize)]
 struct AccessTokenClaims {
@@ -21,33 +33,25 @@ struct AccessTokenClaims {
 pub struct TokenVerifier {
     keys: PinnedKeySet,
     issuer: String,
-    introspection: IntrospectionClient,
+    activity: Arc<dyn ActivityVerifier>,
     dpop: Option<ResourceVerifier>,
 }
 
 impl TokenVerifier {
-    pub fn new(config: &AccountConfig) -> anyhow::Result<Self> {
-        anyhow::ensure!(
-            config.token_audience == "nvbes-account-service",
-            "invalid Account token audience"
-        );
+    pub fn new(
+        trust: &TokenTrust,
+        public_origin: Option<&str>,
+        activity: Arc<dyn ActivityVerifier>,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
-            dpop: config
-                .public_origin
-                .as_deref()
-                .map(ResourceVerifier::new)
-                .transpose()?,
+            dpop: public_origin.map(ResourceVerifier::new).transpose()?,
             keys: PinnedKeySet::new(
-                &config.token_key_id,
-                &config.token_public_key_pem,
-                &config.token_verification_keys,
+                &trust.key_id,
+                &trust.public_key_pem,
+                &trust.verification_keys,
             )?,
-            issuer: config.token_issuer.clone(),
-            introspection: IntrospectionClient::new(
-                &config.token_issuer,
-                &config.identity_resource_client_id,
-                &config.identity_resource_secret,
-            )?,
+            issuer: trust.issuer.clone(),
+            activity,
         })
     }
 
@@ -66,11 +70,7 @@ impl TokenVerifier {
             method,
             uri,
         )?;
-        match self
-            .introspection
-            .is_active(credentials.token, &expected)
-            .await
-        {
+        match self.activity.is_active(credentials.token, &expected).await {
             Ok(true) => {}
             Ok(false) => return Err(AccountError::Unauthorized),
             Err(_) => return Err(AccountError::IdentityUnavailable),
@@ -97,7 +97,7 @@ impl TokenVerifier {
         }
         let mut validation = Validation::new(Algorithm::RS256);
         validation.set_issuer(&[&self.issuer]);
-        validation.set_audience(&["nvbes-account-service"]);
+        validation.set_audience(&[ACCOUNT_AUDIENCE]);
         validation.set_required_spec_claims(&["exp", "iat", "nbf", "iss", "aud", "sub"]);
         validation.validate_nbf = true;
         validation.leeway = 0;
@@ -111,7 +111,7 @@ impl TokenVerifier {
             .claims;
         let mut expected = claims.token;
         if expected.iss != self.issuer
-            || expected.aud != "nvbes-account-service"
+            || expected.aud != ACCOUNT_AUDIENCE
             || expected.token_type != "access"
             || expected.client_id.is_empty()
             || expected.iat > now

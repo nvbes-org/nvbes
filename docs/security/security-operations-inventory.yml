@@ -74,7 +74,7 @@ critical_assets:
     owner: security_operations
     classification: restricted
     repositories:
-      - libs/rust/audit
+      - libs/rust/account/migrations
       - apps/account-worker
       - infrastructure/modules/scaleway-audit-archive
       - infrastructure/environments/security-audit-archive

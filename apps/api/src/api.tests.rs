@@ -5,7 +5,7 @@ use axum::{
 use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
 
-use crate::{build_router, config::ApiConfig};
+use crate::{IdentityRuntime, build_router, config::ApiConfig};
 
 fn test_pool() -> sqlx::PgPool {
     let url = std::env::var("NVBES_SECURITY_TEST_DATABASE_URL")
@@ -16,6 +16,13 @@ fn test_pool() -> sqlx::PgPool {
         .acquire_timeout(std::time::Duration::from_millis(500))
         .connect_lazy(&url)
         .unwrap()
+}
+
+/// Identity always runs on development fallbacks here, whatever environment a
+/// test gives the API configuration.
+fn app(pool: sqlx::PgPool, config: &ApiConfig) -> axum::Router {
+    let identity = IdentityRuntime::from_lookup("test", &|_| None).expect("development identity");
+    build_router(pool, config, &identity).expect("api router")
 }
 
 #[tokio::test]
@@ -31,7 +38,7 @@ async fn config_loads_defaults() {
 async fn healthz_returns_pass() {
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
     let response = app
         .oneshot(
@@ -50,7 +57,7 @@ async fn healthz_returns_pass() {
 async fn health_live_returns_service_name() {
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
     let response = app
         .oneshot(
@@ -73,7 +80,7 @@ async fn health_live_returns_service_name() {
 async fn root_returns_metadata() {
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
     let response = app
         .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
@@ -87,7 +94,7 @@ async fn root_returns_metadata() {
 async fn openapi_spec_is_accessible() {
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
     let response = app
         .oneshot(
@@ -103,73 +110,27 @@ async fn openapi_spec_is_accessible() {
 }
 
 #[tokio::test]
-async fn oidc_discovery_is_accessible() {
+async fn account_routes_are_mounted_and_require_a_token() {
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
-    let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/.well-known/openid-configuration")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK);
-    let bytes = to_bytes(response.into_body(), 8192).await.unwrap();
-    let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(body["issuer"], "http://localhost:8080");
-    assert_eq!(body["jwks_uri"], "http://localhost:8080/oauth/jwks");
-}
-
-#[tokio::test]
-async fn oidc_jwks_is_accessible() {
-    let pool = test_pool();
-    let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
-
-    let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/oauth/jwks")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK);
-    let bytes = to_bytes(response.into_body(), 8192).await.unwrap();
-    let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert!(body["keys"].is_array());
-}
-
-#[tokio::test]
-async fn consent_routes_are_mounted() {
-    let pool = test_pool();
-    let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
-
-    let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/api/v1/consents")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    // Route exists and is mounted (returns 200 or handles request, not 404)
-    assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    for uri in ["/api/v1/profile", "/api/v1/consents"] {
+        let response = app
+            .clone()
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{uri}");
+    }
 }
 
 #[tokio::test]
 async fn run_migrations_fails_closed_when_database_is_unreachable() {
-    let pool = test_pool();
+    let pool = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_millis(200))
+        .connect_lazy("postgres://127.0.0.1:1/unreachable")
+        .unwrap();
     let result = crate::migrations::run_migrations(&pool).await;
     assert!(result.is_err());
 }
@@ -178,7 +139,7 @@ async fn run_migrations_fails_closed_when_database_is_unreachable() {
 async fn response_contains_observability_headers() {
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
     let response = app
         .oneshot(
@@ -200,7 +161,7 @@ async fn response_contains_observability_headers() {
 async fn metrics_endpoint_returns_prometheus_metrics() {
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
     let response = app
         .oneshot(
@@ -221,7 +182,7 @@ async fn metrics_endpoint_with_internal_token_guard() {
     let mut config = ApiConfig::from_env().unwrap();
     config.environment = "production".to_string();
     config.observability_internal_token = Some("api_secret_token".to_string());
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
     // 1. Without authorization header -> 401
     let unauth = app
@@ -294,7 +255,7 @@ async fn swagger_ui_and_openapi_spec_are_accessible() {
 
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
     let response = app
         .oneshot(
@@ -316,7 +277,7 @@ async fn swagger_ui_and_openapi_spec_are_accessible() {
 async fn readiness_endpoints_work() {
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
+    let app = app(pool, &config);
 
     for uri in ["/readyz", "/health/ready"] {
         let response = app
@@ -343,37 +304,5 @@ fn config_error_formatting() {
     );
 }
 
-#[tokio::test]
-async fn oauth_routes_are_mounted_on_api() {
-    let pool = test_pool();
-    let config = ApiConfig::from_env().unwrap();
-    let app = build_router(pool, &config);
-
-    // /oauth/authorize should not return 404
-    let auth = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/oauth/authorize")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_ne!(auth.status(), StatusCode::NOT_FOUND);
-
-    // /oauth/token should not return 404
-    let token = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/oauth/token")
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_ne!(token.status(), StatusCode::NOT_FOUND);
-}
+#[path = "api.oauth.tests.rs"]
+mod oauth;

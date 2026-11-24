@@ -30,6 +30,13 @@ pub struct AccessTokenClaims {
     pub cnf: Option<ProofConfirmation>,
 }
 
+impl AccessTokenClaims {
+    /// RFC 7662 `token_type` as presented to resource servers.
+    pub fn presentation_type(&self) -> &'static str {
+        if self.cnf.is_some() { "DPoP" } else { "Bearer" }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IdTokenClaims {
     pub iss: String,

@@ -36,15 +36,6 @@
       }
     },
     {
-      "crate": "nvbes-audit",
-      "reason": "Aucune branche instrument\u00e9e (0/0) : les sous-conditions du journal append-only ne sont pas \u00e9mises comme branches par llvm-cov au commit de baseline (logique largement g\u00e9n\u00e9rique/derive). R\u00e9-inclusion conditionn\u00e9e \u00e0 une instrumentation effective de la m\u00e9trique branches.",
-      "baseline": {
-        "score": 0.0,
-        "count": 0,
-        "covered": 0
-      }
-    },
-    {
       "crate": "nvbes-billing-worker",
       "reason": "Couverture de condition sous le plancher de 50% : le worker s'appuie sur les tests de base de donn\u00e9es (outbox, r\u00e9conciliation) non provisionn\u00e9s dans le gate unitaire. R\u00e9-inclusion conditionn\u00e9e \u00e0 des tests ciblant les branches manquantes, sans abaisser le seuil sous le plancher.",
       "baseline": {
@@ -98,6 +89,8 @@
     "nvbes-billing-service",
     "nvbes-trust-risk",
     "nvbes-region",
-    "nvbes-platform"
+    "nvbes-platform",
+    "nvbes-consent",
+    "nvbes-audit"
   ]
 }

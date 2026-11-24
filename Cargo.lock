@@ -2623,10 +2623,10 @@ name = "nvbes-account-service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum",
  "chrono",
  "jsonwebtoken",
- "metrics-exporter-prometheus",
  "nvbes-core",
  "nvbes-dpop",
  "nvbes-identity-sdk",
@@ -2650,14 +2650,16 @@ name = "nvbes-api"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum",
  "base64 0.23.1",
  "chrono",
  "hex",
+ "ipnet",
  "metrics-exporter-prometheus",
  "nvbes-account-service",
- "nvbes-consent",
  "nvbes-core",
+ "nvbes-identity-sdk",
  "nvbes-identity-service",
  "nvbes-observability",
  "rand 0.9.5",
@@ -2674,37 +2676,6 @@ dependencies = [
  "utoipa",
  "uuid",
  "webauthn-rs",
-]
-
-[[package]]
-name = "nvbes-audit"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
-name = "nvbes-consent"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "axum",
- "chrono",
- "hex",
- "nvbes-audit",
- "nvbes-core",
- "proptest",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "sqlx",
- "thiserror 2.0.21",
- "tokio",
- "tracing",
- "utoipa",
- "uuid",
 ]
 
 [[package]]
@@ -2813,6 +2784,7 @@ dependencies = [
 name = "nvbes-identity-sdk"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "axum",
  "base64 0.23.1",
  "jsonwebtoken",

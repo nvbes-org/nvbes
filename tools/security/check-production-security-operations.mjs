@@ -2,8 +2,11 @@ import { readFile } from 'node:fs/promises';
 
 const requirements = [
   {
-    file: 'libs/rust/audit/src/lib.rs',
-    evidence: ['AuditEventInput', 'action_key', 'is_workspace_scoped', 'has_network_context'],
+    file: 'libs/rust/account/migrations/0001_account_foundation.sql',
+    evidence: [
+      'account audit events are append-only',
+      'BEFORE UPDATE OR DELETE ON account_audit_events',
+    ],
   },
   {
     file: 'libs/rust/account/src/account.audit.rs',

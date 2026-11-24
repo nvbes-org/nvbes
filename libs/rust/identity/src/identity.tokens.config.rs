@@ -1,5 +1,5 @@
 use crate::tokens_error::TokenError;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 /// Private signing material must never be formatted into logs.
@@ -13,7 +13,7 @@ pub struct TokenConfig {
     pub(crate) verification_keys: Vec<VerificationKeyConfig>,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct VerificationKeyConfig {
     pub kid: String,
@@ -24,6 +24,23 @@ pub(crate) struct VerificationKeyConfig {
 
 impl TokenConfig {
     pub fn from_env(environment: &str) -> Result<Self, TokenError> {
+        // Non-UTF-8 values stay present (lossily decoded) so they fail validation
+        // instead of being mistaken for an absent variable.
+        Self::from_lookup(environment, |name| {
+            std::env::var_os(name).map(|value| value.to_string_lossy().into_owned())
+        })
+    }
+
+    /// `lookup` returns the raw value of a variable; blank values count as absent.
+    pub fn from_lookup(
+        environment: &str,
+        lookup: impl Fn(&str) -> Option<String>,
+    ) -> Result<Self, TokenError> {
+        let required = |name: &'static str| {
+            lookup(name)
+                .filter(|value| !value.trim().is_empty())
+                .ok_or(TokenError::Configuration(name))
+        };
         let config = Self::from_values(
             environment,
             required("NVBES_IDENTITY_TOKEN_ISSUER")?,
@@ -32,10 +49,9 @@ impl TokenConfig {
             required("NVBES_IDENTITY_TOKEN_PUBLIC_KEY_PEM")?,
             required("NVBES_IDENTITY_TOKEN_AUDIENCES")?,
         )?;
-        match std::env::var("NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS") {
-            Ok(keys) => config.with_verification_keys(&keys),
-            Err(std::env::VarError::NotPresent) => Ok(config),
-            Err(_) => Err(TokenError::Configuration("verification key encoding")),
+        match lookup("NVBES_IDENTITY_TOKEN_VERIFICATION_KEYS") {
+            Some(keys) => config.with_verification_keys(&keys),
+            None => Ok(config),
         }
     }
 
@@ -95,6 +111,25 @@ impl TokenConfig {
 
     /// Prepublish a new public key, or retain an old public key during rotation.
     /// Only the active private key signs. At most three additional keys overlap.
+    pub fn issuer(&self) -> &str {
+        &self.issuer
+    }
+
+    pub fn key_id(&self) -> &str {
+        &self.key_id
+    }
+
+    pub fn public_key_pem(&self) -> &str {
+        &self.public_key_pem
+    }
+
+    /// Overlap keys in the same JSON shape resource servers pin, so in-process
+    /// verifiers trust exactly the keys this issuer still accepts.
+    pub fn verification_keys_json(&self) -> Result<String, TokenError> {
+        serde_json::to_string(&self.verification_keys)
+            .map_err(|_| TokenError::Configuration("verification key encoding"))
+    }
+
     pub fn with_verification_keys(mut self, json: &str) -> Result<Self, TokenError> {
         if json.len() > 32_768 {
             return Err(TokenError::Configuration("verification keys too large"));
@@ -116,13 +151,6 @@ impl TokenConfig {
         self.verification_keys = keys;
         Ok(self)
     }
-}
-
-fn required(name: &'static str) -> Result<String, TokenError> {
-    std::env::var(name)
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .ok_or(TokenError::Configuration(name))
 }
 
 fn validate_identifier(value: &str) -> Result<(), TokenError> {

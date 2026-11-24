@@ -4,9 +4,12 @@ use std::time::Duration;
 use tokio::net::TcpListener;
 use tracing::info;
 
-use crate::{config::ApiConfig, routes::build_router};
+use crate::{config::ApiConfig, identity_runtime::IdentityRuntime, routes::build_router};
 
 pub async fn run_server(config: ApiConfig) -> anyhow::Result<()> {
+    let identity = IdentityRuntime::from_env(&config.environment)
+        .context("failed to load Identity configuration")?;
+
     info!(
         "initializing serverless database connection pool (min: {}, max: {})",
         config.database_min_connections, config.database_max_connections
@@ -19,7 +22,7 @@ pub async fn run_server(config: ApiConfig) -> anyhow::Result<()> {
         .acquire_timeout(Duration::from_secs(10))
         .after_connect(|conn, _meta| {
             Box::pin(async move {
-                sqlx::query("SET search_path TO identity, account, consent, public") // nvbes-allow-runtime-sql
+                sqlx::query("SET search_path TO identity, account, public") // nvbes-allow-runtime-sql
                     .execute(conn)
                     .await?;
                 Ok(())
@@ -28,7 +31,7 @@ pub async fn run_server(config: ApiConfig) -> anyhow::Result<()> {
         .connect_lazy(&config.database_url)
         .context("failed to configure lazy Postgres connection pool")?;
 
-    let app = build_router(pool.clone(), &config);
+    let app = build_router(pool.clone(), &config, &identity)?;
 
     let listener = TcpListener::bind(config.bind_addr)
         .await
@@ -39,10 +42,15 @@ pub async fn run_server(config: ApiConfig) -> anyhow::Result<()> {
         config.bind_addr
     );
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .context("server error during execution")?;
+    // Identity throttles per source address: the transport peer must reach
+    // the router, where trusted proxy hops are resolved.
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .context("server error during execution")?;
 
     info!("server shutdown complete, closing database connections");
     pool.close().await;

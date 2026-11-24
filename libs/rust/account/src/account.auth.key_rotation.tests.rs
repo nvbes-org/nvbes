@@ -32,19 +32,22 @@ fn invalid_overlap_configuration_never_silently_disables_rotation() {
 #[test]
 fn account_accepts_an_overlapping_signer_but_rejects_it_after_retirement() {
     let token = sign(&claims());
-    let mut config = config();
-    config.token_key_id = "next-key".into();
-    config.token_verification_keys = json!([{"kid":"identity-test", "public_key_pem":keys().1, "accept_until":chrono::Utc::now().timestamp()+60}]).to_string();
+    let activity = || -> std::sync::Arc<dyn ActivityVerifier> {
+        std::sync::Arc::new(ScriptedActivity::new(json!({"active": false})))
+    };
+    let mut trust = trust();
+    trust.key_id = "next-key".into();
+    trust.verification_keys = json!([{"kid":"identity-test", "public_key_pem":keys().1, "accept_until":chrono::Utc::now().timestamp()+60}]).to_string();
     assert!(
-        TokenVerifier::new(&config)
+        TokenVerifier::new(&trust, None, activity())
             .unwrap()
             .validated(&token)
             .is_ok()
     );
-    config.token_verification_keys =
+    trust.verification_keys =
         json!([{"kid":"identity-test", "public_key_pem":keys().1, "accept_until":1}]).to_string();
     assert!(
-        TokenVerifier::new(&config)
+        TokenVerifier::new(&trust, None, activity())
             .unwrap()
             .validated(&token)
             .is_err()

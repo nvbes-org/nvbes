@@ -5,6 +5,9 @@ license.workspace = true
 version.workspace = true
 publish.workspace = true
 
+[features]
+database-tests = []
+
 [[bin]]
 name = "nvbes-api"
 path = "src/main.rs"
@@ -15,14 +18,16 @@ path = "src/lib.rs"
 
 [dependencies]
 anyhow.workspace = true
+async-trait.workspace = true
 axum.workspace = true
 base64.workspace = true
 chrono.workspace = true
 hex.workspace = true
+ipnet.workspace = true
 metrics-exporter-prometheus.workspace = true
 nvbes-account-service = { path = "../../libs/rust/account" }
-nvbes-consent = { path = "../../libs/rust/consent" }
 nvbes-core = { path = "../../libs/rust/core" }
+nvbes-identity-sdk = { path = "../../libs/rust/identity-sdk-backend" }
 nvbes-identity-service = { path = "../../libs/rust/identity" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
 rand.workspace = true

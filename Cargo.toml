@@ -4,8 +4,6 @@ members = [
   "apps/worker",
   "libs/rust/identity",
   "libs/rust/account",
-  "libs/rust/audit",
-  "libs/rust/consent",
   "libs/rust/core",
   "libs/rust/dpop",
   "libs/rust/identity-sdk-backend",

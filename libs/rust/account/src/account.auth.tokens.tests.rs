@@ -1,5 +1,6 @@
 use super::*;
 use jsonwebtoken::{EncodingKey, Header, encode};
+use nvbes_identity_sdk::introspection::IntrospectionError;
 use rsa::{
     RsaPrivateKey,
     pkcs8::{EncodePrivateKey, EncodePublicKey},
@@ -25,28 +26,65 @@ fn keys() -> &'static (String, String) {
         )
     })
 }
-fn config() -> AccountConfig {
-    AccountConfig {
-        public_origin: None,
-        browser_origins: Default::default(),
-        environment: "test".into(),
-        database_url: "postgres://unused:unused@127.0.0.1/unused".into(),
-        database_max_connections: 1,
-        bind_addr: "127.0.0.1:0".parse().unwrap(),
-        token_issuer: "https://identity.example/".into(),
-        token_audience: "nvbes-account-service".into(),
-        token_key_id: "identity-test".into(),
-        token_public_key_pem: keys().1.clone(),
-        token_verification_keys: "[]".into(),
-        identity_resource_client_id: "account-api".into(),
-        identity_resource_secret: "A".repeat(43),
-        metrics_token: "test-metrics-token-not-used".into(),
-        sentry_dsn: None,
-        sentry_traces_sample_rate: 0.0,
-        otlp_endpoint: None,
-        otlp_authorization_header: None,
+fn trust() -> TokenTrust {
+    TokenTrust {
+        issuer: "https://identity.example/".into(),
+        key_id: "identity-test".into(),
+        public_key_pem: keys().1.clone(),
+        verification_keys: "[]".into(),
     }
 }
+
+/// Activity double whose answer the test switches between calls.
+#[derive(Clone)]
+struct ScriptedActivity {
+    answer: std::sync::Arc<std::sync::Mutex<Result<Value, IntrospectionError>>>,
+    calls: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+}
+
+impl ScriptedActivity {
+    fn new(answer: Value) -> Self {
+        Self {
+            answer: std::sync::Arc::new(std::sync::Mutex::new(Ok(answer))),
+            calls: Default::default(),
+        }
+    }
+
+    fn set(&self, answer: Result<Value, IntrospectionError>) {
+        *self.answer.lock().unwrap() = answer;
+    }
+}
+
+#[async_trait::async_trait]
+impl ActivityVerifier for ScriptedActivity {
+    async fn is_active(
+        &self,
+        _token: &str,
+        expected: &ExpectedToken,
+    ) -> Result<bool, IntrospectionError> {
+        self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let answer = match &*self.answer.lock().unwrap() {
+            Ok(value) => value.clone(),
+            Err(_) => return Err(IntrospectionError::Unavailable),
+        };
+        if answer["active"] != json!(true) {
+            return Ok(false);
+        }
+        let actual: ExpectedToken =
+            serde_json::from_value(answer).map_err(|_| IntrospectionError::Unavailable)?;
+        nvbes_identity_sdk::introspection::confirm_activity(&actual, expected)
+    }
+}
+
+fn verifier() -> TokenVerifier {
+    TokenVerifier::new(
+        &trust(),
+        None,
+        std::sync::Arc::new(ScriptedActivity::new(json!({"active": false}))),
+    )
+    .unwrap()
+}
+
 fn claims() -> Value {
     let now = chrono::Utc::now().timestamp() as u64;
     json!({"sub":Uuid::new_v4(),"sid":Uuid::new_v4(),"grant_id":Uuid::new_v4(),"jti":Uuid::new_v4(),"iss":"https://identity.example/","aud":"nvbes-account-service","client_id":"account-web","token_type":"access","scope":"account:read account:write account:export account:close","amr":["pwd","totp"],"auth_time":now-60,"iat":now,"nbf":now,"exp":now+600,"step_up_time":now-30,"step_up_expires_at":now+300})
@@ -65,7 +103,7 @@ fn sign(value: &Value) -> String {
 
 #[test]
 fn verified_claims_preserve_the_exact_identity_contract() {
-    let verifier = TokenVerifier::new(&config()).unwrap();
+    let verifier = verifier();
     let claims = claims();
     let (principal, expected) = verifier.validated(&sign(&claims)).unwrap();
     assert_eq!(principal.id.to_string(), claims["sub"].as_str().unwrap());
@@ -98,14 +136,21 @@ fn verified_claims_preserve_the_exact_identity_contract() {
             "accepted {field}"
         );
     }
-    let mut wrong = config();
-    wrong.token_audience = "nvbes-billing-service".into();
-    assert!(TokenVerifier::new(&wrong).is_err());
+    let mut wrong = trust();
+    wrong.public_key_pem = "not a key".into();
+    assert!(
+        TokenVerifier::new(
+            &wrong,
+            None,
+            std::sync::Arc::new(ScriptedActivity::new(json!({"active": false})))
+        )
+        .is_err()
+    );
 }
 
 #[test]
 fn sensitive_actions_require_current_proof_not_a_historical_mfa_method() {
-    let verifier = TokenVerifier::new(&config()).unwrap();
+    let verifier = verifier();
     let mut claims = claims();
     let now = claims["iat"].as_u64().unwrap();
     claims["iat"] = json!(now - 120);
@@ -150,47 +195,32 @@ fn sensitive_actions_require_current_proof_not_a_historical_mfa_method() {
 #[tokio::test]
 async fn account_http_guard_requires_live_identity_and_refuses_duplicate_headers() {
     use axum::{
-        Json, Router,
+        Router,
         body::Body,
         http::{Request, StatusCode},
-        routing::{get, post},
+        routing::get,
     };
     use std::sync::{
-        Arc, Mutex,
+        Arc,
         atomic::{AtomicUsize, Ordering},
     };
     use tower::ServiceExt;
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let issuer = format!("http://{}", listener.local_addr().unwrap());
-    let mut config = config();
-    config.token_issuer = issuer.clone();
-    let mut claims = claims();
-    claims["iss"] = json!(issuer);
+    let claims = claims();
     let token = sign(&claims);
     let mut active = claims;
     active["active"] = json!(true);
     active["token_type"] = json!("Bearer");
-    let response = Arc::new(Mutex::new((StatusCode::OK, active)));
-    let calls = Arc::new(AtomicUsize::new(0));
-    let identity = Router::new().route(
-        "/oauth/introspect",
-        post({
-            let response = response.clone();
-            let calls = calls.clone();
-            move || {
-                let (status, body) = response.lock().unwrap().clone();
-                calls.fetch_add(1, Ordering::SeqCst);
-                async move { (status, Json(body)) }
-            }
-        }),
-    );
-    let server = tokio::spawn(async move {
-        axum::serve(listener, identity).await.unwrap();
-    });
+    let activity = ScriptedActivity::new(active);
     let db = sqlx::postgres::PgPoolOptions::new()
-        .connect_lazy(&config.database_url)
+        .connect_lazy("postgres://unused:unused@127.0.0.1/unused")
         .unwrap();
-    let state = crate::app::AccountState::new(config, db).unwrap();
+    let state = crate::app::AccountState::new(
+        crate::test_support::account_config(),
+        trust(),
+        db,
+        Arc::new(activity.clone()),
+    )
+    .unwrap();
     let reached = Arc::new(AtomicUsize::new(0));
     let app = Router::new()
         .route(
@@ -219,12 +249,12 @@ async fn account_http_guard_requires_live_identity_and_refuses_duplicate_headers
         app.clone().oneshot(request()).await.unwrap().status(),
         StatusCode::NO_CONTENT
     );
-    *response.lock().unwrap() = (StatusCode::OK, json!({"active":false}));
+    activity.set(Ok(json!({"active": false})));
     assert_eq!(
         app.clone().oneshot(request()).await.unwrap().status(),
         StatusCode::UNAUTHORIZED
     );
-    *response.lock().unwrap() = (StatusCode::SERVICE_UNAVAILABLE, json!({}));
+    activity.set(Err(IntrospectionError::Unavailable));
     assert_eq!(
         app.clone().oneshot(request()).await.unwrap().status(),
         StatusCode::SERVICE_UNAVAILABLE
@@ -237,7 +267,6 @@ async fn account_http_guard_requires_live_identity_and_refuses_duplicate_headers
         app.oneshot(duplicate).await.unwrap().status(),
         StatusCode::UNAUTHORIZED
     );
-    assert_eq!(calls.load(Ordering::SeqCst), 3);
+    assert_eq!(activity.calls.load(Ordering::SeqCst), 3);
     assert_eq!(reached.load(Ordering::SeqCst), 1);
-    server.abort();
 }

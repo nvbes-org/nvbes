@@ -71,7 +71,7 @@ pub fn set_trusted_client_ip(
     let selected = if proxy_is_trusted {
         forwarded_for
             .as_deref()
-            .and_then(first_forwarded_ip)
+            .and_then(|value| nearest_untrusted_forwarded_ip(value, trusted_proxy_cidrs))
             .or_else(|| real_ip.as_deref().and_then(parse_ip))
             .or(peer_ip)
     } else {
@@ -98,8 +98,19 @@ fn header_value(headers: &HeaderMap, name: &'static str) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
-fn first_forwarded_ip(value: &str) -> Option<IpAddr> {
-    value.split(',').find_map(parse_ip)
+/// Walks the chain from the hop closest to us and returns the first address
+/// that is not a trusted proxy. Entries further left were written by the
+/// client or by untrusted hops and could be forged to dodge per-source limits.
+fn nearest_untrusted_forwarded_ip(value: &str, trusted_proxy_cidrs: &[String]) -> Option<IpAddr> {
+    let mut last_trusted = None;
+    for hop in value.rsplit(',') {
+        let ip = parse_ip(hop)?;
+        if !is_trusted_proxy(ip, trusted_proxy_cidrs) {
+            return Some(ip);
+        }
+        last_trusted = Some(ip);
+    }
+    last_trusted
 }
 
 fn parse_ip(value: &str) -> Option<IpAddr> {
@@ -149,6 +160,40 @@ mod tests {
         assert_eq!(selected.as_deref(), Some("203.0.113.10"));
         assert_eq!(client_ip(&headers).as_deref(), Some("203.0.113.10"));
         assert!(from_trusted_proxy(&headers));
+    }
+
+    #[test]
+    fn ignores_client_supplied_entries_left_of_the_nearest_untrusted_hop() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-forwarded-for",
+            "192.0.2.99, 203.0.113.10, 10.0.0.1".parse().unwrap(),
+        );
+
+        let selected = set_trusted_client_ip(
+            &mut headers,
+            Some("10.0.0.5:443".parse().unwrap()),
+            &["10.0.0.0/8".to_string()],
+        );
+
+        assert_eq!(selected.as_deref(), Some("203.0.113.10"));
+    }
+
+    #[test]
+    fn malformed_forwarded_hop_stops_the_walk_and_falls_back_to_the_peer() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-forwarded-for",
+            "203.0.113.10, not-an-ip".parse().unwrap(),
+        );
+
+        let selected = set_trusted_client_ip(
+            &mut headers,
+            Some("10.0.0.5:443".parse().unwrap()),
+            &["10.0.0.0/8".to_string()],
+        );
+
+        assert_eq!(selected.as_deref(), Some("10.0.0.5"));
     }
 
     #[test]

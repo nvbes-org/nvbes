@@ -17,7 +17,6 @@ anyhow.workspace = true
 axum.workspace = true
 chrono.workspace = true
 jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
-metrics-exporter-prometheus.workspace = true
 nvbes-identity-sdk = { path = "../identity-sdk-backend" }
 nvbes-core = { path = "../core" }
 nvbes-dpop = { path = "../dpop", features = ["resource-server"] }
@@ -33,6 +32,7 @@ tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+async-trait.workspace = true
 rsa = "0.9.10"
 openssl.workspace = true
 tower = "0.5"

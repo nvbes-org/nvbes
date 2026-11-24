@@ -1,9 +1,7 @@
-use super::{claims, config, sign};
+use super::{ScriptedActivity, claims, sign, trust};
 use axum::{
-    Json, Router,
     body::Body,
     http::{Request, StatusCode},
-    routing::post,
 };
 use serde_json::json;
 use sqlx::PgPool;
@@ -54,28 +52,20 @@ async fn check(action: Action, expire: bool) {
     }
     let before = snapshot(&pool, owner).await;
     // Generate test keys before starting the short deadline.
-    let mut cfg = config();
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    cfg.token_issuer = format!("http://{}", listener.local_addr().unwrap());
     let mut claims = claims();
     let until = chrono::Utc::now().timestamp() + if expire { 3 } else { 60 };
-    claims["iss"] = json!(cfg.token_issuer);
     claims["sub"] = json!(owner);
     claims["step_up_expires_at"] = json!(until);
     let token = sign(&claims);
     claims["active"] = json!(true);
     claims["token_type"] = json!("Bearer");
-    let identity = Router::new().route(
-        "/oauth/introspect",
-        post(move || {
-            let claims = claims.clone();
-            async move { Json(claims) }
-        }),
-    );
-    let server = tokio::spawn(async move {
-        axum::serve(listener, identity).await.unwrap();
-    });
-    let state = crate::app::AccountState::new(cfg, pool.clone()).unwrap();
+    let state = crate::app::AccountState::new(
+        crate::test_support::account_config(),
+        trust(),
+        pool.clone(),
+        std::sync::Arc::new(ScriptedActivity::new(claims)),
+    )
+    .unwrap();
     let app = crate::privacy::router(state);
     let mut blocker = pool.begin().await.unwrap();
     let table = match action {
@@ -157,7 +147,6 @@ async fn check(action: Action, expire: bool) {
         .await
         .unwrap()
         .unwrap();
-    server.abort();
     if expire {
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
         assert_eq!(

@@ -288,17 +288,15 @@
 					"includes": ["CREATE TABLE identity_audit_events"]
 				},
 				{
-					"path": "libs/rust/audit/src/lib.rs",
-					"includes": [
-						"AuditEventInput",
-						"action_key",
-						"is_workspace_scoped",
-						"has_network_context"
-					]
-				},
-				{
 					"path": "libs/rust/account/src/account.audit.rs",
 					"includes": ["INSERT INTO account_audit_events", "AuditInput", "record"]
+				},
+				{
+					"path": "libs/rust/account/migrations/0001_account_foundation.sql",
+					"includes": [
+						"account audit events are append-only",
+						"BEFORE UPDATE OR DELETE ON account_audit_events"
+					]
 				}
 			]
 		},

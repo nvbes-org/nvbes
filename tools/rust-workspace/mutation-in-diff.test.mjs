@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CRITICAL_PACKAGES, summarizeDiffOutcomes } from './mutation-in-diff.mjs';
 
-test('CRITICAL_PACKAGES covers identity account consent and security primitives', () => {
+test('CRITICAL_PACKAGES covers identity, account and security primitives', () => {
   assert.equal(CRITICAL_PACKAGES.has('nvbes-identity-service'), true);
-  assert.equal(CRITICAL_PACKAGES.has('nvbes-consent'), true);
+  assert.equal(CRITICAL_PACKAGES.has('nvbes-dpop'), true);
   assert.equal(CRITICAL_PACKAGES.has('nvbes-billing'), false);
   assert.equal(CRITICAL_PACKAGES.has('nvbes-email'), false);
 });
@@ -17,7 +17,7 @@ test('summarizeDiffOutcomes counts missed and critical packages', () => {
         summary: 'MissedMutant',
         scenario: { Mutant: { package: 'nvbes-core', function: 'hash' } },
       },
-      { summary: 'Timeout', scenario: { Mutant: { package: 'nvbes-consent', function: 'grant' } } },
+      { summary: 'Timeout', scenario: { Mutant: { package: 'nvbes-dpop', function: 'verify' } } },
       {
         summary: 'MissedMutant',
         scenario: { Mutant: { package: 'nvbes-email', function: 'render' } },

@@ -4,7 +4,7 @@ use sqlx::PgPool;
 pub async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
     tracing::info!("ensuring multi-schema isolation in PostgreSQL");
 
-    let schemas = ["identity", "account", "consent", "outbox"];
+    let schemas = ["identity", "account", "outbox"];
     for schema in schemas {
         sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {schema}")) // nvbes-allow-runtime-sql
             .execute(pool)
@@ -42,22 +42,6 @@ pub async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
             .run(&mut *conn)
             .await
             .context("failed to run account migrations")?;
-    }
-
-    tracing::info!("running Consent domain migrations");
-    {
-        let mut conn = pool
-            .acquire()
-            .await
-            .context("failed to acquire connection for consent migrations")?;
-        sqlx::query("SET search_path TO consent, public") // nvbes-allow-runtime-sql
-            .execute(&mut *conn)
-            .await
-            .context("failed to set consent search_path")?;
-        nvbes_consent::db::MIGRATOR
-            .run(&mut *conn)
-            .await
-            .context("failed to run consent migrations")?;
     }
 
     tracing::info!("all domain migrations applied successfully");

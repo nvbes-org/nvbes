@@ -61,18 +61,6 @@
         "regions": 90.4
       }
     },
-    "nvbes-audit": {
-      "threshold": {
-        "lines": 98,
-        "functions": 98,
-        "regions": 98
-      },
-      "baseline": {
-        "lines": 100,
-        "functions": 100,
-        "regions": 100
-      }
-    },
     "nvbes-account-service": {
       "threshold": {
         "lines": 78,
@@ -144,18 +132,6 @@
         "functions": 35.7,
         "regions": 35.3
       }
-    },
-    "nvbes-consent": {
-      "threshold": {
-        "lines": 8,
-        "functions": 8,
-        "regions": 13
-      },
-      "baseline": {
-        "lines": 10.2,
-        "functions": 10.6,
-        "regions": 15.0
-      }
     }
   },
   "excluded": [
@@ -172,6 +148,8 @@
     "nvbes-billing-service",
     "nvbes-trust-risk",
     "nvbes-region",
-    "nvbes-platform"
+    "nvbes-platform",
+    "nvbes-consent",
+    "nvbes-audit"
   ]
 }

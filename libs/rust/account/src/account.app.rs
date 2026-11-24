@@ -1,26 +1,34 @@
 use std::sync::Arc;
 
 use axum::Router;
-use metrics_exporter_prometheus::PrometheusHandle;
+use nvbes_identity_sdk::introspection::ActivityVerifier;
 use sqlx::PgPool;
 
-use crate::{auth::TokenVerifier, config::AccountConfig};
+use crate::{
+    auth::{TokenTrust, TokenVerifier},
+    config::AccountConfig,
+};
 
 #[derive(Clone)]
 pub struct AccountState {
     pub config: Arc<AccountConfig>,
+    pub trust: Arc<TokenTrust>,
     pub db: PgPool,
-    pub metrics: Arc<PrometheusHandle>,
     pub tokens: Arc<TokenVerifier>,
 }
 
 impl AccountState {
-    pub fn new(config: AccountConfig, db: PgPool) -> anyhow::Result<Self> {
-        let tokens = TokenVerifier::new(&config)?;
+    pub fn new(
+        config: AccountConfig,
+        trust: TokenTrust,
+        db: PgPool,
+        activity: Arc<dyn ActivityVerifier>,
+    ) -> anyhow::Result<Self> {
+        let tokens = TokenVerifier::new(&trust, config.public_origin.as_deref(), activity)?;
         Ok(Self {
             config: Arc::new(config),
+            trust: Arc::new(trust),
             db,
-            metrics: crate::metrics::install(),
             tokens: Arc::new(tokens),
         })
     }
@@ -38,10 +46,4 @@ pub fn domain_router(state: AccountState) -> Router {
         .merge(crate::privacy::router(state.clone()))
         .layer(cors);
     crate::operator::router(state.clone()).merge(browser)
-}
-
-pub fn router(state: AccountState) -> Router {
-    crate::health::router(state.clone())
-        .merge(crate::metrics::router(state.clone()))
-        .merge(domain_router(state))
 }
