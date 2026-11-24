@@ -6,19 +6,30 @@
 
 ## V1 Ultra-Restricted Architecture (Small Building)
 
-- **Monolithic API** (`apps/api`): Axum HTTP service bundling Identity/OAuth 2.0 (PKCE,
-  authorization code flow, tokens), Consent management, and User Profile.
-- **Monolithic Web** (`apps/web` / dev UI): React 19 + Vite + Tailwind + shadcn/ui.
-  Provides Register, Login, Consent prompt, and Profile views. No marketing pages.
-- **Data Persistence**: Standard PostgreSQL database (single connection pool, isolated schemas).
-- **Two Major Principles**:
-  1. *Frugality & Market Efficiency*: Tiny RAM footprint (< 20MB), free tier CDN (Cloudflare Pages),
-     low-cost managed DB. Monthly spend strictly < 30 EUR TTC.
-  2. *OSS Migration Readiness*: Zero vendor lock-in. Architecture directly swappable with
-     self-hosted open-source components (PostgreSQL bare-metal/dedicated, Nginx/Caddy, SMTP).
+- **Serverless API** (`apps/api`): Axum, Identity (OAuth 2.0 + PKCE, sessions,
+  MFA, password recovery) and Account (profile, legal consents, RGPD). No
+  background task, no migration. Account verifies tokens in-process through
+  `ActivityVerifier` (identity SDK) implemented on `TokenService::introspect`.
+- **Single worker** (`apps/worker`): `serve` for a Scaleway Container
+  (recurring `identity-emails`, `privacy-retention`), `run <task>` for a
+  Scaleway Job (`migrate`, `rotate-mfa-key`, or any recurring task once).
+  Emails are rendered and sent in-process (`DirectEmailDelivery`: SMTP or
+  Scaleway TEM); the old gRPC email service is archived.
+- **Web**: `apps/identity-web` (hosted login) and `apps/account-web`; React 19,
+  Vite, TanStack Router, shadcn/ui. Unification is a later step.
+- **Data**: one PostgreSQL database, one schema per domain (`identity`,
+  `account`), each with its own migration table.
+- **Fail-closed configuration**: config loaders are pure `from_lookup`
+  functions; outside development nothing is generated. Shared secrets (MFA,
+  rate-limit key) must match across API instances and the worker.
+- **CORS**: no global layer; Identity allows registered client origins,
+  Account its configured browser origins.
+- **Client IP**: only peers inside `NVBES_TRUSTED_PROXY_CIDRS` may supply
+  `X-Forwarded-For`; the nearest untrusted hop wins.
 
-## Platform Boundaries & Dormant Modules
+## Archived (not compiled)
 
-- Billing (Stripe), Trust/Risk engine, and separate background workers are paused/dormant in V1.
-- In-process background tasks use Tokio tasks rather than distributed queues.
-- Enterprise governance, SAML/SCIM, and complex multi-tenancy remain future extensions.
+billing, billing-service, trust-risk, region, platform, consent (unauthenticated
+subject header), audit (unused once consent left), the identity binary and the
+account outbox (no consumer). They live in `archive/` and are marked
+`archived` in the threshold files.

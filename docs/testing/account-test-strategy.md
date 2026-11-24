@@ -10,8 +10,8 @@
 
 Cette stratégie couvre :
 
-- `apps/account-service` (profil, préférences, consents, équipes, export,
-  fermeture, outbox) ;
+- `libs/rust/account` monté par `apps/api` (profil, préférences, consentements,
+  export, fermeture) et la tâche worker `privacy-retention` ;
 - `libs/ts/account-sdk-core` (contrat OpenAPI + types générés) ;
 - les événements versionnés `contracts/events/account.*.v1.schema.json`.
 
@@ -37,21 +37,21 @@ Audience JWT : `nvbes-account-service`. Scopes :
 
 ## État d'automatisation réel
 
-| Lane             | Déclenchement                     | Couverture                                                                     | Preuve                          |
-| ---------------- | --------------------------------- | ------------------------------------------------------------------------------ | ------------------------------- |
-| PR               | `account-service:check` / `:test` | compilation, auth step-up, consents, CLI maintenance                           | Cargo / nextest                 |
-| Database         | `account-service:test:database`   | cycle de vie (profil, consentements, export, fermeture, audit append-only)     | PostgreSQL isolé `account_test` |
-| Contract         | `account-service:test:contract`   | Dockerfile non-root, migrate/privacy/outbox CLI, step-up                       | `container-contract.test.mjs`   |
-| OpenAPI          | `account-sdk-core:check`          | paths V1 + scopes + sync `types.gen.ts`                                        | `openapi.contract.test.mjs`     |
-| Trusted hermetic | opérateur                         | `migrate`, `synthetic-account-smoke`, `process-privacy-jobs`, `publish-outbox` | journaux smoke                  |
-| Pre-release      | session signée                    | acceptation opérateur runbook Platform Operations                              | preuve manuelle                 |
+| Lane             | Déclenchement                     | Couverture                                                                 | Preuve                          |
+| ---------------- | --------------------------------- | -------------------------------------------------------------------------- | ------------------------------- |
+| PR               | `account-service:check` / `:test` | compilation, auth step-up, consentements, config fail-closed               | Cargo / nextest                 |
+| Database         | `account-service:test:database`   | cycle de vie (profil, consentements, export, fermeture, audit append-only) | PostgreSQL isolé `account_test` |
+| Contract         | `account-service:test:contract`   | images API et worker non-root, `serve` / `run <task>`                      | `container-contract.test.mjs`   |
+| OpenAPI          | `account-sdk-core:check`          | paths V1 + scopes + sync `types.gen.ts`                                    | `openapi.contract.test.mjs`     |
+| Trusted hermetic | opérateur                         | `nvbes-worker run migrate`, `nvbes-worker run privacy-retention`           | journaux smoke                  |
+| Pre-release      | session signée                    | acceptation opérateur runbook Platform Operations                          | preuve manuelle                 |
 
 ### Limites explicites
 
 - Pas d'UI Account dans la V1 ; pas de Playwright Account.
 - Pas d'équipes ni de RLS multi-tenant en V1 : isolation par `principal_id`.
-- L'outbox marque `published_at` sans sink externe tant qu'aucun consommateur
-  n'est branché.
+- Pas d'outbox Account en V1 : aucun consommateur ; l'audit append-only
+  trace chaque mutation.
 - `account-web` / `account-worker` / DAST/k6 historiques ne comptent pas comme
   preuves du runtime lean.
 
@@ -66,6 +66,6 @@ Audience JWT : `nvbes-account-service`. Scopes :
 ## Gates
 
 - PR : check, unitaires, contrat conteneur, OpenAPI Account.
-- Avant staging : `synthetic-account-smoke` + `publish-outbox` verts.
+- Avant staging : `nvbes-worker run migrate` et `run privacy-retention` verts.
 - Avant production : preuves `docs/testing/v1/account.json` + acceptation
   opérateur ; aucun GO via le manifeste historique.

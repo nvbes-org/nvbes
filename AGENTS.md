@@ -11,13 +11,13 @@ La [direction produit canonique](docs/product/nvbes-product-strategy.md) prévau
 - **Mission Nvbes** : Nvbes est une entité destinée à offrir des outils et des logiciels aux développeurs, le tout en **open-source**, financé par son futur cloud.
 - **V1 Ultra-Restreinte ("Small Building")** : La V1 sert exclusivement de service d'identité et de compte pour les développeurs utilisant les outils Nvbes, avec une configuration interne et manuelle (pas de portail d'enregistrement d'apps complexe en V1) :
   - **Une API monolithique** (`apps/api`) : Création de compte, Connexion et maintien de session le tout en **OAuth 2** (PKCE, RFC 6749), gestion des consentements (scopes) et profil utilisateur basique.
-  - **Un site web monolithique** (`apps/identity-web` / `apps/account-web` unifiés) : Inscription, Connexion en OAuth2, écran de consentement, page de profil (infos, sessions actives). Destiné uniquement aux développeurs : **aucun front-end marketing en V1**.
+  - **Un site web dev-first** (aujourd'hui `apps/identity-web` et `apps/account-web`, unification prévue) : Inscription, Connexion en OAuth2, écran de consentement, page de profil (infos, sessions actives). Destiné uniquement aux développeurs : **aucun front-end marketing en V1**.
 - **Deux Principes Majeurs** :
   1. **Rentabilité maximale & technologies les moins chères du marché** : Exploiter au maximum la gratuité et l'ultra-légèreté (Rust/Axum < 20Mo RAM, Cloudflare Pages gratuit pour le front, PostgreSQL managé ou low-cost).
   2. **Migration vers l'Open Source auto-géré** : Chaque brique et choix technologique doit être conçu pour permettre une migration fluide vers des solutions OSS auto-hébergées dans le futur (PostgreSQL natif, reverse proxy Nginx/Caddy, zéro lock-in propriétaire).
 - **Hors périmètre actif V1 (Gelé / Mis en pause)** :
   - ❌ Pas de **Billing (Stripe)** pour l'instant (activé ultérieurement lors du lancement du cloud payant).
-  - ❌ Pas de **Trust/Risk engine** ni de workers distribués séparés (les tâches asynchrones sont gérées en interne par l'API ou des jobs légers).
+  - ❌ Pas de **Trust/Risk engine** ni de workers distribués : l'API reste strictement serverless (aucune tâche de fond) et un seul binaire `apps/worker` exécute les tâches, en Scaleway Container (`serve`) ou en Scaleway Job (`run <task>`).
   - ❌ Pas de **front-end marketing** ni de gestion complexe d'organisations/équipes B2B.
   - ❌ **Souveraineté et conformité avancée non exigées en V1** : préparées dans les abstractions, mais sans surcoût ni complexité bloquante pour démarrer.
 - **Plafond FinOps impératif** : Le coût récurrent total de l'infrastructure ne doit jamais dépasser **30 EUR TTC par mois** (cible opérationnelle à 20 EUR). FinOps est une contrainte de conception et un gate de livraison non négociable.
@@ -36,7 +36,7 @@ La [direction produit canonique](docs/product/nvbes-product-strategy.md) prévau
 - **Formatage & Lint** : Biome (`vp check`, `vp fmt`) + `cargo fmt` + `cargo clippy`
 - **Hooks Git** : Lefthook
 - **Backend** : Rust stable (2021), Axum, SQLx (mode offline `query!`), PostgreSQL
-- **Frontend** : React 19, Vite, TanStack Router, TanStack Query, Effect, Tailwind CSS, shadcn/ui
+- **Frontend** : React 19, Vite, TanStack Router, Tailwind CSS, shadcn/ui (Radix), Lucide
 - **Auth** : nvbes OAuth 2.0 / PKCE (RFC 6749, RFC 7636), Sessions, Consentement, JWT & DPoP
 - **Hébergement & Infra** : Cloudflare Pages (Frontend gratuit), Runtimes ultra-frugaux (Axum < 20Mo RAM), PostgreSQL managé / low-cost
 - **Billing** : Hors périmètre actif V1 (gelé jusqu'au lancement commercial du Cloud)
@@ -46,33 +46,29 @@ La [direction produit canonique](docs/product/nvbes-product-strategy.md) prévau
 ```
 nvbes/
 ├── apps/
-│   ├── api/                # API Monolithe Modulaire HTTP serverless (Axum)
-│   ├── worker/             # Worker d'arrière-plan unifié (outbox/purges/batch)
-│   ├── identity-web/       # UI hébergée Identity (OAuth/MFA, React/Vite)
-│   └── account-web/        # UI Account (session, logout RP, React/Vite)
+│   ├── api/                # API serverless (Axum) : Identity + Account, aucune tâche de fond
+│   ├── worker/             # Worker unique : `serve` (Container) ou `run <task>` (Job)
+│   ├── identity-web/       # UI hébergée Identity (OAuth/MFA, récupération, React/Vite)
+│   └── account-web/        # UI Account (profil, consentements, RGPD, React/Vite)
 ├── libs/
 │   ├── rust/
-│   │   ├── identity/       # Domaine Identity (OAuth 2.1, OIDC, WebAuthn, MFA)
-│   │   ├── account/        # Domaine Account (Profils, Équipes, Sessions)
-│   │   ├── billing-service/# Domaine Billing (Stripe, Abonnements)
-│   │   ├── consent/        # Domaine Consent & RGPD (CGU, Cookies, GPC)
-│   │   ├── trust-risk/     # Domaine Trust/Risk (Signaux, Risque, Anti-abus)
-│   │   ├── email/          # Service Email (Scaleway TEM, templates)
-│   │   ├── core/           # Primitives partagées (config, auth, crypto, mfa)
-│   │   ├── adapters/       # Adaptateurs externes actifs (Scaleway, etc.)
-│   │   ├── audit/          # Piste d'audit append-only
-│   │   ├── billing/        # Logique billing partagée
-│   │   ├── observability/  # Métriques Prometheus, tracing OpenTelemetry, sentry
-│   │   ├── platform/       # Primitives de plateforme (outbox, idempotence)
-│   │   ├── region/         # Régions et résidence des données (UE)
-│   │   └── redis/          # Primitives Redis/Valkey actives
+│   │   ├── identity/            # Domaine Identity (OAuth 2.1, OIDC, WebAuthn, MFA, récupération)
+│   │   ├── account/             # Domaine Account (profil, préférences, consentements légaux, RGPD)
+│   │   ├── identity-sdk-backend/# Vérification JWT et ActivityVerifier pour serveurs de ressources
+│   │   ├── dpop/                # Preuves DPoP (RFC 9449)
+│   │   ├── email/               # Commandes, gabarits et livraison email (SMTP, Scaleway TEM)
+│   │   ├── adapters/            # Adaptateurs externes (Scaleway TEM)
+│   │   ├── core/                # Primitives partagées (http, sécurité, crypto, mfa)
+│   │   ├── observability/       # Métriques Prometheus, tracing OpenTelemetry, Sentry
+│   │   └── test-utils/          # Runner de tests par mots-clés
 │   └── ts/
 │       ├── http-client/        # Client fetch partagé (DTO + helpers DPoP)
 │       ├── identity-sdk-core/  # Types OpenAPI générés
 │       ├── identity-sdk-web/   # SDK navigateur Identity (OAuth/WebAuthn)
+│       ├── account-sdk-core/   # Contrat OpenAPI Account
 │       └── email-ui/           # Templates React Email actifs
 ├── infrastructure/         # Terraform/OpenTofu (api, worker, bootstrap)
-└── archive/                # Anciens services et prototypes hors runtime actif
+└── archive/                # Services et crates gelés (billing, trust-risk, consent, ...)
 ```
 
 *Note* : Les applications archivées (`archive/apps/`) ne sont pas des bases actives. Ne pas copier le code archivé par défaut.
@@ -198,13 +194,12 @@ Les fichiers Rust utilisent une structure plate qualifiée par des points pour u
 
 ```
 apps/api/src/
-├── api.app.rs             # AppState et initialisation
-├── api.identity.rs        # Montage HTTP du domaine Identity
-├── api.account.rs         # Montage HTTP du domaine Account
-├── api.billing.rs         # Montage HTTP du domaine Billing
-├── api.consent.rs         # Montage HTTP du domaine Consent
-├── api.ports.rs           # Adaptateurs in-process inter-domaines
-└── api.migrations.rs      # Orchestrateur de migrations multi-schémas
+├── api.config.rs            # Configuration fail-closed (lookup pur, testable)
+├── api.identity.runtime.rs  # Secrets et registres Identity validés au démarrage
+├── api.identity.rs          # Montage HTTP du domaine Identity
+├── api.identity.activity.rs # Vérification d'activité des jetons in-process (Account)
+├── api.client_ip.rs         # IP client derrière les proxies de confiance
+└── api.routes.rs            # Assemblage du routeur
 ```
 
 - Tous les `.rs` résident directement dans `src/` (aucun sous-répertoire profond).
@@ -288,7 +283,7 @@ Ces règles sont vérifiées localement avant commit (`pnpm check:upstream-rules
 # Runtimes Locaux
 pnpm dev              # API (8080) + Worker (8081)
 pnpm dev:api          # API Monolithe Modulaire en isolation
-pnpm dev:worker       # Worker unifié en isolation
+pnpm dev:worker       # Worker en isolation (`run migrate` puis `serve`)
 pnpm dev:identity-web # Interface Identity hébergée (port 3000)
 pnpm dev:account-web  # Interface Account (port 3001)
 pnpm dev:infra        # Infrastructure locale (PostgreSQL, Valkey, Mailpit)
@@ -323,5 +318,6 @@ pnpm nx affected -t check # Vérifie uniquement les projets affectés
   - `5432` : PostgreSQL
   - `6379` : Valkey / Redis
   - `8025` / `1025` : Mailpit (UI web / SMTP local)
-- **Multi-schémas PostgreSQL** : L'API et le Worker utilisent les schémas isolés `identity`, `account`, `billing`, `consent`, `audit`.
+- **Multi-schémas PostgreSQL** : chaque domaine migre dans son schéma (`identity`, `account`) via `nvbes-worker run migrate` ; l'API et le worker résolvent les tables par `search_path = identity, account, public`. L'API ne migre jamais.
+- **Secrets partagés** : `NVBES_IDENTITY_MFA_ENCRYPTION_KEY` et `NVBES_IDENTITY_RATE_LIMIT_KEY` doivent être identiques sur toutes les instances API et le worker ; hors `development`/`test`, aucun secret n'est généré et l'absence d'une variable empêche le démarrage.
 - **Variables d'environnement** : Toujours utiliser `.env` (synchronisé avec `.env.example` via `pnpm env:check`). Ne jamais commiter de secret réel.

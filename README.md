@@ -40,11 +40,11 @@ Le dépôt est orchestré avec pnpm workspaces, Cargo workspace et Nx. Le socle 
 nvbes/
 ├── apps/
 │   ├── api/                  # API Monolithe Modulaire HTTP serverless (Axum)
-│   ├── worker/               # Worker d'arrière-plan unifié (outbox/purges)
+│   ├── worker/               # Worker unique : serve (Container) ou run <task> (Job)
 │   ├── account-web/          # Interface web Compte & Équipes (React/Vite)
 │   └── identity-web/         # Interface web Authentification & Sessions (React/Vite)
 ├── libs/
-│   ├── rust/                 # Domaines (identity, account, billing, consent...), ports et primitives
+│   ├── rust/                 # Domaines (identity, account), SDK, email et primitives
 │   └── ts/                   # SDKs, clients et runtime web réutilisables
 ├── contracts/                # OpenAPI, Protobuf, événements et GraphQL
 ├── infrastructure/           # IaC OpenTofu/Terraform et contrat FinOps
@@ -84,7 +84,7 @@ Commandes principales :
 
 ```bash
 pnpm dev:api          # API Monolithique Modulaire (Axum, port 8080)
-pnpm dev:worker       # Worker unifié (outbox/purges, port 8081)
+pnpm dev:worker       # Worker : migrations puis serve (port 8081)
 pnpm dev:identity-web # Interface web Identity (Vite)
 pnpm dev:account-web  # Interface web Account (Vite)
 pnpm dev:infra        # Conteneurs d'infrastructure locale (PostgreSQL, Mailpit)

@@ -12,7 +12,7 @@ workspaces, Nx, and a Cargo workspace (Rust/Axum + React/Vite).
 - **Architecture**:
   - **Monolithic API** (`apps/api`): Account creation, login, session management
     all via OAuth 2 (PKCE RFC 7636), consent management (scopes), user profile.
-  - **Monolithic Web** (`apps/web` / unified UI): Register, OAuth 2 login, consent
+  - **Web** (`apps/identity-web` + `apps/account-web`, unification planned): Register, OAuth 2 login, consent
     screen, profile page. Strict dev-first UX, **no marketing front-end in V1**.
 - **Two Major Principles**:
   1. **Maximum cost-efficiency**: Use the cheapest / most cost-effective technologies
@@ -30,7 +30,10 @@ workspaces, Nx, and a Cargo workspace (Rust/Axum + React/Vite).
 
 ## Stable Boundaries
 
-- `apps/api` is the active monolithic API runtime.
-- `apps/identity-web` and `apps/account-web` are the web frontends (to be unified dev-first).
-- `libs/rust/*` contains shared domains (identity, account, consent, core) and primitives.
+- `apps/api` is the serverless runtime; `apps/worker` runs every batch.
+- `apps/identity-web` and `apps/account-web` are the web frontends.
+- Active Rust libs: identity, account, identity-sdk-backend, dpop, email,
+  adapters/email-scaleway, core, observability, test-utils.
 - `libs/ts/*` contains SDKs, clients, and web runtime packages.
+- Follow-ups outside V1 code: OpenTofu still describes archived services;
+  `nvbes-core::AppConfig` still parses billing/Stripe settings.

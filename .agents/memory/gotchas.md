@@ -15,4 +15,11 @@
   - Rust: Never make blocking calls (`child.wait()`) in async Tokio contexts (`rust:S7487`).
   - Coverage: SonarCloud requires >= 80% coverage on new code. In LCOV reports, source paths must be relative to repository root (`SF:apps/...` or `SF:libs/...`).
   - Commits: Conventional Commits with body line length < 80 chars, and trailer `AI-Assisted: <agent>`.
-
+- **Identity throttling needs the peer**: identity reads `ConnectInfo` from
+  request extensions directly; serve with `into_make_service_with_connect_info`
+  and, in tests, insert the extension (`MockConnectInfo` is not enough).
+- **sqlx `query!`**: only identity uses it; refresh `.sqlx/` with
+  `SQLX_OFFLINE=false cargo sqlx prepare --workspace -- --all-targets --all-features`
+  against a database where identity migrations ran in `public`.
+- **Migrator in spawned futures**: `Migrator::run(&mut PgConnection)` is not
+  `Send`-general; migrate through a pool with `after_connect` instead.

@@ -1,30 +1,39 @@
-# NVBES Worker - Unified Background Worker
+# nvbes worker
 
-> **Référence d'Architecture (ADR 0013)** : [0013-modular-monolith-api-and-unified-worker.md](../../docs/adr/0013-modular-monolith-api-and-unified-worker.md).
+One binary for every background batch of the V1 monolith. The API stays
+strictly serverless; this worker owns migrations, email delivery and RGPD
+retention.
 
-Central background worker handling asynchronous processing for NVBES, consolidating legacy worker operations (`billing-worker`, `email-worker`) into a single serverless container:
+## Commands
 
-- **Transactional Outbox Dispatcher**: Sweeps outbox events directly from PostgreSQL (Scaleway TEM transactional email, Stripe billing receipts & payment failure notifications).
-- **GDPR 30-Day Purges**: Executes periodic privacy jobs (exports expiry, account closures after 30-day grace period).
-- **Scale-to-Zero & Serverless**: Zero-CLI container entrypoint, scale-to-zero connection pool (`min_connections = 0`, 30s `idle_timeout`), graceful shutdown on `SIGTERM` / `SIGINT`.
-- **Health Probes**: Embedded HTTP server for container liveness and readiness (`/healthz`, `/readyz`) on `$PORT` (default 8081).
+| Command | Runtime | Behaviour |
+|---|---|---|
+| `nvbes-worker serve` | Scaleway Container (image default) | Health on `$PORT` (`/health/live`, `/health/ready`, `/metrics`) and one loop per task in `NVBES_WORKER_TASKS` |
+| `nvbes-worker run <task>` | Scaleway Job | One batch, a JSON summary on stdout, exit code 1 on failure |
 
-## Environment Variables
+| Task | Kind | Does |
+|---|---|---|
+| `migrate` | one-shot | Applies identity and account migrations, each in its own schema; idempotent |
+| `identity-emails` | recurring (15 s) | Sends queued security notifications and password-recovery links |
+| `privacy-retention` | recurring (300 s) | Completes due RGPD exports and account closures |
+| `rotate-mfa-key` | one-shot | Re-seals MFA secrets under the active key after a key change |
 
-| Variable | Default | Description |
-| -------- | ------- | ----------- |
-| `PORT` | `8081` | HTTP port for `/healthz` and `/readyz` probes |
-| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/nvbes_dev` | PostgreSQL connection string |
-| `POLL_INTERVAL_SECS` | `5` | Polling interval for transactional outbox dispatch |
-| `PRIVACY_INTERVAL_SECS` | `60` | Interval for running GDPR retention & privacy jobs |
+## Configuration
 
-## Local Development
+Outside `development`/`test` every value marked required must be set or the
+worker refuses to start. See `.env.example` for the full list.
+
+- `DATABASE_URL` (required), `NVBES_WORKER_DATABASE_MAX_CONNECTIONS` (2)
+- `NVBES_WORKER_TASKS` (required for `serve`), `NVBES_WORKER_*_INTERVAL_SECS`
+- `NVBES_IDENTITY_MFA_ENCRYPTION_KEY` (required by `identity-emails` and
+  `rotate-mfa-key`; must equal the API's key)
+- `NVBES_EMAIL_PROVIDER` (`smtp`, `scaleway-tem`; `test-capture` in development),
+  `NVBES_EMAIL_FROM_EMAIL`, SMTP or Scaleway TEM credentials
+
+## Local development
 
 ```bash
-# Run worker locally with hot reload
 pnpm dev:worker
-
-# Run tests
-pnpm nx test worker
 ```
 
+Runs `run migrate`, then `serve`, with the Identity keys shared with the API.
