@@ -5,13 +5,7 @@ use axum::{
 use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
 
-use crate::{
-    build_router,
-    config::ApiConfig,
-    ports::{
-        AccountPort, IdentityPort, InProcessAccountAdapter, InProcessIdentityAdapter, PortError,
-    },
-};
+use crate::{build_router, config::ApiConfig};
 
 fn test_pool() -> sqlx::PgPool {
     let url = std::env::var("NVBES_SECURITY_TEST_DATABASE_URL")
@@ -171,29 +165,6 @@ async fn consent_routes_are_mounted() {
 
     // Route exists and is mounted (returns 200 or handles request, not 404)
     assert_ne!(response.status(), StatusCode::NOT_FOUND);
-}
-
-#[tokio::test]
-async fn in_process_identity_port_rejects_invalid_token() {
-    let pool = test_pool();
-    let config = ApiConfig::from_env().unwrap();
-    let (_router, token_svc) = crate::identity::build_router(pool, &config);
-    let token_service = token_svc.expect("TokenService must be available in dev/test");
-
-    let adapter = InProcessIdentityAdapter::new(token_service);
-    let result = adapter.introspect_token("invalid.jwt.token", "nvbes-account-service");
-
-    assert!(matches!(result, Err(PortError::Unauthorized(_))));
-}
-
-#[tokio::test]
-async fn in_process_account_port_handles_database_error() {
-    let pool = test_pool();
-    let adapter = InProcessAccountAdapter::new(pool);
-    let result = adapter
-        .is_team_member(uuid::Uuid::new_v4(), uuid::Uuid::new_v4())
-        .await;
-    assert!(matches!(result, Err(PortError::Internal(_))));
 }
 
 #[tokio::test]
@@ -358,38 +329,6 @@ async fn readiness_endpoints_work() {
                 || response.status() == StatusCode::SERVICE_UNAVAILABLE
         );
     }
-}
-
-#[test]
-fn port_error_and_principal_contract() {
-    assert_eq!(
-        format!("{}", PortError::Unauthorized("denied".into())),
-        "unauthorized: denied"
-    );
-    assert_eq!(
-        format!("{}", PortError::InvalidArgument("bad".into())),
-        "invalid argument: bad"
-    );
-    assert_eq!(
-        format!("{}", PortError::NotFound("missing".into())),
-        "not found: missing"
-    );
-    assert_eq!(
-        format!("{}", PortError::Internal("crash".into())),
-        "internal port error: crash"
-    );
-
-    let id = uuid::Uuid::new_v4();
-    let principal = crate::ports::AuthenticatedPrincipal {
-        id,
-        scopes: vec!["account:read".into(), "account:write".into()],
-        client_id: Some("nvbes-web".into()),
-        step_up: true,
-    };
-    assert_eq!(principal.id, id);
-    assert_eq!(principal.scopes.len(), 2);
-    assert_eq!(principal.client_id.as_deref(), Some("nvbes-web"));
-    assert!(principal.step_up);
 }
 
 #[test]

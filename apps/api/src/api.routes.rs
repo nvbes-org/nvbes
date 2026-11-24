@@ -22,7 +22,7 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
         nvbes_consent::routes::consent_routes(consent_service),
     );
 
-    let (identity_router, _token_service) = identity::build_router(pool.clone(), config);
+    let identity_router = identity::build_router(pool.clone(), config);
 
     let observability_config = InternalObservabilityConfig::new(
         &config.environment,

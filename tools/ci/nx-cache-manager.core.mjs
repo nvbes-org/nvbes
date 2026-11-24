@@ -39,7 +39,7 @@ export function isRustWorkspaceAffected(changedPaths) {
 
 export function isDatabaseScopeAffected(changedPaths, scope) {
   const patterns = {
-    api: ['apps/api/migrations', 'apps/api/src/api.migrations', 'apps/api/src/api.ports'],
+    api: ['apps/api/migrations', 'apps/api/src/api.migrations'],
     worker: ['apps/worker/src/worker.outbox', 'apps/worker/src/worker.privacy'],
     account: [
       'libs/rust/account/migrations',

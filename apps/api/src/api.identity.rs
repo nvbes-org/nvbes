@@ -22,7 +22,7 @@ use nvbes_identity_service::{
 
 use crate::config::ApiConfig;
 
-pub fn build_router(pool: PgPool, config: &ApiConfig) -> (Router, Option<Arc<TokenService>>) {
+pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
     let is_dev = matches!(config.environment.as_str(), "development" | "test");
 
     let token_service = match init_token_service(config, is_dev) {
@@ -34,7 +34,7 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> (Router, Option<Arc<Tok
     };
 
     let Some(tokens) = token_service.clone() else {
-        return (Router::new(), None);
+        return Router::new();
     };
 
     let issuer = tokens.issuer().to_owned();
@@ -44,7 +44,7 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> (Router, Option<Arc<Tok
         Err(e) => {
             tracing::warn!("OAuth clients not initialized: {e}");
             let discovery = router_with_logout(&issuer, tokens.clone(), false);
-            return (discovery, Some(tokens));
+            return discovery;
         }
     };
 
@@ -53,7 +53,7 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> (Router, Option<Arc<Tok
         Err(e) => {
             tracing::warn!("RateLimiter not initialized: {e}");
             let discovery = router_with_logout(&issuer, tokens.clone(), false);
-            return (discovery, Some(tokens));
+            return discovery;
         }
     };
 
@@ -65,7 +65,7 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> (Router, Option<Arc<Tok
         Err(e) => {
             tracing::warn!("BrowserSecurity not initialized: {e}");
             let discovery = router_with_logout(&issuer, tokens.clone(), false);
-            return (discovery, Some(tokens));
+            return discovery;
         }
     };
 
@@ -74,7 +74,7 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> (Router, Option<Arc<Tok
         Err(e) => {
             tracing::warn!("MfaCrypto not initialized: {e}");
             let discovery = router_with_logout(&issuer, tokens.clone(), false);
-            return (discovery, Some(tokens));
+            return discovery;
         }
     };
 
@@ -83,7 +83,7 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> (Router, Option<Arc<Tok
         Err(e) => {
             tracing::warn!("Webauthn not initialized: {e}");
             let discovery = router_with_logout(&issuer, tokens.clone(), false);
-            return (discovery, Some(tokens));
+            return discovery;
         }
     };
 
@@ -142,7 +142,7 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> (Router, Option<Arc<Tok
         ));
     }
 
-    (router, Some(tokens))
+    router
 }
 
 fn init_token_service(config: &ApiConfig, is_dev: bool) -> Result<TokenService, anyhow::Error> {

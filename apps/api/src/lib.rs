@@ -10,8 +10,6 @@ pub mod identity;
 pub mod migrations;
 #[path = "api.openapi.rs"]
 pub mod openapi;
-#[path = "api.ports.rs"]
-pub mod ports;
 #[path = "api.routes.rs"]
 pub mod routes;
 #[path = "api.server.rs"]
