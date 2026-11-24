@@ -118,8 +118,8 @@
 					]
 				},
 				{
-					"path": "libs/rust/account/src/account.billing_authorization.rs",
-					"includes": ["AccountType::Team", "owner_principal_id", "allowed"]
+					"path": "libs/rust/account/src/account.profile.rs",
+					"includes": ["WHERE principal_id=$1 AND lifecycle_status='active'"]
 				}
 			]
 		},
@@ -161,10 +161,6 @@
 						"introspection_authentication_and_form_boundaries_are_enforced",
 						"unavailable_grant_store_returns_service_error_not_active_or_inactive"
 					]
-				},
-				{
-					"path": "libs/rust/account/src/account.billing_authorization.rs",
-					"includes": ["/internal/v1/billing/authorize", "struct Decision"]
 				},
 				{
 					"path": "libs/rust/identity/src/identity.oauth.http.introspection.rs",

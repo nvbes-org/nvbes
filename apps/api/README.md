@@ -23,7 +23,6 @@ Unified production HTTP API serving Identity, Account, and Consent capabilities 
 | `/api/docs/openapi.json` | OpenAPI | OpenAPI 3.0 JSON specification |
 | `/api/v1/consents` | Consent | RGPD/ePrivacy agreements & cookie preferences with GPC |
 | `/api/v1/profile` | Account | User profile management |
-| `/api/v1/teams` | Account | Team spaces and membership |
 | `/.well-known/*` | Identity | OpenID Connect discovery and JWKS |
 | `/oauth/*` | Identity | Token exchange, authorization, sessions, WebAuthn |
 

@@ -35,15 +35,9 @@ pub fn domain_router(state: AccountState) -> Router {
     let browser = crate::profile::router(state.clone())
         .merge(crate::preferences::router(state.clone()))
         .merge(crate::consents::router(state.clone()))
-        .merge(crate::teams::router(state.clone()))
         .merge(crate::privacy::router(state.clone()))
         .layer(cors);
-    crate::billing_authorization::router(
-        state.db.clone(),
-        state.config.billing_authorization_secret.as_deref(),
-    )
-    .merge(crate::operator::router(state.clone()))
-    .merge(browser)
+    crate::operator::router(state.clone()).merge(browser)
 }
 
 pub fn router(state: AccountState) -> Router {

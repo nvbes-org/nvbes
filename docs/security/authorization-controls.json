@@ -45,13 +45,24 @@
 					"description": "Protected HTTP routes authorize the authenticated actor before executing operations.",
 					"evidence": [
 						{
-							"path": "libs/rust/account/src/account.billing_authorization.rs",
-							"includes": ["struct Decision", "/internal/v1/billing/authorize", "allowed"]
+							"path": "libs/rust/account/src/account.auth.rs",
+							"includes": [
+								"impl FromRequestParts<AccountState> for Principal",
+								".authenticate(&credentials, &parts.method, uri, &state.db)",
+								"AccountError::Forbidden"
+							]
 						},
 						{
-							"path": "libs/rust/account/src/account.billing_authorization.tests.rs",
-							"includes": ["only_active_personal_owners_and_consistent_team_owners_are_allowed"],
-							"tests": ["only_active_personal_owners_and_consistent_team_owners_are_allowed"]
+							"path": "libs/rust/account/src/account.profile.rs",
+							"includes": [
+								"principal.require(\"account:read\")?",
+								"principal.require(\"account:write\")?"
+							]
+						},
+						{
+							"path": "libs/rust/account/src/account.auth.tests.rs",
+							"includes": ["principal_extractor_requires_bearer_token"],
+							"tests": ["principal_extractor_requires_bearer_token"]
 						}
 					]
 				}
@@ -93,8 +104,8 @@
 			"controls": [
 				{
 					"id": "AUTHZ_CTRL_004",
-					"name": "Scoped workspace and team access",
-					"description": "Reject access when actor does not possess the requisite workspace or team membership.",
+					"name": "Principal-scoped account data and workspace policy",
+					"description": "Account rows are read and written only for the authenticated principal; core policy rejects actors without the requisite workspace membership.",
 					"evidence": [
 						{
 							"path": "libs/rust/core/src/authz.policy.tests.rs",
@@ -108,8 +119,8 @@
 							]
 						},
 						{
-							"path": "libs/rust/account/src/account.teams.rs",
-							"includes": ["struct Team", "router", "join_code"]
+							"path": "libs/rust/account/src/account.profile.rs",
+							"includes": ["WHERE principal_id=$1 AND lifecycle_status='active'"]
 						}
 					]
 				}
@@ -196,28 +207,6 @@
 								"AccountError::Forbidden",
 								"account.operator.profile_read"
 							]
-						}
-					]
-				}
-			]
-		},
-		{
-			"id": "AUTHZ_REQ_008",
-			"name": "Team and member administration authorization",
-			"owasp": "Attribute or Feature-Based Access Control",
-			"controls": [
-				{
-					"id": "AUTHZ_CTRL_008",
-					"name": "Team administration guards",
-					"description": "Permit team actions only to eligible roles inside the correct profile context.",
-					"evidence": [
-						{
-							"path": "libs/rust/account/src/account.teams.rs",
-							"includes": ["ensure_profile", "CreateTeam", "JoinTeam"]
-						},
-						{
-							"path": "libs/rust/core/src/authz.role.rs",
-							"includes": ["WorkspaceRole", "IdentityRole", "Owner", "Admin", "Member", "Viewer"]
 						}
 					]
 				}

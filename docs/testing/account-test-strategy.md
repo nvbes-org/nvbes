@@ -22,21 +22,15 @@ diagnostiques pour des campagnes archivées ; ils ne prononcent plus GO.
 
 ## Surface HTTP V1
 
-| Route                                           | Rôle                        |
-| ----------------------------------------------- | --------------------------- |
-| `GET/PUT /api/v1/profile`                       | profil Account              |
-| `GET/PUT /api/v1/preferences`                   | thème / langue              |
-| `GET/PUT /api/v1/notifications`                 | préférences de notification |
-| `GET/POST/DELETE /api/v1/consents`              | acceptations légales        |
-| `GET/POST /api/v1/teams`                        | list / create               |
-| `POST /api/v1/teams/join`                       | rejoindre                   |
-| `GET /api/v1/teams/{id}`                        | détail                      |
-| `GET /api/v1/teams/{id}/members`                | membres                     |
-| `DELETE /api/v1/teams/{id}/members/{principal}` | retrait (owner)             |
-| `POST /api/v1/teams/{id}/leave`                 | quitter                     |
-| `POST/GET /api/v1/privacy/exports*`             | export RGPD                 |
-| `GET/POST /api/v1/closure*`                     | fermeture / annulation      |
-| `GET /health/live`, `GET /metrics`              | ops                         |
+| Route                               | Rôle                        |
+| ----------------------------------- | --------------------------- |
+| `GET/PUT /api/v1/profile`           | profil Account              |
+| `GET/PUT /api/v1/preferences`       | thème / langue              |
+| `GET/PUT /api/v1/notifications`     | préférences de notification |
+| `GET/POST/DELETE /api/v1/consents`  | acceptations légales        |
+| `POST/GET /api/v1/privacy/exports*` | export RGPD                 |
+| `GET/POST /api/v1/closure*`         | fermeture / annulation      |
+| `GET /health/live`, `GET /metrics`  | ops                         |
 
 Audience JWT : `nvbes-account-service`. Scopes :
 `account:read|write|export|close`.
@@ -46,7 +40,7 @@ Audience JWT : `nvbes-account-service`. Scopes :
 | Lane             | Déclenchement                     | Couverture                                                                     | Preuve                          |
 | ---------------- | --------------------------------- | ------------------------------------------------------------------------------ | ------------------------------- |
 | PR               | `account-service:check` / `:test` | compilation, auth step-up, consents, CLI maintenance                           | Cargo / nextest                 |
-| Database         | `account-service:test:database`   | synthetic lifecycle (teams leave, consents, export, closure, outbox publish)   | PostgreSQL isolé `account_test` |
+| Database         | `account-service:test:database`   | cycle de vie (profil, consentements, export, fermeture, audit append-only)     | PostgreSQL isolé `account_test` |
 | Contract         | `account-service:test:contract`   | Dockerfile non-root, migrate/privacy/outbox CLI, step-up                       | `container-contract.test.mjs`   |
 | OpenAPI          | `account-sdk-core:check`          | paths V1 + scopes + sync `types.gen.ts`                                        | `openapi.contract.test.mjs`     |
 | Trusted hermetic | opérateur                         | `migrate`, `synthetic-account-smoke`, `process-privacy-jobs`, `publish-outbox` | journaux smoke                  |
@@ -55,8 +49,7 @@ Audience JWT : `nvbes-account-service`. Scopes :
 ### Limites explicites
 
 - Pas d'UI Account dans la V1 ; pas de Playwright Account.
-- Pas de RLS multi-tenant Enterprise : isolation par `principal_id` et rôles
-  d'équipe `owner`/`member`.
+- Pas d'équipes ni de RLS multi-tenant en V1 : isolation par `principal_id`.
 - L'outbox marque `published_at` sans sink externe tant qu'aucun consommateur
   n'est branché.
 - `account-web` / `account-worker` / DAST/k6 historiques ne comptent pas comme

@@ -4,7 +4,6 @@ use std::net::SocketAddr;
 pub struct AccountConfig {
     pub browser_origins: nvbes_core::security::resource_cors::ResourceCorsOrigins,
     pub public_origin: Option<String>,
-    pub billing_authorization_secret: Option<String>,
     pub environment: String,
     pub database_url: String,
     pub database_max_connections: u32,
@@ -25,15 +24,6 @@ pub struct AccountConfig {
 
 impl AccountConfig {
     pub fn from_env() -> Result<Self, ConfigError> {
-        let billing_authorization_secret = optional("NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET");
-        if billing_authorization_secret
-            .as_deref()
-            .is_some_and(|s| !crate::billing_authorization::valid_secret(s))
-        {
-            return Err(ConfigError::Invalid(
-                "NVBES_ACCOUNT_BILLING_AUTHORIZATION_SECRET",
-            ));
-        }
         let environment = optional("NVBES_ENVIRONMENT").unwrap_or_else(|| "development".into());
         let development = matches!(environment.as_str(), "development" | "test");
         let browser_origins = nvbes_core::security::resource_cors::ResourceCorsOrigins::from_json(
@@ -97,7 +87,6 @@ impl AccountConfig {
         Ok(Self {
             browser_origins,
             public_origin: optional("NVBES_ACCOUNT_PUBLIC_ORIGIN"),
-            billing_authorization_secret,
             environment,
             database_url,
             database_max_connections,

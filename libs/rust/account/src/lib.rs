@@ -4,8 +4,6 @@ pub mod app;
 pub mod audit;
 #[path = "account.auth.rs"]
 pub mod auth;
-#[path = "account.billing_authorization.rs"]
-pub mod billing_authorization;
 #[path = "account.config.rs"]
 pub mod config;
 #[path = "account.consents.rs"]
@@ -30,10 +28,6 @@ pub mod privacy;
 pub mod privacy_jobs;
 #[path = "account.profile.rs"]
 pub mod profile;
-#[path = "account.synthetic.rs"]
-pub mod synthetic;
-#[path = "account.teams.rs"]
-pub mod teams;
 
 #[cfg(test)]
 #[allow(

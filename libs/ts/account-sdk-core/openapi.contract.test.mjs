@@ -47,9 +47,6 @@ test('every operation has a unique ID and an explicit valid security contract', 
     '/api/v1/profile',
     '/api/v1/preferences',
     '/api/v1/consents',
-    '/api/v1/teams',
-    '/api/v1/teams/join',
-    '/api/v1/teams/{teamId}/leave',
     '/api/v1/privacy/exports',
     '/api/v1/closure',
   ]) {
@@ -62,6 +59,8 @@ test('every operation has a unique ID and an explicit valid security contract', 
     '/auth/challenge/identifier',
     '/api/v1/privacy/gpc',
     '/api/v1/security/sessions',
+    '/api/v1/teams',
+    '/api/v1/teams/join',
   ]) {
     assert.equal(
       document.paths[path],

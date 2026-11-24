@@ -83,14 +83,8 @@
 			"expectedDeniedStatus": 403,
 			"evidence": [
 				{
-					"path": "libs/rust/account/src/account.teams.rs",
-					"includes": ["pub fn router", "get(list)"]
-				},
-				{
 					"path": "libs/rust/core/src/authz.policy.tests.rs",
-					"includes": [
-						"workspace_membership_roles_cover_expected_permission_boundaries"
-					]
+					"includes": ["workspace_membership_roles_cover_expected_permission_boundaries"]
 				}
 			]
 		},
@@ -177,10 +171,7 @@
 			"evidence": [
 				{
 					"path": "libs/rust/core/src/authz.action.rs",
-					"includes": [
-						"WorkspaceAction::DeleteObjectPermanently",
-						"action_requires_step_up"
-					]
+					"includes": ["WorkspaceAction::DeleteObjectPermanently", "action_requires_step_up"]
 				},
 				{
 					"path": "libs/rust/core/src/authz.policy.rs",
@@ -279,10 +270,7 @@
 				},
 				{
 					"path": "libs/rust/core/src/authz.action.rs",
-					"includes": [
-						"WorkspaceAction::ManageBilling",
-						"action_requires_step_up"
-					]
+					"includes": ["WorkspaceAction::ManageBilling", "action_requires_step_up"]
 				}
 			]
 		}

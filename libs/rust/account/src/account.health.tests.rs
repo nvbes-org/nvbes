@@ -14,7 +14,6 @@ fn state() -> AccountState {
         AccountConfig {
             browser_origins: Default::default(),
             public_origin: None,
-            billing_authorization_secret: None,
             token_verification_keys: "[]".into(),
             identity_resource_client_id: "account-test".into(),
             identity_resource_secret: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".into(),

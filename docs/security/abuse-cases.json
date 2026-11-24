@@ -153,8 +153,8 @@
 			"countermeasures": ["DEFENSE_003", "DEFENSE_010"],
 			"validation": [
 				{
-					"path": "libs/rust/account/src/account.billing_authorization.rs",
-					"includes": ["principal_id", "account_type", "allowed"]
+					"path": "libs/rust/account/src/account.profile.rs",
+					"includes": ["principal.id", "WHERE principal_id=$1"]
 				},
 				{
 					"path": "libs/rust/core/src/authz.policy.tests.rs",
