@@ -1,4 +1,4 @@
-//! Internal password recovery used by the synthetic runtime diagnostics.
+//! Password recovery challenges: issuance, reset and post-recovery notice.
 use crate::auth::{
     RecoveryNotification, audit, hash_current_password, hash_token, normalize_email, random_token,
     validate_password, verify_stored_password,
@@ -10,16 +10,6 @@ use uuid::Uuid;
 #[derive(Debug, thiserror::Error)]
 #[error("recovery unavailable")]
 pub(crate) struct RecoveryUnavailable;
-
-pub(super) async fn request_recovery(
-    db: &PgPool,
-    email: &str,
-) -> anyhow::Result<RecoveryNotification> {
-    let mut tx = db.begin().await?;
-    let recovery = issue(&mut tx, email).await?;
-    tx.commit().await?;
-    Ok(recovery)
-}
 
 pub(crate) async fn issue(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -117,7 +107,7 @@ pub(super) async fn reset_password(db: &PgPool, token: &str, password: &str) -> 
     sqlx::query("UPDATE identity_recovery_deliveries SET state='cancelled',outcome='password_recovered',ciphertext=NULL,nonce=NULL,key_version=NULL,lease_token=NULL,lease_expires_at=NULL,settled_at=clock_timestamp() WHERE principal_id=$1 AND state IN ('pending','sending')")
         .bind(principal_id).execute(&mut *tx).await?;
     audit(&mut tx, principal_id, "identity.password_recovered").await?;
-    nvbes_identity_service::notification_events::password_recovered(&mut tx, principal_id).await?;
+    crate::notification_events::password_recovered(&mut tx, principal_id).await?;
     tx.commit().await?;
     Ok(())
 }
@@ -129,16 +119,3 @@ mod database_tests;
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.recovery.notification.tests.rs"]
 mod notification_tests;
-
-pub(super) fn validate_password_pair(initial: &str, recovered: &str) -> anyhow::Result<()> {
-    validate_password(initial)?;
-    validate_password(recovered)?;
-    if initial == recovered {
-        anyhow::bail!("recovered password must differ from the initial password");
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-#[path = "identity.recovery.tests.rs"]
-mod tests;

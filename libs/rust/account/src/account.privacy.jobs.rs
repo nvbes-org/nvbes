@@ -105,13 +105,6 @@ async fn complete_closure(db: &PgPool, id: Uuid, principal_id: Uuid) -> AccountR
         },
     )
     .await?;
-    audit::enqueue(
-        &mut tx,
-        "account.closure.completed.v1",
-        id,
-        json!({"saga_id": id, "principal_id": principal_id}),
-    )
-    .await?;
     tx.commit().await?;
     Ok(())
 }

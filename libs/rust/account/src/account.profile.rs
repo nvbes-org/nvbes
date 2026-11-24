@@ -139,13 +139,6 @@ pub(crate) async fn ensure_profile_in_transaction(
             },
         )
         .await?;
-        audit::enqueue(
-            tx,
-            "account.profile.created.v1",
-            principal_id,
-            json!({"principal_id": principal_id}),
-        )
-        .await?;
     }
     match row {
         Some(value) => Ok(value),

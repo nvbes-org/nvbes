@@ -14,8 +14,6 @@ pub mod database;
 pub mod error;
 #[path = "account.operator.rs"]
 pub mod operator;
-#[path = "account.outbox.rs"]
-pub mod outbox;
 #[path = "account.preferences.rs"]
 pub mod preferences;
 #[path = "account.privacy.rs"]

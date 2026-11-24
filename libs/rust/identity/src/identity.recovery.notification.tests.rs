@@ -1,4 +1,5 @@
-use super::{request_recovery, reset_password};
+use super::reset_password;
+use crate::recovery_test_fixture::request_recovery;
 use crate::{
     auth,
     recovery_test_fixture::{INITIAL, fixture},

@@ -113,13 +113,6 @@ async fn request_export(
         },
     )
     .await?;
-    audit::enqueue(
-        &mut tx,
-        "account.export.requested.v1",
-        id,
-        json!({"export_id": id, "principal_id": principal.id}),
-    )
-    .await?;
     principal.require_step_up_at_database(&mut tx).await?;
     tx.commit().await?;
     Ok((StatusCode::ACCEPTED, Json(value)))
@@ -178,13 +171,6 @@ async fn request_closure(
             correlation_id: audit::correlation_id(&headers),
             details: json!({"grace_period_days": 7}),
         },
-    )
-    .await?;
-    audit::enqueue(
-        &mut tx,
-        "account.closure.requested.v1",
-        id,
-        json!({"saga_id": id, "principal_id": principal.id}),
     )
     .await?;
     principal.require_step_up_at_database(&mut tx).await?;

@@ -4,6 +4,10 @@ use crate::{auth, mfa_crypto::MfaCrypto, recovery, recovery_delivery};
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "identity.recovery.http.tests.rs"]
 mod tests;
+use crate::{
+    browser::BrowserSecurity,
+    rate_limits::{Category, LimitError, RateLimiter},
+};
 use axum::{
     Json, Router,
     extract::{ConnectInfo, DefaultBodyLimit, Request, State},
@@ -14,10 +18,6 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use hmac::{Hmac, KeyInit, Mac};
-use nvbes_identity_service::{
-    browser::BrowserSecurity,
-    rate_limits::{Category, LimitError, RateLimiter},
-};
 use sha2::Sha256;
 use sqlx::PgPool;
 use std::{

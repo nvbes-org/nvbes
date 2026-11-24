@@ -5,7 +5,7 @@ use tokio::net::TcpListener;
 use tokio::sync::watch;
 use tracing::info;
 
-use crate::{config::WorkerConfig, health, outbox, privacy};
+use crate::{config::WorkerConfig, health, privacy};
 
 pub async fn run_worker(config: WorkerConfig) -> anyhow::Result<()> {
     info!(
@@ -81,24 +81,11 @@ async fn run_worker_loop(
     config: WorkerConfig,
     mut shutdown: watch::Receiver<bool>,
 ) {
-    let mut outbox_interval = tokio::time::interval(Duration::from_secs(config.poll_interval_secs));
     let mut privacy_interval =
         tokio::time::interval(Duration::from_secs(config.privacy_interval_secs));
 
     loop {
         tokio::select! {
-            _ = outbox_interval.tick() => {
-                let pool = pool.clone();
-                let env = config.environment.clone();
-                let task = tokio::spawn(async move {
-                    outbox::run_outbox_tick(&pool, &env).await;
-                });
-                if let Err(err) = task.await
-                    && err.is_panic()
-                {
-                    tracing::error!("worker outbox tick panicked, worker loop continuing safely");
-                }
-            }
             _ = privacy_interval.tick() => {
                 let pool = pool.clone();
                 let env = config.environment.clone();

@@ -41,24 +41,6 @@ pub async fn record(
     Ok(())
 }
 
-pub async fn enqueue(
-    tx: &mut Transaction<'_, Postgres>,
-    event_type: &str,
-    aggregate_id: Uuid,
-    payload: Value,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO account_outbox (id, event_type, aggregate_id, payload) VALUES ($1,$2,$3,$4)",
-    )
-    .bind(Uuid::new_v4())
-    .bind(event_type)
-    .bind(aggregate_id)
-    .bind(payload)
-    .execute(&mut **tx)
-    .await?;
-    Ok(())
-}
-
 #[cfg(test)]
 #[path = "account.audit.tests.rs"]
 mod tests;

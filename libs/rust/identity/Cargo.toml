@@ -13,10 +13,6 @@ email-integration-tests = ["database-tests"]
 name = "nvbes_identity_service"
 path = "src/lib.rs"
 
-[[bin]]
-name = "nvbes-identity-service"
-path = "src/main.rs"
-
 [dependencies]
 anyhow.workspace = true
 aes-gcm.workspace = true
@@ -26,15 +22,12 @@ chrono.workspace = true
 hex.workspace = true
 hmac.workspace = true
 jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
-metrics-exporter-prometheus.workspace = true
 nvbes-core = { path = "../core" }
 nvbes-dpop = { path = "../dpop" }
 nvbes-email = { path = "../email" }
-nvbes-observability = { path = "../observability", features = ["otlp"] }
 rand.workspace = true
 reqwest.workspace = true
 rsa = { version = "0.9.10", features = ["pem"] }
-openssl.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

@@ -26,11 +26,22 @@ pub mod notification_events;
 #[path = "identity.notifications.queue.rs"]
 mod notification_queue;
 
+#[path = "identity.email.rs"]
+mod email;
 #[cfg(all(test, feature = "email-integration-tests"))]
 #[path = "identity.notifications.runtime.tests.rs"]
 mod notification_runtime_tests;
 #[path = "identity.rate_limits.rs"]
 pub mod rate_limits;
+#[path = "identity.recovery.rs"]
+mod recovery;
+#[path = "identity.recovery.delivery.rs"]
+pub mod recovery_delivery;
+#[path = "identity.recovery.http.rs"]
+pub mod recovery_http;
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "identity.recovery.test_support.rs"]
+mod recovery_test_fixture;
 #[path = "identity.session.context.rs"]
 pub mod session_context;
 #[path = "identity.sessions.lock.rs"]

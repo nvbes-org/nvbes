@@ -90,7 +90,6 @@ async fn grant(
         principal.id,
         id,
         "account.consent.granted",
-        "account.consent.granted.v1",
         correlation_id,
         &input,
     )
@@ -134,7 +133,6 @@ async fn revoke(
         principal.id,
         id,
         "account.consent.revoked",
-        "account.consent.revoked.v1",
         correlation_id,
         &input,
     )
@@ -148,7 +146,6 @@ async fn record_consent_change(
     principal_id: Uuid,
     consent_id: Uuid,
     event_type: &'static str,
-    outbox_type: &'static str,
     correlation_id: Uuid,
     input: &ConsentInput,
 ) -> AccountResult<()> {
@@ -166,18 +163,6 @@ async fn record_consent_change(
                 "document_version": input.document_version
             }),
         },
-    )
-    .await?;
-    audit::enqueue(
-        tx,
-        outbox_type,
-        consent_id,
-        json!({
-            "consent_id": consent_id,
-            "principal_id": principal_id,
-            "consent_type": input.consent_type,
-            "document_version": input.document_version
-        }),
     )
     .await?;
     Ok(())

@@ -4,8 +4,6 @@
 pub mod config;
 #[path = "worker.health.rs"]
 pub mod health;
-#[path = "worker.outbox.rs"]
-pub mod outbox;
 #[path = "worker.privacy.rs"]
 pub mod privacy;
 #[path = "worker.server.rs"]

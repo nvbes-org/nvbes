@@ -1,19 +1,9 @@
 use nvbes_email::{
-    EmailCategory, EmailClient, EmailCommand, EmailIdempotencyKey, EmailRecipient,
-    EmailRequestContext, EmailTemplate,
+    EmailCategory, EmailCommand, EmailIdempotencyKey, EmailRecipient, EmailRequestContext,
+    EmailTemplate,
 };
 
 use crate::auth::RecoveryNotification;
-
-pub async fn deliver_recovery(
-    client: &EmailClient,
-    recovery_base_url: &str,
-    recovery: RecoveryNotification,
-) -> anyhow::Result<()> {
-    let command = recovery_command(recovery_base_url, &recovery)?;
-    client.send(command).await?;
-    Ok(())
-}
 
 pub(crate) fn recovery_command(
     recovery_base_url: &str,

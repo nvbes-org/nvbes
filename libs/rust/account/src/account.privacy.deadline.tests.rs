@@ -12,7 +12,6 @@ use uuid::Uuid;
 #[derive(Clone, Copy)]
 enum Action {
     Export,
-    OutboxExport,
     Closure,
     Cancel,
     Download,
@@ -69,7 +68,6 @@ async fn check(action: Action, expire: bool) {
     let app = crate::privacy::router(state);
     let mut blocker = pool.begin().await.unwrap();
     let table = match action {
-        Action::OutboxExport => "account_outbox",
         Action::Download | Action::ExistingExport => "account_exports",
         Action::ExistingClosure => "account_closures",
         _ => "account_audit_events",
@@ -83,7 +81,7 @@ async fn check(action: Action, expire: bool) {
         .await
         .unwrap();
     let (method, path) = match action {
-        Action::Export | Action::OutboxExport | Action::ExistingExport | Action::FirstExport => {
+        Action::Export | Action::ExistingExport | Action::FirstExport => {
             ("POST", "/api/v1/privacy/exports".into())
         }
         Action::Closure | Action::FirstClosure | Action::ExistingClosure => {
@@ -152,7 +150,7 @@ async fn check(action: Action, expire: bool) {
         assert_eq!(
             snapshot(&pool, owner).await,
             before,
-            "rollback must include profile, preferences, audit and outbox"
+            "rollback must include profile, preferences and audit"
         );
     } else {
         assert!(
@@ -166,7 +164,7 @@ async fn check(action: Action, expire: bool) {
 }
 
 async fn snapshot(pool: &PgPool, owner: Uuid) -> serde_json::Value {
-    sqlx::query_scalar("SELECT jsonb_build_object('profile',(SELECT to_jsonb(p) FROM account_profiles p WHERE principal_id=$1),'preferences',(SELECT to_jsonb(p) FROM account_preferences p WHERE principal_id=$1),'exports',(SELECT jsonb_agg(to_jsonb(e) ORDER BY id) FROM account_exports e WHERE principal_id=$1),'closures',(SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM account_closures c WHERE principal_id=$1),'audit',(SELECT count(*) FROM account_audit_events WHERE principal_id=$1),'outbox',(SELECT count(*) FROM account_outbox WHERE payload->>'principal_id'=$1::text))").bind(owner).fetch_one(pool).await.unwrap()
+    sqlx::query_scalar("SELECT jsonb_build_object('profile',(SELECT to_jsonb(p) FROM account_profiles p WHERE principal_id=$1),'preferences',(SELECT to_jsonb(p) FROM account_preferences p WHERE principal_id=$1),'exports',(SELECT jsonb_agg(to_jsonb(e) ORDER BY id) FROM account_exports e WHERE principal_id=$1),'closures',(SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM account_closures c WHERE principal_id=$1),'audit',(SELECT count(*) FROM account_audit_events WHERE principal_id=$1))").bind(owner).fetch_one(pool).await.unwrap()
 }
 
 macro_rules! deadline_test {
@@ -178,7 +176,6 @@ macro_rules! deadline_test {
     };
 }
 deadline_test!(export_rejects_expired_proof_after_audit_wait, Export);
-deadline_test!(export_rejects_expired_proof_after_outbox_wait, OutboxExport);
 deadline_test!(
     first_closure_rolls_back_profile_after_expired_proof,
     FirstClosure
@@ -203,7 +200,6 @@ deadline_test!(
 async fn fresh_proof_allows_each_privacy_action_after_a_lock_wait() {
     for action in [
         Action::Export,
-        Action::OutboxExport,
         Action::Closure,
         Action::Cancel,
         Action::Download,

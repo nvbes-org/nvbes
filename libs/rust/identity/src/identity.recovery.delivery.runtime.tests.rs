@@ -127,14 +127,14 @@ async fn start_email_fixture() -> ConnectedEmail {
 #[tokio::test]
 async fn password_change_notification_retries_through_email_with_original_recipient() {
     let (db, principal, email) = fixture().await;
-    let recovery = crate::recovery::request_recovery(&db, &email)
+    let recovery = crate::recovery_test_fixture::request_recovery(&db, &email)
         .await
         .unwrap();
     crate::recovery::reset_password(&db, &recovery.token, "Password-with-notification!")
         .await
         .unwrap();
     let mailbox = start_email_fixture().await;
-    let first = nvbes_identity_service::notification_dispatch::run_batch(&db, &mailbox.client)
+    let first = crate::notification_dispatch::run_batch(&db, &mailbox.client)
         .await
         .unwrap();
     assert_eq!(first.deferred, 1);
@@ -155,7 +155,7 @@ async fn password_change_notification_retries_through_email_with_original_recipi
         .execute(&db)
         .await
         .unwrap();
-    let resumed = nvbes_identity_service::notification_dispatch::run_batch(&db, &mailbox.client)
+    let resumed = crate::notification_dispatch::run_batch(&db, &mailbox.client)
         .await
         .unwrap();
     assert_eq!(resumed.accepted, 1);
