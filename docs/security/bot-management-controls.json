@@ -15,11 +15,7 @@
 					"evidence": [
 						{
 							"path": "libs/rust/identity/src/identity.auth.rs",
-							"includes": [
-								"normalize_email",
-								"validate_password",
-								"authenticate"
-							]
+							"includes": ["normalize_email", "validate_password", "authenticate"]
 						},
 						{
 							"path": "libs/rust/identity/src/identity.oauth.http.rs",
@@ -40,12 +36,12 @@
 			"controls": [
 				{
 					"id": "BOT_CTRL_002",
-					"name": "App, risk, and API-layer bot controls",
-					"description": "Combine risk signal scoring, PostgreSQL rate limiting, and password hashing defense.",
+					"name": "Identity, protocol, and API-layer bot controls",
+					"description": "Combine per-account and per-source identity throttling, PostgreSQL rate limiting, and password hashing defense.",
 					"evidence": [
 						{
-							"path": "libs/rust/trust-risk/src/trust_risk.assessment.rs",
-							"includes": ["Assessment", "instantaneous_signals", "RiskSignal"]
+							"path": "libs/rust/identity/src/identity.rate_limits.rs",
+							"includes": ["LoginAccount", "LoginSource", "MfaAccount", "RecoveryAccount"]
 						},
 						{
 							"path": "libs/rust/core/src/limiter.rs",
@@ -87,8 +83,8 @@
 							]
 						},
 						{
-							"path": "libs/rust/billing-service/src/billing.webhooks.rs",
-							"includes": ["stripe-signature", "stripe_webhook_handler"]
+							"path": "libs/rust/identity/src/identity.oauth.http.limits.rs",
+							"includes": ["protect_source", "Category::ProtocolSource", "Category::LoginSource"]
 						}
 					]
 				}
@@ -101,12 +97,12 @@
 			"controls": [
 				{
 					"id": "BOT_CTRL_004",
-					"name": "Scored risk signals and trusted client IP resolution",
-					"description": "Score automation signals through validated risk attributes and trusted client IP resolution.",
+					"name": "Keyed throttling subjects and trusted client IP resolution",
+					"description": "Throttle on HMAC-keyed subjects so no raw IP or email is stored, and resolve client IPs only from trusted transport data.",
 					"evidence": [
 						{
-							"path": "libs/rust/trust-risk/src/trust_risk.signal.rs",
-							"includes": ["RiskSignal", "validated_name"]
+							"path": "libs/rust/identity/src/identity.rate_limits.rs",
+							"includes": ["No raw IP, email or unkeyed", "Hmac::<Sha256>"]
 						},
 						{
 							"path": "libs/rust/core/src/http.client_ip.rs",
@@ -180,18 +176,11 @@
 					"evidence": [
 						{
 							"path": "libs/rust/identity/src/identity.tokens.rs",
-							"includes": [
-								"AccessTokenClaims",
-								"TokenService",
-								"pub fn verify("
-							]
+							"includes": ["AccessTokenClaims", "TokenService", "pub fn verify("]
 						},
 						{
 							"path": "libs/rust/core/src/idempotency.rs",
-							"includes": [
-								"request_signature_includes_method_path_and_body_hash",
-								"validate_key"
-							],
+							"includes": ["request_signature_includes_method_path_and_body_hash", "validate_key"],
 							"tests": ["request_signature_includes_method_path_and_body_hash"]
 						}
 					]
@@ -205,20 +194,12 @@
 			"controls": [
 				{
 					"id": "BOT_CTRL_008",
-					"name": "Rule-based recommendations and rate-limit headers",
-					"description": "Use domain rules for recommendation actions (Deny, StepUp, Review) and standard rate limit headers.",
+					"name": "Graduated throttling and rate-limit headers",
+					"description": "Escalate from standard rate-limit headers to 429 responses with retry hints as limits are reached.",
 					"evidence": [
 						{
-							"path": "libs/rust/trust-risk/src/trust_risk.rules.rs",
-							"includes": ["RuleSet", "Recommendation", "RiskBand"]
-						},
-						{
 							"path": "libs/rust/core/src/limiter.rs",
-							"includes": [
-								"ratelimit-limit",
-								"ratelimit-remaining",
-								"ratelimit-reset"
-							]
+							"includes": ["ratelimit-limit", "ratelimit-remaining", "ratelimit-reset"]
 						},
 						{
 							"path": "libs/rust/core/src/http.error.rs",
@@ -235,18 +216,16 @@
 			"controls": [
 				{
 					"id": "BOT_CTRL_009",
-					"name": "Risk and security telemetry",
-					"description": "Record security and risk assessment events in append-only audit tables.",
+					"name": "Security telemetry",
+					"description": "Record authentication and account security events in append-only audit tables.",
 					"evidence": [
 						{
 							"path": "libs/rust/identity/src/identity.auth.rs",
-							"includes": [
-								"audit(tx, principal_id, \"identity.authenticated\")"
-							]
+							"includes": ["audit(tx, principal_id, \"identity.authenticated\")"]
 						},
 						{
-							"path": "archive/apps/trust-risk-service/src/trust_risk.audit.rs",
-							"includes": ["trust_risk_audit_events", "AuditEvent"]
+							"path": "libs/rust/account/src/account.audit.rs",
+							"includes": ["INSERT INTO account_audit_events"]
 						}
 					]
 				}
@@ -264,11 +243,7 @@
 					"evidence": [
 						{
 							"path": "libs/rust/core/src/limiter.rs",
-							"includes": [
-								"RateLimiter",
-								"check_rate_limit_pair",
-								"rate_limited"
-							],
+							"includes": ["RateLimiter", "check_rate_limit_pair", "rate_limited"],
 							"tests": ["rate_limiter_blocks_after_limit"]
 						},
 						{
@@ -277,11 +252,7 @@
 						},
 						{
 							"path": "libs/rust/core/src/auth.helpers.validation.rs",
-							"includes": [
-								"validate_password",
-								"MIN_PASSWORD_LENGTH",
-								"MAX_PASSWORD_LENGTH"
-							]
+							"includes": ["validate_password", "MIN_PASSWORD_LENGTH", "MAX_PASSWORD_LENGTH"]
 						},
 						{
 							"path": "libs/rust/core/src/auth.helpers.tests.rs",

@@ -26,17 +26,12 @@
 		{
 			"id": "FEATURE_005",
 			"name": "Email and webhook ingestion",
-			"description": "Email dispatch, delivery webhook signatures, and Trust/Risk evaluation."
-		},
-		{
-			"id": "FEATURE_006",
-			"name": "Billing and payment webhooks",
-			"description": "Inbound Stripe webhooks, signature validation, idempotency, and replay protection."
+			"description": "Email dispatch and delivery webhook signatures."
 		},
 		{
 			"id": "FEATURE_007",
-			"name": "Platform operations",
-			"description": "Cockpit operator authentication, privileged mutations, role permissions, and idempotency."
+			"name": "Operator access",
+			"description": "Operator token authentication, platform_owner role, recent MFA, and audited privileged reads."
 		},
 		{
 			"id": "FEATURE_008",
@@ -88,16 +83,10 @@
 			"description": "Cryptographic signature verification, message age checking, and rate limiting on ingress."
 		},
 		{
-			"id": "DEFENSE_008",
-			"name": "Webhook authenticity and replay controls",
-			"location": "code",
-			"description": "Raw payload signature verification, payload hashing, duplicate handling, and advisory transaction locks."
-		},
-		{
 			"id": "DEFENSE_009",
-			"name": "Platform operations privileged action gates",
+			"name": "Operator privileged access gates",
 			"location": "code",
-			"description": "Permission checks, operator session validation, idempotency keys, and advisory locks."
+			"description": "Dedicated operator token type and audience, platform_owner role, recent MFA, and audit on every privileged read."
 		},
 		{
 			"id": "DEFENSE_010",
@@ -145,19 +134,11 @@
 			"validation": [
 				{
 					"path": "libs/rust/identity/src/identity.mfa.rs",
-					"includes": [
-						"enroll_totp",
-						"confirm_enrollment",
-						"grant_step_up",
-						"replay_rejected"
-					]
+					"includes": ["enroll_totp", "confirm_enrollment", "grant_step_up", "replay_rejected"]
 				},
 				{
 					"path": "libs/rust/core/src/authz.policy.tests.rs",
-					"includes": [
-						"sensitive_actions_require_step_up",
-						"action_requires_step_up"
-					]
+					"includes": ["sensitive_actions_require_step_up", "action_requires_step_up"]
 				}
 			]
 		},
@@ -223,11 +204,7 @@
 			"validation": [
 				{
 					"path": "libs/rust/core/src/security.headers.rs",
-					"includes": [
-						"x-frame-options",
-						"frame-ancestors 'none'",
-						"x-content-type-options"
-					]
+					"includes": ["x-frame-options", "frame-ancestors 'none'", "x-content-type-options"]
 				},
 				{
 					"path": "libs/rust/core/src/security.headers.tests.rs",
@@ -276,63 +253,22 @@
 			]
 		},
 		{
-			"id": "ABUSE_CASE_008",
-			"featureId": "FEATURE_006",
-			"kind": "technical",
-			"risk": "high",
-			"decision": "to_address",
-			"attack": "An attacker sends fake, tampered, stale, or duplicate webhook payloads to trigger illegitimate billing side effects.",
-			"referential": "OWASP Webhook Security; OWASP A5 Broken Access Control",
-			"countermeasures": ["DEFENSE_008", "DEFENSE_010"],
-			"validation": [
-				{
-					"path": "libs/rust/billing/src/stripe_webhook_intake.rs",
-					"includes": [
-						"classify_webhook_retry",
-						"payload_hash",
-						"WebhookRetryDecision::Duplicate"
-					]
-				},
-				{
-					"path": "libs/rust/billing/src/stripe.rs",
-					"includes": ["verify_stripe_signature"]
-				},
-				{
-					"path": "libs/rust/billing-service/src/billing.webhooks.rs",
-					"includes": [
-						"stripe_webhook_handler",
-						"stripe-signature",
-						"pg_advisory_xact_lock"
-					]
-				}
-			]
-		},
-		{
 			"id": "ABUSE_CASE_009",
 			"featureId": "FEATURE_007",
 			"kind": "business",
 			"risk": "critical",
 			"decision": "to_address",
-			"attack": "A compromised, confused, or overprivileged operator attempts irreversible platform mutations without proper role, idempotency, or permission context.",
+			"attack": "A compromised, confused, or overprivileged operator attempts to read account data without the operator role, recent MFA, or an audit trail.",
 			"referential": "OWASP Authorization; OWASP Transaction Authorization",
 			"countermeasures": ["DEFENSE_009", "DEFENSE_010"],
 			"validation": [
 				{
-					"path": "libs/rust/platform/src/platform.operations.service.rs",
+					"path": "libs/rust/account/src/account.operator.rs",
 					"includes": [
-						"actor.permits(permission)",
-						"OperationsError::Forbidden",
-						"idempotency_key",
-						"pg_advisory_xact_lock"
-					]
-				},
-				{
-					"path": "libs/rust/platform/src/platform.cockpit.auth.rs",
-					"includes": [
-						"DEFAULT_OPERATOR_ROLE",
-						"OperatorSession",
-						"Permission",
-						"MFA_STEP_UP_HEADER"
+						"require_operator",
+						"operator+jwt",
+						"OPERATOR_ROLE",
+						"account.operator.profile_read"
 					]
 				}
 			]
@@ -343,7 +279,7 @@
 			"kind": "technical",
 			"risk": "critical",
 			"decision": "to_address",
-			"attack": "An attacker alters or deletes audit evidence to hide account, billing, or administrative abuse.",
+			"attack": "An attacker alters or deletes audit evidence to hide account or administrative abuse.",
 			"referential": "OWASP A10 Insufficient Logging and Monitoring",
 			"countermeasures": ["DEFENSE_010"],
 			"validation": [
@@ -362,15 +298,7 @@
 				},
 				{
 					"path": "libs/rust/account/src/account.audit.rs",
-					"includes": [
-						"INSERT INTO account_audit_events",
-						"AuditInput",
-						"record"
-					]
-				},
-				{
-					"path": "libs/rust/billing-service/src/billing.audit.rs",
-					"includes": ["INSERT INTO billing_audit_events", "record_audit_event"]
+					"includes": ["INSERT INTO account_audit_events", "AuditInput", "record"]
 				}
 			]
 		},
@@ -390,11 +318,7 @@
 				},
 				{
 					"path": "tools/security/check-dependencies.mjs",
-					"includes": [
-						"Dependency coverage: ok",
-						"pnpm-lock.yaml",
-						"Cargo.lock"
-					]
+					"includes": ["Dependency coverage: ok", "pnpm-lock.yaml", "Cargo.lock"]
 				},
 				{
 					"path": "tools/security/sbom.mjs",

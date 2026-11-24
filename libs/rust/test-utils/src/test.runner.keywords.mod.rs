@@ -1,5 +1,3 @@
-#[path = "test.runner.keywords.billing_kw.rs"]
-pub mod billing_kw;
 #[path = "test.runner.keywords.data_kw.rs"]
 pub mod data_kw;
 #[path = "test.runner.keywords.email_kw.rs"]
@@ -12,7 +10,3 @@ pub mod http_kw;
 pub mod identity_kw;
 #[path = "test.runner.keywords.infra_kw.rs"]
 pub mod infra_kw;
-#[path = "test.runner.keywords.platform_kw.rs"]
-pub mod platform_kw;
-#[path = "test.runner.keywords.trust_risk_kw.rs"]
-pub mod trust_risk_kw;

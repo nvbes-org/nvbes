@@ -45,11 +45,7 @@
 			"evidence": [
 				{
 					"path": "libs/rust/core/src/authz.action.rs",
-					"includes": [
-						"pub enum WorkspaceAction",
-						"ViewWorkspace",
-						"DeleteWorkspace"
-					]
+					"includes": ["pub enum WorkspaceAction", "ViewWorkspace", "DeleteWorkspace"]
 				},
 				{
 					"path": "libs/rust/core/src/authz.role.rs",
@@ -82,11 +78,7 @@
 				},
 				{
 					"path": "libs/rust/core/src/authz.context.rs",
-					"includes": [
-						"pub struct ResourceContext",
-						"owns_resource",
-						"target_role"
-					]
+					"includes": ["pub struct ResourceContext", "owns_resource", "target_role"]
 				}
 			]
 		},
@@ -106,11 +98,8 @@
 					]
 				},
 				{
-					"path": "libs/rust/platform/src/platform.operations.service.rs",
-					"includes": [
-						"actor.permits(permission)",
-						"OperationsError::Forbidden"
-					]
+					"path": "libs/rust/account/src/account.operator.rs",
+					"includes": ["claims.role != OPERATOR_ROLE", "AccountError::Forbidden"]
 				}
 			]
 		},
@@ -191,11 +180,8 @@
 			"regressionRisk": "A missing authorization branch returns success by default.",
 			"evidence": [
 				{
-					"path": "libs/rust/platform/src/platform.operations.service.rs",
-					"includes": [
-						"OperationsError::Forbidden",
-						"OperationsError::Conflict"
-					]
+					"path": "libs/rust/account/src/account.operator.rs",
+					"includes": ["AccountError::Unauthorized", "AccountError::Forbidden"]
 				},
 				{
 					"path": "libs/rust/identity/src/identity.auth.rs",
@@ -220,11 +206,7 @@
 				},
 				{
 					"path": "tools/security/check-authorization-regression-tests.mjs",
-					"includes": [
-						"Authorization regression tests",
-						"AUTHZ_REG_",
-						"evidence strings"
-					]
+					"includes": ["Authorization regression tests", "AUTHZ_REG_", "evidence strings"]
 				}
 			]
 		}

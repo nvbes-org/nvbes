@@ -21,7 +21,6 @@ chrono.workspace = true
 hex.workspace = true
 metrics-exporter-prometheus.workspace = true
 nvbes-account-service = { path = "../../libs/rust/account" }
-nvbes-billing-service = { path = "../../libs/rust/billing-service" }
 nvbes-consent = { path = "../../libs/rust/consent" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-identity-service = { path = "../../libs/rust/identity" }

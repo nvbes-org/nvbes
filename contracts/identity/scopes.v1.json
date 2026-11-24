@@ -3,9 +3,6 @@
   "audiences": {
     "nvbes-account-service": {
       "scopes": ["account:read", "account:write", "account:export", "account:close"]
-    },
-    "nvbes-billing-service": {
-      "scopes": ["billing:read", "billing:checkout"]
     }
   },
   "amr": ["pwd", "totp", "webauthn"],

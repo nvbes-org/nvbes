@@ -15,14 +15,9 @@ else {
         'email-worker': 'email',
         account: 'account',
         'account-service': 'account',
-        billing: 'billing',
-        'billing-service': 'billing',
         identity: 'identity',
         'identity-service': 'identity',
         consent: 'consent',
-        'trust-risk': 'trust_risk',
-        'trust-risk-service': 'trust_risk',
-        'platform-operations-service': 'platform_operations',
       }[project];
       if (!scope) throw new Error(`No isolated database for ${project}`);
       if (createdScopes.has(scope)) continue;

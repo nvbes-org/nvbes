@@ -9,12 +9,11 @@ import { resolve } from 'node:path';
 
 export const CRITICAL_PACKAGES = new Set([
   'nvbes-core',
-  'nvbes-billing',
   'nvbes-audit',
-  'nvbes-trust-risk',
+  'nvbes-consent',
+  'nvbes-dpop',
   'nvbes-identity-service',
   'nvbes-account-service',
-  'nvbes-billing-service',
 ]);
 
 /**

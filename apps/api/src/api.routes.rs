@@ -58,28 +58,6 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
         tracing::info!("Account configuration not set, skipping Account router mounting");
     }
 
-    // Integrate Billing domain if configuration is present
-    if let Ok(billing_config) = nvbes_billing_service::BillingConfig::from_env() {
-        match nvbes_billing_service::auth::TokenVerifier::new(&billing_config) {
-            Ok(tokens) => {
-                let billing_state = nvbes_billing_service::BillingState {
-                    db: pool.clone(),
-                    config: billing_config,
-                    metrics: http_metrics.handle.clone(),
-                    tokens,
-                    email_client: None,
-                };
-                tracing::info!("mounting Billing service domain router");
-                router = router.merge(nvbes_billing_service::domain_router(billing_state));
-            }
-            Err(e) => {
-                tracing::warn!("failed to initialize Billing TokenVerifier: {e}");
-            }
-        }
-    } else {
-        tracing::info!("Billing configuration not set, skipping Billing router mounting");
-    }
-
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)

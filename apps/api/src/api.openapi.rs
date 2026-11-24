@@ -24,12 +24,11 @@ use utoipa::OpenApi;
         (name = "Consent", description = "Legal agreements and cookie preferences with GPC"),
         (name = "Identity", description = "OAuth2 / OIDC authentication and sessions"),
         (name = "Account", description = "Profile, settings, and team management"),
-        (name = "Billing", description = "Stripe subscriptions, checkouts, and invoices"),
     ),
     info(
         title = "NVBES Unified Monolith API",
         version = "0.1.0",
-        description = "Production serverless unified API for NVBES identity, accounts, consent, and billing."
+        description = "Production serverless unified API for NVBES identity, accounts, and consent."
     )
 )]
 pub struct ApiDoc;

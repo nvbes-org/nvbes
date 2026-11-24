@@ -1,6 +1,6 @@
 # NVBES API - Serverless Modular Monolith
 
-Unified production HTTP API serving Identity, Account, Consent, and Billing capabilities as a zero-CLI, scale-to-zero serverless container.
+Unified production HTTP API serving Identity, Account, and Consent capabilities as a zero-CLI, scale-to-zero serverless container.
 
 ## Architecture
 
@@ -24,8 +24,6 @@ Unified production HTTP API serving Identity, Account, Consent, and Billing capa
 | `/api/v1/consents` | Consent | RGPD/ePrivacy agreements & cookie preferences with GPC |
 | `/api/v1/profile` | Account | User profile management |
 | `/api/v1/teams` | Account | Team spaces and membership |
-| `/billing/plans` | Billing | Active subscription plans |
-| `/webhooks/stripe` | Billing | Stripe webhook ingestion |
 | `/.well-known/*` | Identity | OpenID Connect discovery and JWKS |
 | `/oauth/*` | Identity | Token exchange, authorization, sessions, WebAuthn |
 

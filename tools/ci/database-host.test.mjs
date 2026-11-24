@@ -2,10 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { serviceName } from './test-service.mjs';
 import { validateAccountTestDatabaseTarget } from '../../scripts/validate-account-test-database.mjs';
-import { validateBillingTestDatabaseTarget } from '../../scripts/validate-billing-test-database.mjs';
 import { validateEmailTestDatabaseTarget } from '../../scripts/validate-email-test-database.mjs';
 import { validateIdentityTestDatabaseTarget } from '../../scripts/validate-identity-test-database.mjs';
-import { validateTrustRiskTestDatabaseTarget } from '../../scripts/validate-trust-risk-test-database.mjs';
 
 const ci = {
   GITHUB_ACTIONS: 'true',
@@ -17,10 +15,8 @@ const ci = {
 const host = serviceName('postgres', ci);
 for (const [domain, validate] of Object.entries({
   account: validateAccountTestDatabaseTarget,
-  billing: validateBillingTestDatabaseTarget,
   email: validateEmailTestDatabaseTarget,
   identity: validateIdentityTestDatabaseTarget,
-  trust_risk: validateTrustRiskTestDatabaseTarget,
 })) {
   const target = (hostname) => `postgres://postgres:test@${hostname}/nvbes_${domain}_test`;
   test(`${domain}: accepts only this CI run, attempt and job service`, () => {

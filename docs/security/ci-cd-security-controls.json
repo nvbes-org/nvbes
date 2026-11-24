@@ -80,11 +80,7 @@
 						},
 						{
 							"path": "tools/security/check-ci-cd-security.mjs",
-							"includes": [
-								"forbiddenWritePermissions",
-								"permissions:",
-								"write permission"
-							]
+							"includes": ["forbiddenWritePermissions", "permissions:", "write permission"]
 						}
 					]
 				}
@@ -114,14 +110,6 @@
 								"assertSecrets",
 								"validated protected-Environment workflow",
 								"secret-bearing step must be restricted"
-							]
-						},
-						{
-							"path": ".github/workflows/stripe-sandbox.yml",
-							"includes": [
-								"name: stripe-ci",
-								"github.ref == 'refs/heads/main'",
-								"NVBES_STRIPE_SECRET_KEY: ${{ secrets.STRIPE_CI_SECRET_KEY }}"
 							]
 						},
 						{
@@ -190,22 +178,13 @@
 						},
 						{
 							"path": ".github/workflows/ci.yml",
-							"includes": [
-								"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
-							]
+							"includes": ["actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"]
 						},
 						{
 							"path": ".github/actions/ci-setup/action.yml",
 							"includes": [
 								"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
 								"pnpm install --frozen-lockfile --prefer-offline"
-							]
-						},
-						{
-							"path": ".github/workflows/stripe-sandbox.yml",
-							"includes": [
-								"dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4",
-								"cargo build --locked --manifest-path libs/rust/billing-service/Cargo.toml"
 							]
 						}
 					]
@@ -233,11 +212,7 @@
 						},
 						{
 							"path": "tools/ci/run-lane.mjs",
-							"includes": [
-								"'check:structure'",
-								"'check:nx-boundaries'",
-								"'check:secrets'"
-							]
+							"includes": ["'check:structure'", "'check:nx-boundaries'", "'check:secrets'"]
 						}
 					]
 				}
@@ -255,11 +230,7 @@
 					"evidence": [
 						{
 							"path": "docs/security/ci-cd-security.md",
-							"includes": [
-								"CI/CD Security",
-								"pnpm check:ci-cd-security",
-								"allowlisted"
-							]
+							"includes": ["CI/CD Security", "pnpm check:ci-cd-security", "allowlisted"]
 						},
 						{
 							"path": "tools/security/check-ci-cd-security.mjs",
@@ -374,12 +345,7 @@
 		"WORKER_TERRAFORM_STATE_SECRET_KEY"
 	],
 	"allowedContinueOnError": [],
-	"allowedWritePermissions": [
-		"attestations",
-		"id-token",
-		"packages",
-		"security-events"
-	],
+	"allowedWritePermissions": ["attestations", "id-token", "packages", "security-events"],
 	"requiredWorkflowIncludes": [
 		"permissions:",
 		"actions: read",

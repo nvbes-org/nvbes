@@ -7,7 +7,6 @@ export function assertSecrets(
   const referencedSecrets = extractSecrets(text);
   const protectedSecretWorkflows = new Map([
     ['SONAR_TOKEN', new Set(['.github/workflows/sonarcloud.yml'])],
-    ['STRIPE_CI_SECRET_KEY', new Set(['.github/workflows/stripe-sandbox.yml'])],
     [
       'ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_PEM',
       new Set([
@@ -56,13 +55,6 @@ export function assertSecrets(
       secret,
       new Set(['.github/workflows/deploy.yml', '.github/workflows/validate-restore.yml']),
     ]),
-    ...[
-      'BILLING_METRICS_TOKEN',
-      'BILLING_OPERATOR_TOKEN',
-      'BILLING_SENTRY_DSN',
-      'STRIPE_SECRET_KEY',
-      'STRIPE_WEBHOOK_SECRET',
-    ].map((secret) => [secret, new Set(['.github/workflows/deploy.yml'])]),
     ...['BILLING_TERRAFORM_STATE_ACCESS_KEY', 'BILLING_TERRAFORM_STATE_SECRET_KEY'].map(
       (secret) => [
         secret,
@@ -86,17 +78,6 @@ export function assertSecrets(
     const hasLine = (target) => textLines.some((l) => l.trim() === target);
     const hasTrigger = (pattern) => textLines.some((l) => pattern.test(l.trim()));
 
-    const isValidatedStripeSandboxWorkflow =
-      path === '.github/workflows/stripe-sandbox.yml' &&
-      hasLine('workflow_dispatch:') &&
-      !hasTrigger(/^(?:inputs|pull_request|push|schedule):/) &&
-      text.includes('name: stripe-ci') &&
-      text.includes("if: github.ref == 'refs/heads/main'") &&
-      text.includes('[[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]') &&
-      text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
-      text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
-      text.includes(`ref: ${githubExpression('github.sha')}`) &&
-      text.includes('run: node scripts/stripe-billing-smoke.mjs');
     const preceding = text.slice(Math.max(0, secretIndex - 500), secretIndex);
     const isValidatedDastWorkflow =
       path === '.github/workflows/dast.yml' &&
@@ -239,7 +220,6 @@ export function assertSecrets(
     if (
       !preceding.includes("if: github.event_name == 'push' && github.ref == 'refs/heads/main'") &&
       !isValidatedDastWorkflow &&
-      !isValidatedStripeSandboxWorkflow &&
       !isValidatedAccountReleaseWorkflow &&
       !isValidatedAcceptanceIngestWorkflow &&
       !isValidatedDeploymentWorkflow &&

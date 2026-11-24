@@ -6,10 +6,6 @@ const requirements = [
     evidence: ['AuditEventInput', 'action_key', 'is_workspace_scoped', 'has_network_context'],
   },
   {
-    file: 'libs/rust/billing-service/src/billing.audit.rs',
-    evidence: ['INSERT INTO billing_audit_events', 'record_audit_event'],
-  },
-  {
     file: 'libs/rust/account/src/account.audit.rs',
     evidence: ['INSERT INTO account_audit_events', 'AuditInput', 'record'],
   },
@@ -85,18 +81,13 @@ const requirements = [
     ],
   },
   {
-    file: 'libs/rust/platform/src/platform.cockpit.auth.rs',
+    file: 'libs/rust/account/src/account.operator.rs',
     evidence: [
-      'DEFAULT_OPERATOR_ROLE',
-      'MFA_STEP_UP_HEADER',
-      'OperatorSession',
-      'has_mfa_step_up',
-      'Permission',
+      'require_operator',
+      'operator+jwt',
+      'OPERATOR_ROLE',
+      'account.operator.profile_read',
     ],
-  },
-  {
-    file: 'libs/rust/platform/src/platform.operations.model.rs',
-    evidence: ['Command', 'Action', 'Receipt', 'idempotency_key'],
   },
   {
     file: 'infrastructure/environments/security-audit-archive/main.tf',

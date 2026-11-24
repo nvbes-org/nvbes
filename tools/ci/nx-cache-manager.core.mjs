@@ -50,15 +50,6 @@ export function isDatabaseScopeAffected(changedPaths, scope) {
       'scripts/test-account-service-database.sh',
       'scripts/validate-account-test-database',
     ],
-    billing: [
-      'libs/rust/billing-service/migrations',
-      'libs/rust/billing-service/src/billing.db',
-      'apps/billing-service/migrations',
-      'apps/billing-service/src/billing.db',
-      'apps/billing-service/src/billing.database',
-      'scripts/test-billing-service-database.sh',
-      'scripts/validate-billing-test-database',
-    ],
     email: [
       'libs/rust/email/migrations',
       'apps/email-worker/migrations',
@@ -77,14 +68,6 @@ export function isDatabaseScopeAffected(changedPaths, scope) {
       'apps/identity-service/src/identity.database',
       'scripts/test-identity-service-database.sh',
       'scripts/validate-identity-test-database',
-    ],
-    'trust-risk': [
-      'libs/rust/trust-risk/migrations',
-      'apps/trust-risk-service/migrations',
-      'apps/trust-risk-service/src/trust_risk.db',
-      'apps/trust-risk-service/src/trust_risk.database',
-      'scripts/test-trust-risk-service-database.sh',
-      'scripts/validate-trust-risk-test-database',
     ],
   };
   return changedPaths.some((path) => matchesPath(path, patterns[scope] ?? []));

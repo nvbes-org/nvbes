@@ -19,7 +19,7 @@ pub async fn run_server(config: ApiConfig) -> anyhow::Result<()> {
         .acquire_timeout(Duration::from_secs(10))
         .after_connect(|conn, _meta| {
             Box::pin(async move {
-                sqlx::query("SET search_path TO identity, account, billing, consent, public") // nvbes-allow-runtime-sql
+                sqlx::query("SET search_path TO identity, account, consent, public") // nvbes-allow-runtime-sql
                     .execute(conn)
                     .await?;
                 Ok(())

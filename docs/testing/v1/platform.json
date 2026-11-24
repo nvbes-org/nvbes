@@ -1,24 +1,40 @@
 {
   "schemaVersion": 1,
   "domain": "platform",
-  "project": "platform-operations-service",
-  "cargoPackage": "nvbes-platform",
+  "project": "api",
+  "cargoPackage": "nvbes-api",
   "suites": [
     {
       "id": "platform.unit",
-      "requirement": "platform: unit behavior",
+      "requirement": "platform: API runtime unit behavior",
       "risk": "Regression in production code or shared dependencies",
       "execution": "automated",
-      "target": "platform-operations-service:test",
+      "target": "api:test",
       "cases": ["platform.unit.complete-run"]
     },
     {
       "id": "platform.check",
-      "requirement": "platform: compilation",
+      "requirement": "platform: API runtime compilation",
       "risk": "Regression in production code or shared dependencies",
       "execution": "automated",
-      "target": "platform-operations-service:check",
+      "target": "api:check",
       "cases": ["platform.check.complete-run"]
+    },
+    {
+      "id": "platform.worker-unit",
+      "requirement": "platform: worker runtime unit behavior",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "worker:test",
+      "cases": ["platform.worker-unit.complete-run"]
+    },
+    {
+      "id": "platform.worker-check",
+      "requirement": "platform: worker runtime compilation",
+      "risk": "Regression in production code or shared dependencies",
+      "execution": "automated",
+      "target": "worker:check",
+      "cases": ["platform.worker-check.complete-run"]
     },
     {
       "id": "platform.workspace-lint",
@@ -51,27 +67,6 @@
       "execution": "automated",
       "target": "rust-workspace:format",
       "cases": ["platform.workspace-format.complete-run"]
-    },
-    {
-      "id": "platform.database",
-      "requirement": "platform: persistent business invariants",
-      "risk": "Unauthorized access, corrupted state or lost events",
-      "execution": "automated",
-      "target": "platform-operations-service:test:database",
-      "cases": [
-        "platform.command-authorization",
-        "platform.append-only-audit",
-        "platform.operator-recovery",
-        "platform.finops-limits"
-      ]
-    },
-    {
-      "id": "platform.contract",
-      "requirement": "platform: deployable runtime contract",
-      "risk": "Invalid runtime or exposed unsupported interface",
-      "execution": "automated",
-      "target": "platform-operations-service:test:contract",
-      "cases": ["platform.runtime-contract"]
     },
     {
       "id": "platform.acceptance",

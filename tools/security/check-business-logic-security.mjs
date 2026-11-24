@@ -15,9 +15,6 @@ runControlsRegistryCheck({
   runDomainAssertions({ requireNamedTests }) {
     requireNamedTests(
       [
-        'subscription_status_requires_lock_blocks_degraded_states',
-        'checkout_rejects_empty_idempotency_key',
-        'checkout_rejects_oversized_idempotency_key',
         'workspace_membership_roles_cover_expected_permission_boundaries',
         'validate_password_accepts_strong_password',
         'validate_password_rejects_weak_passwords',

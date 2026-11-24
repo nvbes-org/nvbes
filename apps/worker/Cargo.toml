@@ -20,7 +20,6 @@ chrono.workspace = true
 metrics.workspace = true
 metrics-exporter-prometheus.workspace = true
 nvbes-account-service = { path = "../../libs/rust/account" }
-nvbes-billing-service = { path = "../../libs/rust/billing-service" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-email-scaleway = { path = "../../libs/rust/adapters/email-scaleway" }

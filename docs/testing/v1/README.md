@@ -1,6 +1,6 @@
 # Dispositif de test V1 — chantier ouvert
 
-Le manifeste racine `manifest.json` référence les six domaines actifs. Il ne
+Le manifeste racine `manifest.json` référence les quatre domaines actifs. Il ne
 déclare pas la V1 terminée. Les écarts restent ouverts tant que les campagnes
 du candidat final ne prouvent pas leur clôture. Aucune certification externe
 n'est revendiquée.
@@ -220,7 +220,7 @@ avec tous les modules Rust (certains n'ont aucun compteur applicable).
    arrêter les dépendances, appliquer les deadlines, propager les variables
    et nettoyer ses ressources après échec/timeout. Cela ne prouve pas encore
    le nettoyage après tous les signaux système.
-5. Exécuter les scénarios réels des six domaines et le parcours intégré,
+5. Exécuter les scénarios réels des quatre domaines et le parcours intégré,
    isolation Account avec rôle PostgreSQL runtime, Email at-least-once,
    fuzzing, états, charge et interfaces navigateur effectivement livrées.
 6. Exécuter migration zéro/N−1, restauration, contrôles après restauration,
@@ -229,7 +229,7 @@ avec tous les modules Rust (certains n'ont aucun compteur applicable).
    puis rejouer sur le commit final. Ne pas fusionner comme « V1 terminée »
    un simple changement d'outillage.
 
-Les six registres de domaine maintiennent ces travaux bloquants avec un
+Les quatre registres de domaine maintiennent ces travaux bloquants avec un
 responsable et une date de revue. Public signup reste fermé, Billing en
 sandbox et Trust/Risk en shadow mode.
 

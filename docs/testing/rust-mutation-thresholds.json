@@ -41,28 +41,6 @@
         "unviable": 2
       }
     },
-    "nvbes-trust-risk": {
-      "threshold": 91,
-      "baseline": {
-        "score": 96.2,
-        "tested": 263,
-        "caught": 253,
-        "missed": 10,
-        "timeout": 0,
-        "unviable": 37
-      }
-    },
-    "nvbes-platform": {
-      "threshold": 88,
-      "baseline": {
-        "score": 93.3,
-        "tested": 180,
-        "caught": 168,
-        "missed": 12,
-        "timeout": 0,
-        "unviable": 54
-      }
-    },
     "nvbes-core": {
       "threshold": 85,
       "baseline": {
@@ -72,17 +50,6 @@
         "missed": 73,
         "timeout": 0,
         "unviable": 64
-      }
-    },
-    "nvbes-region": {
-      "threshold": 88,
-      "baseline": {
-        "score": 93.2,
-        "tested": 340,
-        "caught": 317,
-        "missed": 23,
-        "timeout": 0,
-        "unviable": 90
       }
     },
     "nvbes-identity-service": {
@@ -107,28 +74,6 @@
         "unviable": 255
       }
     },
-    "nvbes-billing-service": {
-      "threshold": 88,
-      "baseline": {
-        "score": 93.5,
-        "tested": 77,
-        "caught": 72,
-        "missed": 5,
-        "timeout": 0,
-        "unviable": 271
-      }
-    },
-    "nvbes-billing": {
-      "threshold": 86,
-      "baseline": {
-        "score": 91.6,
-        "tested": 796,
-        "caught": 729,
-        "missed": 67,
-        "timeout": 0,
-        "unviable": 97
-      }
-    },
     "nvbes-observability": {
       "threshold": 95,
       "baseline": {
@@ -145,6 +90,11 @@
   "archived": [
     "nvbes-billing-worker",
     "nvbes-email-worker",
-    "nvbes-trust-risk-service"
+    "nvbes-trust-risk-service",
+    "nvbes-billing",
+    "nvbes-billing-service",
+    "nvbes-trust-risk",
+    "nvbes-region",
+    "nvbes-platform"
   ]
 }

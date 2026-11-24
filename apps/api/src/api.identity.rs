@@ -175,7 +175,7 @@ fn dev_token_config() -> Result<TokenConfig, anyhow::Error> {
         "nvbes-dev-key-1".into(),
         priv_pem,
         pub_pem,
-        "nvbes-account-service,nvbes-billing-service".into(),
+        "nvbes-account-service".into(),
     )
     .map_err(|e| anyhow::anyhow!("{e}"))
 }
@@ -192,10 +192,6 @@ fn init_clients(is_dev: bool) -> Result<ClientRegistry, anyhow::Error> {
                     "http://localhost:8080/account": {
                         "audience": "nvbes-account-service",
                         "scopes": ["account:read", "account:write"]
-                    },
-                    "http://localhost:8080/billing": {
-                        "audience": "nvbes-billing-service",
-                        "scopes": ["billing:read", "billing:checkout"]
                     }
                 },
                 "allow_refresh": true,

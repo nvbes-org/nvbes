@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-export const DOMAINS = ['identity', 'account', 'billing', 'email', 'trust-risk', 'platform'];
+export const DOMAINS = ['identity', 'account', 'email', 'platform'];
 export const METRICS = ['lines', 'branches', 'mutation'];
 export const STATUSES = ['passed', 'failed', 'blocked', 'not-run', 'not-applicable'];
 export const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
@@ -11,9 +11,9 @@ export function validateManifest(root, domains) {
   assert.deepEqual(
     Object.keys(root.domains).sort((a, b) => a.localeCompare(b)),
     [...DOMAINS].sort((a, b) => a.localeCompare(b)),
-    'Six domains required',
+    'Four domains required',
   );
-  assert.equal(domains.length, DOMAINS.length, 'Six domain manifests required');
+  assert.equal(domains.length, DOMAINS.length, 'Four domain manifests required');
   assert(unique(domains.map((domain) => domain.domain)), 'Duplicate domain');
   assert.equal(root.policy.silentSkipsAllowed, false);
   assert.equal(root.policy.retryCanMakeGateGreen, false);

@@ -2,21 +2,16 @@
 members = [
   "apps/api",
   "apps/worker",
-  "libs/rust/billing-service",
   "libs/rust/identity",
   "libs/rust/account",
   "libs/rust/audit",
-  "libs/rust/billing",
   "libs/rust/consent",
   "libs/rust/core",
-  "libs/rust/region",
   "libs/rust/dpop",
   "libs/rust/identity-sdk-backend",
   "libs/rust/email",
   "libs/rust/adapters/email-scaleway",
   "libs/rust/observability",
-  "libs/rust/platform",
-  "libs/rust/trust-risk",
   "libs/rust/test-utils",
 ]
 resolver = "2"
