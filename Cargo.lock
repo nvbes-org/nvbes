@@ -2726,7 +2726,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "base64 0.23.1",
  "chrono",
+ "hex",
  "metrics-exporter-prometheus",
  "nvbes-account-service",
  "nvbes-billing-service",

@@ -15,7 +15,7 @@ pub fn build_router(pool: PgPool, config: &ApiConfig) -> Router {
     let http_metrics = HttpMetrics::new();
     let consent_service = Arc::new(nvbes_consent::service::ConsentService::new(
         pool.clone(),
-        "nvbes_consent_ip_salt",
+        &config.consent_ip_salt,
     ));
     let consent_router = Router::new().nest(
         "/api/v1/consents",

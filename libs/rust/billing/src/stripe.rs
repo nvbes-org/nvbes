@@ -88,6 +88,8 @@ pub struct StripeWebhookEvent {
     pub event_type: String,
     pub livemode: bool,
     pub data_object: Value,
+    pub created: Option<i64>,
+    pub raw: Value,
 }
 
 pub fn parse_stripe_signature_header(header: &str) -> Option<(String, Vec<String>)> {
@@ -150,7 +152,12 @@ pub fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
         == 0
 }
 
+pub const MAX_STRIPE_PAYLOAD_SIZE: usize = 65_536;
+
 pub fn parse_stripe_event(payload: &[u8]) -> Option<StripeWebhookEvent> {
+    if payload.len() > MAX_STRIPE_PAYLOAD_SIZE {
+        return None;
+    }
     let value: Value = serde_json::from_slice(payload).ok()?;
     let id = value.get("id").and_then(Value::as_str)?.to_owned();
     let event_type = value.get("type").and_then(Value::as_str)?.to_owned();
@@ -159,11 +166,15 @@ pub fn parse_stripe_event(payload: &[u8]) -> Option<StripeWebhookEvent> {
         .and_then(Value::as_bool)
         .unwrap_or(false);
     let data_object = value.pointer("/data/object").cloned()?;
+    let created = value.get("created").and_then(Value::as_i64);
+    let raw = value;
     Some(StripeWebhookEvent {
         id,
         event_type,
         livemode,
         data_object,
+        created,
+        raw,
     })
 }
 

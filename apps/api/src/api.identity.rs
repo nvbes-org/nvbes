@@ -209,13 +209,30 @@ fn init_clients(is_dev: bool) -> Result<ClientRegistry, anyhow::Error> {
 }
 
 fn init_limiter() -> Result<RateLimiter, anyhow::Error> {
-    let key_b64 = std::env::var("NVBES_IDENTITY_RATE_LIMIT_KEY")
-        .unwrap_or_else(|_| "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=".into());
+    let key_b64 = match std::env::var("NVBES_IDENTITY_RATE_LIMIT_KEY") {
+        Ok(k) if !k.trim().is_empty() => k,
+        _ => base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            rand::random::<[u8; 32]>(),
+        ),
+    };
     RateLimiter::from_base64(&key_b64).map_err(|e| anyhow::anyhow!("{e}"))
 }
 
 fn init_mfa() -> Result<MfaCrypto, anyhow::Error> {
-    let key = [0u8; 32];
+    let key: [u8; 32] = match std::env::var("NVBES_IDENTITY_MFA_ENCRYPTION_KEY") {
+        Ok(val) => {
+            let bytes =
+                base64::Engine::decode(&base64::engine::general_purpose::STANDARD, val.trim())
+                    .map_err(|e| {
+                        anyhow::anyhow!("invalid base64 in NVBES_IDENTITY_MFA_ENCRYPTION_KEY: {e}")
+                    })?;
+            bytes.try_into().map_err(|_| {
+                anyhow::anyhow!("NVBES_IDENTITY_MFA_ENCRYPTION_KEY must be 32 bytes")
+            })?
+        }
+        Err(_) => rand::random::<[u8; 32]>(),
+    };
     MfaCrypto::with_rotation(1, key, None).map_err(|e| anyhow::anyhow!("{e}"))
 }
 

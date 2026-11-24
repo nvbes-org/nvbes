@@ -19,6 +19,12 @@ pub async fn stripe_webhook_handler(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<impl IntoResponse, BillingError> {
+    // 0. Enforce maximum payload size limit
+    const MAX_WEBHOOK_PAYLOAD_SIZE: usize = nvbes_billing::stripe::MAX_STRIPE_PAYLOAD_SIZE;
+    if body.len() > MAX_WEBHOOK_PAYLOAD_SIZE {
+        return Err(BillingError::Invalid("payload_too_large"));
+    }
+
     let sig_header = headers
         .get("stripe-signature")
         .and_then(|h| h.to_str().ok());
@@ -43,12 +49,10 @@ pub async fn stripe_webhook_handler(
         ));
     }
 
-    let raw_json: Value =
-        serde_json::from_slice(&body).map_err(|_| BillingError::Invalid("invalid_json"))?;
+    let raw_json = &event.raw;
 
-    let event_created = raw_json
-        .get("created")
-        .and_then(Value::as_i64)
+    let event_created = event
+        .created
         .and_then(|ts| Utc.timestamp_opt(ts, 0).single())
         .unwrap_or_else(Utc::now);
 

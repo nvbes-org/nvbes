@@ -20,6 +20,7 @@ pub struct ApiConfig {
     pub otlp_endpoint: Option<String>,
     pub otlp_authorization_header: Option<String>,
     pub observability_internal_token: Option<String>,
+    pub consent_ip_salt: String,
 }
 
 impl ApiConfig {
@@ -70,6 +71,9 @@ impl ApiConfig {
         let observability_internal_token = optional("NVBES_OBSERVABILITY_INTERNAL_TOKEN")
             .or_else(|| optional("OBSERVABILITY_INTERNAL_TOKEN"));
 
+        let consent_ip_salt = optional("NVBES_CONSENT_IP_SALT")
+            .unwrap_or_else(|| hex::encode(rand::random::<[u8; 16]>()));
+
         Ok(Self {
             bind_addr,
             environment,
@@ -81,6 +85,7 @@ impl ApiConfig {
             otlp_endpoint,
             otlp_authorization_header,
             observability_internal_token,
+            consent_ip_salt,
         })
     }
 }

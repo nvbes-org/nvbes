@@ -58,6 +58,8 @@ fn summarize_webhook_payload_includes_object_metadata() {
             "livemode": true,
             "created": 1_700_000_000_i64
         }),
+        created: Some(1_700_000_000_i64),
+        raw: json!({}),
     };
     let summary = summarize_webhook_payload(&event, "payload-hash".into(), &event.data_object);
     assert_eq!(summary["hash"], "payload-hash");
