@@ -7,8 +7,7 @@ use crate::{
 use nvbes_core::mfa::{current_counter, generate_totp_code};
 use webauthn_authenticator_rs::{WebauthnAuthenticator, softpasskey::SoftPasskey};
 
-#[path = "identity.mfa.rotation.rs"]
-mod rotation;
+use crate::mfa_rotation as rotation;
 
 struct Fixture {
     db: PgPool,

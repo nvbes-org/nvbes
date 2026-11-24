@@ -22,8 +22,8 @@
 							"includes": ["LoginForm", "authenticate"]
 						},
 						{
-							"path": "libs/rust/identity/src/identity.invitations.rs",
-							"includes": ["normalize_email", "create", "accept"]
+							"path": "libs/rust/identity/src/identity.oauth.http.limits.rs",
+							"includes": ["Category::LoginSource", "/oauth/authorize/login", "/oauth/recovery/"]
 						}
 					]
 				}

@@ -126,16 +126,6 @@ async fn account_routes_are_mounted_and_require_a_token() {
 }
 
 #[tokio::test]
-async fn run_migrations_fails_closed_when_database_is_unreachable() {
-    let pool = PgPoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_millis(200))
-        .connect_lazy("postgres://127.0.0.1:1/unreachable")
-        .unwrap();
-    let result = crate::migrations::run_migrations(&pool).await;
-    assert!(result.is_err());
-}
-
-#[tokio::test]
 async fn response_contains_observability_headers() {
     let pool = test_pool();
     let config = ApiConfig::from_env().unwrap();

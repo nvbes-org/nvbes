@@ -52,6 +52,8 @@ pub struct IdentityRuntime {
     pub mfa: Arc<MfaCrypto>,
     pub browser: BrowserSecurity,
     pub webauthn: Arc<Webauthn>,
+    /// Hosted page the password-recovery email links to.
+    pub password_recovery_url: String,
     /// External resource servers allowed to call `/oauth/introspect`. The
     /// in-process Account domain never needs it.
     pub resources: Option<Arc<ResourceServers>>,
@@ -93,8 +95,13 @@ impl IdentityRuntime {
             None if development => DEV_BROWSER_ORIGIN.to_owned(),
             None => return Err(ConfigError::Missing("NVBES_IDENTITY_BROWSER_ORIGIN")),
         };
+        if !development && !browser_origin.starts_with("https://") {
+            return Err(ConfigError::Invalid("NVBES_IDENTITY_BROWSER_ORIGIN"));
+        }
         let browser = BrowserSecurity::new(&browser_origin, development)
             .map_err(|_| ConfigError::Invalid("NVBES_IDENTITY_BROWSER_ORIGIN"))?;
+        let password_recovery_url =
+            format!("{}/password-recovery", browser_origin.trim_end_matches('/'));
         let rp_id = reqwest::Url::parse(&browser_origin)
             .ok()
             .and_then(|url| url.host_str().map(str::to_owned))
@@ -118,6 +125,7 @@ impl IdentityRuntime {
             mfa: Arc::new(mfa),
             browser,
             webauthn: Arc::new(webauthn),
+            password_recovery_url,
             resources,
         })
     }

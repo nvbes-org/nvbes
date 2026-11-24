@@ -33,7 +33,7 @@
 					"evidence": [
 						{
 							"path": "libs/rust/identity/src/identity.recovery.rs",
-							"includes": ["request_recovery", "reset_password", "consumed_at"]
+							"includes": ["pub(crate) async fn issue", "reset_password", "consumed_at"]
 						}
 					]
 				}

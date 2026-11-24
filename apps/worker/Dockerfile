@@ -51,4 +51,7 @@ STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://127.0.0.1:8081/health/live || exit 1
 
+# Containers run `serve`; Scaleway Jobs override the command with
+# `run <task>` (migrate, identity-emails, privacy-retention, rotate-mfa-key).
 ENTRYPOINT ["/app/worker"]
+CMD ["serve"]

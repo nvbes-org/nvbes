@@ -1,10 +1,12 @@
 use anyhow::Context;
-use nvbes_worker::{WorkerConfig, run_worker};
+use nvbes_worker::{Command, WorkerConfig, cli, server};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    nvbes_observability::install_safe_panic_hook();
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let command = cli::parse(&args)?;
 
+    nvbes_observability::install_safe_panic_hook();
     let config = WorkerConfig::from_env().context("failed to load Worker configuration")?;
 
     nvbes_observability::init_tracing_with_config(
@@ -29,5 +31,11 @@ async fn main() -> anyhow::Result<()> {
         )
     });
 
-    run_worker(config).await
+    let result = match command {
+        Command::Serve => server::serve(config).await,
+        Command::Run(task) => server::run_once(config, task).await,
+    };
+    nvbes_observability::shutdown_tracing();
+    let _ = nvbes_observability::flush_error_reporting(std::time::Duration::from_secs(1));
+    result
 }

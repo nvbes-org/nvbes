@@ -1,5 +1,6 @@
 pub mod client;
 pub mod command;
+pub mod delivery;
 pub mod error;
 pub mod mock;
 pub mod operations;
@@ -19,6 +20,7 @@ pub use command::{
     AccountSecurityEvent, EmailCategory, EmailCommand, EmailCommandError, EmailIdempotencyKey,
     EmailReceipt, EmailRecipient, EmailRequestContext, EmailTemplate, normalized_timezone,
 };
+pub use delivery::{DirectEmailDelivery, EmailCommandSender};
 pub use error::{EmailError, EmailFailureClass};
 pub use mock::MockEmailSender;
 pub use operations::{EmailOperationsClient, EmailOperationsError, privacy_activity_json};

@@ -175,6 +175,7 @@ async fn client_maps_every_grpc_failure_class() {
             EmailClientError::Conflict => "conflict",
             EmailClientError::Unauthorized => "unauthorized",
             EmailClientError::Unavailable => "unavailable",
+            EmailClientError::Rejected => "rejected",
             EmailClientError::Protocol => "protocol",
             EmailClientError::Configuration(_) => "configuration",
         };

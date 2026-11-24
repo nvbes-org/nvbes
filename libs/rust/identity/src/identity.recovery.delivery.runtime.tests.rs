@@ -1,5 +1,6 @@
 use super::*;
 use crate::recovery_test_fixture::fixture;
+use nvbes_email::EmailClient;
 use nvbes_email::proto::nvbes::email::v1::{
     EmailReceipt as ProtoReceipt, SubmitEmailRequest,
     email_delivery_service_server::{EmailDeliveryService, EmailDeliveryServiceServer},

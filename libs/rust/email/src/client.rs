@@ -29,6 +29,8 @@ pub enum EmailClientError {
     Conflict,
     #[error("email command service is unavailable")]
     Unavailable,
+    #[error("email provider permanently rejected the message")]
+    Rejected,
     #[error("email command service rejected the caller")]
     Unauthorized,
     #[error("email command service returned an invalid response")]

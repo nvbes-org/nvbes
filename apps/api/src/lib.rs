@@ -12,8 +12,6 @@ pub mod identity;
 pub mod identity_activity;
 #[path = "api.identity.runtime.rs"]
 pub mod identity_runtime;
-#[path = "api.migrations.rs"]
-pub mod migrations;
 #[path = "api.openapi.rs"]
 pub mod openapi;
 #[path = "api.routes.rs"]

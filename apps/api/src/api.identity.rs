@@ -6,6 +6,7 @@ use nvbes_identity_service::{
         authorization_router, introspection_router, passkey_login_router, recovery_router,
         router_with_logout, rp_logout_router, token_router, webauthn_router,
     },
+    recovery_http,
     session_context::{self, SessionContextGuard},
 };
 
@@ -60,6 +61,13 @@ pub fn build_router(pool: PgPool, identity: &IdentityRuntime) -> anyhow::Result<
             identity.browser.clone(),
             identity.webauthn.clone(),
             identity.limiter.clone(),
+        ))
+        .merge(recovery_http::router(
+            pool.clone(),
+            identity.browser.clone(),
+            identity.limiter.clone(),
+            identity.mfa.clone(),
+            identity.password_recovery_url.clone(),
         ));
     let router = match &identity.resources {
         Some(resources) => router.merge(introspection_router(

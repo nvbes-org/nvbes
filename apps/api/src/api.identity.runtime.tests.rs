@@ -63,6 +63,18 @@ fn complete_production_identity_loads_and_shares_its_trust() {
     assert_eq!(runtime.trust.key_id, "identity-2026-11");
     assert_eq!(runtime.trust.verification_keys, "[]");
     assert!(runtime.resources.is_none());
+    assert_eq!(
+        runtime.password_recovery_url,
+        "https://id.nvbes.fr/password-recovery"
+    );
+}
+
+#[test]
+fn production_refuses_a_plain_http_browser_origin() {
+    assert!(matches!(
+        production(&[("NVBES_IDENTITY_BROWSER_ORIGIN", Some("http://id.nvbes.fr"))]),
+        Err(ConfigError::Invalid("NVBES_IDENTITY_BROWSER_ORIGIN"))
+    ));
 }
 
 #[test]

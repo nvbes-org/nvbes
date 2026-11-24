@@ -21,10 +21,7 @@ anyhow.workspace = true
 async-trait.workspace = true
 axum.workspace = true
 base64.workspace = true
-chrono.workspace = true
-hex.workspace = true
 ipnet.workspace = true
-metrics-exporter-prometheus.workspace = true
 nvbes-account-service = { path = "../../libs/rust/account" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-identity-sdk = { path = "../../libs/rust/identity-sdk-backend" }
@@ -42,7 +39,6 @@ tower = { workspace = true }
 tower-http = { workspace = true, features = ["trace", "catch-panic", "compression-full"] }
 tracing.workspace = true
 utoipa.workspace = true
-uuid.workspace = true
 webauthn-rs.workspace = true
 
 [dev-dependencies]

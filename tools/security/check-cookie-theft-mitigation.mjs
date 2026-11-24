@@ -53,7 +53,7 @@ runControlsRegistryCheck({
           'opaque_tokens_have_fixed_entropy_and_are_hashed_at_rest',
           'oidc_and_api_tokens_have_distinct_audiences_and_types',
           'hostile_claims_and_scope_escalation_fail_validation',
-          'session_token_prefers_bearer_then_cookie',
+          'duplicate_headers_and_cookie_shadowing_are_rejected',
           'clear_site_data_header_clears_browser_state',
           'security_headers_deny_clickjacking_with_csp_and_legacy_header',
         ],

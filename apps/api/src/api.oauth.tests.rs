@@ -128,3 +128,17 @@ async fn oauth_routes_are_mounted_on_api() {
         .unwrap();
     assert_ne!(token.status(), StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn password_recovery_routes_are_mounted() {
+    let response = app(test_pool(), &ApiConfig::from_env().unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/oauth/password-recovery/context")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_ne!(response.status(), StatusCode::NOT_FOUND);
+}

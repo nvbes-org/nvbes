@@ -1,5 +1,5 @@
 use crate::mfa_crypto::MfaCrypto;
-use nvbes_email::{EmailClient, EmailClientError, EmailCommand, EmailReceipt};
+use nvbes_email::{EmailClientError, EmailCommand, EmailCommandSender, EmailReceipt};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -35,9 +35,9 @@ pub async fn enqueue(
 pub async fn run_batch(
     db: &PgPool,
     crypto: &MfaCrypto,
-    client: &EmailClient,
+    sender: &dyn EmailCommandSender,
 ) -> anyhow::Result<BatchResult> {
-    run_with(db, crypto, |command| client.send(command)).await
+    run_with(db, crypto, |command| sender.send(command)).await
 }
 
 #[derive(sqlx::FromRow)]

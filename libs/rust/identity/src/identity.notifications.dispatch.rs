@@ -1,4 +1,4 @@
-use nvbes_email::{EmailClient, EmailClientError, EmailCommand, EmailReceipt};
+use nvbes_email::{EmailClientError, EmailCommand, EmailCommandSender, EmailReceipt};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -17,8 +17,11 @@ pub struct BatchResult {
 }
 
 /// One bounded batch, no autonomous loop or external scheduler implied.
-pub async fn run_batch(db: &PgPool, client: &EmailClient) -> Result<BatchResult, DispatchError> {
-    run_with(db, |command| client.send(command)).await
+pub async fn run_batch(
+    db: &PgPool,
+    sender: &dyn EmailCommandSender,
+) -> Result<BatchResult, DispatchError> {
+    run_with(db, |command| sender.send(command)).await
 }
 
 async fn run_with<F, Fut>(db: &PgPool, send: F) -> Result<BatchResult, DispatchError>

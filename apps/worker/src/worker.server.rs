@@ -1,108 +1,154 @@
+use std::{sync::Arc, time::Duration, time::Instant};
+
 use anyhow::Context;
-use sqlx::postgres::PgPoolOptions;
-use std::time::Duration;
-use tokio::net::TcpListener;
-use tokio::sync::watch;
-use tracing::info;
+use nvbes_observability::{
+    metrics::HttpMetrics,
+    worker_error_reporting::{WorkerOperationContext, capture_worker_operation_error},
+};
+use sqlx::{PgPool, postgres::PgPoolOptions};
+use tokio::{net::TcpListener, sync::watch, task::JoinSet};
+use tracing::{error, info};
 
-use crate::{config::WorkerConfig, health, privacy};
+use crate::{
+    config::{ServeConfig, WorkerConfig, env_lookup},
+    health,
+    tasks::{PreparedTask, WorkerTask},
+};
 
-pub async fn run_worker(config: WorkerConfig) -> anyhow::Result<()> {
-    info!(
-        "initializing serverless database connection pool (min: {}, max: {})",
-        config.database_min_connections, config.database_max_connections
-    );
+const APP_NAME: &str = "nvbes-worker";
 
-    let pool = PgPoolOptions::new()
+/// Domain tables live in their own schemas; every connection resolves them
+/// through the same search path as the API.
+pub fn pool(config: &WorkerConfig) -> anyhow::Result<PgPool> {
+    PgPoolOptions::new()
+        .after_connect(|connection, _| {
+            Box::pin(async move {
+                sqlx::query("SET search_path TO identity, account, public") // nvbes-allow-runtime-sql
+                    .execute(connection)
+                    .await?;
+                Ok(())
+            })
+        })
         .min_connections(config.database_min_connections)
         .max_connections(config.database_max_connections)
         .idle_timeout(Duration::from_secs(30))
         .acquire_timeout(Duration::from_secs(10))
         .connect_lazy(&config.database_url)
-        .context("failed to configure lazy Postgres connection pool")?;
+        .context("failed to configure lazy Postgres connection pool")
+}
 
-    let (shutdown_tx, shutdown_rx) = watch::channel(false);
-
-    // Spawn HTTP health server for liveness and readiness probes
-    let health_router = health::router(pool.clone(), &config);
-    let listener = TcpListener::bind(config.bind_addr).await.with_context(|| {
-        format!(
-            "failed to bind worker health server to {}",
-            config.bind_addr
-        )
-    })?;
-
-    info!(
-        "nvbes-worker health server listening on http://{}",
-        config.bind_addr
-    );
-
-    let health_server = {
-        let mut shutdown_rx = shutdown_rx.clone();
-        async move {
-            let _ = axum::serve(listener, health_router)
-                .with_graceful_shutdown(async move {
-                    while !*shutdown_rx.borrow_and_update() {
-                        if shutdown_rx.changed().await.is_err() {
-                            break;
-                        }
-                    }
-                })
-                .await;
-        }
-    };
-
-    let worker_loop = run_worker_loop(pool.clone(), config, shutdown_rx);
-
-    tokio::select! {
-        _ = health_server => {
-            info!("health server stopped");
-        }
-        _ = worker_loop => {
-            info!("worker loop stopped");
-        }
-        _ = shutdown_signal() => {
-            info!("shutdown signal received, stopping worker");
-            let _ = shutdown_tx.send(true);
-        }
-    }
-
-    info!("worker shutdown complete, closing database connections");
+/// Scaleway Job mode: one batch, a JSON summary on stdout, a non-zero exit on
+/// failure so the job is reported as failed.
+pub async fn run_once(config: WorkerConfig, task: WorkerTask) -> anyhow::Result<()> {
+    let prepared = PreparedTask::prepare(task, &env_lookup, config.development())
+        .with_context(|| format!("invalid configuration for {task}"))?;
+    let pool = pool(&config)?;
+    let result = execute(&prepared, &pool, &config.environment).await;
     pool.close().await;
-
-    nvbes_observability::shutdown_tracing();
-    let _ = nvbes_observability::flush_error_reporting(Duration::from_secs(1));
-
+    let summary = result?;
+    println!(
+        "{}",
+        serde_json::json!({"task": task.name(), "result": summary})
+    );
     Ok(())
 }
 
-async fn run_worker_loop(
-    pool: sqlx::PgPool,
-    config: WorkerConfig,
-    mut shutdown: watch::Receiver<bool>,
-) {
-    let mut privacy_interval =
-        tokio::time::interval(Duration::from_secs(config.privacy_interval_secs));
+/// Scaleway Container mode: health endpoints plus one loop per scheduled task.
+pub async fn serve(config: WorkerConfig) -> anyhow::Result<()> {
+    let serve = ServeConfig::from_lookup(&env_lookup, config.development())
+        .context("invalid serve configuration")?;
+    let mut tasks = Vec::with_capacity(serve.schedules.len());
+    for schedule in &serve.schedules {
+        let prepared = PreparedTask::prepare(schedule.task, &env_lookup, config.development())
+            .with_context(|| format!("invalid configuration for {}", schedule.task))?;
+        tasks.push((Arc::new(prepared), schedule.every));
+    }
+    let pool = pool(&config)?;
+    let listener = TcpListener::bind(serve.bind_addr)
+        .await
+        .with_context(|| format!("failed to bind worker health server to {}", serve.bind_addr))?;
+    info!(
+        "{APP_NAME} health server listening on http://{}",
+        serve.bind_addr
+    );
 
-    loop {
-        tokio::select! {
-            _ = privacy_interval.tick() => {
-                let pool = pool.clone();
-                let env = config.environment.clone();
-                let task = tokio::spawn(async move {
-                    privacy::run_privacy_tick(&pool, &env).await;
-                });
-                if let Err(err) = task.await
-                    && err.is_panic()
-                {
-                    tracing::error!("worker privacy tick panicked, worker loop continuing safely");
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let mut loops = JoinSet::new();
+    for (task, every) in tasks {
+        let pool = pool.clone();
+        let environment = config.environment.clone();
+        let mut shutdown = shutdown_rx.clone();
+        loops.spawn(async move {
+            let mut interval = tokio::time::interval(every);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            loop {
+                tokio::select! {
+                    _ = interval.tick() => {
+                        // Errors are reported and the next tick retries.
+                        let _ = execute(&task, &pool, &environment).await;
+                    }
+                    changed = shutdown.changed() => {
+                        if changed.is_err() || *shutdown.borrow() {
+                            break;
+                        }
+                    }
                 }
             }
-            changed = shutdown.changed() => {
-                if changed.is_err() || *shutdown.borrow() {
-                    break;
-                }
+        });
+    }
+
+    let health_router = health::router(pool.clone(), &config);
+    let mut health_shutdown = shutdown_rx.clone();
+    let health_server = axum::serve(listener, health_router).with_graceful_shutdown(async move {
+        while !*health_shutdown.borrow_and_update() {
+            if health_shutdown.changed().await.is_err() {
+                break;
             }
+        }
+    });
+
+    tokio::select! {
+        result = health_server => {
+            result.context("worker health server failed")?;
+        }
+        _ = shutdown_signal() => {
+            info!("shutdown signal received, stopping worker");
+        }
+    }
+    let _ = shutdown_tx.send(true);
+    while loops.join_next().await.is_some() {}
+    info!("worker shutdown complete, closing database connections");
+    pool.close().await;
+    Ok(())
+}
+
+async fn execute(
+    task: &PreparedTask,
+    pool: &PgPool,
+    environment: &str,
+) -> anyhow::Result<serde_json::Value> {
+    let metrics = HttpMetrics::new();
+    let name = task.task().name();
+    metrics.record_worker_heartbeat(name);
+    let started = Instant::now();
+    match task.execute(pool).await {
+        Ok(summary) => {
+            info!(task = name, %summary, "worker task completed");
+            metrics.record_worker_queue_job(name, "ok", started.elapsed());
+            Ok(summary)
+        }
+        Err(err) => {
+            error!(task = name, "worker task failed: {err:#}");
+            capture_worker_operation_error(
+                &*err,
+                &WorkerOperationContext {
+                    app_name: APP_NAME,
+                    environment,
+                    operation: name,
+                },
+            );
+            metrics.record_worker_queue_job(name, "error", started.elapsed());
+            Err(err)
         }
     }
 }
@@ -110,7 +156,7 @@ async fn run_worker_loop(
 async fn shutdown_signal() {
     let ctrl_c = async {
         if let Err(err) = tokio::signal::ctrl_c().await {
-            tracing::error!("failed to install ctrl+c signal handler: {err}");
+            error!("failed to install ctrl+c signal handler: {err}");
         }
     };
 
@@ -121,7 +167,7 @@ async fn shutdown_signal() {
                 signal.recv().await;
             }
             Err(err) => {
-                tracing::error!("failed to install SIGTERM signal handler: {err}");
+                error!("failed to install SIGTERM signal handler: {err}");
             }
         }
     };
@@ -130,11 +176,7 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {
-            info!("received CTRL+C signal");
-        }
-        _ = terminate => {
-            info!("received SIGTERM signal");
-        }
+        _ = ctrl_c => info!("received CTRL+C signal"),
+        _ = terminate => info!("received SIGTERM signal"),
     }
 }

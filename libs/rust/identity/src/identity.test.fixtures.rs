@@ -48,7 +48,8 @@ pub async fn isolated_database() -> PgPool {
         .after_connect(move |connection, _| {
             let schema = schema.clone();
             Box::pin(async move {
-                sqlx::query("SELECT set_config('search_path',$1,false)")
+                // application_name lets lock-wait tests find this schema's sessions.
+                sqlx::query("SELECT set_config('search_path',$1,false),set_config('application_name',$1,false)")
                     .bind(schema)
                     .execute(connection)
                     .await?;

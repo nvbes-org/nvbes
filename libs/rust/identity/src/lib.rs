@@ -15,6 +15,8 @@ pub mod mfa_crypto;
 pub mod mfa_keys;
 #[path = "identity.mfa.recovery.rs"]
 pub mod mfa_recovery;
+#[path = "identity.mfa.rotation.rs"]
+pub mod mfa_rotation;
 #[path = "identity.migrations.rs"]
 pub mod migrations;
 #[path = "identity.notifications.command.rs"]
