@@ -24,18 +24,10 @@
     "worker_error_reporting::monitor::tests::send_monitor_check_in_returns_false_when_hub_has_no_client": "Sentry client init requires network syscalls blocked in micro-test sandbox"
   },
   "nvbes-identity-service": {
-    "database::unit_tests::connect_succeeds_when_postgres_is_available": "PostgreSQL connect requires network syscalls blocked in micro-test sandbox",
-    "error_reporting::tests::smoke_returns_structured_result_in_development_without_network": "Sentry client init requires network syscalls blocked in micro-test sandbox",
     "oauth::http::tests::discovery_advertises_logout_only_when_its_runtime_is_enabled": "HTTP discovery loopback server blocked in micro-test sandbox",
     "oauth::http::tests::authorization_redirect_discards_post_body_for_success_and_denial": "HTTP authorize loopback server blocked in micro-test sandbox"
   },
-  "nvbes-account-service": {
-    "auth::tokens::tests::account_http_guard_requires_live_identity_and_refuses_duplicate_headers": "HTTP identity introspection loopback transport blocked in micro-test sandbox"
-  },
   "nvbes-api": {
-    "tests::consent_routes_are_mounted": "Consent status route touches database (pool connection attempt)",
-    "tests::in_process_account_port_handles_database_error": "Account port adapter touches database (pool connection attempt)",
-    "tests::run_migrations_fails_closed_when_database_is_unreachable": "Migration runner touches database (pool connection attempt)",
     "tests::readiness_endpoints_work": "Readiness probe touches database (pool connection attempt)"
   },
   "nvbes-worker": {
