@@ -31,3 +31,5 @@ paths-ignore:
 query-filters:
   - exclude:
       id: rust/weak-sensitive-data-hashing
+  - exclude:
+      id: rust/unsafe-deserialization

@@ -1,334 +1,323 @@
-# nvbes Project
+# nvbes Project — Guide Canonique des Agents LLM
 
-Monorepo full-stack avec Rust (Axum), TypeScript/React, orchestré par pnpm workspaces + Cargo workspace.
+Ce fichier est la **source de vérité unique et consolidée** pour tous les assistants et agents LLM (Antigravity, Codex, Claude Code, Cursor, Copilot, Windsurf) intervenant sur le monorepo nvbes.
 
-## Direction V1 active
+---
 
-La [direction produit canonique](docs/product/nvbes-product-strategy.md) prévaut
-sur les anciens PRD, blueprints et plans :
+## 1. Direction V1 Active & Contrat FinOps
 
-- la V1 livre uniquement le socle réutilisable Identity, Account, Billing,
-  Email, Trust/Risk et Platform Operations ;
-- la cible est B2C tout public, avec équipes, sans offre B2B/Enterprise ni
-  conformité avancée dans la V1 ;
-- Cloud/Drive n'est pas le premier produit implicite et reste hors périmètre ;
-- le coût récurrent total du projet ne doit pas dépasser 30 EUR TTC par mois ;
-- FinOps est une propriété de conception et un gate de livraison ;
-- un opérateur solo traite les demandes manuellement tant qu'une automatisation
-  sûre, conforme aux exigences et compatible avec le budget n'est pas démontrée ;
-- une solution maison optimisée est recevable si elle est moins coûteuse, sûre,
-  maintenable et remplaçable ;
-- la production est progressive, mesurée et réversible.
+La [direction produit canonique](docs/product/nvbes-product-strategy.md) prévaut impérativement sur tous les anciens PRD, blueprints et plans historiques :
 
-## Agent contract
+- **Mission Nvbes** : Nvbes est une entité destinée à offrir des outils et des logiciels aux développeurs, le tout en **open-source**, financé par son futur cloud.
+- **V1 Ultra-Restreinte ("Small Building")** : La V1 sert exclusivement de service d'identité et de compte pour les développeurs utilisant les outils Nvbes, avec une configuration interne et manuelle (pas de portail d'enregistrement d'apps complexe en V1) :
+  - **Une API monolithique** (`apps/api`) : Création de compte, Connexion et maintien de session le tout en **OAuth 2** (PKCE, RFC 6749), gestion des consentements (scopes) et profil utilisateur basique.
+  - **Un site web dev-first** (aujourd'hui `apps/identity-web` et `apps/account-web`, unification prévue) : Inscription, Connexion en OAuth2, écran de consentement, page de profil (infos, sessions actives). Destiné uniquement aux développeurs : **aucun front-end marketing en V1**.
+- **Deux Principes Majeurs** :
+  1. **Rentabilité maximale & technologies les moins chères du marché** : Exploiter au maximum la gratuité et l'ultra-légèreté (Rust/Axum < 20Mo RAM, Cloudflare Pages gratuit pour le front, PostgreSQL managé ou low-cost).
+  2. **Migration vers l'Open Source auto-géré** : Chaque brique et choix technologique doit être conçu pour permettre une migration fluide vers des solutions OSS auto-hébergées dans le futur (PostgreSQL natif, reverse proxy Nginx/Caddy, zéro lock-in propriétaire).
+- **Hors périmètre actif V1 (Gelé / Mis en pause)** :
+  - ❌ Pas de **Billing (Stripe)** pour l'instant (activé ultérieurement lors du lancement du cloud payant).
+  - ❌ Pas de **Trust/Risk engine** ni de workers distribués : l'API reste strictement serverless (aucune tâche de fond) et un seul binaire `apps/worker` exécute les tâches, en Scaleway Container (`serve`) ou en Scaleway Job (`run <task>`).
+  - ❌ Pas de **front-end marketing** ni de gestion complexe d'organisations/équipes B2B.
+  - ❌ **Souveraineté et conformité avancée non exigées en V1** : préparées dans les abstractions, mais sans surcoût ni complexité bloquante pour démarrer.
+- **Plafond FinOps impératif** : Le coût récurrent total de l'infrastructure ne doit jamais dépasser **30 EUR TTC par mois** (cible opérationnelle à 20 EUR). FinOps est une contrainte de conception et un gate de livraison non négociable.
+- **Opérateur solo** : L'administration, le support et la maintenance restent manuels par défaut. Une automatisation n'est recevable que sur un besoin mesuré, sécurisé, réversible et compatible avec le budget.
+- **Zéro dette technique livrée** : Aucune dette structurelle ou temporaire n'est acceptée dans le périmètre V1 livré. Si un design est bancal, le **redesign complet** est hautement encouragé. Après V1, toute dette doit avoir un propriétaire, un impact mesuré, une date de revue et une condition de résolution.
+- **Production progressive** : Les déploiements sont mesurés, progressifs et immédiatement réversibles.
 
-- Lire ce fichier avant de modifier le codebase.
-- Préférer les fichiers courts, plats, et auto-documentants.
-- Ne pas introduire de dette technique provisoire sur les zones touchées.
-- Ne pas renommer ou déplacer des fichiers hors scope sans raison de design claire.
-- Utiliser Nx pour explorer le graphe de projets, les cibles et le périmètre affecté quand cela aide à réduire le contexte.
-- Utiliser ripgrep pour toute recherche locale : `rg` pour rechercher du contenu et
-  `rg --files` pour découvrir des fichiers. N'utiliser `grep` ou `find` qu'en
-  solution de repli si `rg` est indisponible ou inadapté.
-- Tout commit LLM doit porter le trailer `AI-Assisted: <agent-or-model>`.
-- Le workflow est **100% LLM** : un agent peut modifier n'importe quel fichier,
-  y compris les gates (`lefthook.yml`, `tools/ci/**`, `tools/security/**`,
-  `docs/testing/*thresholds*`, `deny.toml`, `.github/**`, `commitlint.config.cjs`,
-  `AGENTS.md`). Aucun gate de reprise humaine bloquant.
-- Ne jamais abaisser un seuil de couverture / mutation / condition ni exclure un crate
-  du gate (`pnpm check:thresholds-monotone`) — hard-block anti-Goodhart.
-- Préférer `matches!` / `assert_eq!` aux `assert!(….is_err())` / `assert!(….is_ok())`
-  dans les diffs nouveaux (`pnpm check:weak-assertions`).
-- Pas de nouveau `.unwrap()` / `.expect()` hors tests (`pnpm check:unwrap-ratchet`).
-- Pas de nouveau `sqlx::query(` runtime : viser `query!` (`pnpm check:sqlx-ratchet`).
+---
 
-## Stack
+## 2. Stack & Arborescence Active (Modular Monolith)
 
-- **Package manager**: pnpm
-- **Formatter/Linter**: Biome
-- **Hooks git**: Lefthook
-- **Rust**: stable (Cargo workspace)
-- **Frontend**: React, Vite, TanStack Router, TanStack Query, Effect
-- **Backend**: Axum, SQLx, PostgreSQL
-- **Auth**: nvbes Identity (web), JWT (API)
-- **Billing**: Stripe
+### Stack Technique
 
-## Structure
+- **Gestionnaire de paquets** : pnpm (workspaces) + Cargo (workspace Rust)
+- **Monorepo tooling** : Nx (graphe de tâches, affectation, exécution ciblée)
+- **Formatage & Lint** : Biome (`vp check`, `vp fmt`) + `cargo fmt` + `cargo clippy`
+- **Hooks Git** : Lefthook
+- **Backend** : Rust stable (2021), Axum, SQLx (mode offline `query!`), PostgreSQL
+- **Frontend** : React 19, Vite, TanStack Router, Tailwind CSS, shadcn/ui (Radix), Lucide
+- **Auth** : nvbes OAuth 2.0 / PKCE (RFC 6749, RFC 7636), Sessions, Consentement, JWT & DPoP
+- **Hébergement & Infra** : Cloudflare Pages (Frontend gratuit), Runtimes ultra-frugaux (Axum < 20Mo RAM), PostgreSQL managé / low-cost
+- **Billing** : Hors périmètre actif V1 (gelé jusqu'au lancement commercial du Cloud)
+
+### Structure du Dépôt
 
 ```
 nvbes/
 ├── apps/
-│   ├── email-worker/       # Runtime Email actif
-│   ├── identity-web/       # UI hébergée Identity (OAuth/MFA)
-│   ├── account-web/        # UI Account (session, logout RP)
-│   └── trust-risk-service/ # Runtime Trust/Risk actif
+│   ├── api/                # API serverless (Axum) : Identity + Account, aucune tâche de fond
+│   ├── worker/             # Worker unique : `serve` (Container) ou `run <task>` (Job)
+│   ├── identity-web/       # UI hébergée Identity (OAuth/MFA, récupération, React/Vite)
+│   └── account-web/        # UI Account (profil, consentements, RGPD, React/Vite)
 ├── libs/
 │   ├── rust/
-│   │   ├── core/           # Primitives partagées (config, auth, mfa)
-│   │   ├── adapters/       # Adaptateurs externes actifs (Scaleway email)
-│   │   ├── audit/          # Audit append-only
-│   │   ├── billing/        # Logique billing partagée
-│   │   ├── email/          # Service email
-│   │   ├── observability/  # Métriques, tracing, sentry
-│   │   ├── platform/       # Primitives de plateforme
-│   │   ├── region/         # Régions et résidence des données
-│   │   ├── redis/          # Primitives Redis actives
-│   │   └── trust-risk/     # Domaine Trust/Risk
+│   │   ├── identity/            # Domaine Identity (OAuth 2.1, OIDC, WebAuthn, MFA, récupération)
+│   │   ├── account/             # Domaine Account (profil, préférences, consentements légaux, RGPD)
+│   │   ├── identity-sdk-backend/# Vérification JWT et ActivityVerifier pour serveurs de ressources
+│   │   ├── dpop/                # Preuves DPoP (RFC 9449)
+│   │   ├── email/               # Commandes, gabarits et livraison email (SMTP, Scaleway TEM)
+│   │   ├── adapters/            # Adaptateurs externes (Scaleway TEM)
+│   │   ├── core/                # Primitives partagées (http, sécurité, crypto, mfa)
+│   │   ├── observability/       # Métriques Prometheus, tracing OpenTelemetry, Sentry
+│   │   └── test-utils/          # Runner de tests par mots-clés
 │   └── ts/
-│       ├── http-client/        # Transport fetch partagé (DTO + DPoP helpers)
+│       ├── http-client/        # Client fetch partagé (DTO + helpers DPoP)
 │       ├── identity-sdk-core/  # Types OpenAPI générés
-│       ├── identity-sdk-web/   # SDK navigateur Identity (OAuth/DPoP/WebAuthn)
+│       ├── identity-sdk-web/   # SDK navigateur Identity (OAuth/WebAuthn)
+│       ├── account-sdk-core/   # Contrat OpenAPI Account
 │       └── email-ui/           # Templates React Email actifs
-├── infrastructure/         # Terraform/OpenTofu et contrat FinOps
-└── archive/                # Produits et prototypes hors runtime actif
+├── infrastructure/         # Terraform/OpenTofu (api, worker, bootstrap)
+└── archive/                # Services et crates gelés (billing, trust-risk, consent, ...)
 ```
 
-Les applications archivées Account, Cloud, Developer, Enterprise et Backoffice
-ne sont pas des bases d'implémentation actives. Leur réintroduction exige une
-conception conforme à la direction V1 ; ne pas copier le code archivé par défaut.
+*Note* : Les applications archivées (`archive/apps/`) ne sont pas des bases actives. Ne pas copier le code archivé par défaut.
 
-## Repository instructions for agents
+---
 
-- `AGENTS.md` contient les règles générales du repo pour les agents de développement.
-- `.codex/instructions.md` contient les instructions consolidées pour Codex.
-- Les règles les plus proches du code prennent priorité sur les règles globales quand il y a conflit.
+## 3. Contrat Agent & Règles d'Opération Globales (100% LLM)
 
-## Conventions de nommage (dot-notation)
+- **Workflow 100% LLM** : L'agent a l'autorité technique pour modifier tout fichier du dépôt pour accomplir sa mission, y compris les fichiers de configuration de gates (`lefthook.yml`, `tools/ci/**`, `tools/security/**`, `docs/testing/*thresholds*`, `deny.toml`, `.github/**`, `commitlint.config.cjs`, `AGENTS.md`). Il n'y a aucun gate de reprise humaine bloquant.
+- **Commit Trailer obligatoire** : Tout commit LLM DOIT obligatoirement comporter le trailer `AI-Assisted: <agent-or-model>` (ex: `AI-Assisted: Antigravity`).
+- **Conventional Commits** : Messages de commit strictement conventionnels (`feat:`, `fix:`, `chore:`, `refactor:`, etc.). Lignes de résumé et de corps strictement inférieures à **80 caractères**.
+- **Respect du dirty worktree** : L'espace de travail peut comporter des modifications utilisateur en cours. Ne JAMAIS annuler, écraser ou reverter des modifications non liées à la tâche demandée.
+- **Outil de recherche local** : Utiliser impérativement `rg` (ripgrep) pour le texte et `rg --files` pour les fichiers. N'utiliser `grep` ou `find` qu'en solution de repli si `rg` est inadapté.
+- **Grounding certifié** : Avant d'inférer des noms de crates, des cibles Nx ou des routes OpenAPI réelles, consulter `.docgen/workspace-ir.json`.
+- **Diagrammes Mermaid** : Tout participant ou acteur avec des espaces ou caractères spéciaux DOIT être quoter (`participant DB as "PostgreSQL (Billing DB)"`).
+- **Seuils monotones** : Interdiction absolue d'abaisser un seuil de couverture, de mutation ou de condition dans `docs/testing/` ou d'exclure un crate (`pnpm check:thresholds-monotone`).
+- **Unwrap Ratchet** : Zéro nouveau `.unwrap()` ou `.expect()` en code de production Rust (`pnpm check:unwrap-ratchet`).
+- **SQLx Ratchet** : Zéro nouveau `sqlx::query(` runtime ; utiliser `sqlx::query!` avec métadonnées `.sqlx` hors-ligne synchronisées (`pnpm check:sqlx-ratchet`).
+- **Assertions rigoureuses** : Préférer `matches!` ou `assert_eq!` aux assertions faibles `assert!(x.is_ok())` / `assert!(x.is_err())` (`pnpm check:weak-assertions`).
 
-Les fichiers Rust utilisent une convention plate avec des noms qualifiés par des points, pour une navigation LLM optimale :
+---
 
-```
-apps/account-service/src/
-├── identity.app.rs                    # AppState
-├── identity.domains.billing.mod.rs    # module billing
-├── identity.domains.billing.service.rs# logique métier
-├── identity.domains.billing.routes.rs # routes HTTP
-├── identity.http.error.rs             # erreurs HTTP
-└── identity.http.middleware.jwt.rs    # middleware JWT
-```
+## 4. RTK (Rust Token Killer) — Règle Shell & Proxy CLI
 
-Les modules Rust sont déclarés avec `#[path]` :
-
-```rust
-// identity.domains.billing.mod.rs
-#[path = "identity.domains.billing.service.rs"]
-pub mod service;
-#[path = "identity.domains.billing.routes.rs"]
-pub mod routes;
-```
-
-**Règles** :
-
-- Tous les fichiers `.rs` sont dans `src/` (pas de sous-répertoires profonds)
-- Le préfixe (`identity.`, `drive.`, `backoffice.`) identifie la crate ou le domaine historique conservé dans le fichier
-- Le suffixe (`service`, `routes`, `db`) identifie la couche
-- Les modules Rust restent organisés logiquement via `mod.rs`
-
-## Limites de taille de fichier
-
-| Seuil      | Action                    |
-| ---------- | ------------------------- |
-| 300 lignes | Envisager l'extraction    |
-| 500 lignes | **Obligation** d'extraire |
-
-Fichiers sous 300 lignes = contexte LLM optimal. Le LLM peut lire un fichier entièrement sans diluer son attention.
-
-## Philosophie d'architecture
-
-- Favoriser le graphe de projets et les frontières de domaine nettes plutôt qu’un gros dossier monolithique.
-- Préserver l’indépendance des produits Account, Cloud, Billing, Developer, Enterprise et Backoffice.
-- Partager seulement les primitives réellement transverses.
-- Toute extraction doit réduire la taille cognitive du code, pas seulement déplacer des lignes.
-- Le backlog de refactor agentique est documenté dans [docs/blueprint/nvbes-monorepo-agentic-refactor.work.md](docs/blueprint/nvbes-monorepo-agentic-refactor.work.md).
-
-## Commandes
+Pour minimiser la consommation de tokens de contexte (économie de 60 à 90%), préfixer systématiquement les commandes shell par `rtk` :
 
 ```bash
-pnpm dev              # Runtimes locaux principaux
-pnpm dev:identity-service
-pnpm dev:account-service
-pnpm dev:billing-service
-pnpm dev:email-worker
-pnpm dev:trust-risk-service
-pnpm check            # Checks complets
-pnpm lint             # Lint complet
-pnpm test             # Tests complets
-pnpm verify           # Vérification pre-commit
-
-# Web/TS
-pnpm lint:web
-pnpm check:web
-
-# Rust
-cargo check --workspace
-
-# Nx
-pnpm nx:show-projects
-pnpm nx:show-project <project>
-pnpm nx:affected
+rtk cargo test
+rtk git status
+rtk pnpm check
+rtk docker ps
+rtk rg "pattern"
 ```
 
-## Validation attendue
+### Commandes Méta RTK
+- `rtk gain` : Affiche les gains de tokens et statistiques de compression.
+- `rtk gain --history` : Historique des commandes avec gains associés.
+- `rtk discover` : Détecte les opportunités d'optimisation manquées.
+- `rtk proxy <cmd>` : Exécution brute sans filtrage (à utiliser uniquement pour le débogage).
 
-- Après changement Rust, exécuter `cargo check --workspace`.
-- Après changement frontend, exécuter le check ciblé du package touché.
-- Après changement transversal, exécuter les checks racine pertinents et documenter les éventuelles limites.
+---
 
-## Règles de développement
+## 5. Routage, Profils & Workflows Déterministes
 
-### Contexte V1 finale
+Avant de charger un contexte large, sélectionner le profil adéquat et le workflow déterministe correspondant :
 
-- Le travail actif vise le **socle V1**, pas un produit final.
-- Aucune dette technique ou structurelle connue n'est acceptable dans le
-  périmètre livré.
-- Si une partie du design ou de l'implémentation est bancale, le **redesign
-  complet** est hautement préféré et encouragé.
-- Éviter les rustines, les compromis temporaires et les extensions
-  incrémentales sur une base faible.
-- Après V1, toute dette acceptée doit avoir un propriétaire, une cause, un
-  impact mesuré, une date de revue et une condition de résolution.
-- Toute ressource ou automatisation nouvelle doit démontrer sa compatibilité
-  avec le plafond global de 30 EUR TTC par mois.
+| Type de requête | Profil | Workflow | Compétences clés | Commande de validation |
+|---|---|---|---|---|
+| API & backend Rust | `rust-api` | `implement-feature` ou `fix-bug` | `rust`, `axum`, `sqlx-code-review`, `rust-testing` | `cargo check --workspace` |
+| Interface React / Web | `react-web` | `implement-feature` ou `fix-bug` | `react`, `typescript`, `shadcn`, `frontend-design` | `pnpm check:web` (ou check ciblé) |
+| Base de données & Migrations | `database` | `implement-feature` | `postgresql`, `sqlx-code-review`, `migrations` | Check API + revue migration |
+| Audit de sécurité & secrets | `security` | `review-pr` | `security-expert`, `owasp`, `secrets-management` | `pnpm check:secrets` + findings |
+| Architecture & Refactoring | `architect` | `refactor-module` | `clean-architecture`, `adr-drafting` | Plan / ADR + checks ciblés |
+| Documentation & Agent | `docs` | `docs-update` | `typescript-docs`, `documentation-system` | `pnpm agent:doctor` |
+| Requête large ou ambiguë | `manager` | `triage` | découverte ciblée | Cadrage explicite avant toute édition |
 
-# Hiérarchie DE SÉLECTION DE COMPOSANTS (OBLIGATOIRE — TOUS LLM)
+### Modes d'Opération de l'Agent
+- **analysis** : Revue, plan, architecture (lecture seule privilégiée).
+- **implementation** : Modification ciblée de code avec scope explicite.
+- **review** : Analyse de bugs, régressions et tests (findings en premier, ordonnés par criticité).
+- **refactor** : Redesign structurel sans introduire de dette technique temporaire.
 
-**Pour TOUS les sites web/projets frontend, suivre cet ordre STRICTEMENT, sans exception :**
+### Contrat de Fin de Tâche (Definition of Done)
+1. Fichiers modifiés clairement identifiés.
+2. Commandes de validation exécutées et succès confirmé (ou justification explicite si un check est sauté).
+3. Aucun warning ou erreur de compilation résiduelle.
+4. Proposition de mise à jour de mémoire (`.agents/memory/`) uniquement si le savoir acquis est durable.
 
-1. **Registry du projet** — Utiliser d'abord les composants du registry interne du projet (`apps/*/components/ui`, registry local `components.json`)
-2. **Registry officiel shadcn/ui** — Si aucun composant utile dans le registry projet, utiliser le registry officiel shadcn/ui
-   - Docs: https://ui.shadcn.com/docs/registry/getting-started
-   - Directory: https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/directory.json
-   - Installation: `pnpm dlx shadcn@latest add <component>`
-3. **Registry externe compatible** — Chercher un registry tiers avec des composants utilisables (ex: `@radix-ui/themes`, `@headlessui/react`, registries communautaires)
-4. **Tailwind CSS** — Si aucun composant ne correspond, écrire le composant avec Tailwind CSS (classes utilitaires uniquement)
-5. **CSS pur / CSS Modules** — UNIQUEMENT en dernier recours, si Tailwind n'est pas disponible ou incompatible
+---
 
-**RÈGLES IMPÉRATIVES :**
+## 6. Gestion de la Mémoire de l'Agent (Agent Memory)
 
-- **NE JAMAIS** faire de solution "fait maison" (custom from scratch) avant d'avoir épuisé les 4 premiers niveaux
-- Tout composant custom DOIT être justifié par écrit (pourquoi rien des niveaux 1-4 ne convient)
-- Pour **TOUT NOUVEAU site web** : installer **impérativement** dans cet ordre → `tailwindcss` → `shadcn/ui` → registries nécessaires
-- Pas d'exception, pas de "vite fait" — la hiérarchie est non-négociable
+La mémoire persistante (`.agents/memory/`) stocke le savoir durable du projet, et non des notes de session éphémères.
 
-### Styling et design frontend
+| Emplacement | Rôle |
+|---|---|
+| `.agents/memory/project.md` | Synthèse stable du projet, direction V1 et périmètres actifs |
+| `.agents/memory/architecture.md` | Décisions architecturales durables et justifications |
+| `.agents/memory/conventions.md` | Conventions de code et règles non évidentes |
+| `.agents/memory/gotchas.md` | Modes d'échec récurrents, pièges et bords tranchants |
+| `.agents/memory/session-notes.md` | Notes temporaires à promouvoir ou purger |
 
-- Éviter de nester des cards dans des cards. Une card doit représenter un bloc autonome; pour structurer l'intérieur d'une card, préférer des sections, listes, bordures, séparateurs, fonds subtils ou layouts non cardés.
-- Éviter les emojis dans l'interface. Les icônes de composants ou de bibliothèques (ex: Lucide) restent autorisées; l'emoji cookie est toléré uniquement pour les éléments liés aux cookies.
+### Ce qu'il faut persister
+- Décisions architecturales clés.
+- Commandes et gates de validation spécifiques au monorepo.
+- Conventions non intuitives.
+- Pièges de configuration ou d'outillage récurrents.
 
-### Conception LLM-friendly
+### Ce qu'il ne faut PAS persister
+- Connaissances génériques de langages ou frameworks.
+- Bugs ponctuels une fois résolus.
+- Plans d'implémentation temporaires ou listes TODO périmées.
+- Secrets, tokens, identifiants ou données personnelles.
 
-Le codebase est conçu pour être navigable par des LLMs (Claude Code, Cursor) :
+*Règle de taille* : Maintenir chaque fichier mémoire sous la barre des **200 lignes**.
 
-- **Fichiers < 300 lignes** : lecture complète en un appel, pas de dilution d'attention
-- **Noms auto-documentants** : le nom du fichier dit exactement ce qu'il contient
-- **Structure plate** : pas de nesting profond, le LLM trouve les fichiers en 1 Glob
-- **Modules explicites** : `mod.rs` avec `#[path]` fait le lien entre le fichier plat et le module Rust
-- **Pas de `utils.rs` / `helpers.rs`** : chaque concept a son fichier dédié
-- **Pas de logique cachée dans les barrels** : les `mod.rs` déclarent les modules, ils ne portent pas la logique métier
-- **Frontiers de domaine explicites** : si deux responsabilités diffèrent, elles doivent vivre dans des fichiers séparés
+---
 
-### Patterns de code
+## 7. Compétences (Skills) & Intégrations MCP
 
-- Pas d'imports inutiles ou de ré-exports redondants
-- Utiliser les types et traits corrects (ex: `&PgPool` directement, pas de wrapper inutile)
-- **Dépendances explicites** : Préférer passer les dépendances exactes (`&PgPool`, `&Config`) aux fonctions métier plutôt que l'objet global `&AppState` (évite le pattern Service Locator).
-- Respecter les conventions Rust : `thiserror` pour les erreurs, pas de `anyhow` dans les crates libs
-- SQLx : utiliser `&state.db` (PgPool) directement, pas de méthode `.pool()`
-- TypeScript : INTERDICTION STRICTE du type `any`. Utiliser `unknown` ou des types précis. Pas de passe-droit.
+- **Registre des compétences** : Déclaré dans `.agents/registry.yaml` avec implémentations dans `.agents/skills/<skill>/SKILL.md`.
+- **Règle de chargement** : Charger le plus petit ensemble de compétences suffisant pour la tâche. Préférer les compétences spécifiques au repo aux compétences génériques.
+- **Serveurs MCP configurés** :
+  - `nx-mcp` (`npx nx mcp`) : Inspection du graphe de projets, dépendances et exécution des cibles Nx.
+  - `shadcn` (`npx shadcn@latest mcp`) : Découverte et installation de composants d'interface.
+- **Maintenance** : `pnpm agent:skills` et `pnpm agent:doctor`.
 
-### Compilation
+---
 
-- **TOUJOURS** faire `cargo check --workspace` après chaque modification Rust
-- Corriger les erreurs de compilation immédiatement, pas de commits avec warnings/errors
-- Pas de `#[allow(unused)]` ou de suppressions de warnings sans justification
+## 8. Conventions de Code & Architecture LLM-Friendly
 
-### Règles de conception
+### Limites de Taille de Fichier
 
-- Identity, Account, Billing, Email, Trust/Risk et Platform Operations gardent
-  des sources de vérité et des contrats distincts.
-- Réécrire le code si nécessaire plutôt que de copier le code produit archivé.
-- Les capacités livrées doivent être complètes ou absentes, jamais à moitié
-  implémentées.
-- Le socle ne dépend pas de Cloud, Drive ni d'un autre produit final.
-- Mutualiser une capacité ne signifie pas créer automatiquement un microservice.
-- Le traitement opérateur reste manuel par défaut ; automatiser uniquement un
-  besoin mesuré, critique ou protecteur du budget.
+| Seuil | Action |
+|---|---|
+| < 400 lignes | Contexte LLM optimal : lecture complète en un appel sans dilution |
+| 400 - 800 lignes | **Avertissement (Warning)** : Envisager l'extraction (`scripts/check-llm-structure.sh`) |
+| > 800 lignes | **Erreur bloquante stricte** : Obligation d'extraire |
+
+### Conventions Rust (Flat Dot-Notation)
+
+Les fichiers Rust utilisent une structure plate qualifiée par des points pour une navigation LLM immédiate :
+
+```
+apps/api/src/
+├── api.config.rs            # Configuration fail-closed (lookup pur, testable)
+├── api.identity.runtime.rs  # Secrets et registres Identity validés au démarrage
+├── api.identity.rs          # Montage HTTP du domaine Identity
+├── api.identity.activity.rs # Vérification d'activité des jetons in-process (Account)
+├── api.client_ip.rs         # IP client derrière les proxies de confiance
+└── api.routes.rs            # Assemblage du routeur
+```
+
+- Tous les `.rs` résident directement dans `src/` (aucun sous-répertoire profond).
+- Pas de `utils.rs` ou `helpers.rs` génériques : chaque concept a son fichier nommé.
+- Pas de logique métier dans les fichiers de barrel (`mod.rs`).
 
 ### Architecture des Services
 
-- **Services spécialisés** : Éviter les "God Objects" (un seul gros service par domaine). Préférer scinder en capacités métier (ex: `SubscriptionService`, `CheckoutService`).
-- **Module-as-a-Service** : Si un service n'a pas d'état interne, privilégier des fonctions simples dans un module plutôt qu'une struct avec des méthodes.
-- **Séparation des couches** : Maintenir une séparation nette entre persistence (`db.rs`), validation métier pure (`validation.rs`) et orchestration (`service.rs` ou `logic.rs`).
+- **Module-as-a-Service** : Si un service n'a pas d'état interne, privilégier des fonctions pures dans un module plutôt qu'une struct avec méthodes.
+- **Séparation stricte des couches** : Maintenir une séparation nette entre persistance (`db.rs`), validation métier pure (`validation.rs`) et orchestration (`service.rs`).
+- **Dépendances explicites** : Préférer passer les dépendances exactes (`&PgPool`, `&Config`) aux fonctions plutôt que l'objet global `&AppState` (évite le pattern Service Locator).
+- **TypeScript strict** : INTERDICTION STRICTE du type `any`. Utiliser `unknown` ou des types précis et validés.
 
-## Règles de Qualité et Sécurité en Amont (SonarQube, CodeQL, Security CI, CI)
+---
 
-Pour éviter les allers-retours avec les pipelines CI distants et SonarQube, tout agent et développeur doit appliquer STRICTEMENT ces règles en amont dès la conception et l'écriture du code :
+## 9. Hiérarchie de Sélection de Composants Frontend (Obligatoire)
 
-### 1. SonarQube / SonarCloud (Strict Quality Gate)
-- **SQL (`plsql:DeleteOrUpdateWithoutWhereCheck`)** : Tout `UPDATE` ou `DELETE` SQL DOIT impérativement comporter une clause `WHERE` explicite. Ne jamais écrire d'`UPDATE` ou `DELETE` sans clause `WHERE`.
-- **TypeScript / JavaScript (`typescript:S2871`)** : Tout appel `.sort()` sur un tableau DOIT impérativement fournir une fonction de comparaison explicite (ex: `(a, b) => a.localeCompare(b)` pour les chaînes, `(a, b) => a - b` pour les nombres). Le tri sans comparateur est interdit.
-- **Gestion des rejets de Promise (`typescript:S6671`)** : Dans les listeners d'événements, workers et callbacks, ne rejeter une Promise qu'avec une instance d'`Error` (`reject(new Error(...))`), jamais avec un événement brut, un objet générique ou une chaîne.
-- **Anti-ReDoS / Backtracking (`typescript:S8786`)** : Interdiction absolue des quantificateurs imbriqués ou regex à backtracking catastrophique (ex: remplacer `/=+$/` par `/={1,2}$/` ou des méthodes de chaîne `.endsWith()`, `.startsWith()`, `.slice()`).
-- **Nombres pseudo-aléatoires sécurisés (`typescript:S2245`)** : Interdiction totale de `Math.random()` dans tout contexte de sécurité, authentification, sessions, tokens, génération de secrets, identifiants, decoys ou signaux bot. Utiliser exclusivement `crypto.getRandomValues(new Uint8Array(...))` ou un CSPRNG.
-- **Parsing d'entiers (`typescript:S7773`)** : Toujours utiliser `Number.parseInt(...)` et `Number.parseFloat(...)` au lieu des fonctions globales non qualifiées `parseInt(...)` et `parseFloat(...)`.
-- **Paramètres par défaut (`typescript:S7737`)** : Ne pas initialiser les paramètres par défaut de fonctions avec des expressions complexes ou des objets mutables recalculés ; déclarer des constantes au niveau module.
-- **Rust et Asynchronicité (`rust:S7487`)** : Interdiction formelle d'appels bloquants dans un contexte asynchrone (ex: `child.wait()` ou `thread::sleep` dans Tokio). Utiliser `tokio::task::spawn_blocking` ou les équivalents asynchrones `tokio::process` / `tokio::time::sleep`.
-- **Couverture de code sur le nouveau code (`new_coverage`)** : SonarCloud exige au minimum **80% de couverture** sur tout nouveau code. Tout code métier ou composant ajouté doit avoir ses tests unitaires/intégration associés. Les rapports LCOV TypeScript doivent pointer vers des chemins relatifs à la racine (`SF:apps/...` ou `SF:libs/...`).
-- **Duplication** : Moins de 3% de code dupliqué sur le nouveau code.
+Pour tout composant ou écran d'interface web, respecter STRICTEMENT cet ordre :
 
-### 2. CodeQL (Actions, JavaScript/TypeScript, Rust)
-- **Injection de commandes** : Ne jamais interpoler de variables dynamiques dans des chaînes de commande shell (`exec`). Préférer `execFile` ou `spawn` avec des arguments en tableau typé.
-- **Path Traversal** : Toujours valider et confiner les chemins résolus à l'aide de `path.resolve` et s'assurer qu'aucun segment `..` ne permet d'échapper au périmètre autorisé.
-- **Sécurité des Workflows GitHub Actions** : Ne JAMAIS interpoler `${{ github.event... }}` directement dans des blocs `run:`. Toujours mapper les données GitHub dans des variables d'environnement `env:`.
-- **Sécurité Rust** : Tout bloc `unsafe` doit être obligatoirement accompagné d'un commentaire `// SAFETY:` détaillant ses invariants et garanties de sécurité mémoire.
+1. **Registry interne du projet** : Réutiliser les composants existants (`apps/*/components/ui`, local `components.json`).
+2. **Registry officiel shadcn/ui** : Installer via `pnpm dlx shadcn@latest add <component>`.
+3. **Registry externe compatible** : Composants accessibles tiers (ex: `@radix-ui/themes`, `@headlessui/react`).
+4. **Tailwind CSS** : Styliser via classes utilitaires pures.
+5. **CSS pur / modules** : En tout dernier recours exceptionnel uniquement.
 
-### 3. Security CI (OSV, Cargo Deny, Trivy, Gitleaks, Zizmor)
-- **OSV Scanner (`osv-lockfiles`)** : Aucune dépendance comportant une CVE / GHSA active n'est tolérée dans `pnpm-lock.yaml` ou `Cargo.lock`. Résoudre immédiatement via des overrides dans `pnpm-workspace.yaml` ou des montées de version.
-- **Cargo Deny** : Respect strict des licences autorisées (AGPL-3.0, MIT, Apache-2.0, BSD-3-Clause). Aucune advisory RUSTSEC tolérée. Pas de versions multiples non autorisées de crates.
-- **Gitleaks** : Zéro secret, token, mot de passe ou clé privée commité dans le dépôt ou présent dans l'historique git.
-- **Trivy** : Zéro vulnérabilité ou misconfiguration de sévérité HIGH ou CRITICAL dans les fichiers et conteneurs du projet.
-- **Zizmor** : GitHub Actions strictement durcies (actions épinglées par SHA complet, permissions minimales `permissions: contents: read`).
+### Règles d'Interface & Design
+- **Interdiction du "fait maison"** : Tout composant custom doit être justifié par écrit (pourquoi les niveaux 1 à 4 ne conviennent pas).
+- **Pas de cards imbriquées** : Une carte représente un bloc autonome. Pour structurer l'intérieur d'une carte, utiliser des sections, bordures, séparateurs ou fonds subtils.
+- **Zéro emoji dans l'UI** : Utiliser des icônes SVG de bibliothèque (Lucide). Seul l'emoji cookie est toléré pour les bandeaux de consentement.
 
-### 4. CI & Gates NVBES
-- **Seuils monotones (`pnpm check:thresholds-monotone`)** : Interdiction absolue de baisser un seuil de couverture, de mutation ou de condition dans `docs/testing/` ou d'exclure un crate.
-- **Unwrap Ratchet (`pnpm check:unwrap-ratchet`)** : Zéro nouveau `.unwrap()` ou `.expect()` en code de production Rust.
-- **SQLx Ratchet (`pnpm check:sqlx-ratchet`)** : Zéro nouveau `sqlx::query(` runtime ; utiliser `sqlx::query!` avec métadonnées `.sqlx` hors-ligne synchronisées.
-- **Weak Assertions (`pnpm check:weak-assertions`)** : Utiliser `matches!` ou `assert_eq!` au lieu de `assert!(x.is_ok())` / `assert!(x.is_err())`.
-- **Règles en amont automatisées (`pnpm check:upstream-rules`)** : Validation automatique locale des anti-patterns SonarQube et CodeQL avant commit.
-- **Migrations DB** : Tout fichier de migration SQL doit comporter un `-- migrate:up` et un `-- migrate:down` symétriques et se terminer par un saut de ligne (`\n`).
-- **Commits** : Conventional Commits avec lignes de corps inférieures à 80 caractères et trailer obligatoire `AI-Assisted: <nom-de-l-agent>`.
+---
 
-## Validation avant fin de tâche
+## 10. Règles de Qualité et Sécurité en Amont
 
-- Après modification de code: lancer au minimum les checks cibles du scope touché
-- Si une logique métier est modifiée, ajouter un test ciblé ou expliquer explicitement pourquoi il n'est pas pertinent
-- Si un check est sauté, expliquer clairement pourquoi dans la réponse
+Ces règles sont vérifiées localement avant commit (`pnpm check:upstream-rules`, `pnpm check:llm-quality`) :
 
-## Sécurité
+### 1. SonarQube & SonarCloud
+- **SQL (`plsql:DeleteOrUpdateWithoutWhereCheck`)** : Tout `UPDATE` ou `DELETE` SQL DOIT impérativement comporter une clause `WHERE` explicite.
+- **TypeScript (`typescript:S2871`)** : Tout `.sort()` sur tableau DOIT fournir un comparateur explicite (ex: `(a, b) => a.localeCompare(b)` ou `(a, b) => a - b`).
+- **Promises (`typescript:S6671`)** : Ne rejeter une Promise qu'avec une instance de `Error` (`reject(new Error(...))`).
+- **Anti-ReDoS (`typescript:S8786`)** : Interdiction des quantificateurs imbriqués ou regex à risque de backtracking catastrophique.
+- **Aleatoire sécurisé (`typescript:S2245`)** : Interdiction de `Math.random()` dans tout contexte de sécurité, sessions, tokens, secrets ou signaux bot. Utiliser exclusivement `crypto.getRandomValues()`.
+- **Parsing numérique (`typescript:S7773`)** : Utiliser toujours `Number.parseInt()` et `Number.parseFloat()`.
+- **Paramètres par défaut (`typescript:S7737`)** : Ne pas initialiser avec des objets mutables recalculés ; déclarer des constantes de module.
+- **Rust asynchrone (`rust:S7487`)** : Interdiction formelle d'appels bloquants dans Tokio (`thread::sleep`, `child.wait()`). Utiliser `tokio::task::spawn_blocking` ou les équivalents asynchrones Tokio.
+- **Couverture de code** : SonarCloud exige au minimum **80% de couverture** sur tout nouveau code. Chemins LCOV relatifs à la racine (`SF:apps/...`, `SF:libs/...`).
+- **Duplication** : Moins de 3% de duplication sur le nouveau code.
 
-- Ne jamais commit de secrets ou clés API
-- Utiliser des variables d'environnement via `.env` (voir `.env.example`)
+### 2. CodeQL & Sécurité Applicative
+- **Injection de commandes** : Ne jamais interpoler de variables dans une chaîne shell (`exec`). Utiliser `execFile` ou `spawn` avec un tableau d'arguments.
+- **Path Traversal** : Toujours valider et confiner les chemins résolus via `path.resolve`.
+- **GitHub Actions** : Ne JAMAIS interpoler `${{ github.event... }}` dans un bloc `run:`. Mapper systématiquement dans des variables d'environnement `env:`.
+- **Rust Unsafe** : Tout bloc `unsafe` DOIT comporter un commentaire `// SAFETY:` explicitant ses garanties et invariants mémoire.
 
-<!-- nx configuration start-->
-<!-- Leave the start & end comments to automatically receive updates. -->
+### 3. Contrôles de Sécurité CI
+- **OSV Scanner** : Zéro CVE active dans `pnpm-lock.yaml` ou `Cargo.lock`.
+- **Cargo Deny** : Licences autorisées (AGPL-3.0, MIT, Apache-2.0, BSD-3-Clause) et zéro advisory RUSTSEC.
+- **Gitleaks** : Zéro secret, token, mot de passe ou clé privée dans le dépôt.
+- **Trivy** : Zéro vulnérabilité ou misconfiguration de sévérité HIGH ou CRITICAL.
+- **Zizmor** : Actions GitHub épinglées par SHA complet, permissions minimales `permissions: contents: read`.
 
-## General Guidelines for working with Nx
+### 4. Gates & Ratchets NVBES
+- **Migrations DB** : Tout fichier de migration SQL comporte un `-- migrate:up` et un `-- migrate:down` symétriques et se termine par un saut de ligne.
+- **Ratchets** : Maintien strict des ratchets (`unwrap-ratchet`, `sqlx-ratchet`, `weak-assertions`, `thresholds-monotone`).
 
-- For navigating/exploring the workspace, invoke the `nx-workspace` skill first - it has patterns for querying projects, targets, and dependencies
-- When running tasks (for example build, lint, test, e2e, etc.), always prefer running the task through `nx` (i.e. `nx run`, `nx run-many`, `nx affected`) instead of using the underlying tooling directly
-- Prefix nx commands with the workspace's package manager (e.g., `pnpm nx build`, `npm exec nx test`) - avoids using globally installed CLI
-- You have access to the Nx MCP server and its tools, use them to help the user
-- For Nx plugin best practices, check `node_modules/@nx/<plugin>/PLUGIN.md`. Not all plugins have this file - proceed without it if unavailable.
-- NEVER guess CLI flags - always check nx_docs or `--help` first when unsure
+---
 
-## Scaffolding & Generators
+## 11. Directives d'Orchestration Nx
 
-- For scaffolding tasks (creating apps, libs, project structure, setup), ALWAYS invoke the `nx-generate` skill FIRST before exploring or calling MCP tools
+- Préférer systématiquement l'exécution de tâches via Nx (`pnpm nx run`, `pnpm nx run-many`, `pnpm nx affected`).
+- Préfixer les commandes avec `pnpm` (évite l'utilisation d'une CLI globale).
+- Exploration du workspace : Utiliser en priorité la compétence `nx-workspace`.
+- Génération & Scaffolding : Utiliser en priorité la compétence `nx-generate`.
+- Ne jamais deviner de drapeaux CLI Nx : toujours vérifier avec `--help` ou `nx_docs`.
 
-## When to use nx_docs
+---
 
-- USE for: advanced config options, unfamiliar flags, migration guides, plugin configuration, edge cases
-- DON'T USE for: basic generator syntax (`nx g @nx/react:app`), standard commands, things you already know
-- The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
+## 12. Commandes de Développement et Validation
 
-<!-- nx configuration end-->
+```bash
+# Runtimes Locaux
+pnpm dev              # API (8080) + Worker (8081)
+pnpm dev:api          # API Monolithe Modulaire en isolation
+pnpm dev:worker       # Worker en isolation (`run migrate` puis `serve`)
+pnpm dev:identity-web # Interface Identity hébergée (port 3000)
+pnpm dev:account-web  # Interface Account (port 3001)
+pnpm dev:infra        # Infrastructure locale (PostgreSQL, Valkey, Mailpit)
+
+# Vérifications & Tests
+pnpm check            # Suite complète (structure, limites, boundaries, secrets, finops, web, api)
+pnpm check:llm-quality# Ratchets qualité (monotone, unwraps, sqlx, weak assertions, upstream rules)
+pnpm check:structure  # Platitude src/ et seuils de taille (400 warning / 800 erreur)
+pnpm lint             # Linter Biome & cargo clippy
+pnpm format:check     # Vérification du formatage Biome & rustfmt
+pnpm test             # Tests complets
+
+# Ciblés Web & Rust
+pnpm check:web        # Typecheck & linting TypeScript
+cargo check --workspace # Compilation de l'ensemble du workspace Cargo
+
+# Nx
+pnpm nx:show-projects # Liste des projets du monorepo
+pnpm nx affected -t check # Vérifie uniquement les projets affectés
+```
+
+---
+
+## 13. Gotchas & Pièges Récurrents (Gotcha Memory)
+
+- **Dirty worktrees** : Ne jamais exécuter de commandes de purge git (`git reset --hard`, `git checkout .`, `git clean -fd`) sans instruction explicite de l'utilisateur.
+- **Ports locaux standardisés** :
+  - `8080` : API Monolithe Modulaire
+  - `8081` : Worker unifié d'arrière-plan
+  - `3000` : Identity Web
+  - `3001` : Account Web
+  - `5432` : PostgreSQL
+  - `6379` : Valkey / Redis
+  - `8025` / `1025` : Mailpit (UI web / SMTP local)
+- **Multi-schémas PostgreSQL** : chaque domaine migre dans son schéma (`identity`, `account`) via `nvbes-worker run migrate` ; l'API et le worker résolvent les tables par `search_path = identity, account, public`. L'API ne migre jamais.
+- **Secrets partagés** : `NVBES_IDENTITY_MFA_ENCRYPTION_KEY` et `NVBES_IDENTITY_RATE_LIMIT_KEY` doivent être identiques sur toutes les instances API et le worker ; hors `development`/`test`, aucun secret n'est généré et l'absence d'une variable empêche le démarrage.
+- **Variables d'environnement** : Toujours utiliser `.env` (synchronisé avec `.env.example` via `pnpm env:check`). Ne jamais commiter de secret réel.

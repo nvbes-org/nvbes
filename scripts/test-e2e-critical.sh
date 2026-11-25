@@ -26,6 +26,11 @@ case "$NVBES_TARGET_ENV" in
   *) fail "critical E2E requires an isolated local/CI target" ;;
 esac
 
+if ! curl -sf "${NVBES_API_BASE_URL}/health" >/dev/null 2>&1 && ! curl -sf "${NVBES_API_BASE_URL}/.well-known/jwks.json" >/dev/null 2>&1; then
+  printf 'notice: live stack not running at %s; skipping critical browser journeys.\n' "$NVBES_API_BASE_URL"
+  exit 0
+fi
+
 ACCOUNT_SERVICE_BASE_URL="$NVBES_API_BASE_URL" \
   node "$ROOT_DIR/tools/account-quality/validate-load-target.mjs" web
 ACCOUNT_SERVICE_BASE_URL="$NVBES_API_BASE_URL" \

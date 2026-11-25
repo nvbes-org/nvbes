@@ -5,6 +5,8 @@ use axum::{
     response::Response,
 };
 use std::time::Instant;
+#[cfg(feature = "otlp")]
+use tracing::Instrument;
 
 use crate::metrics::HttpMetrics;
 #[cfg(feature = "otlp")]
@@ -43,8 +45,6 @@ pub async fn observe_request(
     if let Some(traceparent) = otel_span.as_ref().and_then(traceparent_from_span) {
         current_traceparent = traceparent;
     }
-    #[cfg(feature = "otlp")]
-    let _span_guard = otel_span.as_ref().map(|s| s.enter());
 
     // Store trace context in extensions so downstream handlers and outgoing
     // HTTP clients can retrieve it for propagation.
@@ -85,6 +85,13 @@ pub async fn observe_request(
         path_template = %path_template,
     );
 
+    #[cfg(feature = "otlp")]
+    let mut response = if let Some(span) = otel_span.as_ref().cloned() {
+        next.run(req).instrument(span).await
+    } else {
+        next.run(req).await
+    };
+    #[cfg(not(feature = "otlp"))]
     let mut response = next.run(req).await;
     let status = response.status();
     let duration_ms = started_at.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
@@ -178,11 +185,6 @@ pub async fn observe_request(
             status = status.as_u16(),
             duration_ms,
         );
-    }
-
-    #[cfg(feature = "otlp")]
-    if let Some(guard) = _span_guard {
-        drop(guard);
     }
 
     response

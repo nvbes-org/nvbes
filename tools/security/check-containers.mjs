@@ -44,8 +44,12 @@ const catalog = existsSync(catalogPath)
   : { rust: [] };
 const dockerfiles = [
   ...new Set([
-    ...catalog.rust.map(({ dockerfile }) => dockerfile),
-    'apps/platform-operations-service/Dockerfile',
+    ...catalog.rust.map(({ dockerfile }) =>
+      existsSync(dockerfile) ? dockerfile : `archive/${dockerfile}`,
+    ),
+    existsSync('apps/platform-operations-service/Dockerfile')
+      ? 'apps/platform-operations-service/Dockerfile'
+      : 'archive/apps/platform-operations-service/Dockerfile',
   ]),
 ];
 
@@ -75,13 +79,7 @@ for (const dockerfile of dockerfiles) {
   }
 }
 
-const releaseImages = [
-  'nvbes-account-service',
-  'nvbes-billing-service',
-  'nvbes-email-worker',
-  'nvbes-identity-service',
-  'nvbes-trust-risk-service',
-];
+const releaseImages = ['nvbes-api', 'nvbes-worker'];
 
 const catalogImages = new Set(catalog.rust.map(({ image }) => image));
 for (const image of releaseImages) {

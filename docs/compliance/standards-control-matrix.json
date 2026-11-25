@@ -138,7 +138,7 @@
           "includes": ["has_recent_phishing_resistant_authentication", "Aal::Aal2"]
         },
         {
-          "path": "apps/identity-service/src/identity.mfa.rs",
+          "path": "libs/rust/identity/src/identity.mfa.rs",
           "includes": ["step_up_expires_at", "grant_step_up", "step_up_granted"]
         }
       ]
@@ -161,10 +161,6 @@
           ]
         },
         {
-          "path": "libs/rust/platform/src/platform.cockpit.auth.rs",
-          "includes": ["DEFAULT_OPERATOR_ROLE", "MFA_STEP_UP_HEADER", "has_mfa_step_up"]
-        },
-        {
           "path": "tools/security/check-production-security-operations.mjs",
           "includes": [
             "privileged_phishing_resistant_access",
@@ -181,15 +177,11 @@
       "frameworks": ["OAUTH-OIDC-FAPI"],
       "evidence": [
         {
-          "path": "apps/identity-service/src/identity.tokens.config.rs",
-          "includes": [
-            "TokenConfig",
-            "allowed_audiences",
-            "issuer must be an HTTPS origin"
-          ]
+          "path": "libs/rust/identity/src/identity.tokens.config.rs",
+          "includes": ["TokenConfig", "allowed_audiences", "issuer must be an HTTPS origin"]
         },
         {
-          "path": "apps/identity-service/src/identity.tokens.rs",
+          "path": "libs/rust/identity/src/identity.tokens.rs",
           "includes": ["AccessTokenClaims", "JsonWebKeySet", "ACCESS_TOKEN_TTL_SECONDS"]
         }
       ]
@@ -282,7 +274,7 @@
     {
       "id": "STD_CTRL_010",
       "name": "Provider-hosted payment data boundary",
-      "status": "implemented",
+      "status": "not-applicable",
       "profiles": ["NVBES_CRITICAL"],
       "frameworks": ["PCI-DSS-4.0.1", "OWASP-ASVS-5.0.0"],
       "evidence": [
@@ -291,18 +283,12 @@
           "includes": ["Checkout", "webhooks Stripe doivent etre signes, idempotents et audites"]
         },
         {
-          "path": "libs/rust/billing/src/stripe.rs",
-          "includes": ["verify_stripe_signature"]
-        },
-        {
-          "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
-          "includes": ["payload_hash", "WebhookRetryDecision::Duplicate"]
-        },
-        {
-          "path": "apps/billing-service/src/billing.portal.rs",
-          "includes": ["create_portal_handler", "portal_session_created"]
+          "path": "docs/product/nvbes-product-strategy.md",
+          "includes": ["Billing (Stripe)"]
         }
-      ]
+      ],
+      "gap": "V1 processes no payment: billing is frozen and its crates are archived, so no card or payment data reaches nvbes runtimes.",
+      "target": "Re-assess and restore provider-hosted checkout and signed, idempotent webhook evidence before the paid cloud launch."
     },
     {
       "id": "STD_CTRL_011",

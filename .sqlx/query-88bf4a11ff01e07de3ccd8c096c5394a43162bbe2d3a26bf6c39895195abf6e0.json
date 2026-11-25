@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE identity_sessions SET context_fingerprint = $1 WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "88bf4a11ff01e07de3ccd8c096c5394a43162bbe2d3a26bf6c39895195abf6e0"
+}

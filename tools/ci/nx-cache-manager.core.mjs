@@ -39,21 +39,19 @@ export function isRustWorkspaceAffected(changedPaths) {
 
 export function isDatabaseScopeAffected(changedPaths, scope) {
   const patterns = {
+    api: ['apps/api/src/api.identity', 'apps/api/src/api.config'],
+    worker: ['apps/worker/src/worker.migrations', 'apps/worker/src/worker.tasks'],
     account: [
+      'libs/rust/account/migrations',
+      'libs/rust/account/src/account.db',
       'apps/account-service/migrations',
       'apps/account-service/src/account.db',
       'apps/account-service/src/account.database',
       'scripts/test-account-service-database.sh',
       'scripts/validate-account-test-database',
     ],
-    billing: [
-      'apps/billing-service/migrations',
-      'apps/billing-service/src/billing.db',
-      'apps/billing-service/src/billing.database',
-      'scripts/test-billing-service-database.sh',
-      'scripts/validate-billing-test-database',
-    ],
     email: [
+      'libs/rust/email/migrations',
       'apps/email-worker/migrations',
       'apps/email-worker/src/email.worker.database',
       'apps/email-worker/src/email.worker.dispatch.db',
@@ -63,18 +61,13 @@ export function isDatabaseScopeAffected(changedPaths, scope) {
       'scripts/validate-email-test-database',
     ],
     identity: [
+      'libs/rust/identity/migrations',
+      'libs/rust/identity/src/identity.db',
       'apps/identity-service/migrations',
       'apps/identity-service/src/identity.db',
       'apps/identity-service/src/identity.database',
       'scripts/test-identity-service-database.sh',
       'scripts/validate-identity-test-database',
-    ],
-    'trust-risk': [
-      'apps/trust-risk-service/migrations',
-      'apps/trust-risk-service/src/trust_risk.db',
-      'apps/trust-risk-service/src/trust_risk.database',
-      'scripts/test-trust-risk-service-database.sh',
-      'scripts/validate-trust-risk-test-database',
     ],
   };
   return changedPaths.some((path) => matchesPath(path, patterns[scope] ?? []));

@@ -20,12 +20,14 @@ Cloud/Drive, le stockage de fichiers et les consoles Enterprise sont hors V1.
 
 ## Stack
 
-- Rust, Axum, Tokio et SQLx pour les runtimes backend ;
-- PostgreSQL comme stockage transactionnel et outbox initiale ;
-- TypeScript pour SDK, clients et futures interfaces web ;
-- OpenAPI et gRPC/Protobuf pour les contrats synchrones ;
-- Cloudflare pour DNS, TLS, edge et accès interne ;
-- Scaleway serverless pour compute, PostgreSQL et email ;
+- Monolithe Modulaire Serverless Axum (`apps/api`) et Worker unifié (`apps/worker`) pour les runtimes backend (voir [ADR 0013](../adr/0013-modular-monolith-api-and-unified-worker.md)) ;
+- PostgreSQL 17 comme stockage transactionnel unique avec schémas séparés étanches (`identity`, `account`, `billing`, `consent`, `outbox`) et zéro clé étrangère directe inter-schémas ;
+- Communication in-process par Traits Rust (Ports & Adapters) pour l'introspection et les autorisations, éliminant toute boucle réseau locale ;
+- Transactional Outbox pour découpler les effets de bord asynchrones (emails, webhooks) ;
+- TypeScript pour les SDKs, clients et interfaces web hébergées (`identity-web`, `account-web`) ;
+- OpenAPI 3.0 consolidé (`utoipa`) pour les contrats d'API synchrones ;
+- Cloudflare pour DNS, TLS, WAF, edge et accès interne Zero Trust ;
+- Scaleway serverless pour compute (containers scale-to-zero, démarrage < 100ms), PostgreSQL et email (TEM) ;
 - OpenTelemetry, Grafana Cloud et Sentry dans les paliers gratuits disponibles.
 
 Redis, Kafka, ClickHouse, Kubernetes, moteur de workflow et stockage produit ne
@@ -71,34 +73,56 @@ des autres services et n'usurpe pas les sessions utilisateur.
 ## Topologie V1
 
 ```mermaid
-flowchart LR
-    U[Utilisateurs] --> CF[Cloudflare]
-    O[Opérateur solo] --> ZT[Accès interne MFA]
-    CF --> I[Identity]
-    CF --> A[Account]
-    CF --> B[Billing]
-    I --> E[Email]
-    A --> E
-    B --> E
-    I --> R[Trust/Risk]
-    A --> R
-    B --> R
-    ZT --> P[Platform Operations]
-    P --> I
-    P --> A
-    P --> B
-    P --> E
-    P --> R
+flowchart TD
+    subgraph Clients["Clients Externes & Web"]
+        U["Utilisateurs / Navigateurs"]
+        WebIdentity["identity-web"]
+        WebAccount["account-web"]
+    end
+
+    CF["Cloudflare (WAF, DNS, TLS, Zero Trust)"]
+
+    subgraph ServerlessContainers["Runtimes Scaleway Serverless"]
+        subgraph API["apps/api (Monolithe HTTP Axum)"]
+            Router["Axum Router (Zéro CLI, scale-to-zero)"]
+            IdentityDomain["Domaine Identity"]
+            AccountDomain["Domaine Account"]
+            BillingDomain["Domaine Billing"]
+            ConsentDomain["Domaine Consent"]
+        end
+
+        subgraph Worker["apps/worker (Worker Centralisé)"]
+            OutboxDispatcher["Outbox Dispatcher"]
+            EmailSender["Envoi Email (Scaleway TEM)"]
+            BillingReconciler["Réconciliation Stripe"]
+            RgpdPurge["Purge RGPD 30 jours"]
+        end
+    end
+
+    subgraph Storage["PostgreSQL 17 Unique"]
+        DB[("Bases & Schémas Étanches<br/>identity.*, account.*, billing.*, consent.*, outbox.*")]
+    end
+
+    U --> CF
+    WebIdentity --> CF
+    WebAccount --> CF
+    CF --> Router
+    Router --> IdentityDomain
+    Router --> AccountDomain
+    Router --> BillingDomain
+    Router --> ConsentDomain
+    API -->|Traits in-process & SQLx| DB
+    Worker -->|Consommation Outbox & Purges| DB
+    Worker --> ScalewayTEM["Scaleway Transactional Email"]
+    Worker --> Stripe["Stripe PSP"]
 ```
 
-- chaque runtime Scaleway a `min_scale = 0` et un maximum explicite ;
-- chaque bounded context garde sa propre base logique, ses credentials et ses
-  migrations ;
-- aucun schéma métier n'est partagé entre services ;
+- **API Monolithique Modulaire (`apps/api`)** : un seul conteneur HTTP Axum serverless avec `min_scale = 0`, écoute directe sur `$PORT`, sans sous-commandes CLI.
+- **Worker Centralisé (`apps/worker`)** : processus asynchrone centralisant la consommation d'outbox, les purges RGPD et l'envoi d'emails.
+- chaque bounded context garde son schéma SQL logique propre (`identity.*`, `account.*`, etc.), sans clé étrangère transverse directe ;
 - staging et previews sont éphémères ;
 - les tâches ponctuelles utilisent des jobs serverless ;
-- la région, le registry et l'observabilité sont mutualisés lorsque cela réduit
-  le coût sans mélanger les responsabilités.
+- l'empreinte mémoire globale est réduite d'environ 65%, garantissant le respect du plafond FinOps de 30 EUR TTC/mois (cible 20 EUR).
 
 ## Capacités partagées
 

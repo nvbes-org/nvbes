@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "domain": "email",
-  "project": "email-worker",
-  "cargoPackage": "nvbes-email-worker",
+  "project": "email",
+  "cargoPackage": "nvbes-email",
   "suites": [
     {
       "id": "email.unit",
       "requirement": "email: unit behavior",
       "risk": "Regression in production code or shared dependencies",
       "execution": "automated",
-      "target": "email-worker:test",
+      "target": "email:test",
       "cases": ["email.unit.complete-run"]
     },
     {
@@ -17,7 +17,7 @@
       "requirement": "email: compilation",
       "risk": "Regression in production code or shared dependencies",
       "execution": "automated",
-      "target": "email-worker:check",
+      "target": "email:check",
       "cases": ["email.check.complete-run"]
     },
     {
@@ -25,7 +25,7 @@
       "requirement": "email: persistent business invariants",
       "risk": "Unauthorized access, corrupted state or lost events",
       "execution": "automated",
-      "target": "email-worker:test:database",
+      "target": "email:test:database",
       "cases": [
         "email.ingestion",
         "email.dispatch",
@@ -39,7 +39,7 @@
       "requirement": "email: deployable runtime contract",
       "risk": "Invalid runtime or exposed unsupported interface",
       "execution": "automated",
-      "target": "email-worker:test:contract",
+      "target": "email:test:contract",
       "cases": ["email.runtime-contract"]
     },
     {

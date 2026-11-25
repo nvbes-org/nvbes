@@ -1,22 +1,15 @@
 [workspace]
 members = [
-  "apps/email-worker",
-  "apps/account-service",
-  "apps/billing-service",
-  "apps/billing-worker",
-  "apps/identity-service",
-  "apps/trust-risk-service",
-  "libs/rust/audit",
-  "libs/rust/billing",
+  "apps/api",
+  "apps/worker",
+  "libs/rust/identity",
+  "libs/rust/account",
   "libs/rust/core",
-  "libs/rust/region",
   "libs/rust/dpop",
   "libs/rust/identity-sdk-backend",
   "libs/rust/email",
   "libs/rust/adapters/email-scaleway",
   "libs/rust/observability",
-  "libs/rust/platform",
-  "libs/rust/trust-risk",
   "libs/rust/test-utils",
 ]
 resolver = "2"
@@ -79,8 +72,7 @@ tonic-health = "0.14.6"
 tower = "0.5"
 tower-http = { version = "0.7.1", features = ["cors", "timeout", "compression-full"] }
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
-utoipa-swagger-ui = { version = "9", features = ["axum"] }
-zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
+zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
 serde_yaml_ng = "0.10"
 async-trait = "0.1"
 

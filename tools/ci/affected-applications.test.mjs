@@ -100,15 +100,9 @@ void test('unrelated documentation selects nothing', () => {
   assert.deepEqual(result, { rust: [], web: [] });
 });
 
-void test('real catalog contains all 5 V1 production deployable services', async () => {
+void test('real catalog contains V1 modular monolith API and unified worker', async () => {
   const { readFileSync } = await import('node:fs');
   const realCatalog = JSON.parse(readFileSync('tools/ci/deployable-applications.json', 'utf8'));
   const projects = realCatalog.rust.map((s) => s.project).sort();
-  assert.deepEqual(projects, [
-    'account-service',
-    'billing-service',
-    'email-worker',
-    'identity-service',
-    'trust-risk-service',
-  ]);
+  assert.deepEqual(projects, ['api', 'worker']);
 });

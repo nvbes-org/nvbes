@@ -3,135 +3,126 @@
 ## Statut et autorité
 
 Ce document est la source de vérité produit pour la V1 actuelle. En cas de
-contradiction, il prévaut sur les anciens PRD, blueprints, plans d'exécution et
-documents marketing. Les ADR conservent leur valeur historique, mais ne peuvent
-pas élargir le périmètre produit actif.
+contradiction, il prévaut sur tous les anciens PRD, blueprints, plans
+d'exécution et documents marketing. Les ADR conservent leur valeur historique,
+mais ne peuvent pas élargir le périmètre produit actif.
 
-La conception détaillée du socle et de son exploitation est décrite dans
-[Socle nvbes V1 piloté par FinOps et Platform Operations](../superpowers/specs/2026-08-25-nvbes-v1-finops-platform-operations-design.md).
+---
 
-## Décision
+## 1. Mission globale de Nvbes
 
-La V1 finale livre uniquement le socle nvbes réutilisable. Elle ne livre pas
-Cloud, Drive ni un autre produit utilisateur final. Le premier produit nvbes
-sera sélectionné après validation du socle ; Cloud n'est pas supposé être ce
-premier produit.
+**Nvbes est une entité destinée à offrir des outils et des logiciels aux développeurs, le tout en open-source, financé par son futur cloud.**
 
-Le socle mutualise actuellement cinq services métier :
+Le cloud servira de modèle économique pour soutenir et pérenniser l'écosystème
+d'outils open-source.
 
-1. Identity ;
-2. Account ;
-3. Billing ;
-4. Email ;
-5. Trust/Risk.
+---
 
-Platform Operations complète ces services avec les capacités minimales
-d'administration, de support, de sécurité, de traitement des abus et de suivi
-FinOps. D'autres capacités ne sont mutualisées que lorsqu'un besoin transversal
-réel est démontré avant la connexion du premier produit.
+## 2. Décision V1 : Approche "Small Building" & V1 Ultra-Restreinte
 
-## Public cible
+Le périmètre initial du projet étant trop vaste pour démarrer efficacement, la V1
+adopte une démarche stricte de **"small building"** : construire une tranche
+verticale ultra-restreinte, hautement fonctionnelle, sans friction
+opérationnelle ni surcharge architecturale prématurée.
 
-La cible V1 est B2C, tout public. Le modèle permet également à une personne de
-créer ou rejoindre une équipe, de la petite collaboration jusqu'à une grande
-équipe.
+Dans cette V1 ultra-restreinte, Nvbes sert exclusivement en tant que **service
+d'authentification et de compte pour les développeurs** utilisant ses outils :
 
-La V1 n'est pas une offre B2B ou Enterprise : elle ne promet ni contrat
-entreprise, ni SLA client, ni SSO/SCIM, ni certification, ni programme de
-conformité avancé. Les frontières d'identité, de compte, d'équipe,
-d'autorisation et d'audit doivent permettre ces évolutions futures sans les
-implémenter prématurément.
+- **Configuration interne et manuelle** : les applications clientes OAuth 2 sont
+  déclarées et gérées manuellement (base de données ou configuration statique),
+  sans portail d'enregistrement d'apps en libre-service.
+- **Une API monolithique** (`apps/api`) :
+  1. Création de compte, Connexion et maintien de session, le tout en **OAuth 2**
+     (standard RFC 6749 avec PKCE) ;
+  2. Gestion des consentements (écran d'approbation et persistance des scopes
+     accordés par l'utilisateur) ;
+  3. Profil utilisateur de base et consultation des sessions actives.
+- **Un site web monolithique** (`apps/web` / interfaces unifiées) :
+  1. Pages d'inscription et de connexion en OAuth 2 ;
+  2. Écran d'accord de consentement aux applications clientes ;
+  3. Page de profil (informations du compte, déconnexion / révocation de session).
+  4. Interface strictement dev-first : **aucun front-end marketing en V1**.
 
-Les obligations légales applicables à un service B2C restent obligatoires. Les
-documents RGPD, sécurité et légaux constituent un socle de protection, pas une
-autorisation d'ouvrir un chantier de conformité Enterprise hors budget.
+---
 
-## FinOps comme contrainte de conception
+## 3. Les Deux Principes Directeurs Majeurs
 
-Le coût récurrent total du projet est limité à **30 EUR TTC par mois**, domaines,
-infrastructure et fournisseurs compris. La cible opérationnelle est 20 EUR TTC,
-avec 10 EUR de réserve.
+Toutes les décisions techniques et d'infrastructure de la V1 reposent sur deux
+piliers non négociables :
 
-Toute évolution doit :
+1. **Rentabilité maximale & technologies les moins chères du marché** :
+   - Utiliser au maximum les technologies gratuites, les plans free tier et les
+     runtimes à empreinte ultra-réduite (Rust/Axum consommant moins de 20 Mo de
+     RAM, Cloudflare Pages gratuit pour le front statique avec bande passante
+     illimitée, base PostgreSQL managée low-cost ou free tier).
+   - Coût récurrent d'infrastructure strictement plafonné à **30 EUR TTC par mois**
+     (cible opérationnelle à 20 EUR).
 
-- déclarer son coût fixe et son pire coût variable autorisé ;
-- rester compatible avec la descente à zéro lorsque le composant est inactif ;
-- attribuer ses coûts à un domaine et à une unité de consommation ;
-- prévoir quotas, rétention et mode économique dégradé ;
-- passer le gate FinOps avant déploiement ;
-- être refusée ou différée si le plafond global ne peut pas être démontré.
+2. **Migration vers l'Open Source auto-géré dans le futur** :
+   - Aucun enfermement propriétaire (zéro lock-in) : chaque technologie ou
+     fournisseur utilisé doit pouvoir être remplacé à tout moment par son
+     équivalent open-source auto-hébergé (PostgreSQL natif sur VPS/dédié, reverse
+     proxy Nginx ou Caddy, briques de messagerie SMTP standard).
+   - Les frontières logicielles et les contrats d'API doivent être standards
+     (RFC OAuth2, requêtes HTTP/JSON standard).
 
-Les factures et estimations TTC vérifiées manuellement restent l'autorité tant
-qu'aucune collecte automatique sûre, exacte et gratuite ne répond au besoin.
+---
 
-## Administration et modération
+## 4. Public cible et posture réglementaire
 
-Un seul opérateur administre actuellement nvbes. Par défaut, les demandes de
-support, de sécurité, d'abus, de facturation, de recours et de modération sont
-traitées manuellement.
+- **Public cible** : Les **développeurs** utilisant les outils open-source Nvbes.
+- **B2B et Enterprise** : Hors périmètre V1. Aucun contrat d'entreprise, ni
+  SLA garanti, ni SSO d'entreprise (SAML/SCIM), ni gouvernance complexe.
+- **Souveraineté et conformité avancée** : **Non exigées pour la V1**, mais
+  gardées en tête pour des migrations ultérieures dès lors que le produit aura
+  trouvé son adéquation marché. Les obligations légales élémentaires (RGPD de
+  base sur la conservation des comptes) sont appliquées sans surcoût
+  opérationnel.
 
-La procédure applicable est le
-[runbook Platform Operations](../operations/platform-operations-manual-runbook.md).
+---
 
-Une automatisation est autorisée uniquement si elle remplit toutes les
-conditions suivantes :
+## 5. Périmètre V1 : Inclus vs Gelé
 
-- elle répond aux exigences fonctionnelles et de sécurité ;
-- elle maintient le coût récurrent total sous 30 EUR TTC ;
-- elle réduit un volume manuel mesuré, protège une propriété critique ou
-  empêche un dépassement budgétaire ;
-- elle est observable, réversible et remplaçable ;
-- elle ne prend pas seule une décision irréversible ou ambiguë.
+### Périmètre actif inclus
+- Moteur d'authentification et serveur d'autorisation OAuth 2.0 (PKCE, sessions) ;
+- Gestion du consentement utilisateur (scopes demandés par les outils dev) ;
+- API et Web monolithiques dédiés aux développeurs ;
+- Gestion manuelle et interne des applications clientes OAuth 2 ;
+- Profil utilisateur minimal (consultation, révocation de session, modification de base) ;
+- Suivi FinOps strict (coût < 30 EUR TTC/mois).
 
-Une solution maison optimisée peut être retenue lorsque son coût total, sa
-sécurité, sa maintenance et sa remplaçabilité sont meilleurs que les solutions
-disponibles. Le temps de développement et d'exploitation reste comptabilisé.
+### Périmètre gelé / reporté post-V1
+- ❌ **Billing (Stripe)** : Gelé tant que les services payants du cloud ne sont
+  pas prêts à la commercialisation ;
+- ❌ **Trust/Risk engine séparé** : Remplacé par des contrôles d'accès et rate
+  limits simples en mémoire ;
+- ❌ **Multi-workers d'arrière-plan** : Les besoins asynchrones légers sont
+  exécutés directement dans le runtime API (Tokio tasks) ;
+- ❌ **Gestion d'équipes et organisations complexes** : Reportée ;
+- ❌ **Front-end marketing / vitrine** : Zéro investissement avant validation des
+  outils développeurs.
 
-## Qualité et dette technique
+---
 
-Aucune dette technique ou structurelle connue n'est acceptée dans le périmètre
-V1 livré. Les rustines, doubles sources de vérité et garanties fictives sont des
-NO-GO.
+## 6. Exploitation et Opérateur Solo
 
-Après la V1, toute dette acceptée doit avoir un propriétaire, une cause, un
-impact mesuré, une date de revue et une condition de résolution. La dette est
-gérée méthodiquement et proactivement ; elle ne devient pas un backlog sans fin.
+Un seul opérateur administre Nvbes en V1. Par défaut, les interventions, le
+support et la configuration des applications clientes sont traités
+manuellement.
 
-## Mise en production progressive
+Une automatisation n'est recevable que si elle :
+- répond à un besoin réel mesuré ;
+- maintient le coût total sous 30 EUR TTC/mois ;
+- est réversible et remplaçable par une solution open-source auto-gérée ;
+- ne prend pas de décision critique de façon opaque.
 
-La production est ouverte par étapes réversibles : primitives et FinOps, Email,
-Identity et Account en accès interne, Billing en test, Trust/Risk en shadow
-mode, Platform Operations, parcours intégré, comptes invités, puis premier
-produit.
+---
 
-Les inscriptions publiques et paiements réels restent fermés tant que les
-coûts, restaurations, incidents, abus et parcours critiques ne sont pas mesurés
-et validés.
+## 7. Qualité et "Zéro dette technique livrée"
 
-## Périmètre V1
+Même en approche ultra-restreinte, **aucune dette technique ou structurelle
+connue n'est acceptée dans le périmètre livré**. 
 
-Inclus :
-
-- services Identity, Account, Billing, Email et Trust/Risk ;
-- équipes comme primitive Account, sans gouvernance Enterprise ;
-- contrats, audits, idempotence, outbox, observabilité et contrôles FinOps
-  réutilisables ;
-- Platform Operations minimal pour un opérateur solo ;
-- procédures manuelles sûres et auditables ;
-- déploiement progressif et restauration démontrée.
-
-Exclus :
-
-- Cloud, Drive ou tout autre produit final ;
-- marketing, pricing ou beta d'un produit non sélectionné ;
-- B2B, Enterprise, SLA, SSO/SCIM et conformité avancée ;
-- support ou modération entièrement automatisés ;
-- haute disponibilité permanente, multi-région ou hyperscale ;
-- nouvelle ressource payante sans preuve de compatibilité avec le budget.
-
-## Gate avant le premier produit
-
-Le choix et la connexion du premier produit font l'objet d'une décision séparée.
-Le socle doit auparavant fonctionner de bout en bout sans dépendre d'un produit
-final, rester sous les gates de 20/30 EUR TTC, démontrer sa restauration et
-permettre à l'opérateur solo de traiter les demandes réelles en sécurité.
+Le code doit être propre, typé strictement, testé de bout en bout et exempt de
+rustines temporaires. Si une conception s'avère inadaptée, le redesign complet
+est privilégié.

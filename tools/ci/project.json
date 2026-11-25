@@ -3,9 +3,8 @@
   "projectType": "library",
   "root": "tools/ci",
   "implicitDependencies": [
-    "email-worker",
-    "terraform-email-production",
-    "terraform-email-legacy-stack"
+    "terraform-api-production",
+    "terraform-worker-production"
   ],
   "targets": {
     "test:ci-contract": {
@@ -37,12 +36,10 @@
       "cache": true,
       "inputs": [
         "{workspaceRoot}/package.json",
-        "{workspaceRoot}/tools/ci/email-deployment-contract.test.mjs",
-        "{workspaceRoot}/tools/ci/reconcile-email-idle-alert.mjs",
+        "{workspaceRoot}/tools/ci/deployment-provenance-contract.test.mjs",
         "{workspaceRoot}/.github/workflows/deploy.yml",
-        "{workspaceRoot}/infrastructure/local/observability/grafana-provisioning/alerting/nvbes-email.yml",
-        "{workspaceRoot}/infrastructure/environments/email-production/**/*",
-        "{workspaceRoot}/infrastructure/stacks/email/production/**/*"
+        "{workspaceRoot}/infrastructure/environments/api-production/**/*",
+        "{workspaceRoot}/infrastructure/environments/worker-production/**/*"
       ],
       "options": {
         "command": "pnpm test:pre-deploy",

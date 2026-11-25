@@ -63,8 +63,10 @@ export function evaluateMutation(outcomes, config, packages) {
     if (excludedNames.has(name)) throw new Error(`Crate ${name} is both configured and excluded`);
   }
   const memberNames = new Set((packages ?? []).map((pkg) => pkg.name));
+  const archived = new Set(Array.isArray(config.archived) ? config.archived : []);
   if (packages) {
     for (const name of [...configuredNames, ...excludedNames]) {
+      if (archived.has(name)) continue;
       if (!memberNames.has(name))
         throw new Error(`Configured crate ${name} is not a workspace member`);
     }

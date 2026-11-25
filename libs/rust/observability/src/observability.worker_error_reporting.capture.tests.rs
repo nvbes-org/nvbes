@@ -63,6 +63,7 @@ fn worker_contexts_expose_expected_fields() {
 
 #[test]
 fn capture_paths_run_when_error_reporting_is_configured() {
+    let _lock = crate::error_reporting::error_reporting_test_lock();
     let _guard = init_error_reporting_with_config(ErrorReportingConfig {
         app_name: "nvbes-observability-tests",
         service_name: "nvbes-observability-tests",

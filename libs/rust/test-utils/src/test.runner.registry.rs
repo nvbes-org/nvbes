@@ -63,11 +63,8 @@ pub fn register_all(registry: &mut KeywordRegistry) {
     super::keywords::data_kw::register(registry);
     super::keywords::http_kw::register(registry);
     super::keywords::identity_kw::register(registry);
-    super::keywords::platform_kw::register(registry);
-    super::keywords::billing_kw::register(registry);
     super::keywords::email_kw::register(registry);
     super::keywords::infra_kw::register(registry);
-    super::keywords::trust_risk_kw::register(registry);
 }
 
 #[cfg(test)]
@@ -83,10 +80,6 @@ mod tests {
     #[test]
     fn all_domains_registered() {
         let expected = [
-            "billing.create_webhook",
-            "billing.verify_signature",
-            "billing.process_event",
-            "billing.check_idempotence",
             "email.send",
             "email.verify_delivery",
             "email.capture_webhook",
@@ -96,9 +89,6 @@ mod tests {
             "infra.start_service",
             "infra.health_check",
             "infra.cleanup",
-            "trust.submit_signals",
-            "trust.assess_risk",
-            "trust.submit_labels",
             "identity.health_check",
             "http.get",
             "http.post",
@@ -109,12 +99,6 @@ mod tests {
             "data.get_var",
             "data.assert_eq",
             "data.timestamp",
-            "platform.health_probe",
-            "platform.cockpit_overview",
-            "platform.budget_stage",
-            "platform.degraded_procedure",
-            "platform.service_readiness",
-            "platform.wait_for_ready",
         ];
         let registry = full_registry();
         for name in expected {

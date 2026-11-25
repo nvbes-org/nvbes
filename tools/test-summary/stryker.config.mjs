@@ -31,7 +31,6 @@ export default {
     '/.temp',
     '/.trunk',
     '/.nx',
-    '/.codex',
     '/.agents',
     '/.git',
     '/.github',

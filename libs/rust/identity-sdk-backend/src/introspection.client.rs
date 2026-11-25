@@ -39,6 +39,34 @@ pub enum IntrospectionError {
     Unavailable,
 }
 
+/// Confirms that a locally verified access token is still backed by an active
+/// grant and session. Resource servers deny access on every error.
+#[async_trait::async_trait]
+pub trait ActivityVerifier: Send + Sync {
+    async fn is_active(
+        &self,
+        token: &str,
+        expected: &ExpectedToken,
+    ) -> Result<bool, IntrospectionError>;
+}
+
+/// Compares the authority's view of a token with the locally verified claims.
+/// Any divergence is reported as unavailable rather than inactive so callers
+/// never treat a confused authority as a definitive answer.
+pub fn confirm_activity(
+    actual: &ExpectedToken,
+    expected: &ExpectedToken,
+) -> Result<bool, IntrospectionError> {
+    if actual != expected {
+        return Err(IntrospectionError::Unavailable);
+    }
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| IntrospectionError::Unavailable)?
+        .as_secs();
+    Ok(actual.exp > now)
+}
+
 #[derive(Clone)]
 pub struct IntrospectionClient {
     http: Client,
@@ -117,9 +145,12 @@ impl IntrospectionClient {
             capacity: Arc::new(Semaphore::new(16)),
         })
     }
+}
 
+#[async_trait::async_trait]
+impl ActivityVerifier for IntrospectionClient {
     /// No positive cache or retry: callers must deny access on every error.
-    pub async fn is_active(
+    async fn is_active(
         &self,
         token: &str,
         expected: &ExpectedToken,
@@ -166,14 +197,7 @@ impl IntrospectionClient {
             true => {
                 let actual: ExpectedToken =
                     serde_json::from_slice(&bytes).map_err(|_| unavailable())?;
-                if &actual != expected {
-                    return Err(unavailable());
-                }
-                let now = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .map_err(|_| unavailable())?
-                    .as_secs();
-                Ok(actual.exp > now)
+                confirm_activity(&actual, expected)
             }
         }
     }

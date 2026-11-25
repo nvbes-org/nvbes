@@ -136,12 +136,11 @@ switch (lane) {
     const dbParallel = recommendedParallelism({ maxParallel: 4, memoryPerWorkerMb: 1024 });
     const targetProjects = plan.shadow ? plan.baseline.databases : plan.databases;
     const workspaceMap = {
+      api: 'nvbes-api',
+      worker: 'nvbes-worker',
       'account-service': 'nvbes-account-service',
-      'billing-service': 'nvbes-billing-service',
       'identity-service': 'nvbes-identity-service',
       'email-worker': 'nvbes-email-worker',
-      'trust-risk-service': 'nvbes-trust-risk-service',
-      'platform-operations-service': 'nvbes-platform',
     };
     const workspacePkgs = targetProjects.map((project) => workspaceMap[project]).filter(Boolean);
     if (workspacePkgs.length > 0) {

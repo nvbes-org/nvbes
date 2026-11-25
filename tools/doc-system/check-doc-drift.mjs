@@ -67,6 +67,20 @@ export function checkDocumentationDrift() {
     }
   }
 
+  const currentPackageFiles = walkDir(REPO_ROOT, (f) => f.endsWith('package.json'));
+  for (const pkgFile of currentPackageFiles) {
+    const pData = readJson(pkgFile);
+    if (pData && pData.nx) {
+      const name = pData.nx.name || pData.name;
+      const knownProject = ir.projects.find((p) => p.name === name);
+      if (!knownProject) {
+        driftErrors.push(
+          `New Nx project (package.json) detected but missing in doc IR: "${name}" (${relative(REPO_ROOT, pkgFile)})`,
+        );
+      }
+    }
+  }
+
   // 2. Check for unindexed Rust crates
   const currentCargoFiles = walkDir(REPO_ROOT, (f) => f.endsWith('Cargo.toml'));
   for (const cFile of currentCargoFiles) {

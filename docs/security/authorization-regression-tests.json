@@ -1,259 +1,210 @@
 {
-  "schemaVersion": 1,
-  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Regression_Testing_Cheat_Sheet.html",
-  "reviewCadence": "At every authorization-sensitive route, policy, OpenAPI, tenant-boundary, or data-access change.",
-  "commands": [
-    {
-      "id": "AUTHZ_REG_CMD_001",
-      "name": "Core policy regression suite",
-      "command": "cargo nextest run --locked -p nvbes-core authz",
-      "purpose": "Run the fast actor-resource-action matrix, horizontal ownership, vertical role boundary, and step-up policy tests.",
-      "evidence": [
-        {
-          "path": "libs/rust/core/src/authz.policy.tests.rs",
-          "includes": [
-            "workspace_membership_roles_cover_expected_permission_boundaries",
-            "member_can_only_modify_owned_objects",
-            "sensitive_actions_require_step_up"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHZ_REG_CMD_002",
-      "name": "Authorization regression registry gate",
-      "command": "pnpm check:authorization-regression",
-      "purpose": "Fail CI when an authorization regression suite, negative assertion, command, or evidence marker is removed.",
-      "evidence": [
-        {
-          "path": "package.json",
-          "includes": [
-            "check:authorization-regression",
-            "tools/security/check-authorization-regression-tests.mjs"
-          ]
-        }
-      ]
-    }
-  ],
-  "suites": [
-    {
-      "id": "AUTHZ_REG_001",
-      "name": "Actor-resource-action matrix",
-      "owasp": "Authorization Test Matrix Design, Define the Access Policy Model",
-      "pattern": "Central machine-readable matrix covering who acts on which workspace resource with which action.",
-      "regressionRisk": "A new role, action, or target role silently receives broader access than intended.",
-      "evidence": [
-        {
-          "path": "libs/rust/core/src/authz.action.rs",
-          "includes": [
-            "pub enum WorkspaceAction",
-            "ViewWorkspace",
-            "DeleteWorkspace"
-          ]
-        },
-        {
-          "path": "libs/rust/core/src/authz.role.rs",
-          "includes": [
-            "pub enum WorkspaceRole",
-            "Owner",
-            "Viewer"
-          ]
-        },
-        {
-          "path": "libs/rust/core/src/authz.policy.tests.rs",
-          "includes": [
-            "workspace_membership_roles_cover_expected_permission_boundaries",
-            "assert_eq!",
-            "WorkspaceRole::Viewer"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHZ_REG_002",
-      "name": "Horizontal escalation and IDOR replay",
-      "owasp": "Horizontal Escalation (IDOR) Validation",
-      "pattern": "Replay object-level actions against resources not owned by the same-privilege actor.",
-      "regressionRisk": "A member can access or modify another member's resource by guessing its identifier.",
-      "evidence": [
-        {
-          "path": "libs/rust/core/src/authz.policy.tests.rs",
-          "includes": [
-            "member_can_only_modify_owned_objects",
-            "member_share_link_requires_policy_and_ownership",
-            "owns_resource: true"
-          ]
-        },
-        {
-          "path": "libs/rust/core/src/authz.context.rs",
-          "includes": [
-            "pub struct ResourceContext",
-            "owns_resource",
-            "target_role"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHZ_REG_003",
-      "name": "Vertical escalation role demotion",
-      "owasp": "Vertical Escalation Validation",
-      "pattern": "Exercise privileged actions with lower-privileged roles and assert explicit denial.",
-      "regressionRisk": "Admin, member, or viewer roles gain privileged mutation capabilities through refactor drift.",
-      "evidence": [
-        {
-          "path": "libs/rust/core/src/authz.policy.tests.rs",
-          "includes": [
-            "admin_cannot_manage_billing_or_delete_workspace",
-            "viewer_is_read_only",
-            "owner_cannot_invite_or_remove_another_owner"
-          ]
-        },
-        {
-          "path": "libs/rust/platform/src/platform.operations.service.rs",
-          "includes": [
-            "actor.permits(permission)",
-            "OperationsError::Forbidden"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHZ_REG_004",
-      "name": "Tenant and workspace isolation",
-      "owasp": "Tenant Isolation Breakage",
-      "pattern": "Reject tokens and actors outside their tenant or workspace boundary.",
-      "regressionRisk": "A cross-tenant or cross-workspace token can access resources because context validation was bypassed.",
-      "evidence": [
-        {
-          "path": "libs/rust/core/src/authz.policy.tests.rs",
-          "includes": [
-            "workspace_membership_roles_cover_expected_permission_boundaries",
-            "member_can_only_modify_owned_objects"
-          ]
-        },
-        {
-          "path": "apps/account-service/src/account.billing_authorization.rs",
-          "includes": [
-            "AccountType::Team",
-            "owner_principal_id",
-            "allowed"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHZ_REG_005",
-      "name": "Token scope and session-switching regression",
-      "owasp": "Automated Testing Framework Integration, Session Switching",
-      "pattern": "Validate tokens with differing scopes through the same authorization path.",
-      "regressionRisk": "Tokens bypass missing-scope denial or inherit broader privileges than intended.",
-      "evidence": [
-        {
-          "path": "apps/identity-service/src/identity.oauth.http.introspection.rs",
-          "includes": [
-            "introspect",
-            "claims.scope",
-            "/oauth/introspect"
-          ]
-        },
-        {
-          "path": "apps/identity-service/src/identity.tokens.claims.rs",
-          "includes": [
-            "AccessTokenClaims",
-            "token_type",
-            "scope"
-          ]
-        },
-        {
-          "path": "apps/identity-service/src/identity.tokens.rs",
-          "includes": [
-            "validate_scopes",
-            "claims.scope"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHZ_REG_006",
-      "name": "Contract-driven authorization validation",
-      "owasp": "Contract-Driven Authorization Validation",
-      "pattern": "Keep public authorization endpoints and decisions verified through tests.",
-      "regressionRisk": "Route contract changes remove authorization semantics without failing tests.",
-      "evidence": [
-        {
-          "path": "apps/identity-service/src/identity.oauth.http.introspection.tests.rs",
-          "includes": [
-            "introspection_authentication_and_form_boundaries_are_enforced",
-            "unavailable_grant_store_returns_service_error_not_active_or_inactive"
-          ],
-          "tests": [
-            "introspection_authentication_and_form_boundaries_are_enforced",
-            "unavailable_grant_store_returns_service_error_not_active_or_inactive"
-          ]
-        },
-        {
-          "path": "apps/account-service/src/account.billing_authorization.rs",
-          "includes": [
-            "/internal/v1/billing/authorize",
-            "struct Decision"
-          ]
-        },
-        {
-          "path": "apps/identity-service/src/identity.oauth.http.introspection.rs",
-          "includes": [
-            "/oauth/introspect"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHZ_REG_007",
-      "name": "Denied outcome and fail-closed regression",
-      "owasp": "Regression Testing Patterns",
-      "pattern": "Assert denied requests fail closed with explicit forbidden or error outcomes, not accidental success.",
-      "regressionRisk": "A missing authorization branch returns success by default.",
-      "evidence": [
-        {
-          "path": "libs/rust/platform/src/platform.operations.service.rs",
-          "includes": [
-            "OperationsError::Forbidden",
-            "OperationsError::Conflict"
-          ]
-        },
-        {
-          "path": "apps/identity-service/src/identity.auth.rs",
-          "includes": [
-            "dummy_verify_password",
-            "authentication failed"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHZ_REG_008",
-      "name": "CI/CD authorization gate",
-      "owasp": "CI/CD Gating and SDLC Integration",
-      "pattern": "Run a dedicated authorization regression gate from the root check pipeline.",
-      "regressionRisk": "Authorization tests become optional local knowledge and stop blocking vulnerable pull requests.",
-      "evidence": [
-        {
-          "path": "package.json",
-          "includes": [
-            "check:authorization",
-            "check:authorization-regression",
-            "tools/security/check-authorization-regression-tests.mjs"
-          ]
-        },
-        {
-          "path": "tools/security/check-authorization-regression-tests.mjs",
-          "includes": [
-            "Authorization regression tests",
-            "AUTHZ_REG_",
-            "evidence strings"
-          ]
-        }
-      ]
-    }
-  ]
+	"schemaVersion": 1,
+	"source": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Regression_Testing_Cheat_Sheet.html",
+	"reviewCadence": "At every authorization-sensitive route, policy, OpenAPI, tenant-boundary, or data-access change.",
+	"commands": [
+		{
+			"id": "AUTHZ_REG_CMD_001",
+			"name": "Core policy regression suite",
+			"command": "cargo nextest run --locked -p nvbes-core authz",
+			"purpose": "Run the fast actor-resource-action matrix, horizontal ownership, vertical role boundary, and step-up policy tests.",
+			"evidence": [
+				{
+					"path": "libs/rust/core/src/authz.policy.tests.rs",
+					"includes": [
+						"workspace_membership_roles_cover_expected_permission_boundaries",
+						"member_can_only_modify_owned_objects",
+						"sensitive_actions_require_step_up"
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHZ_REG_CMD_002",
+			"name": "Authorization regression registry gate",
+			"command": "pnpm check:authorization-regression",
+			"purpose": "Fail CI when an authorization regression suite, negative assertion, command, or evidence marker is removed.",
+			"evidence": [
+				{
+					"path": "package.json",
+					"includes": [
+						"check:authorization-regression",
+						"tools/security/check-authorization-regression-tests.mjs"
+					]
+				}
+			]
+		}
+	],
+	"suites": [
+		{
+			"id": "AUTHZ_REG_001",
+			"name": "Actor-resource-action matrix",
+			"owasp": "Authorization Test Matrix Design, Define the Access Policy Model",
+			"pattern": "Central machine-readable matrix covering who acts on which workspace resource with which action.",
+			"regressionRisk": "A new role, action, or target role silently receives broader access than intended.",
+			"evidence": [
+				{
+					"path": "libs/rust/core/src/authz.action.rs",
+					"includes": ["pub enum WorkspaceAction", "ViewWorkspace", "DeleteWorkspace"]
+				},
+				{
+					"path": "libs/rust/core/src/authz.role.rs",
+					"includes": ["pub enum WorkspaceRole", "Owner", "Viewer"]
+				},
+				{
+					"path": "libs/rust/core/src/authz.policy.tests.rs",
+					"includes": [
+						"workspace_membership_roles_cover_expected_permission_boundaries",
+						"assert_eq!",
+						"WorkspaceRole::Viewer"
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHZ_REG_002",
+			"name": "Horizontal escalation and IDOR replay",
+			"owasp": "Horizontal Escalation (IDOR) Validation",
+			"pattern": "Replay object-level actions against resources not owned by the same-privilege actor.",
+			"regressionRisk": "A member can access or modify another member's resource by guessing its identifier.",
+			"evidence": [
+				{
+					"path": "libs/rust/core/src/authz.policy.tests.rs",
+					"includes": [
+						"member_can_only_modify_owned_objects",
+						"member_share_link_requires_policy_and_ownership",
+						"owns_resource: true"
+					]
+				},
+				{
+					"path": "libs/rust/core/src/authz.context.rs",
+					"includes": ["pub struct ResourceContext", "owns_resource", "target_role"]
+				}
+			]
+		},
+		{
+			"id": "AUTHZ_REG_003",
+			"name": "Vertical escalation role demotion",
+			"owasp": "Vertical Escalation Validation",
+			"pattern": "Exercise privileged actions with lower-privileged roles and assert explicit denial.",
+			"regressionRisk": "Admin, member, or viewer roles gain privileged mutation capabilities through refactor drift.",
+			"evidence": [
+				{
+					"path": "libs/rust/core/src/authz.policy.tests.rs",
+					"includes": [
+						"admin_cannot_manage_billing_or_delete_workspace",
+						"viewer_is_read_only",
+						"owner_cannot_invite_or_remove_another_owner"
+					]
+				},
+				{
+					"path": "libs/rust/account/src/account.operator.rs",
+					"includes": ["claims.role != OPERATOR_ROLE", "AccountError::Forbidden"]
+				}
+			]
+		},
+		{
+			"id": "AUTHZ_REG_004",
+			"name": "Tenant and workspace isolation",
+			"owasp": "Tenant Isolation Breakage",
+			"pattern": "Reject tokens and actors outside their tenant or workspace boundary.",
+			"regressionRisk": "A cross-tenant or cross-workspace token can access resources because context validation was bypassed.",
+			"evidence": [
+				{
+					"path": "libs/rust/core/src/authz.policy.tests.rs",
+					"includes": [
+						"workspace_membership_roles_cover_expected_permission_boundaries",
+						"member_can_only_modify_owned_objects"
+					]
+				},
+				{
+					"path": "libs/rust/account/src/account.profile.rs",
+					"includes": ["WHERE principal_id=$1 AND lifecycle_status='active'"]
+				}
+			]
+		},
+		{
+			"id": "AUTHZ_REG_005",
+			"name": "Token scope and session-switching regression",
+			"owasp": "Automated Testing Framework Integration, Session Switching",
+			"pattern": "Validate tokens with differing scopes through the same authorization path.",
+			"regressionRisk": "Tokens bypass missing-scope denial or inherit broader privileges than intended.",
+			"evidence": [
+				{
+					"path": "libs/rust/identity/src/identity.oauth.http.introspection.rs",
+					"includes": ["introspect", "claims.scope", "/oauth/introspect"]
+				},
+				{
+					"path": "libs/rust/identity/src/identity.tokens.claims.rs",
+					"includes": ["AccessTokenClaims", "token_type", "scope"]
+				},
+				{
+					"path": "libs/rust/identity/src/identity.tokens.rs",
+					"includes": ["validate_scopes", "claims.scope"]
+				}
+			]
+		},
+		{
+			"id": "AUTHZ_REG_006",
+			"name": "Contract-driven authorization validation",
+			"owasp": "Contract-Driven Authorization Validation",
+			"pattern": "Keep public authorization endpoints and decisions verified through tests.",
+			"regressionRisk": "Route contract changes remove authorization semantics without failing tests.",
+			"evidence": [
+				{
+					"path": "libs/rust/identity/src/identity.oauth.http.introspection.tests.rs",
+					"includes": [
+						"introspection_authentication_and_form_boundaries_are_enforced",
+						"unavailable_grant_store_returns_service_error_not_active_or_inactive"
+					],
+					"tests": [
+						"introspection_authentication_and_form_boundaries_are_enforced",
+						"unavailable_grant_store_returns_service_error_not_active_or_inactive"
+					]
+				},
+				{
+					"path": "libs/rust/identity/src/identity.oauth.http.introspection.rs",
+					"includes": ["/oauth/introspect"]
+				}
+			]
+		},
+		{
+			"id": "AUTHZ_REG_007",
+			"name": "Denied outcome and fail-closed regression",
+			"owasp": "Regression Testing Patterns",
+			"pattern": "Assert denied requests fail closed with explicit forbidden or error outcomes, not accidental success.",
+			"regressionRisk": "A missing authorization branch returns success by default.",
+			"evidence": [
+				{
+					"path": "libs/rust/account/src/account.operator.rs",
+					"includes": ["AccountError::Unauthorized", "AccountError::Forbidden"]
+				},
+				{
+					"path": "libs/rust/identity/src/identity.auth.rs",
+					"includes": ["dummy_verify_password", "authentication failed"]
+				}
+			]
+		},
+		{
+			"id": "AUTHZ_REG_008",
+			"name": "CI/CD authorization gate",
+			"owasp": "CI/CD Gating and SDLC Integration",
+			"pattern": "Run a dedicated authorization regression gate from the root check pipeline.",
+			"regressionRisk": "Authorization tests become optional local knowledge and stop blocking vulnerable pull requests.",
+			"evidence": [
+				{
+					"path": "package.json",
+					"includes": [
+						"check:authorization",
+						"check:authorization-regression",
+						"tools/security/check-authorization-regression-tests.mjs"
+					]
+				},
+				{
+					"path": "tools/security/check-authorization-regression-tests.mjs",
+					"includes": ["Authorization regression tests", "AUTHZ_REG_", "evidence strings"]
+				}
+			]
+		}
+	]
 }

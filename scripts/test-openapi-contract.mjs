@@ -89,16 +89,12 @@ function loadOpenApiSpec() {
   }
 
   if (process.env.NVBES_OPENAPI_EXPORT_FROM_CARGO) {
-    const stdout = execFileSync(
-      'cargo',
-      ['run', '-p', 'nvbes-account-service', '--', '--export-openapi'],
-      {
-        cwd: ROOT_DIR,
-        encoding: 'utf8',
-        maxBuffer: 20 * 1024 * 1024,
-        env: process.env,
-      },
-    );
+    const stdout = execFileSync('cargo', ['run', '-p', 'nvbes-api', '--', '--export-openapi'], {
+      cwd: ROOT_DIR,
+      encoding: 'utf8',
+      maxBuffer: 20 * 1024 * 1024,
+      env: process.env,
+    });
     return JSON.parse(stdout);
   }
 

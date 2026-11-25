@@ -1,0 +1,26 @@
+{
+  "name": "identity-service",
+  "projectType": "library",
+  "root": "libs/rust/identity",
+  "sourceRoot": "libs/rust/identity/src",
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["{projectRoot}/**/*"],
+      "options": {
+        "command": "cargo check --locked --package nvbes-identity-service --all-targets",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "cargo nextest run --locked --package nvbes-identity-service",
+        "cwd": "."
+      }
+    }
+  },
+  "tags": ["scope:platform", "type:lib", "domain:identity", "layer:domain"]
+}

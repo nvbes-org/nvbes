@@ -1,7 +1,7 @@
 # Monorepo nvbes - Agent Context Pack
 
 > Fiche de contexte ultra-synthétique auto-générée pour agents IA (Cursor, Antigravity, Claude Code).
-> Générée le : `2026-08-26T09:36:01.861Z`
+> Générée le : `2026-11-21T18:27:12.321Z`
 
 ## 1. Direction V1
 - Livrer uniquement le socle Identity, Account, Billing, Email, Trust/Risk et Platform Operations.
@@ -19,21 +19,23 @@
 ## 3. Services Backend actifs (Axum / Rust)
 | Service | Chemin | Endpoints OpenAPI |
 | :--- | :--- | :--- |
-| `nvbes-email-worker` | `apps/email-worker` | - endpoints |
-| `nvbes-trust-risk-service` | `apps/trust-risk-service` | - endpoints |
+| `nvbes-api` | `apps/api` | 20 endpoints |
+| `nvbes-worker` | `apps/worker` | - endpoints |
 
 ## 4. Applications Frontend actives (React / Vite)
 | Application | Chemin | Rôle |
 | :--- | :--- | :--- |
+| `@nvbes/account-web` | `apps/account-web` | Interface utilisateur |
+| `@nvbes/identity-web` | `apps/identity-web` | Interface utilisateur |
 
 ## 5. Bibliothèques disponibles
-- **Rust (`libs/rust/`)** : `nvbes-analytics-posthog`, `nvbes-email-scaleway`, `nvbes-audit`, `nvbes-billing`, `nvbes-core`, `nvbes-dpop`, `nvbes-email`, `nvbes-identity-sdk`, `nvbes-observability`, `nvbes-platform` (+13 autres).
-- **TypeScript (`libs/ts/`)** : `@nvbes/account-client`, `@nvbes/backoffice-service-sdk-core`, `@nvbes/billing-client`, `@nvbes/email-ui`, `@nvbes/http-client`, `@nvbes/identity-client`, `@nvbes/identity-sdk`, `@nvbes/identity-sdk-core`, `@nvbes/identity-sdk-web`, `@nvbes/web-runtime`, `@nvbes/web-ui`.
+- **Rust (`libs/rust/`)** : `nvbes-account-service`, `nvbes-email-scaleway`, `nvbes-audit`, `nvbes-billing`, `nvbes-billing-service`, `nvbes-consent`, `nvbes-core`, `nvbes-dpop`, `nvbes-email`, `nvbes-identity-service` (+6 autres).
+- **TypeScript (`libs/ts/`)** : `@nvbes/account-sdk-core`, `@nvbes/email-ui`, `@nvbes/http-client`, `@nvbes/identity-sdk-core`, `@nvbes/identity-sdk-web`.
 
 La présence d'une bibliothèque Cloud, Drive, Backoffice, Developer ou Enterprise ne la rend pas active. Vérifier la direction produit avant usage.
 
 ## 6. Règles Impératives du Codebase
-1. **Fichiers < 300 lignes** : Tout fichier dépassant 300 lignes doit être découpé. Limite stricte à 500 lignes.
+1. **Fichiers < 400 lignes** : Tout fichier dépassant 400 lignes doit être découpé. Limite stricte à 800 lignes.
 2. **Flat Dot-Notation (Rust)** : Tous les fichiers `.rs` sont à la racine de `src/` (ex: `identity.domains.auth.service.rs`).
 3. **Zéro Dette Technique** : Pas de types `any` en TypeScript, pas de `#[allow(unused)]` sans justification en Rust.
 4. **Pas de Service Locator** : Passer explicitement les dépendances (`&PgPool`, `&Config`) plutôt que l'objet global AppState.

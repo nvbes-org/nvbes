@@ -1,104 +1,118 @@
-use anyhow::Context;
 use chrono::{Duration, Utc};
-use nvbes_billing::{StripeWebhookEvent, provider::ProviderPayment};
 use nvbes_email::{
-    EmailCategory, EmailCommand, EmailIdempotencyKey, EmailRecipient, EmailRequestContext,
-    EmailTemplate,
+    EmailCategory, EmailClient, EmailCommand, EmailIdempotencyKey, EmailRecipient,
+    EmailRequestContext, EmailTemplate,
 };
-use serde_json::json;
-use sqlx::PgPool;
 use uuid::Uuid;
 
-#[path = "billing.worker.email.delivery.rs"]
-mod delivery;
-#[path = "billing.worker.email.payloads.rs"]
-mod payloads;
-
-pub(crate) use delivery::process_billing_email_job;
-
-pub(crate) async fn enqueue_billing_email_for_stripe_event(
-    db_pool: &PgPool,
-    redis: &nvbes_redis::RedisPool,
-    workspace_id: Uuid,
-    event: &StripeWebhookEvent,
-) -> anyhow::Result<()> {
-    let Some(template) = payloads::stripe_event_template(event) else {
-        return Ok(());
-    };
-    let idempotency_key = payloads::billing_email_idempotency_key(&event.id, &template);
-    enqueue_command(db_pool, redis, workspace_id, template, idempotency_key).await
+#[derive(Debug, Clone)]
+pub struct BillingReceiptNotification {
+    pub account_id: Uuid,
+    pub recipient_email: String,
+    pub customer_name: Option<String>,
+    pub amount_minor: i64,
+    pub currency: String,
+    pub invoice_id: String,
+    pub invoice_url: Option<String>,
 }
 
-pub(crate) async fn enqueue_billing_email_for_provider_payment(
-    db_pool: &PgPool,
-    redis: &nvbes_redis::RedisPool,
-    workspace_id: Uuid,
-    provider_event_id: &str,
-    payment: &ProviderPayment,
-) -> anyhow::Result<()> {
-    let Some(template) = payloads::provider_payment_template(payment) else {
-        return Ok(());
-    };
-    let idempotency_key = payloads::billing_email_idempotency_key(provider_event_id, &template);
-    enqueue_command(db_pool, redis, workspace_id, template, idempotency_key).await
+#[derive(Debug, Clone)]
+pub struct BillingPaymentFailureNotification {
+    pub account_id: Uuid,
+    pub recipient_email: String,
+    pub customer_name: Option<String>,
+    pub amount_minor: i64,
+    pub currency: String,
+    pub invoice_id: String,
+    pub billing_portal_url: Option<String>,
+    pub invoice_url: Option<String>,
 }
 
-async fn enqueue_command(
-    pool: &PgPool,
-    redis: &nvbes_redis::RedisPool,
-    workspace_id: Uuid,
-    template: EmailTemplate,
-    idempotency_key: String,
+pub async fn deliver_billing_receipt(
+    client: &EmailClient,
+    notification: BillingReceiptNotification,
 ) -> anyhow::Result<()> {
-    let (email, name) = billing_email_recipient(pool, workspace_id).await?;
-    let request_id = Uuid::new_v4().to_string();
-    let command = EmailCommand {
-        context: EmailRequestContext {
-            request_id: request_id.clone(),
-            correlation_id: request_id,
-            actor_principal_id: String::new(),
-        },
-        producer: "billing-worker".to_string(),
-        idempotency_key: EmailIdempotencyKey::new(idempotency_key)?,
-        recipient: EmailRecipient { email, name },
-        category: EmailCategory::Billing,
-        template,
-        deliver_before: Utc::now() + Duration::hours(24),
-    };
-    command.validate(Utc::now())?;
-    let queue = nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT;
-    let key = command.idempotency_key.as_str().to_string();
-    nvbes_redis::worker_queue::enqueue_job(
-        redis,
-        nvbes_redis::worker_queue::EnqueueJobInput {
-            queue: queue.to_string(),
-            job_type: queue.to_string(),
-            payload: json!(command),
-            idempotency_key: Some(key),
-            max_attempts: 5,
-            overwrite_terminal: false,
-            job_id: None,
-        },
-    )
-    .await
-    .context("failed to enqueue billing email command")?;
+    let command = receipt_command(&notification)?;
+    client.send(command).await?;
     Ok(())
 }
 
-async fn billing_email_recipient(
-    pool: &PgPool,
-    workspace_id: Uuid,
-) -> anyhow::Result<(String, Option<String>)> {
-    let mut tx = pool.begin().await?;
-    let billing = nvbes_billing::db::fetch_billing_state_tx(&mut tx, workspace_id)
-        .await?
-        .with_context(|| format!("workspace {workspace_id} not found for billing email"))?;
-    tx.commit().await?;
-    Ok((
-        billing
-            .billing_email
-            .clone()
-            .unwrap_or_else(|| billing.owner_email.clone()),
-        Some(billing.owner_email),
-    ))
+pub async fn deliver_payment_failure(
+    client: &EmailClient,
+    notification: BillingPaymentFailureNotification,
+) -> anyhow::Result<()> {
+    let command = failure_command(&notification)?;
+    client.send(command).await?;
+    Ok(())
 }
+
+pub fn receipt_command(notification: &BillingReceiptNotification) -> anyhow::Result<EmailCommand> {
+    let now = Utc::now();
+    let correlation_id = format!("billing:invoice_paid:{}", notification.invoice_id);
+    let command = EmailCommand {
+        context: EmailRequestContext {
+            request_id: correlation_id.clone(),
+            correlation_id,
+            actor_principal_id: notification.account_id.to_string(),
+        },
+        producer: "billing-worker".into(),
+        idempotency_key: EmailIdempotencyKey::new(format!(
+            "billing:receipt:{}",
+            notification.invoice_id
+        ))?,
+        recipient: EmailRecipient {
+            email: notification.recipient_email.clone(),
+            name: notification.customer_name.clone(),
+        },
+        category: EmailCategory::Billing,
+        template: EmailTemplate::BillingReceiptV1 {
+            customer_name: notification.customer_name.clone(),
+            amount_minor: notification.amount_minor,
+            currency: notification.currency.clone(),
+            invoice_url: notification.invoice_url.clone(),
+            provider_name: Some("Stripe".into()),
+        },
+        deliver_before: now + Duration::hours(24),
+    };
+    command.validate(now)?;
+    Ok(command)
+}
+
+pub fn failure_command(
+    notification: &BillingPaymentFailureNotification,
+) -> anyhow::Result<EmailCommand> {
+    let now = Utc::now();
+    let correlation_id = format!("billing:payment_failed:{}", notification.invoice_id);
+    let command = EmailCommand {
+        context: EmailRequestContext {
+            request_id: correlation_id.clone(),
+            correlation_id,
+            actor_principal_id: notification.account_id.to_string(),
+        },
+        producer: "billing-worker".into(),
+        idempotency_key: EmailIdempotencyKey::new(format!(
+            "billing:payment_failed:{}",
+            notification.invoice_id
+        ))?,
+        recipient: EmailRecipient {
+            email: notification.recipient_email.clone(),
+            name: notification.customer_name.clone(),
+        },
+        category: EmailCategory::Billing,
+        template: EmailTemplate::BillingPaymentFailureV1 {
+            customer_name: notification.customer_name.clone(),
+            amount_minor: notification.amount_minor,
+            currency: notification.currency.clone(),
+            billing_portal_url: notification.billing_portal_url.clone(),
+            invoice_url: notification.invoice_url.clone(),
+            provider_name: Some("Stripe".into()),
+        },
+        deliver_before: now + Duration::hours(24),
+    };
+    command.validate(now)?;
+    Ok(command)
+}
+
+#[cfg(test)]
+#[path = "billing.worker.email.tests.rs"]
+mod tests;

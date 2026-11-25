@@ -19,7 +19,7 @@ runControlsRegistryCheck({
         'viewer_is_read_only',
         'member_can_only_modify_owned_objects',
         'sensitive_actions_require_step_up',
-        'only_active_personal_owners_and_consistent_team_owners_are_allowed',
+        'principal_extractor_requires_bearer_token',
         'step_up_required_for_sensitive_mutations',
       ],
       'authorization behavioral tests',

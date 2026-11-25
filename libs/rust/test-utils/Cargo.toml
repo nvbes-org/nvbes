@@ -14,7 +14,6 @@ path = "src/test.runner.cli.rs"
 async-trait.workspace = true
 hmac.workspace = true
 hex = "0.4"
-nvbes-trust-risk = { path = "../trust-risk" }
 prost-types = "0.14"
 chrono.workspace = true
 reqwest.workspace = true

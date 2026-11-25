@@ -33,7 +33,7 @@ runControlsRegistryCheck({
 
     function assertLayeredDefenses() {
       requireFileIncludes(
-        'apps/identity-service/src/identity.auth.rs',
+        'libs/rust/identity/src/identity.auth.rs',
         ['dummy_verify_password', 'normalize_email', 'authentication failed'],
         'identity.auth.rs',
       );
@@ -48,9 +48,9 @@ runControlsRegistryCheck({
         'auth.helpers.validation.rs',
       );
       requireFileIncludes(
-        'libs/rust/trust-risk/src/trust_risk.assessment.rs',
-        ['Assessment', 'instantaneous_signals', 'RiskSignal'],
-        'trust_risk.assessment.rs',
+        'libs/rust/identity/src/identity.rate_limits.rs',
+        ['LoginAccount', 'LoginSource', 'RecoverySource'],
+        'identity.rate_limits.rs',
       );
     }
 

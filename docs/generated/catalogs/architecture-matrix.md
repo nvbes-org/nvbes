@@ -10,20 +10,22 @@ Le diagramme ci-dessous illustre les liaisons déterministes entre les services 
 ```mermaid
 flowchart TD
     subgraph Applications ["Services & Workers"]
-        nvbes_account_service["nvbes-account-service"]
-        nvbes_billing_service["nvbes-billing-service"]
-        nvbes_billing_worker["nvbes-billing-worker"]
-        nvbes_email_worker["nvbes-email-worker"]
-        nvbes_identity_service["nvbes-identity-service"]
-        nvbes_trust_risk_service["nvbes-trust-risk-service"]
+        nvbes_api["nvbes-api"]
+        nvbes_worker["nvbes-worker"]
     end
 
     subgraph Libraries ["Bibliotheques Partagees"]
+        nvbes_account_service["nvbes-account-service"]
         nvbes_email_scaleway["nvbes-email-scaleway"]
         nvbes_audit["nvbes-audit"]
         nvbes_billing["nvbes-billing"]
+        nvbes_billing_service["nvbes-billing-service"]
+        nvbes_consent["nvbes-consent"]
         nvbes_core["nvbes-core"]
+        nvbes_dpop["nvbes-dpop"]
         nvbes_email["nvbes-email"]
+        nvbes_identity_service["nvbes-identity-service"]
+        nvbes_identity_sdk["nvbes-identity-sdk"]
         nvbes_observability["nvbes-observability"]
         nvbes_platform["nvbes-platform"]
         nvbes_region["nvbes-region"]
@@ -31,26 +33,20 @@ flowchart TD
         nvbes_trust_risk["nvbes-trust-risk"]
     end
 
-    nvbes_account_service --> nvbes_observability
-    nvbes_billing_service --> nvbes_billing
-    nvbes_billing_service --> nvbes_core
-    nvbes_billing_service --> nvbes_email
-    nvbes_billing_service --> nvbes_observability
-    nvbes_billing_worker --> nvbes_billing
-    nvbes_billing_worker --> nvbes_core
-    nvbes_billing_worker --> nvbes_email
-    nvbes_billing_worker --> nvbes_observability
-    nvbes_email_worker --> nvbes_core
-    nvbes_email_worker --> nvbes_email
-    nvbes_email_worker --> nvbes_email_scaleway
-    nvbes_email_worker --> nvbes_observability
-    nvbes_identity_service --> nvbes_core
-    nvbes_identity_service --> nvbes_email
-    nvbes_identity_service --> nvbes_observability
-    nvbes_trust_risk_service --> nvbes_core
-    nvbes_trust_risk_service --> nvbes_observability
-    nvbes_trust_risk_service --> nvbes_trust_risk
-    nvbes_trust_risk_service --> opentelemetry_otlp
+    nvbes_api --> nvbes_account_service
+    nvbes_api --> nvbes_billing_service
+    nvbes_api --> nvbes_consent
+    nvbes_api --> nvbes_core
+    nvbes_api --> nvbes_identity_service
+    nvbes_api --> nvbes_observability
+    nvbes_api --> tower
+    nvbes_api --> tower_http
+    nvbes_worker --> nvbes_account_service
+    nvbes_worker --> nvbes_billing_service
+    nvbes_worker --> nvbes_core
+    nvbes_worker --> nvbes_email
+    nvbes_worker --> nvbes_email_scaleway
+    nvbes_worker --> nvbes_observability
 ```
 
 ## Règles d'Isolation des Domaines (Boundaries)

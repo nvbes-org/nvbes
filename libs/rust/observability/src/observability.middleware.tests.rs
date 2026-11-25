@@ -9,7 +9,7 @@ use tower::ServiceExt;
 
 use crate::metrics::HttpMetrics;
 use crate::request_id::REQUEST_ID_HEADER;
-use crate::trace_context::{TRACEPARENT_HEADER, TRACESTATE_HEADER, TraceParent};
+use crate::trace_context::{TRACEPARENT_HEADER, TRACESTATE_HEADER};
 
 use super::{insert_header_str, observe_request, request_path_template, server_timing_value};
 
@@ -185,6 +185,7 @@ mod otlp_span_branches {
 
     use super::super::{build_otel_span, traceparent_from_span};
     use super::*;
+    use crate::trace_context::TraceParent;
 
     #[test]
     fn build_otel_span_covers_invalid_ids_and_unsampled_parent() {

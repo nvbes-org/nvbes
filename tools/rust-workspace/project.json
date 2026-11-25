@@ -5,14 +5,15 @@
   "sourceRoot": "tools/rust-workspace",
   "tags": ["scope:oss", "type:workspace", "domain:shared", "layer:tooling"],
   "implicitDependencies": [
-    "email-worker",
-    "trust-risk-service",
-    "audit",
-    "billing",
+    "api",
+    "worker",
+    "account-service",
     "core",
-    "observability",
-    "platform",
-    "trust-risk"
+    "email",
+    "email-scaleway",
+    "identity-sdk-backend",
+    "identity-service",
+    "observability"
   ],
   "namedInputs": {
     "default": [
@@ -34,14 +35,18 @@
     "test:harness": {
       "executor": "nx:run-commands",
       "cache": false,
-      "options": { "command": "node --test tools/rust-workspace/*.test.mjs" }
+      "options": {
+        "command": "node --test tools/rust-workspace/*.test.mjs"
+      }
     },
     "micro-test": {
       "executor": "nx:run-commands",
       "dependsOn": ["test:harness"],
       "cache": false,
       "parallelism": false,
-      "options": { "command": "node tools/rust-workspace/micro-test.mjs" }
+      "options": {
+        "command": "node tools/rust-workspace/micro-test.mjs"
+      }
     },
     "format": {
       "executor": "nx:run-commands",
@@ -138,7 +143,9 @@
       "executor": "nx:run-commands",
       "cache": false,
       "parallelism": false,
-      "options": { "command": "node tools/rust-workspace/mutation-v1.mjs" }
+      "options": {
+        "command": "node tools/rust-workspace/mutation-v1.mjs"
+      }
     },
     "mutation:diff": {
       "executor": "nx:run-commands",

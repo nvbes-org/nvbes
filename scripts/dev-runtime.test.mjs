@@ -10,58 +10,36 @@ async function workspaceFile(path) {
   return readFile(new URL(path, root), 'utf8');
 }
 
-void test('email worker reloads when its renderer or generated React templates change', async () => {
-  const launcher = await workspaceFile('scripts/dev-email-worker.sh');
+void test('API dev launcher watches API and shared Rust crates', async () => {
+  const launcher = await workspaceFile('scripts/dev-api.sh');
 
   assert.match(launcher, /cargo watch/);
-  assert.match(launcher, /--watch libs\/rust\/email/);
-  assert.match(launcher, /--watch apps\/email-worker/);
-  assert.match(launcher, /pnpm --dir libs\/ts\/email-ui run generate/);
-  assert.doesNotMatch(
-    launcher,
-    /--shell '[^']*pnpm generate:email/,
-    'the cargo watcher must not start Nx inside a detached PTY',
-  );
-  assert.match(launcher, /run -p nvbes-email-worker/);
-  assert.match(launcher, /NVBES_DEV_EMAIL_BIND_ADDR/);
-  assert.match(launcher, /NVBES_EMAIL_GRPC_BIND_ADDR="\$NVBES_EMAIL_HTTP_BIND_ADDR"/);
+  assert.match(launcher, /--watch apps\/api/);
+  assert.match(launcher, /--watch libs\/rust/);
+  assert.match(launcher, /run -p nvbes-api/);
+  assert.match(launcher, /PORT="\$\{PORT:-8080\}"/);
 });
 
-void test('the root development launcher starts the complete V1 ecosystem', async () => {
+void test('Worker dev launcher watches Worker and shared Rust crates', async () => {
+  const launcher = await workspaceFile('scripts/dev-worker.sh');
+
+  assert.match(launcher, /cargo watch/);
+  assert.match(launcher, /--watch apps\/worker/);
+  assert.match(launcher, /--watch libs\/rust/);
+  assert.match(launcher, /run -p nvbes-worker/);
+  assert.match(launcher, /PORT="\$\{PORT:-8081\}"/);
+});
+
+void test('the root development launcher starts only API and Worker in V1 ecosystem', async () => {
   const launcher = await workspaceFile('scripts/dev.sh');
 
   assert.match(launcher, /docker compose .* up --detach --wait/);
-  assert.match(launcher, /dev-email-worker\.sh/);
-  assert.match(launcher, /dev-trust-risk-service\.sh/);
-  assert.match(launcher, /dev-identity-service\.sh/);
-  assert.match(launcher, /dev-account-service\.sh/);
-  assert.match(launcher, /dev-billing-service\.sh/);
-  assert.match(
+  assert.match(launcher, /dev-api\.sh/);
+  assert.match(launcher, /dev-worker\.sh/);
+  assert.doesNotMatch(
     launcher,
-    /for database in nvbes_dev_email nvbes_dev_trust_risk nvbes_dev_identity nvbes_dev_account nvbes_dev_billing/,
+    /dev-(email|trust-risk|identity-service|account-service|billing-service|cloud|enterprise|developer|backoffice)/,
   );
-  assert.match(launcher, /createdb --username postgres "\$database"/);
-  assert.match(launcher, /cargo run --package nvbes-email-worker -- migrate/);
-  assert.match(launcher, /cargo run --package nvbes-trust-risk-service -- migrate/);
-  assert.match(launcher, /cargo run --package nvbes-identity-service -- migrate/);
-  assert.match(launcher, /cargo run --package nvbes-account-service -- migrate/);
-  assert.match(launcher, /cargo run --manifest-path apps\/billing-service\/Cargo\.toml -- migrate/);
-  assert.doesNotMatch(launcher, /dev-(cloud|enterprise|developer|backoffice)/);
-});
-
-void test('local Identity consumers share one generated RSA public key', async () => {
-  const [keys, account, billing] = await Promise.all([
-    workspaceFile('scripts/lib/dev-identity-keys.sh'),
-    workspaceFile('scripts/dev-account-service.sh'),
-    workspaceFile('scripts/dev-billing-service.sh'),
-  ]);
-
-  assert.match(keys, /\.temp\/dev-runtime/);
-  assert.match(keys, /openssl genpkey -algorithm RSA/);
-  assert.match(keys, /NVBES_IDENTITY_PUBLIC_KEY_PEM/);
-  assert.match(account, /load_dev_identity_keys/);
-  assert.match(billing, /load_dev_identity_keys/);
-  assert.match(billing, /exec node "\$SCRIPT_DIR\/stripe-dev\.mjs"/);
 });
 
 void test('development environment loaders expose custom Node debugger names', async () => {
@@ -77,26 +55,6 @@ void test('development environment loaders expose custom Node debugger names', a
     workspaceEnv,
     /NVBES_DEVCONTAINER_EMAIL_DATABASE_URL:-postgres:\/\/postgres:postgres@postgres:5432\/nvbes_email/,
   );
-});
-
-void test('email database tests load the worker database environment', async () => {
-  const [project, launcher] = await Promise.all([
-    workspaceFile('apps/email-worker/project.json'),
-    workspaceFile('scripts/test-email-worker-database.sh'),
-  ]);
-  const configuration = JSON.parse(project);
-
-  assert.equal(
-    configuration.targets['test:database'].options.command,
-    'bash scripts/test-email-worker-database.sh',
-  );
-  assert.match(launcher, /source "\$ROOT_DIR\/scripts\/lib\/test-env\.sh"/);
-  assert.match(
-    launcher,
-    /export DATABASE_URL="\$\{DATABASE_URL:-\$\{NVBES_EMAIL_DATABASE_URL:-\}\}"/,
-  );
-  assert.match(launcher, /validate-email-test-database\.mjs/);
-  assert.match(launcher, /--test-threads=1/);
 });
 
 void test('email database tests accept only local, devcontainer, or GitHub CI databases', () => {

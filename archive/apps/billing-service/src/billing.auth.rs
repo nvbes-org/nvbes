@@ -1,273 +1,79 @@
-use axum::http::{HeaderMap, header};
-use sqlx::Row;
+use crate::{app::BillingState, error::BillingError};
+use axum::{extract::FromRequestParts, http::request::Parts};
 use uuid::Uuid;
 
-use crate::http::error::AppError;
-
-const BILLING_AUDIENCE: &str = "nvbes-billing-service";
+#[path = "billing.auth.tokens.rs"]
+mod tokens;
+pub use tokens::TokenVerifier;
 
 #[derive(Debug, Clone)]
-pub struct BillingAuthContext {
-    pub principal_id: Uuid,
-    pub tenant_id: Option<Uuid>,
-    pub workspace_id: Option<Uuid>,
-    pub scope: Option<String>,
-    pub acr: Option<String>,
-    pub amr: Vec<String>,
-    pub auth_time: Option<i64>,
-    pub authentication_event_id: Option<String>,
+pub struct BillingPrincipal {
+    id: Uuid,
+    scopes: Vec<String>,
+    strong_authentication: bool,
+}
+impl BillingPrincipal {
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
+    pub fn has_mfa(&self) -> bool {
+        self.strong_authentication
+    }
+    pub fn require_scope(&self, scope: &str) -> Result<(), BillingError> {
+        if self.scopes.iter().any(|s| s == scope) {
+            Ok(())
+        } else {
+            Err(BillingError::Forbidden)
+        }
+    }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BillingWorkspacePermission {
-    Read,
-    Manage,
-}
-
-pub async fn authorize_billing_workspace(
-    db: &sqlx::PgPool,
-    headers: &HeaderMap,
-    workspace_id: Uuid,
-    permission: BillingWorkspacePermission,
-) -> Result<BillingAuthContext, AppError> {
-    let token = bearer_token(headers)?;
-    let identity = introspect_identity_token(headers, &token).await?;
-    if identity
-        .workspace_id
-        .is_some_and(|claim| claim != workspace_id)
-    {
-        return Err(AppError::forbidden(
-            "workspace_context_mismatch",
-            "Token workspace context does not match the requested workspace.",
-        ));
+fn bearer(parts: &Parts) -> Result<&str, BillingError> {
+    let mut values = parts.headers.get_all("authorization").iter();
+    let value = values.next().ok_or(BillingError::Unauthorized)?;
+    if values.next().is_some() {
+        return Err(BillingError::Unauthorized);
     }
-
-    let role = workspace_role(db, workspace_id, identity.principal_id).await?;
-    if !role_allows(role.as_str(), permission) {
-        return Err(AppError::forbidden(
-            "billing_workspace_access_denied",
-            "This principal cannot access billing for this workspace.",
-        ));
-    }
-    if permission == BillingWorkspacePermission::Manage && !has_step_up(&identity) {
-        return Err(AppError::forbidden(
-            "step_up_required",
-            "Billing changes require a recent phishing-resistant passkey or security-key authentication.",
-        ));
-    }
-    if permission == BillingWorkspacePermission::Manage {
-        tracing::info!(
-            security_event = "privileged_authentication_enforced",
-            privileged_surface = "billing_and_secret_management",
-            principal_id = %identity.principal_id,
-            workspace_id = %workspace_id,
-            authentication_event_id = identity.authentication_event_id.as_deref().unwrap_or_default(),
-            acr = identity.acr.as_deref().unwrap_or_default(),
-            amr = %identity.amr.join(","),
-            auth_time = identity.auth_time.unwrap_or_default(),
-            "accepted privileged Billing request"
-        );
-    }
-
-    Ok(identity)
-}
-
-fn bearer_token(headers: &HeaderMap) -> Result<String, AppError> {
-    headers
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.strip_prefix("Bearer "))
-        .map(str::trim)
-        .filter(|token| !token.is_empty())
-        .map(ToOwned::to_owned)
-        .ok_or_else(|| AppError::unauthorized("missing_authorization", "Missing bearer token."))
-}
-
-async fn introspect_identity_token(
-    headers: &HeaderMap,
-    token: &str,
-) -> Result<BillingAuthContext, AppError> {
-    let identity = crate::identity_grpc::introspect(headers, token).await?;
-    identity_auth_context(identity)
-}
-
-fn identity_auth_context(
-    identity: crate::grpc::pb::nvbes::identity::internal::v1::IntrospectAccessTokenResponse,
-) -> Result<BillingAuthContext, AppError> {
-    if !identity.active {
-        return Err(AppError::unauthorized(
-            "invalid_token",
-            "The access token is inactive.",
-        ));
-    }
-    if identity.audience.as_deref() != Some(BILLING_AUDIENCE) {
-        return Err(AppError::unauthorized(
-            "invalid_token_audience",
-            "The access token is not intended for Billing.",
-        ));
-    }
-    if identity.network_valid == Some(false) {
-        return Err(AppError::forbidden(
-            "network_restriction_violated",
-            "Access denied: current location does not match network restrictions.",
-        ));
-    }
-    if identity.principal_type.as_deref() != Some("user") {
-        return Err(AppError::forbidden(
-            "user_context_required",
-            "Billing workspace actions require a user principal.",
-        ));
-    }
-    let principal_id = identity
-        .sub
-        .as_deref()
-        .and_then(|value| Uuid::parse_str(value).ok())
-        .ok_or_else(|| AppError::unauthorized("invalid_token", "Invalid Identity subject."))?;
-    let tenant_id = optional_uuid(identity.tenant_id, "tenant_id")?;
-    let workspace_id = optional_uuid(identity.workspace_id, "workspace_id")?;
-
-    Ok(BillingAuthContext {
-        principal_id,
-        tenant_id,
-        workspace_id,
-        scope: identity.scope,
-        acr: identity.acr,
-        amr: identity.amr,
-        auth_time: identity.auth_time,
-        authentication_event_id: identity.sid,
-    })
-}
-
-fn optional_uuid(value: Option<String>, field: &str) -> Result<Option<Uuid>, AppError> {
     value
-        .map(|value| {
-            Uuid::parse_str(&value).map_err(|_| {
-                AppError::internal(
-                    "identity_grpc_response_invalid",
-                    format!("Identity gRPC response contains an invalid {field}."),
-                )
-            })
-        })
-        .transpose()
+        .to_str()
+        .ok()
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .filter(|v| !v.is_empty() && !v.bytes().any(|b| b.is_ascii_whitespace()))
+        .ok_or(BillingError::Unauthorized)
 }
-
-async fn workspace_role(
-    db: &sqlx::PgPool,
-    workspace_id: Uuid,
-    principal_id: Uuid,
-) -> Result<String, AppError> {
-    let row = sqlx::query(
-        r#"
-        SELECT wm.role::text AS role
-        FROM workspace_memberships wm
-        INNER JOIN workspaces w ON w.id = wm.workspace_id
-        WHERE wm.workspace_id = $1
-          AND wm.principal_id = $2
-          AND wm.status = 'active'
-          AND w.deleted_at IS NULL
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(principal_id)
-    .fetch_optional(db)
-    .await?;
-
-    row.map(|row| row.get("role")).ok_or_else(|| {
-        AppError::forbidden(
-            "billing_workspace_access_denied",
-            "This principal cannot access billing for this workspace.",
-        )
-    })
-}
-
-fn role_allows(role: &str, permission: BillingWorkspacePermission) -> bool {
-    match permission {
-        BillingWorkspacePermission::Read => matches!(role, "owner" | "admin" | "member" | "viewer"),
-        BillingWorkspacePermission::Manage => matches!(role, "owner" | "admin"),
+impl FromRequestParts<BillingState> for BillingPrincipal {
+    type Rejection = BillingError;
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &BillingState,
+    ) -> Result<Self, Self::Rejection> {
+        let credentials = nvbes_dpop::resource::Credentials::from_headers(&parts.headers)
+            .map_err(|_| BillingError::Unauthorized)?;
+        let uri = parts
+            .extensions
+            .get::<axum::extract::OriginalUri>()
+            .map(|original| &original.0)
+            .unwrap_or(&parts.uri);
+        state
+            .tokens
+            .authenticate(&credentials, &parts.method, uri, &state.db)
+            .await
     }
 }
 
-fn has_step_up(auth: &BillingAuthContext) -> bool {
-    auth.authentication_event_id
-        .as_deref()
-        .is_some_and(|event_id| !event_id.trim().is_empty())
-        && nvbes_core::auth::has_recent_phishing_resistant_authentication(
-            auth.acr.as_deref(),
-            &auth.amr,
-            auth.auth_time,
-            chrono::Utc::now().timestamp(),
-            nvbes_core::auth::PRIVILEGED_AUTHENTICATION_MAX_AGE_SECONDS,
-        )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        BillingAuthContext, BillingWorkspacePermission, has_step_up, identity_auth_context,
-        role_allows,
-    };
-    use crate::grpc::pb::nvbes::identity::internal::v1::IntrospectAccessTokenResponse;
-    use uuid::Uuid;
-
-    #[test]
-    fn billing_role_policy_separates_read_and_manage() {
-        assert!(role_allows("viewer", BillingWorkspacePermission::Read));
-        assert!(!role_allows("viewer", BillingWorkspacePermission::Manage));
-        assert!(role_allows("admin", BillingWorkspacePermission::Manage));
-    }
-
-    #[test]
-    fn billing_management_requires_recent_phishing_resistant_step_up() {
-        let now = chrono::Utc::now().timestamp();
-        let base = BillingAuthContext {
-            principal_id: Uuid::nil(),
-            tenant_id: None,
-            workspace_id: None,
-            scope: None,
-            acr: None,
-            amr: Vec::new(),
-            auth_time: Some(now),
-            authentication_event_id: Some("billing-authn-event".to_string()),
-        };
-        assert!(!has_step_up(&base));
-        assert!(!has_step_up(&BillingAuthContext {
-            acr: Some("aal2".to_string()),
-            ..base.clone()
-        }));
-        assert!(!has_step_up(&BillingAuthContext {
-            acr: Some("aal2".to_string()),
-            amr: vec!["otp".to_string()],
-            ..base.clone()
-        }));
-        assert!(has_step_up(&BillingAuthContext {
-            acr: Some("aal2".to_string()),
-            amr: vec!["webauthn".to_string()],
-            ..base.clone()
-        }));
-        assert!(!has_step_up(&BillingAuthContext {
-            acr: Some("aal2".to_string()),
-            amr: vec!["webauthn".to_string()],
-            authentication_event_id: None,
-            ..base.clone()
-        }));
-        assert!(!has_step_up(&BillingAuthContext {
-            acr: Some("aal2".to_string()),
-            auth_time: Some(now - 16 * 60),
-            ..base
-        }));
-    }
-
-    #[test]
-    fn billing_rejects_foreign_audience() {
-        let error = identity_auth_context(IntrospectAccessTokenResponse {
-            active: true,
-            audience: Some("nvbes-cloud-service".to_string()),
-            principal_type: Some("user".to_string()),
-            sub: Some(Uuid::new_v4().to_string()),
-            ..Default::default()
-        })
-        .expect_err("Billing must reject a Cloud token");
-
-        assert_eq!(error.code, "invalid_token_audience");
+pub struct OperatorAuth;
+impl FromRequestParts<BillingState> for OperatorAuth {
+    type Rejection = BillingError;
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &BillingState,
+    ) -> Result<Self, Self::Rejection> {
+        let token = bearer(parts)?;
+        if let Some(expected) = &state.config.operator_token
+            && nvbes_billing::stripe::constant_time_eq(token.as_bytes(), expected.as_bytes())
+        {
+            return Ok(OperatorAuth);
+        }
+        Err(BillingError::Unauthorized)
     }
 }

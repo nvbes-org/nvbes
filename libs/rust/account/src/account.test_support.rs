@@ -1,0 +1,228 @@
+//! Shared HTTP + JWT fixtures for Account service integration tests.
+
+use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+use nvbes_identity_sdk::introspection::{
+    ActivityVerifier, ExpectedToken, IntrospectionError, confirm_activity,
+};
+use openssl::{pkey::PKey, rsa::Rsa};
+use serde_json::{Value, json};
+use sqlx::PgPool;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex, OnceLock},
+};
+use uuid::Uuid;
+
+use crate::{app::AccountState, auth::TokenTrust, config::AccountConfig};
+
+/// Serializes process-wide env mutation across Account unit tests.
+pub(crate) fn test_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+struct TestKeys {
+    private_pem: String,
+    public_pem: String,
+}
+
+fn test_keys() -> &'static TestKeys {
+    static KEYS: OnceLock<TestKeys> = OnceLock::new();
+    KEYS.get_or_init(|| {
+        let private = PKey::from_rsa(Rsa::generate(2048).expect("rsa")).expect("pkey");
+        TestKeys {
+            private_pem: String::from_utf8(private.private_key_to_pem_pkcs8().expect("priv pem"))
+                .expect("utf8"),
+            public_pem: String::from_utf8(private.public_key_to_pem().expect("pub pem"))
+                .expect("utf8"),
+        }
+    })
+}
+
+pub(crate) const TEST_ISSUER: &str = "http://127.0.0.1";
+
+pub(crate) fn account_config() -> AccountConfig {
+    AccountConfig {
+        browser_origins: Default::default(),
+        public_origin: None,
+    }
+}
+
+pub(crate) fn token_trust() -> TokenTrust {
+    TokenTrust {
+        issuer: TEST_ISSUER.into(),
+        key_id: "identity-key-1".into(),
+        public_key_pem: test_keys().public_pem.clone(),
+        verification_keys: "[]".into(),
+    }
+}
+
+/// In-memory stand-in for the Identity activity check: replies are keyed by
+/// token and use the same JSON shape as RFC 7662 introspection.
+#[derive(Clone, Default)]
+pub(crate) struct FakeActivity {
+    replies: Arc<Mutex<HashMap<String, Value>>>,
+}
+
+impl FakeActivity {
+    pub(crate) fn reply(&self, token: &str, body: Value) {
+        self.replies
+            .lock()
+            .expect("activity replies")
+            .insert(token.to_owned(), body);
+    }
+}
+
+#[async_trait::async_trait]
+impl ActivityVerifier for FakeActivity {
+    async fn is_active(
+        &self,
+        token: &str,
+        expected: &ExpectedToken,
+    ) -> Result<bool, IntrospectionError> {
+        let body = self
+            .replies
+            .lock()
+            .map_err(|_| IntrospectionError::Unavailable)?
+            .get(token)
+            .cloned()
+            .unwrap_or_else(|| json!({"active": false}));
+        if body.get("active") != Some(&Value::Bool(true)) {
+            return Ok(false);
+        }
+        let actual: ExpectedToken =
+            serde_json::from_value(body).map_err(|_| IntrospectionError::Unavailable)?;
+        confirm_activity(&actual, expected)
+    }
+}
+
+pub(crate) struct HttpHarness {
+    pub state: AccountState,
+    pub activity: FakeActivity,
+}
+
+impl HttpHarness {
+    pub(crate) async fn new(pool: PgPool) -> Self {
+        let activity = FakeActivity::default();
+        let state = AccountState::new(
+            account_config(),
+            token_trust(),
+            pool,
+            Arc::new(activity.clone()),
+        )
+        .expect("account state");
+        Self { state, activity }
+    }
+
+    pub(crate) fn access_token(&self, principal_id: Uuid, scopes: &str, step_up: bool) -> String {
+        let now = jsonwebtoken::get_current_timestamp();
+        let mut amr = vec!["pwd"];
+        if step_up {
+            amr.push("totp");
+        }
+        let mut claims = json!({
+            "sub": principal_id,
+            "sid": Uuid::new_v4(),
+            "grant_id": Uuid::new_v4(),
+            "jti": Uuid::new_v4(),
+            "iss": TEST_ISSUER,
+            "aud": "nvbes-account-service",
+            "client_id": "account-web",
+            "token_type": "access",
+            "scope": scopes,
+            "amr": amr,
+            "auth_time": now.saturating_sub(60),
+            "iat": now,
+            "nbf": now,
+            "exp": now + 600,
+        });
+        if step_up {
+            claims["step_up_time"] = json!(now.saturating_sub(30));
+            claims["step_up_expires_at"] = json!(now + 300);
+        }
+        let mut header = Header::new(Algorithm::RS256);
+        header.kid = Some("identity-key-1".into());
+        header.typ = Some("at+jwt".into());
+        let key = EncodingKey::from_rsa_pem(test_keys().private_pem.as_bytes()).expect("encoding");
+        let token = encode(&header, &claims, &key).unwrap();
+        let mut active = claims;
+        active["active"] = json!(true);
+        active["token_type"] = json!("Bearer");
+        self.activity.reply(&token, active);
+        token
+    }
+}
+
+/// Back-compat helper for tests that only need a pool-backed state without HTTP auth.
+pub(crate) fn state_with_pool(pool: PgPool) -> AccountState {
+    AccountState::new(
+        account_config(),
+        token_trust(),
+        pool,
+        Arc::new(FakeActivity::default()),
+    )
+    .expect("account state")
+}
+
+/// Fresh migrated database derived from `DATABASE_URL` for tests that call `migrate` directly.
+pub(crate) async fn ephemeral_migrated_pool() -> (PgPool, String) {
+    let mother = std::env::var("DATABASE_URL").expect("DATABASE_URL required");
+    let admin = rewrite_database_name(&mother, "postgres");
+    let name = format!("account_ephemeral_{}", Uuid::new_v4().simple());
+    let admin_pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&admin)
+        .await
+        .expect("admin postgres");
+    sqlx::query(&format!("CREATE DATABASE \"{name}\""))
+        .execute(&admin_pool)
+        .await
+        .expect("create ephemeral database");
+    admin_pool.close().await;
+    let ephemeral = rewrite_database_name(&mother, &name);
+    let pool = crate::database::connect(&ephemeral, 4)
+        .await
+        .expect("ephemeral pool");
+    crate::database::migrate(&pool)
+        .await
+        .expect("ephemeral migrate");
+    (pool, name)
+}
+
+pub(crate) async fn drop_ephemeral_database(name: &str) {
+    let mother = match std::env::var("DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => return,
+    };
+    let admin = rewrite_database_name(&mother, "postgres");
+    let Ok(admin_pool) = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&admin)
+        .await
+    else {
+        return;
+    };
+    let _ = sqlx::query(
+        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()",
+    )
+    .bind(name)
+    .execute(&admin_pool)
+    .await;
+    let _ = sqlx::query(&format!("DROP DATABASE IF EXISTS \"{name}\""))
+        .execute(&admin_pool)
+        .await;
+    admin_pool.close().await;
+}
+
+fn rewrite_database_name(database_url: &str, name: &str) -> String {
+    let (base, query) = match database_url.split_once('?') {
+        Some((base, query)) => (base, Some(query)),
+        None => (database_url, None),
+    };
+    let slash = base.rfind('/').expect("database URL path");
+    let rewritten = format!("{}{name}", &base[..=slash]);
+    match query {
+        Some(query) => format!("{rewritten}?{query}"),
+        None => rewritten,
+    }
+}

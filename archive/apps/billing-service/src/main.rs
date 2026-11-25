@@ -1,135 +1,249 @@
-use nvbes_core::config::AppConfig;
-use nvbes_core::http::keep_alive;
-use nvbes_observability::{
-    capture_error_reporting_smoke, init_error_reporting_for_service, init_tracing,
-    install_safe_panic_hook, start_continuous_profiling,
-};
-use std::net::SocketAddr;
-use tokio::sync::broadcast;
-
-const BILLING_API_PORT_ENV: &str = "NVBES_BILLING_SERVICE_PORT";
-const BILLING_GRPC_PORT_ENV: &str = "NVBES_BILLING_GRPC_PORT";
+#[path = "billing.app.rs"]
+mod app;
+#[path = "billing.audit.rs"]
+mod audit;
+#[path = "billing.auth.rs"]
+mod auth;
+#[path = "billing.authorization.rs"]
+mod authorization;
+#[path = "billing.checkout.rs"]
+mod checkout;
+#[path = "billing.config.rs"]
+mod config;
+#[path = "billing.customer.rs"]
+mod customer;
+#[path = "billing.database.rs"]
+mod database;
+#[path = "billing.email.rs"]
+mod email;
+#[path = "billing.error.rs"]
+mod error;
+#[path = "billing.grpc.rs"]
+mod grpc;
+#[path = "billing.health.rs"]
+mod health;
+#[path = "billing.metrics.rs"]
+mod metrics;
+#[path = "billing.outbox.rs"]
+mod outbox;
+#[path = "billing.overview.rs"]
+mod overview;
+#[path = "billing.plans.rs"]
+mod plans;
+#[path = "billing.portal.rs"]
+mod portal;
+#[path = "billing.reconciliation.rs"]
+mod reconciliation;
+#[path = "billing.subscriptions.rs"]
+mod subscriptions;
+#[path = "billing.synthetic.rs"]
+mod synthetic;
+#[path = "billing.webhooks.rs"]
+mod webhooks;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
-    config
-        .resolve_from_secret_manager()
-        .await
-        .map_err(anyhow::Error::msg)?;
-    let command = std::env::args().nth(1);
+    run(std::env::args().skip(1).collect()).await
+}
 
-    let _error_reporting_guard = init_error_reporting_for_service(&config, "billing-service");
-    install_safe_panic_hook();
-    init_tracing(&config);
+async fn run(command: Vec<String>) -> anyhow::Result<()> {
+    if matches!(command.as_slice(), [action] if action == "deployment-bootstrap") {
+        return run_deployment_bootstrap().await;
+    }
 
-    if matches!(command.as_deref(), Some("error-reporting-smoke")) {
-        let result = capture_error_reporting_smoke(
-            "billing-service",
-            &config.environment,
-            "api",
-            config.sentry_dsn.is_some(),
-        );
+    if matches!(command.as_slice(), [action] if action == "migrate") {
+        let config = config::BillingConfig::from_env()?;
+        let pool = database::connect(&config.database_url, 2).await?;
+        database::migrate(&pool).await?;
+        println!("billing database migrations applied");
+        return Ok(());
+    }
+
+    if matches!(command.as_slice(), [action] if action == "check-stripe-mappings") {
+        let config = config::BillingConfig::from_env()?;
+        let pool = database::connect(&config.database_url, 2).await?;
+        let report = plans::check_stripe_mappings(&pool).await?;
+        println!("{}", serde_json::to_string(&report)?);
+        if !report.failures.is_empty() {
+            for failure in &report.failures {
+                eprintln!("stripe mapping error: {failure}");
+            }
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
+    if matches!(command.as_slice(), [action] if action == "synthetic-billing-smoke") {
+        let config = config::BillingConfig::from_env()?;
+        let workspace_id = required_uuid("NVBES_BILLING_SYNTHETIC_WORKSPACE_ID")
+            .unwrap_or_else(|_| uuid::Uuid::new_v4());
+        let owner_id = required_uuid("NVBES_BILLING_SYNTHETIC_OWNER_ID")
+            .unwrap_or_else(|_| uuid::Uuid::new_v4());
+        let pool = database::connect(&config.database_url, 2).await?;
+        let result = synthetic::run(&pool, &config, workspace_id, owner_id).await?;
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
 
-    let _profiling_guard =
-        start_continuous_profiling(&config, "billing-service").map_err(anyhow::Error::msg)?;
-
-    let db = nvbes_billing_service::database::connect_pool(&config).await?;
-    nvbes_billing_service::database::run_migrations(&db).await?;
-    if matches!(command.as_deref(), Some("migrate")) {
-        tracing::info!("Billing database migrations applied");
+    if matches!(command.as_slice(), [action] if action == "publish-outbox") {
+        let config = config::BillingConfig::from_env()?;
+        let pool = database::connect(&config.database_url, 2).await?;
+        let email_client = if let (Some(endpoint), Some(token)) =
+            (&config.email_grpc_endpoint, &config.email_token)
+        {
+            let email_cfg = nvbes_email::EmailClientConfig::from_values(
+                "development",
+                endpoint.clone(),
+                token.clone(),
+                std::time::Duration::from_secs(5),
+            )?;
+            Some(nvbes_email::EmailClient::connect(email_cfg).await?)
+        } else {
+            None
+        };
+        let published = outbox::publish_pending_outbox_events(
+            &pool,
+            email_client.as_ref(),
+            &config.app_url,
+            100,
+        )
+        .await?;
+        println!("published {published} outbox events");
         return Ok(());
     }
-    let state = nvbes_billing_service::app::BillingAppState::bootstrap(&config, db).await?;
-    let app = nvbes_billing_service::app::build_router(state.clone());
 
-    let port = billing_api_port(config.api_port)?;
-    let http_addr: SocketAddr = format!("0.0.0.0:{port}").parse()?;
-    let http_listener = keep_alive::bind_listener_with_keepalive(http_addr, 4096)?;
-    tracing::info!(addr = %http_addr, "Starting nvbes billing-service HTTP");
+    let config = config::BillingConfig::from_env()?;
+    if matches!(command.as_slice(), [action] if action == "validate-runtime") {
+        database::connect_lazy(&config.database_url, 2)?;
+        auth::TokenVerifier::new(&config)?;
+        println!("billing runtime configuration is valid");
+        return Ok(());
+    }
 
-    let grpc_port = billing_grpc_port(config.api_port)?;
-    let grpc_addr: SocketAddr = format!("0.0.0.0:{grpc_port}").parse()?;
-    tracing::info!(addr = %grpc_addr, "Starting nvbes Billing gRPC API");
+    if !command.is_empty() && command[0] != "serve" {
+        anyhow::bail!(
+            "usage: nvbes-billing-service [serve|migrate|validate-runtime|publish-outbox|synthetic-billing-smoke|check-stripe-mappings|deployment-bootstrap]"
+        );
+    }
 
-    let (shutdown_tx, _) = broadcast::channel(1);
-    let shutdown_signal_tx = shutdown_tx.clone();
+    let db = database::connect(&config.database_url, 5).await?;
+    let prometheus_handle = metrics::install();
+    let token_verifier = auth::TokenVerifier::new(&config)?;
+
+    let email_client =
+        if let (Some(endpoint), Some(token)) = (&config.email_grpc_endpoint, &config.email_token) {
+            if let Ok(email_cfg) = nvbes_email::EmailClientConfig::from_values(
+                "development",
+                endpoint.clone(),
+                token.clone(),
+                std::time::Duration::from_secs(5),
+            ) {
+                nvbes_email::EmailClient::connect(email_cfg)
+                    .await
+                    .ok()
+                    .map(std::sync::Arc::new)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+    let state = app::BillingState {
+        db: db.clone(),
+        config: config.clone(),
+        metrics: prometheus_handle,
+        tokens: token_verifier,
+        email_client: email_client.clone(),
+    };
+
+    let outbox_db = db.clone();
+    let outbox_email = email_client.clone();
+    let outbox_app_url = config.app_url.clone();
     tokio::spawn(async move {
-        let _ = tokio::signal::ctrl_c().await;
-        let _ = shutdown_signal_tx.send(());
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
+        loop {
+            interval.tick().await;
+            let _ = outbox::publish_pending_outbox_events(
+                &outbox_db,
+                outbox_email.as_deref(),
+                &outbox_app_url,
+                50,
+            )
+            .await;
+        }
     });
 
-    let http_server = axum::serve(
-        http_listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .with_graceful_shutdown(shutdown_signal(shutdown_tx.subscribe()));
-    let grpc_server = nvbes_billing_service::grpc::service::serve(
-        grpc_addr,
-        state,
-        shutdown_signal(shutdown_tx.subscribe()),
-    );
+    let delivery_grpc = grpc::delivery_server(grpc::BillingDeliveryGrpcService::new(state.clone()));
+    let operations_grpc =
+        grpc::operations_server(grpc::BillingOperationsGrpcService::new(state.clone()));
 
-    tokio::try_join!(
-        async { http_server.await.map_err(anyhow::Error::from) },
-        async { grpc_server.await.map_err(anyhow::Error::from) },
-    )?;
+    let (health_reporter, health_service) = tonic_health::server::health_reporter();
+    health_reporter
+        .set_service_status(
+            "nvbes.billing.v1.BillingDeliveryService",
+            tonic_health::ServingStatus::Serving,
+        )
+        .await;
+    health_reporter
+        .set_service_status(
+            "nvbes.billing.v1.BillingOperationsService",
+            tonic_health::ServingStatus::Serving,
+        )
+        .await;
 
+    let router = app::create_router(state);
+    let combined = tonic::service::Routes::from(router)
+        .add_service(health_service)
+        .add_service(delivery_grpc)
+        .add_service(operations_grpc)
+        .into_axum_router();
+
+    let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
+    tracing::info!(bind_addr = %config.bind_addr, "starting Billing runtime (Stripe test mode only, gRPC+HTTP)");
+
+    axum::serve(listener, combined)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+
+    db.close().await;
     Ok(())
 }
 
-async fn shutdown_signal(mut shutdown_rx: broadcast::Receiver<()>) {
-    let _ = shutdown_rx.recv().await;
+fn required_uuid(name: &str) -> anyhow::Result<uuid::Uuid> {
+    let value = std::env::var(name).map_err(|_| anyhow::anyhow!("{name} is required"))?;
+    Ok(uuid::Uuid::parse_str(&value)?)
 }
 
-fn billing_grpc_port(default_api_port: u16) -> anyhow::Result<u16> {
-    match std::env::var(BILLING_GRPC_PORT_ENV) {
-        Ok(port) => port
-            .parse::<u16>()
-            .map_err(|error| anyhow::anyhow!("{BILLING_GRPC_PORT_ENV} is invalid: {error}")),
-        Err(std::env::VarError::NotPresent) => default_api_port
-            .checked_add(21)
-            .ok_or_else(|| anyhow::anyhow!("Default billing gRPC port overflowed")),
-        Err(error) => Err(anyhow::anyhow!(
-            "{BILLING_GRPC_PORT_ENV} could not be read: {error}"
-        )),
-    }
+async fn run_deployment_bootstrap() -> anyhow::Result<()> {
+    let bind_addr: std::net::SocketAddr = std::env::var("NVBES_BILLING_BIND_ADDR")
+        .or_else(|_| std::env::var("NVBES_BILLING_HTTP_BIND_ADDR"))
+        .unwrap_or_else(|_| "0.0.0.0:8080".to_string())
+        .parse()
+        .map_err(|error| anyhow::anyhow!("NVBES_BILLING_BIND_ADDR is invalid: {error}"))?;
+    let listener = tokio::net::TcpListener::bind(bind_addr).await?;
+    let router = axum::Router::new().route(
+        "/health/live",
+        axum::routing::get(|| async { axum::http::StatusCode::NO_CONTENT }),
+    );
+
+    axum::serve(listener, router)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+    Ok(())
 }
 
-fn billing_api_port(default_api_port: u16) -> anyhow::Result<u16> {
-    match std::env::var(BILLING_API_PORT_ENV) {
-        Ok(port) => port
-            .parse::<u16>()
-            .map_err(|error| anyhow::anyhow!("{BILLING_API_PORT_ENV} is invalid: {error}")),
-        Err(std::env::VarError::NotPresent) => default_api_port
-            .checked_add(20)
-            .ok_or_else(|| anyhow::anyhow!("Default billing API port overflowed")),
-        Err(error) => Err(anyhow::anyhow!(
-            "{BILLING_API_PORT_ENV} could not be read: {error}"
-        )),
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+        let mut terminate = signal(SignalKind::terminate()).expect("SIGTERM handler must register");
+        tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = terminate.recv() => {} }
     }
+    #[cfg(not(unix))]
+    let _ = tokio::signal::ctrl_c().await;
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{BILLING_API_PORT_ENV, BILLING_GRPC_PORT_ENV, billing_api_port, billing_grpc_port};
-
-    #[test]
-    fn billing_api_port_defaults_after_primary_api_port() {
-        if std::env::var(BILLING_API_PORT_ENV).is_ok() {
-            return;
-        }
-        assert_eq!(billing_api_port(3000).unwrap(), 3020);
-    }
-
-    #[test]
-    fn billing_grpc_port_defaults_after_primary_api_port() {
-        if std::env::var(BILLING_GRPC_PORT_ENV).is_ok() {
-            return;
-        }
-        assert_eq!(billing_grpc_port(3000).unwrap(), 3021);
-    }
-}
+#[path = "billing.main.tests.rs"]
+mod main_tests;

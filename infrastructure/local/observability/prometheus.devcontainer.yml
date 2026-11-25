@@ -7,32 +7,18 @@ remote_write:
     send_exemplars: true
 
 scrape_configs:
-  - job_name: 'account-service'
+  - job_name: 'api'
     static_configs:
-      - targets: ['workspace:4000']
+      - targets: ['workspace:8080']
         labels:
-          service: 'account-service'
+          service: 'api'
           runtime: 'devcontainer'
 
-  - job_name: 'billing-service'
+  - job_name: 'worker'
     static_configs:
-      - targets: ['workspace:4020']
+      - targets: ['workspace:8081']
         labels:
-          service: 'billing-service'
-          runtime: 'devcontainer'
-
-  - job_name: 'account-worker'
-    static_configs:
-      - targets: ['workspace:4102']
-        labels:
-          service: 'account-worker'
-          runtime: 'devcontainer'
-
-  - job_name: 'billing-worker'
-    static_configs:
-      - targets: ['workspace:4104']
-        labels:
-          service: 'billing-worker'
+          service: 'worker'
           runtime: 'devcontainer'
 
   - job_name: 'grafana-stack'

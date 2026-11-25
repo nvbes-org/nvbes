@@ -3,7 +3,6 @@
   "agent": "antigravity",
   "instructions": [
     "AGENTS.md",
-    ".codex/instructions.md",
     ".agents/skills/fix-errors/SKILL.md",
     ".agents/skills/frontend-design/SKILL.md",
     ".agents/skills/nx-workspace/SKILL.md",

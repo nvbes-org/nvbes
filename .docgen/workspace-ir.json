@@ -1,17 +1,41 @@
 {
-  "extractedAt": "2026-09-23T12:41:02.785Z",
+  "extractedAt": "2026-11-22T02:53:20.406Z",
   "monorepo": {
-    "totalProjects": 63,
-    "totalTsPackages": 19,
-    "totalRustCrates": 45,
-    "totalOpenApiServices": 10,
-    "totalAdrs": 11
+    "totalProjects": 73,
+    "totalTsPackages": 24,
+    "totalRustCrates": 50,
+    "totalOpenApiServices": 9,
+    "totalAdrs": 12
   },
   "projects": [
     {
+      "name": "api",
+      "projectType": "application",
+      "root": "apps/api",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:api",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/api/src"
+    },
+    {
+      "name": "worker",
+      "projectType": "application",
+      "root": "apps/worker",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:worker",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/worker/src"
+    },
+    {
       "name": "account-service",
       "projectType": "application",
-      "root": "apps/account-service",
+      "root": "archive/apps/account-service",
       "tags": [
         "scope:platform",
         "type:app",
@@ -19,78 +43,6 @@
         "layer:app"
       ],
       "sourceRoot": "apps/account-service/src"
-    },
-    {
-      "name": "billing-service",
-      "projectType": "application",
-      "root": "apps/billing-service",
-      "tags": [
-        "scope:platform",
-        "type:app",
-        "domain:billing",
-        "layer:app"
-      ],
-      "sourceRoot": "apps/billing-service/src"
-    },
-    {
-      "name": "billing-worker",
-      "projectType": "application",
-      "root": "apps/billing-worker",
-      "tags": [
-        "scope:platform",
-        "type:app",
-        "domain:billing",
-        "layer:app"
-      ],
-      "sourceRoot": "apps/billing-worker/src"
-    },
-    {
-      "name": "email-worker",
-      "projectType": "application",
-      "root": "apps/email-worker",
-      "tags": [
-        "scope:platform",
-        "type:app",
-        "domain:email",
-        "layer:app"
-      ],
-      "sourceRoot": "apps/email-worker/src"
-    },
-    {
-      "name": "identity-service",
-      "projectType": "application",
-      "root": "apps/identity-service",
-      "tags": [
-        "scope:platform",
-        "type:app",
-        "domain:identity",
-        "layer:app"
-      ],
-      "sourceRoot": "apps/identity-service/src"
-    },
-    {
-      "name": "platform-operations-service",
-      "projectType": "application",
-      "root": "apps/platform-operations-service",
-      "tags": [
-        "scope:platform",
-        "type:app",
-        "domain:platform-operations",
-        "layer:app"
-      ],
-      "sourceRoot": "libs/rust/platform/src"
-    },
-    {
-      "name": "trust-risk-service",
-      "projectType": "application",
-      "root": "apps/trust-risk-service",
-      "tags": [
-        "scope:platform",
-        "type:app",
-        "domain:trust-risk",
-        "layer:app"
-      ],
-      "sourceRoot": "apps/trust-risk-service/src"
     },
     {
       "name": "account-service",
@@ -157,7 +109,7 @@
       "projectType": "application",
       "root": "archive/apps/billing-service",
       "tags": [
-        "scope:cloud",
+        "scope:platform",
         "type:app",
         "domain:billing",
         "layer:app"
@@ -169,7 +121,7 @@
       "projectType": "application",
       "root": "archive/apps/billing-worker",
       "tags": [
-        "scope:cloud",
+        "scope:platform",
         "type:app",
         "domain:billing",
         "layer:app"
@@ -249,6 +201,18 @@
       "sourceRoot": "apps/docs/src"
     },
     {
+      "name": "email-worker",
+      "projectType": "application",
+      "root": "archive/apps/email-worker",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:email",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/email-worker/src"
+    },
+    {
       "name": "enterprise-service",
       "projectType": "application",
       "root": "archive/apps/enterprise-service",
@@ -289,7 +253,7 @@
       "projectType": "application",
       "root": "archive/apps/identity-service",
       "tags": [
-        "scope:cloud",
+        "scope:platform",
         "type:app",
         "domain:identity",
         "layer:app"
@@ -319,6 +283,30 @@
         "layer:app"
       ],
       "sourceRoot": "apps/identity-worker/src"
+    },
+    {
+      "name": "platform-operations-service",
+      "projectType": "application",
+      "root": "archive/apps/platform-operations-service",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:platform-operations",
+        "layer:app"
+      ],
+      "sourceRoot": "libs/rust/platform/src"
+    },
+    {
+      "name": "trust-risk-service",
+      "projectType": "application",
+      "root": "archive/apps/trust-risk-service",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:trust-risk",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/trust-risk-service/src"
     },
     {
       "name": "analytics-posthog",
@@ -499,6 +487,17 @@
       "sourceRoot": "infrastructure/environments/account-production"
     },
     {
+      "name": "terraform-api-production",
+      "projectType": "application",
+      "root": "infrastructure/environments/api-production",
+      "tags": [
+        "scope:infrastructure",
+        "type:terraform",
+        "domain:platform"
+      ],
+      "sourceRoot": "infrastructure/environments/api-production"
+    },
+    {
       "name": "terraform-billing-production",
       "projectType": "application",
       "root": "infrastructure/environments/billing-production",
@@ -565,6 +564,17 @@
       "sourceRoot": "infrastructure/environments/trust-risk-production"
     },
     {
+      "name": "terraform-worker-production",
+      "projectType": "application",
+      "root": "infrastructure/environments/worker-production",
+      "tags": [
+        "scope:infrastructure",
+        "type:terraform",
+        "domain:platform"
+      ],
+      "sourceRoot": "infrastructure/environments/worker-production"
+    },
+    {
       "name": "terraform-modules",
       "projectType": "library",
       "root": "infrastructure/modules",
@@ -585,6 +595,18 @@
         "domain:email"
       ],
       "sourceRoot": "infrastructure/stacks/email/production"
+    },
+    {
+      "name": "account-service",
+      "projectType": "library",
+      "root": "libs/rust/account",
+      "tags": [
+        "scope:platform",
+        "type:lib",
+        "domain:account",
+        "layer:domain"
+      ],
+      "sourceRoot": "libs/rust/account/src"
     },
     {
       "name": "email-scaleway",
@@ -623,6 +645,18 @@
       "sourceRoot": "libs/rust/billing/src"
     },
     {
+      "name": "billing-service",
+      "projectType": "library",
+      "root": "libs/rust/billing-service",
+      "tags": [
+        "scope:platform",
+        "type:lib",
+        "domain:billing",
+        "layer:domain"
+      ],
+      "sourceRoot": "libs/rust/billing-service/src"
+    },
+    {
       "name": "core",
       "projectType": "library",
       "root": "libs/rust/core",
@@ -633,6 +667,42 @@
         "layer:core"
       ],
       "sourceRoot": "libs/rust/core/src"
+    },
+    {
+      "name": "email",
+      "projectType": "library",
+      "root": "libs/rust/email",
+      "tags": [
+        "scope:platform",
+        "type:lib",
+        "domain:email",
+        "layer:domain"
+      ],
+      "sourceRoot": "libs/rust/email/src"
+    },
+    {
+      "name": "identity-service",
+      "projectType": "library",
+      "root": "libs/rust/identity",
+      "tags": [
+        "scope:platform",
+        "type:lib",
+        "domain:identity",
+        "layer:domain"
+      ],
+      "sourceRoot": "libs/rust/identity/src"
+    },
+    {
+      "name": "identity-sdk-backend",
+      "projectType": "library",
+      "root": "libs/rust/identity-sdk-backend",
+      "tags": [
+        "scope:oss",
+        "type:lib",
+        "domain:identity",
+        "layer:sdk"
+      ],
+      "sourceRoot": "libs/rust/identity-sdk-backend/src"
     },
     {
       "name": "observability",
@@ -695,6 +765,18 @@
       "sourceRoot": "libs/ts/email-ui/src"
     },
     {
+      "name": "http-client",
+      "projectType": "library",
+      "root": "libs/ts/http-client",
+      "tags": [
+        "scope:oss",
+        "type:lib",
+        "domain:shared",
+        "layer:transport"
+      ],
+      "sourceRoot": "libs/ts/http-client/src"
+    },
+    {
       "name": "identity-sdk-core",
       "projectType": "library",
       "root": "libs/ts/identity-sdk-core",
@@ -705,6 +787,18 @@
         "layer:sdk"
       ],
       "sourceRoot": "libs/ts/identity-sdk-core/src"
+    },
+    {
+      "name": "identity-sdk-web",
+      "projectType": "library",
+      "root": "libs/ts/identity-sdk-web",
+      "tags": [
+        "scope:oss",
+        "type:lib",
+        "domain:identity",
+        "layer:sdk"
+      ],
+      "sourceRoot": "libs/ts/identity-sdk-web/src"
     },
     {
       "name": "account-quality",
@@ -753,9 +847,120 @@
         "layer:tooling"
       ],
       "sourceRoot": "tools/test-summary"
+    },
+    {
+      "name": "account-web",
+      "projectType": "application",
+      "root": "apps/account-web",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:account",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/account-web"
+    },
+    {
+      "name": "identity-web",
+      "projectType": "application",
+      "root": "apps/identity-web",
+      "tags": [
+        "scope:platform",
+        "type:app",
+        "domain:identity",
+        "layer:app"
+      ],
+      "sourceRoot": "apps/identity-web"
     }
   ],
   "tsPackages": [
+    {
+      "name": "@nvbes/account-web",
+      "version": "0.1.0",
+      "path": "apps/account-web",
+      "isApp": true,
+      "isLib": false,
+      "dependencies": [
+        "@fontsource-variable/geist",
+        "@nvbes/identity-sdk-web",
+        "@tanstack/react-router",
+        "class-variance-authority",
+        "cn",
+        "lucide-react",
+        "radix-ui",
+        "react",
+        "react-dom",
+        "shadcn",
+        "tw-animate-css"
+      ],
+      "devDependencies": [
+        "@tailwindcss/vite",
+        "@types/node",
+        "@types/react",
+        "@types/react-dom",
+        "@vitejs/plugin-react",
+        "jsdom",
+        "tailwindcss",
+        "typescript",
+        "vite-plus"
+      ],
+      "scripts": [
+        "dev",
+        "build",
+        "typecheck",
+        "check",
+        "lint",
+        "test",
+        "format:check"
+      ],
+      "description": ""
+    },
+    {
+      "name": "@nvbes/identity-web",
+      "version": "0.1.0",
+      "path": "apps/identity-web",
+      "isApp": true,
+      "isLib": false,
+      "dependencies": [
+        "@fontsource-variable/fraunces",
+        "@fontsource-variable/geist",
+        "@nvbes/identity-sdk-web",
+        "@tanstack/react-router",
+        "class-variance-authority",
+        "cn",
+        "lucide-react",
+        "radix-ui",
+        "react",
+        "react-dom",
+        "shadcn",
+        "tw-animate-css"
+      ],
+      "devDependencies": [
+        "@tailwindcss/vite",
+        "@testing-library/react",
+        "@testing-library/user-event",
+        "@types/node",
+        "@types/react",
+        "@types/react-dom",
+        "@vitejs/plugin-react",
+        "jsdom",
+        "playwright",
+        "tailwindcss",
+        "typescript",
+        "vite-plus"
+      ],
+      "scripts": [
+        "dev",
+        "build",
+        "typecheck",
+        "lint",
+        "test",
+        "test:browser",
+        "format:check",
+        "check"
+      ],
+      "description": ""
+    },
     {
       "name": "nvbes-account-web",
       "version": "0.1.0",
@@ -1059,6 +1264,19 @@
         "test"
       ],
       "description": ""
+    },
+    {
+      "name": "@nvbes/identity-service",
+      "version": "0.1.0",
+      "path": "archive/apps/identity-service",
+      "isApp": false,
+      "isLib": false,
+      "dependencies": [
+        "@nvbes/identity-sdk-web"
+      ],
+      "devDependencies": [],
+      "scripts": [],
+      "description": "Identity service test harness dependencies (Rust binary lives in Cargo)"
     },
     {
       "name": "nvbes-identity-web",
@@ -1424,6 +1642,32 @@
       "description": "React Email design system and transactional email templates for nvbes"
     },
     {
+      "name": "@nvbes/http-client",
+      "version": "0.1.0",
+      "path": "libs/ts/http-client",
+      "isApp": false,
+      "isLib": true,
+      "dependencies": [
+        "zod"
+      ],
+      "devDependencies": [
+        "@vitest/coverage-v8",
+        "typescript",
+        "vite-plus"
+      ],
+      "scripts": [
+        "build",
+        "check",
+        "dev",
+        "format:check",
+        "lint",
+        "test",
+        "test:coverage",
+        "typecheck"
+      ],
+      "description": "Shared fetch transport with runtime DTO validation"
+    },
+    {
       "name": "@nvbes/identity-sdk-core",
       "version": "0.1.0",
       "path": "libs/ts/identity-sdk-core",
@@ -1444,52 +1688,62 @@
         "typecheck"
       ],
       "description": "OpenAPI specification for nvbes Identity - cross-language SDK generation"
+    },
+    {
+      "name": "@nvbes/identity-sdk-web",
+      "version": "0.1.0",
+      "path": "libs/ts/identity-sdk-web",
+      "isApp": false,
+      "isLib": true,
+      "dependencies": [
+        "@nvbes/http-client",
+        "@nvbes/identity-sdk-core",
+        "jose"
+      ],
+      "devDependencies": [
+        "@types/node",
+        "typescript",
+        "vite-plus"
+      ],
+      "scripts": [
+        "build",
+        "check",
+        "dev",
+        "format:check",
+        "lint",
+        "test",
+        "typecheck"
+      ],
+      "description": "nvbes Identity SDK for web browsers (secure cookies)"
     }
   ],
   "rustCrates": [
     {
-      "name": "nvbes-account-service",
-      "version": "10.3.0",
-      "path": "apps/account-service",
+      "name": "nvbes-api",
+      "version": "0.9.10",
+      "path": "apps/api",
       "isApp": true,
       "isLib": false,
       "internalDependencies": [
-        "nvbes-observability"
-      ]
-    },
-    {
-      "name": "nvbes-billing-service",
-      "version": "10.3.0",
-      "path": "apps/billing-service",
-      "isApp": true,
-      "isLib": false,
-      "internalDependencies": [
-        "nvbes-billing",
+        "nvbes-account-service",
+        "nvbes-billing-service",
+        "nvbes-consent",
         "nvbes-core",
-        "nvbes-email",
-        "nvbes-observability"
+        "nvbes-identity-service",
+        "nvbes-observability",
+        "tower",
+        "tower-http"
       ]
     },
     {
-      "name": "nvbes-billing-worker",
-      "version": "=1.109.0",
-      "path": "apps/billing-worker",
+      "name": "nvbes-worker",
+      "version": "0.1.0",
+      "path": "apps/worker",
       "isApp": true,
       "isLib": false,
       "internalDependencies": [
-        "nvbes-billing",
-        "nvbes-core",
-        "nvbes-email",
-        "nvbes-observability"
-      ]
-    },
-    {
-      "name": "nvbes-email-worker",
-      "version": "=1.109.0",
-      "path": "apps/email-worker",
-      "isApp": true,
-      "isLib": false,
-      "internalDependencies": [
+        "nvbes-account-service",
+        "nvbes-billing-service",
         "nvbes-core",
         "nvbes-email",
         "nvbes-email-scaleway",
@@ -1497,28 +1751,16 @@
       ]
     },
     {
-      "name": "nvbes-identity-service",
+      "name": "nvbes-account-service",
       "version": "10.3.0",
-      "path": "apps/identity-service",
-      "isApp": true,
+      "path": "archive/apps/account-service",
+      "isApp": false,
       "isLib": false,
       "internalDependencies": [
+        "nvbes-identity-sdk",
         "nvbes-core",
-        "nvbes-email",
+        "nvbes-dpop",
         "nvbes-observability"
-      ]
-    },
-    {
-      "name": "nvbes-trust-risk-service",
-      "version": "0.1.0",
-      "path": "apps/trust-risk-service",
-      "isApp": true,
-      "isLib": false,
-      "internalDependencies": [
-        "nvbes-core",
-        "nvbes-observability",
-        "nvbes-trust-risk",
-        "opentelemetry-otlp"
       ]
     },
     {
@@ -1567,36 +1809,30 @@
     },
     {
       "name": "nvbes-billing-service",
-      "version": "0.1.0",
+      "version": "10.3.0",
       "path": "archive/apps/billing-service",
       "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-billing",
-        "nvbes-analytics-posthog",
         "nvbes-core",
-        "nvbes-observability",
-        "nvbes-product-analytics",
-        "nvbes-product-account",
-        "nvbes-redis",
-        "tower-http"
+        "nvbes-identity-sdk",
+        "nvbes-dpop",
+        "nvbes-email",
+        "nvbes-observability"
       ]
     },
     {
       "name": "nvbes-billing-worker",
-      "version": "0.1.0",
+      "version": "=1.112.0",
       "path": "archive/apps/billing-worker",
       "isApp": false,
       "isLib": false,
       "internalDependencies": [
         "nvbes-billing",
-        "nvbes-billing-service",
         "nvbes-core",
         "nvbes-email",
-        "nvbes-observability",
-        "nvbes-analytics-posthog",
-        "nvbes-product-analytics",
-        "nvbes-redis"
+        "nvbes-observability"
       ]
     },
     {
@@ -1655,6 +1891,19 @@
       ]
     },
     {
+      "name": "nvbes-email-worker",
+      "version": "=1.112.0",
+      "path": "archive/apps/email-worker",
+      "isApp": false,
+      "isLib": false,
+      "internalDependencies": [
+        "nvbes-core",
+        "nvbes-email",
+        "nvbes-email-scaleway",
+        "nvbes-observability"
+      ]
+    },
+    {
       "name": "nvbes-enterprise-service",
       "version": "0.1.0",
       "path": "archive/apps/enterprise-service",
@@ -1687,23 +1936,8 @@
       "internalDependencies": [
         "nvbes-core",
         "nvbes-dpop",
-        "nvbes-redis",
-        "nvbes-audit",
         "nvbes-email",
-        "nvbes-region",
-        "nvbes-tenancy",
         "nvbes-observability",
-        "nvbes-analytics-posthog",
-        "nvbes-product-analytics",
-        "nvbes-product-account",
-        "nvbes-product-cloud",
-        "nvbes-product-identity",
-        "nvbes-storage",
-        "sqlx",
-        "tower-http",
-        "tracing-subscriber",
-        "utoipa",
-        "utoipa-swagger-ui",
         "webauthn-rs"
       ]
     },
@@ -1724,6 +1958,19 @@
         "nvbes-region",
         "tonic",
         "tracing-subscriber"
+      ]
+    },
+    {
+      "name": "nvbes-trust-risk-service",
+      "version": "0.1.0",
+      "path": "archive/apps/trust-risk-service",
+      "isApp": false,
+      "isLib": false,
+      "internalDependencies": [
+        "nvbes-core",
+        "nvbes-observability",
+        "nvbes-trust-risk",
+        "opentelemetry-otlp"
       ]
     },
     {
@@ -1891,6 +2138,19 @@
       ]
     },
     {
+      "name": "nvbes-account-service",
+      "version": "10.3.0",
+      "path": "libs/rust/account",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "nvbes-identity-sdk",
+        "nvbes-core",
+        "nvbes-dpop",
+        "nvbes-observability"
+      ]
+    },
+    {
       "name": "nvbes-email-scaleway",
       "version": "0.1.0",
       "path": "libs/rust/adapters/email-scaleway",
@@ -1923,6 +2183,33 @@
       ]
     },
     {
+      "name": "nvbes-billing-service",
+      "version": "10.3.0",
+      "path": "libs/rust/billing-service",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "nvbes-billing",
+        "nvbes-core",
+        "nvbes-identity-sdk",
+        "nvbes-dpop",
+        "nvbes-email",
+        "nvbes-observability"
+      ]
+    },
+    {
+      "name": "nvbes-consent",
+      "version": "0.1.0",
+      "path": "libs/rust/consent",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "nvbes-audit",
+        "nvbes-core",
+        "axum"
+      ]
+    },
+    {
       "name": "nvbes-core",
       "version": "0.6",
       "path": "libs/rust/core",
@@ -1935,6 +2222,18 @@
       ]
     },
     {
+      "name": "nvbes-dpop",
+      "version": "1",
+      "path": "libs/rust/dpop",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "sqlx",
+        "tokio",
+        "serde"
+      ]
+    },
+    {
       "name": "nvbes-email",
       "version": "0.23.41",
       "path": "libs/rust/email",
@@ -1943,6 +2242,38 @@
       "internalDependencies": [
         "nvbes-core",
         "tonic"
+      ]
+    },
+    {
+      "name": "nvbes-identity-service",
+      "version": "10.3.0",
+      "path": "libs/rust/identity",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "nvbes-core",
+        "nvbes-dpop",
+        "nvbes-email",
+        "nvbes-observability",
+        "webauthn-rs"
+      ]
+    },
+    {
+      "name": "nvbes-identity-sdk",
+      "version": "0.1.0",
+      "path": "libs/rust/identity-sdk-backend",
+      "isApp": false,
+      "isLib": true,
+      "internalDependencies": [
+        "reqwest",
+        "serde",
+        "serde_json",
+        "urlencoding",
+        "thiserror",
+        "base64",
+        "sha2",
+        "rand",
+        "tokio"
       ]
     },
     {
@@ -4219,1310 +4550,6 @@
           "security": [],
           "responses": [
             "204"
-          ]
-        }
-      ]
-    },
-    {
-      "filePath": "archive/apps/identity-service/openapi.json",
-      "title": "nvbes Identity Service",
-      "version": "0.1.0",
-      "description": "OAuth 2.1, OpenID Connect, authentication, and authorization server",
-      "endpointsCount": 69,
-      "endpoints": [
-        {
-          "path": "/.well-known/change-password",
-          "method": "GET",
-          "summary": "change_password_well_known",
-          "operationId": "change_password_well_known",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "500"
-          ]
-        },
-        {
-          "path": "/.well-known/gpc.json",
-          "method": "GET",
-          "summary": "gpc_well_known",
-          "operationId": "gpc_well_known",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200"
-          ]
-        },
-        {
-          "path": "/.well-known/jwks.json",
-          "method": "GET",
-          "summary": "get_jwks",
-          "operationId": "get_jwks",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "500"
-          ]
-        },
-        {
-          "path": "/.well-known/oauth-authorization-server",
-          "method": "GET",
-          "summary": "oauth_authorization_server_metadata",
-          "operationId": "oauth_authorization_server_metadata",
-          "tags": [
-            "oauth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "500"
-          ]
-        },
-        {
-          "path": "/.well-known/openid-configuration",
-          "method": "GET",
-          "summary": "openid_configuration",
-          "operationId": "openid_configuration",
-          "tags": [
-            "oauth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "500"
-          ]
-        },
-        {
-          "path": "/.well-known/passkey-endpoints",
-          "method": "GET",
-          "summary": "passkey_endpoints_well_known",
-          "operationId": "passkey_endpoints_well_known",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "500"
-          ]
-        },
-        {
-          "path": "/.well-known/webauthn",
-          "method": "GET",
-          "summary": "webauthn_well_known",
-          "operationId": "webauthn_well_known",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "500"
-          ]
-        },
-        {
-          "path": "/auth/accounts",
-          "method": "GET",
-          "summary": "get_accounts",
-          "operationId": "get_accounts",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200"
-          ]
-        },
-        {
-          "path": "/auth/challenge/identifier",
-          "method": "POST",
-          "summary": "challenge_identifier",
-          "operationId": "challenge_identifier",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "403"
-          ]
-        },
-        {
-          "path": "/auth/challenge/mfa",
-          "method": "POST",
-          "summary": "challenge_mfa",
-          "operationId": "challenge_mfa",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/challenge/pow",
-          "method": "GET",
-          "summary": "challenge_pow",
-          "operationId": "challenge_pow",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200"
-          ]
-        },
-        {
-          "path": "/auth/challenge/pwd",
-          "method": "POST",
-          "summary": "challenge_pwd",
-          "operationId": "challenge_pwd",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "202",
-            "401",
-            "403"
-          ]
-        },
-        {
-          "path": "/auth/challenge/webauthn/discoverable/finish",
-          "method": "POST",
-          "summary": "challenge_webauthn_discoverable_finish",
-          "operationId": "challenge_webauthn_discoverable_finish",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "202",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/challenge/webauthn/discoverable/start",
-          "method": "POST",
-          "summary": "challenge_webauthn_discoverable_start",
-          "operationId": "challenge_webauthn_discoverable_start",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/challenge/webauthn/start",
-          "method": "POST",
-          "summary": "challenge_webauthn_start",
-          "operationId": "challenge_webauthn_start",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/devices/{deviceId}",
-          "method": "DELETE",
-          "summary": "revoke_device",
-          "operationId": "revoke_device",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "404"
-          ]
-        },
-        {
-          "path": "/auth/devices/{deviceId}/trust",
-          "method": "POST",
-          "summary": "trust_device",
-          "operationId": "trust_device",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "404"
-          ]
-        },
-        {
-          "path": "/auth/logout",
-          "method": "POST",
-          "summary": "logout",
-          "operationId": "logout",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "browserSession": []
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/me/emails",
-          "method": "GET",
-          "summary": "me_emails_get",
-          "operationId": "me_emails_get",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:email:read"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/me/emails",
-          "method": "POST",
-          "summary": "me_emails_post",
-          "operationId": "me_emails_post",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:email:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "409"
-          ]
-        },
-        {
-          "path": "/auth/me/emails/{emailId}",
-          "method": "DELETE",
-          "summary": "me_email_delete",
-          "operationId": "me_email_delete",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:email:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "403",
-            "404"
-          ]
-        },
-        {
-          "path": "/auth/me/emails/{emailId}/promote",
-          "method": "POST",
-          "summary": "me_email_promote",
-          "operationId": "me_email_promote",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:email:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "403",
-            "404"
-          ]
-        },
-        {
-          "path": "/auth/me/emails/{emailId}/resend-verification",
-          "method": "POST",
-          "summary": "me_email_resend_verification",
-          "operationId": "me_email_resend_verification",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:email:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "404"
-          ]
-        },
-        {
-          "path": "/auth/mfa/factors",
-          "method": "GET",
-          "summary": "list_mfa_factors",
-          "operationId": "list_mfa_factors",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:read"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/mfa/factors/{factorId}",
-          "method": "DELETE",
-          "summary": "remove_mfa_factor",
-          "operationId": "remove_mfa_factor",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "204",
-            "401",
-            "404"
-          ]
-        },
-        {
-          "path": "/auth/mfa/recovery-codes",
-          "method": "POST",
-          "summary": "generate_recovery_codes",
-          "operationId": "generate_recovery_codes",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/mfa/totp/confirm",
-          "method": "POST",
-          "summary": "confirm_totp_enrollment",
-          "operationId": "confirm_totp_enrollment",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/mfa/totp/setup",
-          "method": "POST",
-          "summary": "begin_totp_enrollment",
-          "operationId": "begin_totp_enrollment",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/mfa/webauthn/register/finish",
-          "method": "POST",
-          "summary": "confirm_webauthn_enrollment",
-          "operationId": "confirm_webauthn_enrollment",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/mfa/webauthn/register/start",
-          "method": "POST",
-          "summary": "begin_webauthn_enrollment",
-          "operationId": "begin_webauthn_enrollment",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/mfa/webauthn/start",
-          "method": "POST",
-          "summary": "webauthn_auth_start",
-          "operationId": "webauthn_auth_start",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/password/change",
-          "method": "POST",
-          "summary": "change_password",
-          "operationId": "change_password",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "429"
-          ]
-        },
-        {
-          "path": "/auth/password/forgot",
-          "method": "POST",
-          "summary": "forgot_password",
-          "operationId": "forgot_password",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "400",
-            "429"
-          ]
-        },
-        {
-          "path": "/auth/password/reset",
-          "method": "POST",
-          "summary": "reset_password",
-          "operationId": "reset_password",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "400",
-            "429"
-          ]
-        },
-        {
-          "path": "/auth/register",
-          "method": "POST",
-          "summary": "register",
-          "operationId": "register",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "400",
-            "409",
-            "429"
-          ]
-        },
-        {
-          "path": "/auth/registration/availability",
-          "method": "POST",
-          "summary": "registration_availability",
-          "operationId": "registration_availability",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "400",
-            "429"
-          ]
-        },
-        {
-          "path": "/auth/sessions",
-          "method": "GET",
-          "summary": "list_sessions",
-          "operationId": "list_sessions",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:session:read"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/sessions/revoke-all",
-          "method": "POST",
-          "summary": "revoke_all_sessions",
-          "operationId": "revoke_all_sessions",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:session:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/sessions/revoke-others",
-          "method": "POST",
-          "summary": "revoke_all_other_sessions",
-          "operationId": "revoke_all_other_sessions",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:session:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/sessions/{sessionId}",
-          "method": "DELETE",
-          "summary": "revoke_session",
-          "operationId": "revoke_session",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:session:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "404"
-          ]
-        },
-        {
-          "path": "/auth/sessions/{sessionId}/confirm",
-          "method": "POST",
-          "summary": "confirm_high_risk_session",
-          "operationId": "confirm_high_risk_session",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:session:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "404"
-          ]
-        },
-        {
-          "path": "/auth/step-up",
-          "method": "POST",
-          "summary": "step_up",
-          "operationId": "step_up",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401"
-          ]
-        },
-        {
-          "path": "/auth/step-up/email/request",
-          "method": "POST",
-          "summary": "request_email_step_up",
-          "operationId": "request_email_step_up",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:security:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "429"
-          ]
-        },
-        {
-          "path": "/auth/verify-email",
-          "method": "POST",
-          "summary": "verify_email",
-          "operationId": "verify_email",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "400",
-            "429"
-          ]
-        },
-        {
-          "path": "/auth/verify-email/change",
-          "method": "POST",
-          "summary": "change_verify_email",
-          "operationId": "change_verify_email",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "registrationEnrollment": []
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "409",
-            "429"
-          ]
-        },
-        {
-          "path": "/auth/verify-email/resend",
-          "method": "POST",
-          "summary": "resend_verify_email",
-          "operationId": "resend_verify_email",
-          "tags": [
-            "auth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "400",
-            "429"
-          ]
-        },
-        {
-          "path": "/auth/workspaces/{workspaceId}/switch",
-          "method": "POST",
-          "summary": "switch_workspace",
-          "operationId": "switch_workspace",
-          "tags": [
-            "auth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:session:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "404"
-          ]
-        },
-        {
-          "path": "/authz/decision",
-          "method": "POST",
-          "summary": "decide",
-          "operationId": "decide",
-          "tags": [
-            "authz"
-          ],
-          "security": [
-            {
-              "oauth2": []
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/authorize",
-          "method": "GET",
-          "summary": "authorize",
-          "operationId": "authorize",
-          "tags": [
-            "oauth"
-          ],
-          "security": [],
-          "responses": [
-            "303",
-            "400",
-            "401",
-            "404",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/client-policies/{policyId}",
-          "method": "DELETE",
-          "summary": "delete_client_policy",
-          "operationId": "delete_client_policy",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "404",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/client-policies/{policyId}",
-          "method": "PATCH",
-          "summary": "update_client_policy",
-          "operationId": "update_client_policy",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "404",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/clients",
-          "method": "GET",
-          "summary": "list_clients",
-          "operationId": "list_clients",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:read"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/clients",
-          "method": "POST",
-          "summary": "create_client",
-          "operationId": "create_client",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/clients/{clientId}",
-          "method": "DELETE",
-          "summary": "revoke_client",
-          "operationId": "revoke_client",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "404",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/clients/{clientId}/keys",
-          "method": "GET",
-          "summary": "list_client_keys",
-          "operationId": "list_client_keys",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:read"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "404"
-          ]
-        },
-        {
-          "path": "/oauth/clients/{clientId}/keys",
-          "method": "POST",
-          "summary": "rotate_client_key",
-          "operationId": "rotate_client_key",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "404"
-          ]
-        },
-        {
-          "path": "/oauth/clients/{clientId}/keys/{keyId}",
-          "method": "DELETE",
-          "summary": "revoke_client_key",
-          "operationId": "revoke_client_key",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "404",
-            "409"
-          ]
-        },
-        {
-          "path": "/oauth/clients/{clientId}/policies",
-          "method": "GET",
-          "summary": "list_client_policies",
-          "operationId": "list_client_policies",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:read"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/clients/{clientId}/policies",
-          "method": "POST",
-          "summary": "create_client_policy",
-          "operationId": "create_client_policy",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": [
-                "account:oauth-clients:write"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/device/approve",
-          "method": "POST",
-          "summary": "device_approve",
-          "operationId": "device_approve",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "browserSession": []
-            },
-            {
-              "oauth2": [
-                "account:oauth:approve"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/device/authorize",
-          "method": "POST",
-          "summary": "device_authorize",
-          "operationId": "device_authorize",
-          "tags": [
-            "oauth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "400",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/device/deny",
-          "method": "POST",
-          "summary": "device_deny",
-          "operationId": "device_deny",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "browserSession": []
-            },
-            {
-              "oauth2": [
-                "account:oauth:approve"
-              ]
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/device/verify",
-          "method": "POST",
-          "summary": "device_verify",
-          "operationId": "device_verify",
-          "tags": [
-            "oauth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "400",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/introspect",
-          "method": "POST",
-          "summary": "introspect",
-          "operationId": "introspect",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauthClientBasic": []
-            },
-            {
-              "oauthClientMtls": []
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/revoke",
-          "method": "POST",
-          "summary": "revoke",
-          "operationId": "revoke",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauthClientBasic": []
-            },
-            {
-              "oauthClientMtls": []
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401"
-          ]
-        },
-        {
-          "path": "/oauth/token",
-          "method": "POST",
-          "summary": "token",
-          "operationId": "token",
-          "tags": [
-            "oauth"
-          ],
-          "security": [],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/oauth/userinfo",
-          "method": "GET",
-          "summary": "userinfo",
-          "operationId": "userinfo",
-          "tags": [
-            "oauth"
-          ],
-          "security": [
-            {
-              "oauth2": []
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/workspaces/{workspaceId}/security-events",
-          "method": "GET",
-          "summary": "list_security_events",
-          "operationId": "list_security_events",
-          "tags": [
-            "security"
-          ],
-          "security": [
-            {
-              "oauth2": []
-            }
-          ],
-          "responses": [
-            "200",
-            "400",
-            "401",
-            "500"
-          ]
-        },
-        {
-          "path": "/workspaces/{workspaceId}/security-events/export",
-          "method": "GET",
-          "summary": "export_security_events",
-          "operationId": "export_security_events",
-          "tags": [
-            "security"
-          ],
-          "security": [
-            {
-              "oauth2": []
-            }
-          ],
-          "responses": [
-            "200",
-            "401",
-            "500"
           ]
         }
       ]
@@ -8935,6 +7962,12 @@
       "filePath": "docs/adr/0012-adopt-scaleway-serverless-sql-per-product.md",
       "filename": "0012-adopt-scaleway-serverless-sql-per-product.md",
       "title": "ADR 0012 - Adopter Scaleway Serverless SQL par produit",
+      "status": "accepted"
+    },
+    {
+      "filePath": "docs/adr/0013-modular-monolith-api-and-unified-worker.md",
+      "filename": "0013-modular-monolith-api-and-unified-worker.md",
+      "title": "0013. Monolithe Modulaire API et Worker Unifié",
       "status": "accepted"
     },
     {

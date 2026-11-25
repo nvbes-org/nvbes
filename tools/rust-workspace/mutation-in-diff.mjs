@@ -9,14 +9,9 @@ import { resolve } from 'node:path';
 
 export const CRITICAL_PACKAGES = new Set([
   'nvbes-core',
-  'nvbes-billing',
-  'nvbes-audit',
-  'nvbes-trust-risk',
+  'nvbes-dpop',
   'nvbes-identity-service',
   'nvbes-account-service',
-  'nvbes-billing-service',
-  'nvbes-billing-worker',
-  'nvbes-trust-risk-service',
 ]);
 
 /**
@@ -124,7 +119,7 @@ export function runMutationInDiff(options = {}) {
     'cargo',
     [
       'mutants',
-      '--locked',
+      '--cargo-arg=--locked',
       '--in-diff',
       diffPath,
       '--timeout',

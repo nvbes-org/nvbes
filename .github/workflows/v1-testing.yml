@@ -32,20 +32,14 @@ jobs:
         suite:
           - account.unit
           - account.check
-          - billing.unit
-          - billing.check
           - email.unit
           - email.check
           - identity.unit
           - identity.check
-          - platform.unit
-          - platform.check
           - platform.workspace-lint
           - platform.workspace-check
           - platform.workspace-tests
           - platform.workspace-format
-          - trust-risk.unit
-          - trust-risk.check
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:

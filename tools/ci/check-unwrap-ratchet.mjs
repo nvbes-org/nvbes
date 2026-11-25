@@ -17,7 +17,7 @@ export const ALLOW_COMMENT = 'nvbes-allow-unwrap';
 export function isProductionRustPath(path) {
   const normalized = path.replaceAll('\\', '/');
   if (!normalized.endsWith('.rs')) return false;
-  if (normalized.includes('/archive/')) return false;
+  if (normalized.startsWith('archive/') || normalized.includes('/archive/')) return false;
   if (/\.tests?\.rs$/u.test(normalized)) return false;
   if (/test_support/u.test(normalized)) return false;
   if (/\/tests\//u.test(normalized)) return false;

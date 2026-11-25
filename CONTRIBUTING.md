@@ -16,7 +16,7 @@ Guidelines for contributing to the nvbes monorepo.
 - Follow the architectural boundaries defined in `AGENTS.md` and Nx configuration.
 - Product services must remain loosely coupled through well-defined API / event contracts.
 - Do not commit secrets, credentials, or `.env` files.
-- Keep files short, flat, and modular (< 300 lines recommended).
+- Keep files short, flat, and modular (< 400 lines recommended, max 800 lines).
 - Keep changes focused and document migrations, recurring cost and rollback.
 
 ## Local Checks

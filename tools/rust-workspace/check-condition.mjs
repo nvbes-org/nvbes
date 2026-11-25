@@ -9,8 +9,10 @@ export function evaluateCondition(report, packages, config) {
   for (const name of configuredNames) {
     if (excludedNames.has(name)) throw new Error(`Crate ${name} is both configured and excluded`);
   }
+  const archived = new Set(Array.isArray(config.archived) ? config.archived : []);
   const memberNames = new Set(packages.map((pkg) => pkg.name));
   for (const name of [...configuredNames, ...excludedNames]) {
+    if (archived.has(name)) continue;
     if (!memberNames.has(name))
       throw new Error(`Configured crate ${name} is not a workspace member`);
   }

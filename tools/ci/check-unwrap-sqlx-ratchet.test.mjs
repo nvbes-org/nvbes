@@ -6,6 +6,7 @@ import { countRuntimeSql } from './check-sqlx-ratchet.mjs';
 test('isProductionRustPath excludes tests', () => {
   assert.equal(isProductionRustPath('libs/rust/core/src/auth.rs'), true);
   assert.equal(isProductionRustPath('libs/rust/core/src/auth.tests.rs'), false);
+  assert.equal(isProductionRustPath('archive/apps/billing-worker/src/main.rs'), false);
 });
 
 test('isInsideCfgTest detects test modules', () => {

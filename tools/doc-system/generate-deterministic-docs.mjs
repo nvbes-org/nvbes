@@ -112,7 +112,11 @@ Le runtime actif contient **${apps.length} applications et services**. Les proje
     const domain =
       app.tags.find((t) => t.startsWith('domain:'))?.replace('domain:', '') || 'général';
     const scope = app.tags.find((t) => t.startsWith('scope:'))?.replace('scope:', '') || 'internal';
-    const isService = app.name.includes('-service') || app.name.includes('-worker');
+    const isService =
+      app.name.includes('-service') ||
+      app.name.includes('-worker') ||
+      app.name === 'api' ||
+      app.name === 'worker';
     const typeLabel = isService ? '⚙️ Backend (Rust/Axum)' : '💻 Frontend (React/Vite)';
 
     content += `| **\`${app.name}\`** | \`${domain}\` | \`${scope}\` | ${typeLabel} | \`${app.root}\` |\n`;

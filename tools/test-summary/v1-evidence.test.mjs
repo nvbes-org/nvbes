@@ -260,7 +260,7 @@ test('the actual V1 gap registry cannot yield GO with synthetic passing results'
 
 test('a missing domain and duplicate case invalidate the manifest', () => {
   const input = validCandidate();
-  assert.throws(() => validateManifest(input.root, input.domains.slice(1)), /Six/u);
+  assert.throws(() => validateManifest(input.root, input.domains.slice(1)), /Four/u);
   input.domains[1].suites[0].cases[0] = input.domains[0].suites[0].cases[0];
   assert.throws(() => validateManifest(input.root, input.domains), /Duplicate test case/u);
 });

@@ -1,8 +1,9 @@
 # Default review owner. GitHub branch rules must require code-owner review.
 * @shaynlink
 
-# Active email runtime and delivery boundaries.
-/apps/email-worker/ @shaynlink
+# Active runtime and delivery boundaries.
+/apps/api/ @shaynlink
+/apps/worker/ @shaynlink
 /libs/rust/email/ @shaynlink
 /libs/rust/adapters/email-scaleway/ @shaynlink
 /libs/ts/email-ui/ @shaynlink

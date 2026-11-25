@@ -1,35 +1,39 @@
 # Project Memory
 
-nvbes is a Rust/Axum and TypeScript/React monorepo managed with pnpm workspaces,
-Nx, and a Cargo workspace.
+nvbes is an entity building open-source tools and software for developers,
+funded by its future cloud offering. The monorepo is managed with pnpm
+workspaces, Nx, and a Cargo workspace (Rust/Axum + React/Vite).
 
-## Active V1 Direction
+## Active V1 Direction (Ultra-Restricted "Small Building")
 
-- V1 delivers the reusable platform foundation, not a final user product.
-- The shared domains are Identity, Account, Billing, Email, Trust/Risk, and
-  minimal Platform Operations.
-- The audience is general-public B2C with team collaboration. B2B, Enterprise,
-  SLA, SSO/SCIM, and advanced compliance are future work.
-- Cloud/Drive is a possible future product, not the assumed first product.
-- Total recurring project spend is capped at EUR 30 including taxes, with a
-  EUR 20 operating target.
-- A solo operator handles administration, support, abuse, and moderation
-  manually unless safe automation fits the global budget and answers a measured
-  need.
-- V1 accepts no known technical or structural debt in delivered scope;
-  subsequent debt is owned, measured, reviewed, and resolved proactively.
+- **Mission**: Open-source developer tools, funded by the future cloud.
+- **V1 Target**: Identity & account service for developers using Nvbes tools.
+  Manual / internal configuration of OAuth 2 clients (no self-serve developer portal).
+- **Architecture**:
+  - **Monolithic API** (`apps/api`): Account creation, login, session management
+    all via OAuth 2 (PKCE RFC 7636), consent management (scopes), user profile.
+  - **Web** (`apps/identity-web` + `apps/account-web`, unification planned): Register, OAuth 2 login, consent
+    screen, profile page. Strict dev-first UX, **no marketing front-end in V1**.
+- **Two Major Principles**:
+  1. **Maximum cost-efficiency**: Use the cheapest / most cost-effective technologies
+     on the market (Rust/Axum < 20MB RAM, Cloudflare Pages free tier, managed low-cost PG).
+     Monthly infrastructure spend hard-capped at 30 EUR TTC (target 20 EUR).
+  2. **Migration path to self-hosted OSS**: Every technology must be swappable with
+     self-hosted open-source software (native PostgreSQL, Nginx/Caddy, no proprietary lock-in).
+- **Frozen / Out of V1 Scope**:
+  - Billing (Stripe) is paused until the paid cloud launches.
+  - No separate Trust/Risk engine or distributed background workers.
+  - No marketing frontend, no complex B2B/Enterprise orgs or advanced compliance.
+- **Operations & Quality**:
+  - Solo operator with manual administration/support by default.
+  - Zero technical debt delivered in active scope.
 
 ## Stable Boundaries
 
-- `apps/email-worker` and `apps/trust-risk-service` are the active runtimes.
-- Historical product applications live under `archive/apps` and are not active
-  implementation bases.
-- `libs/rust/*` contains shared Rust primitives, adapters, and domain libraries.
-- `libs/ts/*` contains SDKs, clients, UI, and web runtime packages.
-
-## Durable Rules
-
-- Rust files use flat dot-qualified filenames in `src/`.
-- TypeScript must not use `any`.
-- Delivered V1 code must not accept known temporary debt in touched areas.
-- Agent instructions should flow from `docs/agent/*`.
+- `apps/api` is the serverless runtime; `apps/worker` runs every batch.
+- `apps/identity-web` and `apps/account-web` are the web frontends.
+- Active Rust libs: identity, account, identity-sdk-backend, dpop, email,
+  adapters/email-scaleway, core, observability, test-utils.
+- `libs/ts/*` contains SDKs, clients, and web runtime packages.
+- Follow-ups outside V1 code: OpenTofu still describes archived services;
+  `nvbes-core::AppConfig` still parses billing/Stripe settings.

@@ -112,28 +112,13 @@ impl Keyword for StartService {
             ));
         }
         let name = required(params, "service_name")?;
-        if ![
-            "identity-service",
-            "account-service",
-            "billing-service",
-            "email-worker",
-            "trust-risk-service",
-            "platform",
-        ]
-        .contains(&name)
-        {
+        if !["api", "worker"].contains(&name) {
             return Err(KeywordError::InvalidParams("unknown V1 service".into()));
         }
         let url = required(params, "health_url")?;
         crate::environment::validate_loopback_url(url, "health")
             .map_err(KeywordError::InvalidParams)?;
-        let executable = if name == "platform" {
-            "target/debug/nvbes-platform-operations".to_string()
-        } else if name == "billing-service" {
-            "apps/billing-service/target/debug/nvbes-billing-service".to_string()
-        } else {
-            format!("target/debug/nvbes-{name}")
-        };
+        let executable = format!("target/debug/nvbes-{name}");
         let arguments = match params.get("args") {
             None => vec![],
             Some(Value::Array(values)) => values

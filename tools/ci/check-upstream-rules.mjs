@@ -204,23 +204,18 @@ export function findUpstreamViolationsInDiff(diffText) {
 
 function runCli() {
   const args = process.argv.slice(2);
+  const gitOpts = { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 };
   let diff = '';
   if (args.includes('--staged')) {
-    diff = execFileSync('git', ['diff', '--cached', '--no-color', '--unified=0'], {
-      encoding: 'utf8',
-    });
+    diff = execFileSync('git', ['diff', '--cached', '--no-color', '--unified=0'], gitOpts);
   } else if (args.includes('--range')) {
     const idx = args.indexOf('--range');
     const range = args[idx + 1] || 'origin/main...HEAD';
-    diff = execFileSync('git', ['diff', '--no-color', '--unified=0', range], { encoding: 'utf8' });
+    diff = execFileSync('git', ['diff', '--no-color', '--unified=0', range], gitOpts);
   } else {
-    diff = execFileSync('git', ['diff', '--cached', '--no-color', '--unified=0'], {
-      encoding: 'utf8',
-    });
+    diff = execFileSync('git', ['diff', '--cached', '--no-color', '--unified=0'], gitOpts);
     if (!diff.trim()) {
-      diff = execFileSync('git', ['diff', '--no-color', '--unified=0', 'HEAD~1...HEAD'], {
-        encoding: 'utf8',
-      });
+      diff = execFileSync('git', ['diff', '--no-color', '--unified=0', 'HEAD~1...HEAD'], gitOpts);
     }
   }
 

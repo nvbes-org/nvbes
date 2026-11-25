@@ -37,8 +37,7 @@ The root `pnpm check` command also runs this validation.
 | `ABUSE_CASE_005` | Web UI rendering                    | high     | Clickjacking and missing browser hardening headers                                      |
 | `ABUSE_CASE_006` | Web UI rendering                    | high     | DOM XSS through unsafe AJAX data, reviewed HTML bypasses, or JSONP                      |
 | `ABUSE_CASE_007` | Cloud public access                 | high     | Public API tampering, replay, and automated public share download abuse                 |
-| `ABUSE_CASE_008` | Billing and developer webhooks      | high     | Fake, tampered, stale, or duplicate webhook payloads                                    |
-| `ABUSE_CASE_009` | Backoffice operations               | critical | Unauthorized or irreversible privileged backoffice mutations                            |
+| `ABUSE_CASE_009` | Operator access                     | critical | Operator reads of account data without role, recent MFA, or audit trail                 |
 | `ABUSE_CASE_010` | Audit, monitoring, and supply chain | critical | Audit evidence alteration or deletion                                                   |
 | `ABUSE_CASE_011` | Audit, monitoring, and supply chain | high     | Secret leaks, vulnerable dependencies, missing SBOM evidence, or weak container hygiene |
 

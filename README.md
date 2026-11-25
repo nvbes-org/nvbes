@@ -1,48 +1,56 @@
 # nvbes
 
-nvbes construit d'abord un socle de services réutilisables pour ses futurs
-produits numériques. La V1 actuelle n'est ni une release Cloud/Drive, ni une
-offre B2B : elle valide la plateforme commune avant de sélectionner le premier
-produit final.
+nvbes est une entité destinée à offrir des **outils et des logiciels aux développeurs**, le tout en **open-source**, financé par son futur cloud.
 
-## Direction V1
+Pour démarrer de façon agile et pragmatique, le projet adopte une approche de **"small building"** avec une **V1 ultra-restreinte** centrée sur le service d'authentification et de compte développeur.
 
-- public cible B2C, tout public, avec collaboration en équipe de toute taille ;
-- services mutualisés : Identity, Account, Billing, Email et Trust/Risk ;
-- Platform Operations minimal pour l'administration, le support, les abus, la
-  modération et FinOps ;
-- un seul opérateur, avec traitement manuel par défaut ;
-- coût récurrent total limité à 30 EUR TTC par mois, cible à 20 EUR ;
-- aucune dette technique ou structurelle connue dans le périmètre livré ;
-- mise en production progressive, mesurée, réversible et restaurable ;
-- B2B, Enterprise et conformité avancée préparés dans les frontières, mais
-  reportés à une version financée ultérieurement.
+## Direction V1 Ultra-Restreinte (Small Building)
 
-Cloud/Drive et les autres concepts présents dans les anciens plans restent des
-hypothèses de produits futurs. Leur présence dans le dépôt ne les rend pas
-prioritaires.
+La V1 sert exclusivement de service d'identité et de compte pour les développeurs utilisant les outils Nvbes (avec configuration interne et manuelle des clients OAuth) :
+
+- **Une API monolithique** (`apps/api`) :
+  - Création de compte, Connexion et maintien de session, le tout en **OAuth 2** (PKCE, RFC 6749) ;
+  - Gestion des consentements (scopes et autorisations accordées par le développeur) ;
+  - Profil utilisateur et sessions actives.
+- **Un site web monolithique** (`apps/identity-web` / `apps/account-web` unifiés) :
+  - Page de création de compte & connexion en OAuth 2 ;
+  - Écran de validation du consentement OAuth 2 ;
+  - Page de profil développeur (informations personnelles, sessions) ;
+  - **Zéro front-end marketing** : interface purement fonctionnelle dev-first.
+- **Deux Principes Majeurs** :
+  1. **Rentabilité maximale & technologies les moins chères du marché** : Exploiter au maximum la gratuité et l'ultra-légèreté (Rust/Axum < 20Mo RAM, Cloudflare Pages gratuit pour le front, PostgreSQL managé ou low-cost).
+  2. **Migration vers l'Open Source auto-géré** : Chaque brique est conçue pour permettre une migration transparente vers des solutions open-source (OSS) auto-hébergées dans le futur (PostgreSQL natif, Nginx/Caddy, zéro lock-in propriétaire).
+- **Périmètre gelé / hors V1 immédiate** :
+  - ❌ Pas de **Billing (Stripe)** pour l'instant (activé avec le cloud payant) ;
+  - ❌ Pas de **Trust/Risk engine** ni de workers asynchrones complexes distribués ;
+  - ❌ Pas de **front-end marketing** ni de gestion multi-tenant d'organisations complexes ;
+  - ❌ **Souveraineté et conformité avancée non exigées en V1** (anticipées dans les abstractions sans complexité prématurée) ;
+- **Plafond FinOps** : Coût récurrent d'infrastructure strictement plafonné à **30 EUR TTC par mois** (cible opérationnelle à 20 EUR).
+- **Opérateur solo** : Administration, support et modération manuels par défaut.
+- **Zéro dette technique livrée** : Code propre, sans rustines ni double source de vérité.
 
 La [direction produit V1](docs/product/nvbes-product-strategy.md) est la source
-de vérité. La [roadmap](docs/roadmap.md) définit l'ordre de livraison et les
-NO-GO.
+de vérité produit. La [roadmap](docs/roadmap.md) définit les jalons d'exécution.
 
 ## État du monorepo
 
-Le dépôt est orchestré avec pnpm workspaces, Cargo workspace et Nx.
+Le dépôt est orchestré avec pnpm workspaces, Cargo workspace et Nx. Le socle applicatif est structuré en **Monolithe Modulaire HTTP serverless** (`apps/api`) et **Worker d'arrière-plan centralisé** (`apps/worker`), complété par les interfaces web hébergées (`identity-web`, `account-web`).
 
 ```text
 nvbes/
 ├── apps/
-│   ├── email-worker/         # Runtime Email actif
-│   └── trust-risk-service/   # Runtime Trust/Risk actif
+│   ├── api/                  # API Monolithe Modulaire HTTP serverless (Axum)
+│   ├── worker/               # Worker unique : serve (Container) ou run <task> (Job)
+│   ├── account-web/          # Interface web Compte & Équipes (React/Vite)
+│   └── identity-web/         # Interface web Authentification & Sessions (React/Vite)
 ├── libs/
-│   ├── rust/                 # Domaines, ports, adaptateurs et primitives partagés
-│   └── ts/                   # SDK, clients et runtime web réutilisables
+│   ├── rust/                 # Domaines (identity, account), SDK, email et primitives
+│   └── ts/                   # SDKs, clients et runtime web réutilisables
 ├── contracts/                # OpenAPI, Protobuf, événements et GraphQL
-├── infrastructure/           # IaC et contrat FinOps
+├── infrastructure/           # IaC OpenTofu/Terraform et contrat FinOps
 ├── deploy/                   # Manifestes de déploiement
-├── docs/                     # Sources produit, architecture et opérations
-└── archive/                  # Produits et prototypes retirés du runtime actif
+├── docs/                     # Spécifications, architecture, ADRs et opérations
+└── archive/                  # Services historiques et prototypes archivés
 ```
 
 Les applications Account, Cloud, Developer, Enterprise et Backoffice archivées
@@ -69,17 +77,17 @@ Prérequis : Node.js 24+, pnpm 11+, Rust stable, Docker Compose et OpenTofu.
 pnpm install
 pnpm env:sync
 pnpm env:check
-pnpm dev              # Email + Trust/Risk + Identity + Account + Billing
+pnpm dev              # Lance l'infrastructure locale, l'API et le Worker
 ```
 
 Commandes principales :
 
 ```bash
-pnpm dev:identity-service      # Identity seul
-pnpm dev:account-service       # Account seul
-pnpm dev:billing-service       # Billing seul
-pnpm dev:email-worker          # Email seul
-pnpm dev:trust-risk-service    # Trust/Risk seul
+pnpm dev:api          # API Monolithique Modulaire (Axum, port 8080)
+pnpm dev:worker       # Worker : migrations puis serve (port 8081)
+pnpm dev:identity-web # Interface web Identity (Vite)
+pnpm dev:account-web  # Interface web Account (Vite)
+pnpm dev:infra        # Conteneurs d'infrastructure locale (PostgreSQL, Mailpit)
 pnpm check            # Gates complets, dont FinOps
 pnpm check:finops     # Budget et plafonds serverless
 pnpm lint             # Lint web et Rust

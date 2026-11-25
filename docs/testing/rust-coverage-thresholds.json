@@ -37,42 +37,6 @@
         "regions": 94.4
       }
     },
-    "nvbes-email-worker": {
-      "threshold": {
-        "lines": 90,
-        "functions": 88,
-        "regions": 83
-      },
-      "baseline": {
-        "lines": 92.7,
-        "functions": 90.1,
-        "regions": 85.5
-      }
-    },
-    "nvbes-platform": {
-      "threshold": {
-        "lines": 87,
-        "functions": 81,
-        "regions": 82
-      },
-      "baseline": {
-        "lines": 89.2,
-        "functions": 83.6,
-        "regions": 84.3
-      }
-    },
-    "nvbes-trust-risk": {
-      "threshold": {
-        "lines": 92,
-        "functions": 90,
-        "regions": 91
-      },
-      "baseline": {
-        "lines": 94.6,
-        "functions": 92.4,
-        "regions": 93.2
-      }
-    },
     "nvbes-identity-service": {
       "threshold": {
         "lines": 80,
@@ -85,30 +49,6 @@
         "regions": 78.7
       }
     },
-    "nvbes-billing-worker": {
-      "threshold": {
-        "lines": 89,
-        "functions": 85,
-        "regions": 86
-      },
-      "baseline": {
-        "lines": 91.8,
-        "functions": 87.7,
-        "regions": 88.6
-      }
-    },
-    "nvbes-billing-service": {
-      "threshold": {
-        "lines": 89,
-        "functions": 73,
-        "regions": 84
-      },
-      "baseline": {
-        "lines": 91.1,
-        "functions": 75.8,
-        "regions": 86
-      }
-    },
     "nvbes-core": {
       "threshold": {
         "lines": 88,
@@ -119,54 +59,6 @@
         "lines": 90.8,
         "functions": 86.8,
         "regions": 90.4
-      }
-    },
-    "nvbes-region": {
-      "threshold": {
-        "lines": 89,
-        "functions": 85,
-        "regions": 83
-      },
-      "baseline": {
-        "lines": 91.4,
-        "functions": 87.5,
-        "regions": 85.5
-      }
-    },
-    "nvbes-trust-risk-service": {
-      "threshold": {
-        "lines": 88,
-        "functions": 88,
-        "regions": 83
-      },
-      "baseline": {
-        "lines": 90.1,
-        "functions": 90.2,
-        "regions": 85.7
-      }
-    },
-    "nvbes-billing": {
-      "threshold": {
-        "lines": 88,
-        "functions": 87,
-        "regions": 86
-      },
-      "baseline": {
-        "lines": 90.9,
-        "functions": 89.5,
-        "regions": 88
-      }
-    },
-    "nvbes-audit": {
-      "threshold": {
-        "lines": 98,
-        "functions": 98,
-        "regions": 98
-      },
-      "baseline": {
-        "lines": 100,
-        "functions": 100,
-        "regions": 100
       }
     },
     "nvbes-account-service": {
@@ -216,6 +108,30 @@
         "functions": 25.6,
         "regions": 38.2
       }
+    },
+    "nvbes-api": {
+      "threshold": {
+        "lines": 42,
+        "functions": 48,
+        "regions": 50
+      },
+      "baseline": {
+        "lines": 44.3,
+        "functions": 50.0,
+        "regions": 52.7
+      }
+    },
+    "nvbes-worker": {
+      "threshold": {
+        "lines": 31,
+        "functions": 33,
+        "regions": 33
+      },
+      "baseline": {
+        "lines": 33.3,
+        "functions": 35.7,
+        "regions": 35.3
+      }
     }
   },
   "excluded": [
@@ -223,5 +139,17 @@
       "crate": "nvbes-test-utils",
       "reason": "Biblioth\u00e8que utilitaire de tests uniquement (support keyword runner, pools de test) ; hors p\u00e9rim\u00e8tre de production, non mesur\u00e9e."
     }
+  ],
+  "archived": [
+    "nvbes-billing-worker",
+    "nvbes-email-worker",
+    "nvbes-trust-risk-service",
+    "nvbes-billing",
+    "nvbes-billing-service",
+    "nvbes-trust-risk",
+    "nvbes-region",
+    "nvbes-platform",
+    "nvbes-consent",
+    "nvbes-audit"
   ]
 }

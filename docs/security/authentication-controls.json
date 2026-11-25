@@ -1,563 +1,440 @@
 {
-  "schemaVersion": 1,
-  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
-  "reviewCadence": "At auth-flow design, before identity releases, and after every auth incident.",
-  "requirements": [
-    {
-      "id": "AUTHN_REQ_001",
-      "name": "Identity identifiers and username handling",
-      "owasp": "User IDs, Usernames",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_001",
-          "name": "Non-sequential identifiers and normalized verified email identity",
-          "description": "Use UUID-based principals/session identifiers, normalize email addresses, and keep email verification state explicit.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "normalize_email",
-                "Uuid::new_v4()",
-                "identity_login_identifiers"
-              ]
-            },
-            {
-              "path": "libs/rust/core/src/auth.helpers.validation.rs",
-              "includes": [
-                "normalize_email",
-                "validate_email"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.invitations.rs",
-              "includes": [
-                "normalize_email",
-                "Uuid::new_v4()",
-                "identity.invitation.accepted"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_002",
-      "name": "Password strength and breached credential rejection",
-      "owasp": "Implement Proper Password Strength Controls",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_002",
-          "name": "Password strength validation",
-          "description": "Require a minimum password length and zxcvbn strength score without composition-only rules.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/auth.helpers.validation.rs",
-              "includes": [
-                "validate_password",
-                "MIN_PASSWORD_LENGTH: usize = 8",
-                "MAX_PASSWORD_LENGTH: usize = 128",
-                "password.chars().count()"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.recovery.rs",
-              "includes": [
-                "validate_password",
-                "validate_password_pair"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_003",
-          "name": "Constant-time comparison on invalid credentials",
-          "description": "Execute constant-time dummy verification when accounts are missing or credentials fail.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "dummy_verify_password",
-                "authentication failed"
-              ]
-            },
-            {
-              "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": [
-                "dummy_verify_password",
-                "DUMMY_ARGON2ID_HASH"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_003",
-      "name": "Password storage and comparison",
-      "owasp": "Store Passwords in a Secure Fashion, Compare Password Hashes Using Safe Functions",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_004",
-          "name": "Argon2id password hashing",
-          "description": "Hash passwords with Argon2id, per-password random salts, and explicit memory/time/parallelism parameters.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": [
-                "Algorithm::Argon2id",
-                "TARGET_M_COST",
-                "TARGET_T_COST",
-                "TARGET_P_COST"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_005",
-          "name": "Verifier-backed password comparison",
-          "description": "Compare user input through the password-hash verifier instead of direct string comparison.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": [
-                "PasswordHash::new",
-                "verify_password"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "verify_password",
-                "dummy_verify_password"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_023",
-          "name": "Recurring Argon2id calibration",
-          "description": "Benchmark the production Argon2id work factor every week and fail when measured latency leaves the accepted security and availability envelope.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/auth.helpers.tests.rs",
-              "includes": [
-                "benchmark_argon2id_latency",
-                "increase its work factor",
-                "recalibrate its parameters"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_024",
-          "name": "Risk-triggered password changes only",
-          "description": "Do not expire passwords periodically; require password changes only through explicit recovery, compromise, or user-initiated flows.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.recovery.rs",
-              "includes": [
-                "changed_at = clock_timestamp()",
-                "compromised_at = NULL",
-                "reset_password"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_004",
-      "name": "Password recovery and change",
-      "owasp": "Implement Secure Password Recovery Mechanism, Change Password Feature",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_006",
-          "name": "Time-limited password recovery tokens",
-          "description": "Issue single-use recovery challenges with bounded expiry.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.recovery.rs",
-              "includes": [
-                "request_recovery",
-                "clock_timestamp()+interval '15 minutes'",
-                "identity_recovery_challenges"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_007",
-          "name": "Password reset token consumption and session revocation",
-          "description": "Consume reset tokens, enforce expiry, block password reuse, and revoke sessions after reset.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.recovery.rs",
-              "includes": [
-                "reset_password",
-                "consumed_at = clock_timestamp()",
-                "identity_sessions SET revoked_at"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.synthetic.rs",
-              "includes": [
-                "session_rotated",
-                "recovery_consumed",
-                "reset_password"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_008",
-          "name": "Password change differentiation",
-          "description": "Require new password to differ from current password.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.recovery.rs",
-              "includes": [
-                "validate_password_pair",
-                "recovered password must differ from the initial password"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_005",
-      "name": "Transport and cookie protections",
-      "owasp": "Transmit Passwords Only Over TLS or Other Strong Transport",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_009",
-          "name": "Session tokens and bearer transport",
-          "description": "Validate token structure and bounded lifespan for bearer sessions.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.tokens.rs",
-              "includes": [
-                "AccessTokenClaims",
-                "token_type",
-                "ACCESS_TOKEN_TTL_SECONDS"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.session.rs",
-              "includes": [
-                "Bearer ",
-                "session_token"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_010",
-          "name": "HTTP security headers for authenticated surfaces",
-          "description": "Add HSTS and browser isolation headers on authenticated responses.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/security.headers.rs",
-              "includes": [
-                "STRICT_TRANSPORT_SECURITY",
-                "CLEAR_SITE_DATA_VALUE",
-                "insert_security_headers"
-              ]
-            },
-            {
-              "path": "libs/rust/core/src/security.headers.tests.rs",
-              "includes": [
-                "insert_clear_site_data_header",
-                "CLICKJACKING_FRAME_ANCESTORS"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_006",
-      "name": "Reauthentication and step-up",
-      "owasp": "Require Re-authentication for Sensitive Features, Reauthentication After Risk Events",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_011",
-          "name": "Recent step-up enforcement",
-          "description": "Require recent step-up authentication for sensitive actions and store bounded step-up state.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.mfa.rs",
-              "includes": [
-                "STEP_UP_TTL_MINUTES",
-                "grant_step_up",
-                "step_up_granted"
-              ]
-            },
-            {
-              "path": "libs/rust/core/src/authz.policy.tests.rs",
-              "includes": [
-                "sensitive_actions_require_step_up",
-                "action_requires_step_up"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_012",
-          "name": "Step-up smoke and replay verification",
-          "description": "Verify that step-up grants reject replayed codes and enforce bounded TTL.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.mfa.rs",
-              "includes": [
-                "run_synthetic_smoke",
-                "replay_rejected",
-                "step_up_granted"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_007",
-      "name": "Generic errors and enumeration resistance",
-      "owasp": "Authentication and Error Messages",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_013",
-          "name": "Generic login responses",
-          "description": "Return generic invalid-credential errors for unknown accounts or invalid passwords.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "dummy_verify_password",
-                "authentication failed"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "authentication failed",
-                "dummy_verify_password"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_014",
-          "name": "Timing discrepancy mitigation",
-          "description": "Execute constant-time verification when an account is not found.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/auth.helpers.password.rs",
-              "includes": [
-                "dummy_verify_password",
-                "constant computation time"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "dummy_verify_password"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_008",
-      "name": "Automated attack protections",
-      "owasp": "Protect Against Automated Attacks, Login Throttling, CAPTCHA",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_015",
-          "name": "Rate limiting on authentication entry points",
-          "description": "Apply rate limits across authentication and sensitive entry points.",
-          "evidence": [
-            {
-              "path": "libs/rust/core/src/limiter.rs",
-              "includes": [
-                "RateLimiter",
-                "check_rate_limit",
-                "RATELIMIT_LIMIT"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_016",
-          "name": "Risk evaluation rules",
-          "description": "Enforce rule sets and risk evaluation for behavioral anomaly detection.",
-          "evidence": [
-            {
-              "path": "apps/trust-risk-service/src/trust_risk.rules.db.rs",
-              "includes": [
-                "trust_risk_rule_sets",
-                "RuleSetReceipt"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_009",
-      "name": "MFA and FIDO/WebAuthn",
-      "owasp": "Multi-Factor Authentication, FIDO",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_017",
-          "name": "MFA factors and step-up verification",
-          "description": "Support TOTP factors, encrypted secret storage, and step-up verification.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.mfa.rs",
-              "includes": [
-                "enroll_totp",
-                "confirm_enrollment",
-                "grant_step_up",
-                "replay_rejected"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.mfa.crypto.rs",
-              "includes": [
-                "pub struct MfaCrypto",
-                "pub fn seal",
-                "active_version"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_018",
-          "name": "Single-use replay protection",
-          "description": "Enforce replay protection on TOTP code usage.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.mfa.rs",
-              "includes": [
-                "replay_rejected",
-                "identity_auth_factors"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_010",
-      "name": "Token, OAuth, and OIDC authentication",
-      "owasp": "OAuth 2.0 and 2.1, OpenID Connect",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_019",
-          "name": "JWT validation and claim verification",
-          "description": "Validate token structure and claims.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.tokens.rs",
-              "includes": [
-                "AccessTokenClaims",
-                "decode",
-                "Validation"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_020",
-          "name": "JWT claim issuance",
-          "description": "Issue tokens with standard claims.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.tokens.claims.rs",
-              "includes": [
-                "jti",
-                "sid",
-                "iss",
-                "aud",
-                "exp",
-                "nbf",
-                "sub"
-              ]
-            }
-          ]
-        },
-        {
-          "id": "AUTHN_CTRL_021",
-          "name": "OAuth/OIDC discovery and PKCE",
-          "description": "Expose OIDC/OAuth metadata and require PKCE S256.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.oauth.metadata.rs",
-              "includes": [
-                "ProviderMetadata",
-                "jwks_uri",
-                "authorization_endpoint"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.test.fixtures.rs",
-              "includes": [
-                "code_challenge",
-                "code_challenge_method",
-                "S256"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "AUTHN_REQ_011",
-      "name": "Logging and monitoring",
-      "owasp": "Logging and Monitoring",
-      "controls": [
-        {
-          "id": "AUTHN_CTRL_022",
-          "name": "Authentication audit event recording",
-          "description": "Record login, registration, recovery, and risk events.",
-          "evidence": [
-            {
-              "path": "apps/identity-service/src/identity.recovery.rs",
-              "includes": [
-                "identity.recovery_requested",
-                "identity.password_recovered"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.auth.rs",
-              "includes": [
-                "identity.authenticated"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.oauth.store.rs",
-              "includes": [
-                "identity_audit_events"
-              ]
-            },
-            {
-              "path": "apps/identity-service/src/identity.invitations.rs",
-              "includes": [
-                "identity.invitation.created",
-                "identity.invitation.accepted"
-              ]
-            },
-            {
-              "path": "apps/trust-risk-service/src/trust_risk.audit.rs",
-              "includes": [
-                "trust_risk_audit_events",
-                "AuditEvent"
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ]
+	"schemaVersion": 1,
+	"source": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+	"reviewCadence": "At auth-flow design, before identity releases, and after every auth incident.",
+	"requirements": [
+		{
+			"id": "AUTHN_REQ_001",
+			"name": "Identity identifiers and username handling",
+			"owasp": "User IDs, Usernames",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_001",
+					"name": "Non-sequential identifiers and normalized verified email identity",
+					"description": "Use UUID-based principals/session identifiers, normalize email addresses, and keep email verification state explicit.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.auth.rs",
+							"includes": ["normalize_email", "Uuid::new_v4()", "identity_login_identifiers"]
+						},
+						{
+							"path": "libs/rust/core/src/auth.helpers.validation.rs",
+							"includes": ["normalize_email", "validate_email"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.auth.rs",
+							"includes": [
+								"normalize_email(email)?",
+								"let principal_id = Uuid::new_v4();",
+								"'email', $3, clock_timestamp()"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_002",
+			"name": "Password strength and breached credential rejection",
+			"owasp": "Implement Proper Password Strength Controls",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_002",
+					"name": "Password strength validation",
+					"description": "Require a minimum password length and zxcvbn strength score without composition-only rules.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/auth.helpers.validation.rs",
+							"includes": [
+								"validate_password",
+								"MIN_PASSWORD_LENGTH: usize = 8",
+								"MAX_PASSWORD_LENGTH: usize = 128",
+								"password.chars().count()"
+							]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.recovery.rs",
+							"includes": ["validate_password"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_003",
+					"name": "Constant-time comparison on invalid credentials",
+					"description": "Execute constant-time dummy verification when accounts are missing or credentials fail.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.auth.rs",
+							"includes": ["dummy_verify_password", "authentication failed"]
+						},
+						{
+							"path": "libs/rust/core/src/auth.helpers.password.rs",
+							"includes": ["dummy_verify_password", "DUMMY_ARGON2ID_HASH"]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_003",
+			"name": "Password storage and comparison",
+			"owasp": "Store Passwords in a Secure Fashion, Compare Password Hashes Using Safe Functions",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_004",
+					"name": "Argon2id password hashing",
+					"description": "Hash passwords with Argon2id, per-password random salts, and explicit memory/time/parallelism parameters.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/auth.helpers.password.rs",
+							"includes": ["Algorithm::Argon2id", "TARGET_M_COST", "TARGET_T_COST", "TARGET_P_COST"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_005",
+					"name": "Verifier-backed password comparison",
+					"description": "Compare user input through the password-hash verifier instead of direct string comparison.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/auth.helpers.password.rs",
+							"includes": ["PasswordHash::new", "verify_password"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.auth.rs",
+							"includes": ["verify_password", "dummy_verify_password"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_023",
+					"name": "Recurring Argon2id calibration",
+					"description": "Benchmark the production Argon2id work factor every week and fail when measured latency leaves the accepted security and availability envelope.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/auth.helpers.tests.rs",
+							"includes": [
+								"benchmark_argon2id_latency",
+								"increase its work factor",
+								"recalibrate its parameters"
+							]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_024",
+					"name": "Risk-triggered password changes only",
+					"description": "Do not expire passwords periodically; require password changes only through explicit recovery, compromise, or user-initiated flows.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.recovery.rs",
+							"includes": [
+								"changed_at = clock_timestamp()",
+								"compromised_at = NULL",
+								"reset_password"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_004",
+			"name": "Password recovery and change",
+			"owasp": "Implement Secure Password Recovery Mechanism, Change Password Feature",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_006",
+					"name": "Time-limited password recovery tokens",
+					"description": "Issue single-use recovery challenges with bounded expiry.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.recovery.rs",
+							"includes": [
+								"pub(crate) async fn issue",
+								"clock_timestamp()+interval '15 minutes'",
+								"identity_recovery_challenges"
+							]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_007",
+					"name": "Password reset token consumption and session revocation",
+					"description": "Consume reset tokens, enforce expiry, block password reuse, and revoke sessions after reset.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.recovery.rs",
+							"includes": [
+								"reset_password",
+								"consumed_at = clock_timestamp()",
+								"identity_sessions SET revoked_at"
+							]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_008",
+					"name": "Password change differentiation",
+					"description": "Require new password to differ from current password.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.recovery.rs",
+							"includes": [
+								"verify_stored_password",
+								"recovered password must differ from the current password"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_005",
+			"name": "Transport and cookie protections",
+			"owasp": "Transmit Passwords Only Over TLS or Other Strong Transport",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_009",
+					"name": "Session tokens and bearer transport",
+					"description": "Validate token structure and bounded lifespan for bearer sessions.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.tokens.rs",
+							"includes": ["AccessTokenClaims", "token_type", "ACCESS_TOKEN_TTL_SECONDS"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.browser.rs",
+							"includes": ["pub fn session_token", "__Host-nvbes-session"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_010",
+					"name": "HTTP security headers for authenticated surfaces",
+					"description": "Add HSTS and browser isolation headers on authenticated responses.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/security.headers.rs",
+							"includes": [
+								"STRICT_TRANSPORT_SECURITY",
+								"CLEAR_SITE_DATA_VALUE",
+								"insert_security_headers"
+							]
+						},
+						{
+							"path": "libs/rust/core/src/security.headers.tests.rs",
+							"includes": ["insert_clear_site_data_header", "CLICKJACKING_FRAME_ANCESTORS"]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_006",
+			"name": "Reauthentication and step-up",
+			"owasp": "Require Re-authentication for Sensitive Features, Reauthentication After Risk Events",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_011",
+					"name": "Recent step-up enforcement",
+					"description": "Require recent step-up authentication for sensitive actions and store bounded step-up state.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.mfa.rs",
+							"includes": ["STEP_UP_TTL_MINUTES", "grant_step_up", "step_up_granted"]
+						},
+						{
+							"path": "libs/rust/core/src/authz.policy.tests.rs",
+							"includes": ["sensitive_actions_require_step_up", "action_requires_step_up"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_012",
+					"name": "Step-up smoke and replay verification",
+					"description": "Verify that step-up grants reject replayed codes and enforce bounded TTL.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.mfa.rs",
+							"includes": ["run_synthetic_smoke", "replay_rejected", "step_up_granted"]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_007",
+			"name": "Generic errors and enumeration resistance",
+			"owasp": "Authentication and Error Messages",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_013",
+					"name": "Generic login responses",
+					"description": "Return generic invalid-credential errors for unknown accounts or invalid passwords.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.auth.rs",
+							"includes": ["dummy_verify_password", "authentication failed"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.auth.rs",
+							"includes": ["authentication failed", "dummy_verify_password"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_014",
+					"name": "Timing discrepancy mitigation",
+					"description": "Execute constant-time verification when an account is not found.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/auth.helpers.password.rs",
+							"includes": ["dummy_verify_password", "constant computation time"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.auth.rs",
+							"includes": ["dummy_verify_password"]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_008",
+			"name": "Automated attack protections",
+			"owasp": "Protect Against Automated Attacks, Login Throttling, CAPTCHA",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_015",
+					"name": "Rate limiting on authentication entry points",
+					"description": "Apply rate limits across authentication and sensitive entry points.",
+					"evidence": [
+						{
+							"path": "libs/rust/core/src/limiter.rs",
+							"includes": ["RateLimiter", "check_rate_limit", "RATELIMIT_LIMIT"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_016",
+					"name": "Risk evaluation rules",
+					"description": "Enforce rule sets and risk evaluation for behavioral anomaly detection.",
+					"evidence": [
+						{
+							"path": "archive/apps/trust-risk-service/src/trust_risk.rules.db.rs",
+							"includes": ["trust_risk_rule_sets", "RuleSetReceipt"]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_009",
+			"name": "MFA and FIDO/WebAuthn",
+			"owasp": "Multi-Factor Authentication, FIDO",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_017",
+					"name": "MFA factors and step-up verification",
+					"description": "Support TOTP factors, encrypted secret storage, and step-up verification.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.mfa.rs",
+							"includes": ["enroll_totp", "confirm_enrollment", "grant_step_up", "replay_rejected"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.mfa.crypto.rs",
+							"includes": ["pub struct MfaCrypto", "pub fn seal", "active_version"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_018",
+					"name": "Single-use replay protection",
+					"description": "Enforce replay protection on TOTP code usage.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.mfa.rs",
+							"includes": ["replay_rejected", "identity_auth_factors"]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_010",
+			"name": "Token, OAuth, and OIDC authentication",
+			"owasp": "OAuth 2.0 and 2.1, OpenID Connect",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_019",
+					"name": "JWT validation and claim verification",
+					"description": "Validate token structure and claims.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.tokens.rs",
+							"includes": ["AccessTokenClaims", "decode", "Validation"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_020",
+					"name": "JWT claim issuance",
+					"description": "Issue tokens with standard claims.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.tokens.claims.rs",
+							"includes": ["jti", "sid", "iss", "aud", "exp", "nbf", "sub"]
+						}
+					]
+				},
+				{
+					"id": "AUTHN_CTRL_021",
+					"name": "OAuth/OIDC discovery and PKCE",
+					"description": "Expose OIDC/OAuth metadata and require PKCE S256.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.oauth.metadata.rs",
+							"includes": ["ProviderMetadata", "jwks_uri", "authorization_endpoint"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.test.fixtures.rs",
+							"includes": ["code_challenge", "code_challenge_method", "S256"]
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "AUTHN_REQ_011",
+			"name": "Logging and monitoring",
+			"owasp": "Logging and Monitoring",
+			"controls": [
+				{
+					"id": "AUTHN_CTRL_022",
+					"name": "Authentication audit event recording",
+					"description": "Record login, registration, recovery, and risk events.",
+					"evidence": [
+						{
+							"path": "libs/rust/identity/src/identity.recovery.rs",
+							"includes": ["identity.recovery_requested", "identity.password_recovered"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.auth.rs",
+							"includes": ["identity.authenticated"]
+						},
+						{
+							"path": "libs/rust/identity/src/identity.oauth.store.rs",
+							"includes": ["identity_audit_events"]
+						},
+						{
+							"path": "archive/apps/trust-risk-service/src/trust_risk.audit.rs",
+							"includes": ["trust_risk_audit_events", "AuditEvent"]
+						}
+					]
+				}
+			]
+		}
+	]
 }

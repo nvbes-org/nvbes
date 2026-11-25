@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const deployableWorkflows = ['account', 'billing', 'email', 'identity', 'trust-risk'];
+const deployableWorkflows = ['api', 'worker'];
 
 test('Terraform validation serializes shared provider installation on cold runners', () => {
   const lane = readFileSync('tools/ci/run-lane.mjs', 'utf8');
@@ -46,7 +46,7 @@ for (const service of deployableWorkflows) {
 test('deployment does not rebuild its CI gate', () => {
   const gate = deployWorkflow.slice(
     deployWorkflow.indexOf('  ci-provenance:'),
-    deployWorkflow.indexOf('  build-scan-sign-account:'),
+    deployWorkflow.indexOf('  build-scan-sign-api:'),
   );
   assert.doesNotMatch(gate, /pnpm install|cargo (?:check|test)|terraform .*validate/u);
 });

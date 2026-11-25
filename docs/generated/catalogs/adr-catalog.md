@@ -3,7 +3,7 @@ title: Catalogue des ADRs (Architecture Decision Records)
 description: Journal des décisions d'architecture prises sur la plateforme nvbes.
 ---
 
-Total : **11 décisions enregistrées**
+Total : **12 décisions enregistrées**
 
 | Fichier ADR | Titre | Statut |
 | :--- | :--- | :--- |
@@ -17,6 +17,7 @@ Total : **11 décisions enregistrées**
 | [`0008-adopt-multi-shell-super-app.md`](/adr/0008-adopt-multi-shell-super-app/) | **ADR 0008 - Adopt a Multi-Shell Architecture for the Cloud and Account Super App** | ⚠️ superseded |
 | [`0011-workspace-end-to-end-encryption.md`](/adr/0011-workspace-end-to-end-encryption/) | **ADR 0011 - Adopter un chiffrement end-to-end optionnel par workspace** | ⚠️ proposed |
 | [`0012-adopt-scaleway-serverless-sql-per-product.md`](/adr/0012-adopt-scaleway-serverless-sql-per-product/) | **ADR 0012 - Adopter Scaleway Serverless SQL par produit** | ✅ Accepté |
+| [`0013-modular-monolith-api-and-unified-worker.md`](/adr/0013-modular-monolith-api-and-unified-worker/) | **0013. Monolithe Modulaire API et Worker Unifié** | ✅ Accepté |
 | [`2026-07-05-account-cloud-service-taxonomy.md`](/adr/2026-07-05-account-cloud-service-taxonomy/) | **ADR 2026-07-05 - Account Cloud Service Taxonomy** | ⚠️ superseded |
 
 ## Pourquoi des ADRs ?

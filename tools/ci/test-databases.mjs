@@ -9,13 +9,15 @@ else {
   try {
     for (const project of plan.databaseExecution) {
       const scope = {
+        api: 'api',
+        worker: 'worker',
+        email: 'email',
         'email-worker': 'email',
+        account: 'account',
         'account-service': 'account',
-        'billing-service': 'billing',
-        'billing-worker': 'billing',
+        identity: 'identity',
         'identity-service': 'identity',
-        'trust-risk-service': 'trust_risk',
-        'platform-operations-service': 'platform_operations',
+        consent: 'consent',
       }[project];
       if (!scope) throw new Error(`No isolated database for ${project}`);
       if (createdScopes.has(scope)) continue;
